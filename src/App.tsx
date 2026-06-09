@@ -118,9 +118,9 @@ const AppContent: React.FC = () => {
         console.warn('Storage read failed:', e);
       }
 
-      // Try ipapi.co (CORS-friendly, HTTPS support)
+      // Try proxy/location (CORS-friendly)
       try {
-        const response = await fetch('https://ipapi.co/json/');
+        const response = await fetch('/api/proxy/location');
         if (response.ok) {
           const data = await response.json();
           if (data && data.city && typeof data.city === 'string') {
@@ -128,32 +128,13 @@ const AppContent: React.FC = () => {
             if (city) {
               localStorage.setItem('aff_preferred_city', city);
               setDetectedCity(city);
-              console.log(`[Auto Location] Detected location via ipapi.co: ${city}`);
+              console.log(`[Auto Location] Detected location via proxy: ${city}`);
               return;
             }
           }
         }
       } catch (err) {
-        console.warn('[Auto Location] ipapi.co failed, trying fallback:', err);
-      }
-
-      // Fallback: freeipapi.com (CORS-friendly, HTTPS support)
-      try {
-        const response = await fetch('https://freeipapi.com/api/json');
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.cityName && typeof data.cityName === 'string') {
-            const city = data.cityName.trim();
-            if (city) {
-              localStorage.setItem('aff_preferred_city', city);
-              setDetectedCity(city);
-              console.log(`[Auto Location] Detected location via freeipapi.com: ${city}`);
-              return;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('[Auto Location] freeipapi.com failed:', err);
+        console.warn('[Auto Location] Proxy failed:', err);
       }
     };
 

@@ -1913,6 +1913,39 @@ async function startServer() {
     }
   });
 
+  // Proxy for geolocation APIs to bypass CORS
+  app.get('/api/proxy/location', async (req, res) => {
+    try {
+      // Try ipapi.co
+      const response = await fetch('https://ipapi.co/json/');
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.city) {
+          res.json({ city: data.city });
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Proxy ipapi.co failed');
+    }
+
+    try {
+      // Fallback: freeipapi.com
+      const response = await fetch('https://freeipapi.com/api/json');
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.cityName) {
+          res.json({ city: data.cityName });
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Proxy freeipapi.com failed');
+    }
+    
+    res.status(500).json({ error: 'Failed to detect location' });
+  });
+
   // Footer Social Clicks Tracking Endpoint
   app.post('/api/analytics/social-click', (req, res) => {
     try {
