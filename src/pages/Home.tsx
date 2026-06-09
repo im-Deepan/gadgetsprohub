@@ -1,0 +1,550 @@
+import React, { useState, useEffect } from 'react';
+import { Product, Category } from '../types';
+import { 
+  Search, Star, Heart, Flame, ShieldCheck, Trophy, Sparkles, 
+  ArrowRight, Landmark, Users, CheckCircle, Smartphone,
+  Clock, History, X
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../context/AuthContext';
+import { AdSenseBanner } from '../components/AdSenseBanner';
+
+interface HomeProps {
+  onNavigate: (view: string, slug?: string) => void;
+}
+
+const ProductCardSkeleton = () => (
+  <div className="group flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-[#0c1224] overflow-hidden animate-pulse">
+    <div className="h-32 sm:h-44 bg-slate-100 dark:bg-slate-900/50 shrink-0"></div>
+    <div className="p-3 sm:p-5 flex flex-col flex-grow space-y-2.5">
+      <div className="h-3.5 w-1/3 bg-slate-100 dark:bg-slate-900/50 rounded"></div>
+      <div className="h-5 w-full bg-slate-100 dark:bg-slate-900/50 rounded"></div>
+      <div className="h-4 w-3/4 bg-slate-100 dark:bg-slate-900/50 rounded"></div>
+      <div className="mt-auto pt-3 border-t border-slate-105 dark:border-slate-800/80 flex items-center justify-between">
+        <div className="h-5 w-16 bg-slate-100 dark:bg-slate-900/50 rounded"></div>
+        <div className="h-6 w-20 bg-slate-100 dark:bg-slate-900/50 rounded-lg"></div>
+      </div>
+    </div>
+  </div>
+);
+
+export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
+  const { wishlist, toggleWishlist, isAuthenticated } = useAuth();
+  const [trending, setTrending] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [homeSearch, setHomeSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [visibleCount, setVisibleCount] = useState(6);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Load recent searches on client side
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('aff_recent_searches');
+      if (stored) {
+        setRecentSearches(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn('Failed to load recent searches:', e);
+    }
+  }, []);
+
+  // Listen to clicks outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const saveSearchToLocal = (query: string) => {
+    const trimmed = query.trim();
+    if (trimmed.length > 1) {
+      try {
+        const stored = localStorage.getItem('aff_recent_searches');
+        let current: string[] = stored ? JSON.parse(stored) : [];
+        const filtered = current.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
+        const updated = [trimmed, ...filtered].slice(0, 5);
+        localStorage.setItem('aff_recent_searches', JSON.stringify(updated));
+        setRecentSearches(updated);
+      } catch (err) {
+        console.warn('Failed to save search:', err);
+      }
+    }
+  };
+
+  const handleRemoveRecentSearch = (e: React.MouseEvent, queryToRemove: string) => {
+    e.stopPropagation();
+    const updated = recentSearches.filter(s => s !== queryToRemove);
+    setRecentSearches(updated);
+    try {
+      localStorage.setItem('aff_recent_searches', JSON.stringify(updated));
+    } catch (err) {
+      console.warn('Failed to remove recent search:', err);
+    }
+  };
+
+  const handleClearAllRecentSearches = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRecentSearches([]);
+    try {
+      localStorage.removeItem('aff_recent_searches');
+    } catch (err) {
+      console.warn('Failed to clear recent searches:', err);
+    }
+  };
+
+  // Synchronize and log searches & filter criteria to MongoDB accordingly
+  useEffect(() => {
+    if (homeSearch.trim() !== '' || activeCategory !== 'all') {
+      const handler = setTimeout(() => {
+        const selectedCat = categories.find(c => c._id === activeCategory);
+        fetch('/api/analytics/filters', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            searchQuery: homeSearch || undefined,
+            categoryId: activeCategory !== 'all' ? activeCategory : undefined,
+            categorySlug: selectedCat ? selectedCat.slug : undefined
+          })
+        }).catch(err => console.warn('Filter interaction logging error:', err));
+      }, 700);
+      return () => clearTimeout(handler);
+    }
+  }, [homeSearch, activeCategory, categories]);
+
+  useEffect(() => {
+    const loadHomeData = async () => {
+      try {
+        const [trendRes, catRes, prodRes] = await Promise.all([
+          fetch('/api/trending'),
+          fetch('/api/categories'),
+          fetch('/api/products?limit=100')
+        ]);
+        
+        if (trendRes.ok) {
+          const tData = await trendRes.json();
+          setTrending(tData || []);
+        }
+        if (catRes.ok) {
+          const cData = await catRes.json();
+          setCategories(cData || []);
+        }
+        if (prodRes.ok) {
+          const pData = await prodRes.json();
+          setAllProducts(pData.products || []);
+        }
+      } catch (err) {
+        console.warn('Failing to assemble home aggregates data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadHomeData();
+  }, []);
+
+  // Filter products in real-time based on the hero search query and active category filter
+  const filteredProducts = allProducts.filter(prod => {
+    const matchesSearch = 
+      prod.name.toLowerCase().includes(homeSearch.toLowerCase()) ||
+      (prod.brand && prod.brand.toLowerCase().includes(homeSearch.toLowerCase())) ||
+      prod.description.toLowerCase().includes(homeSearch.toLowerCase());
+    
+    if (activeCategory === 'all') {
+      return matchesSearch;
+    } else {
+      const prodCatId = (prod.category && typeof prod.category === 'object') ? prod.category._id : prod.category;
+      return matchesSearch && prodCatId === activeCategory;
+    }
+  });
+
+  // Identify products listed under "Top Recommendations & Trending Choices" section (first 8 trending/products)
+  const trendingToShow = (trending.length > 0 ? trending : allProducts).slice(0, 8);
+
+  // General products are filtered products
+  const generalProducts = homeSearch 
+    ? filteredProducts 
+    : filteredProducts.filter(prod => !trendingToShow.some(t => t._id === prod._id));
+
+  const handleHomeSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = homeSearch.trim();
+    if (!query) return;
+
+    saveSearchToLocal(query);
+    onNavigate('products', `search-${query}`);
+  };
+
+  return (
+    <div className="space-y-16 pb-20 dark:bg-[#070a14] transition-colors duration-300 text-slate-900 dark:text-slate-100">
+      
+      {/* 1. HERO & ACCESSIBLE PRODUCT SEARCH BAR SECTION */}
+      <section className="bg-transparent py-14 border-b border-slate-200/50 dark:border-slate-800/50 text-center">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          
+          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/50 px-4 py-1.5 text-xs font-bold text-indigo-900 dark:bg-indigo-950/20 dark:border-indigo-900/30 dark:text-indigo-300">
+            <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
+            <span>Carefully Checked Products & Direct Safe Links</span>
+          </div>
+
+          <h1 className="mt-6 text-3xl font-black tracking-tight text-[#1b365d] sm:text-5xl dark:text-white leading-tight">
+            <span className="text-indigo-650 dark:text-indigo-400">Discover the Best Products Before You Buy</span>
+          </h1>
+
+          {/* Large Focused Dynamic Action Search Bar */}
+          <div className="mt-8 mx-auto max-w-2xl relative" ref={searchContainerRef}>
+            <form onSubmit={handleHomeSearchSubmit} className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <Search className="h-5 w-5 text-slate-400 dark:text-slate-500" />
+              </span>
+              <input
+                type="text"
+                value={homeSearch}
+                onChange={(e) => setHomeSearch(e.target.value)}
+                onFocus={() => setShowDropdown(true)}
+                placeholder="Search products, brands, cameras, or tech items..."
+                className="w-full rounded-2xl border-2 border-slate-200 bg-white py-3.5 pl-13 pr-4 text-sm sm:text-base text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-600 dark:border-slate-800 dark:bg-[#070a14] dark:text-white focus:ring-0"
+              />
+              {homeSearch && (
+                <button 
+                  type="button"
+                  onClick={() => setHomeSearch('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 font-bold text-xs text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </form>
+
+            {/* Premium Interactive Recent Searches Dropdown */}
+            {showDropdown && recentSearches.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-2 rounded-2xl border border-slate-250 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-[#0c1224] text-left animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-slate-800/80">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
+                    <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                    Recent Searches
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleClearAllRecentSearches}
+                    className="text-[10px] font-bold uppercase text-rose-500 hover:text-rose-605 transition-colors cursor-pointer border-none bg-transparent p-0"
+                  >
+                    Clear All
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {recentSearches.map((query, index) => (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setHomeSearch(query);
+                        saveSearchToLocal(query);
+                        setShowDropdown(false);
+                        onNavigate('products', `search-${query}`);
+                      }}
+                      className="group flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <History className="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-550 transition-colors shrink-0" />
+                        <span className="truncate">{query}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemoveRecentSearch(e, query)}
+                        className="rounded-md p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-all cursor-pointer border-none bg-transparent"
+                        title="Remove Search"
+                      >
+                        <X className="h-3.5 w-3.5 shrink-0" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </section>
+
+      {/* 2. DYNAMIC TRENDING PRODUCTS SECTION */}
+      <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-2 mb-6 border-b border-slate-200/60 pb-3 dark:border-slate-800">
+          <Flame className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Top Recommendations & Trending Choices
+          </h2>
+          <span className="ml-2 rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-bold text-indigo-700 dark:bg-[#0c1224] dark:text-indigo-300">
+            Real-Time Focus
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4 animate-in fade-in duration-300">
+            {[...Array(4)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (trending.length > 0 || allProducts.length > 0) ? (
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
+            {(trending.length > 0 ? trending : allProducts).slice(0, 8).map((prod) => (
+              <div
+                key={prod._id}
+                onClick={() => onNavigate('product-detail', prod.slug)}
+                className="group flex flex-col rounded-2xl border border-slate-200 bg-white hover:border-indigo-600 dark:border-slate-800 dark:bg-[#0c1224] transition-all duration-200 overflow-hidden cursor-pointer"
+              >
+                {/* Product Image Panel */}
+                <div className="relative h-32 sm:h-44 bg-slate-100 dark:bg-slate-900/50 overflow-hidden shrink-0">
+                  <img
+                    src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=310'}
+                    alt={prod.name}
+                    referrerPolicy="no-referrer"
+                    className="h-full w-full object-contain p-2 bg-slate-100/40 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-500 cursor-pointer"
+                  />
+                  
+                  <span className="absolute bottom-2 left-2 bg-indigo-600 rounded px-1.5 py-0.5 text-[9px] text-white font-black font-mono shadow-sm">
+                    ★ {prod.rating || '4.8'}
+                  </span>
+
+                  {isAuthenticated && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleWishlist(prod._id); }}
+                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm hover:text-rose-500 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:text-rose-500 transition-colors cursor-pointer"
+                      title="Bookmark product"
+                    >
+                      <Heart className={`h-3.5 w-3.5 ${wishlist.includes(prod._id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Content Details */}
+                <div className="p-3 sm:p-4 flex flex-col flex-grow">
+                  <span className="text-[9px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    {prod.brand || 'Premium Pick'}
+                  </span>
+                  
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 mt-1 line-clamp-1 hover:text-indigo-600 dark:text-white transition-colors">
+                    {prod.name}
+                  </h3>
+
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal dark:text-slate-400">
+                    {prod.description}
+                  </p>
+
+                  <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 font-mono dark:text-white">₹{prod.price}</span>
+                    <div className="rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 py-1 px-2 text-[9px] sm:text-[10px] font-bold text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer">
+                      Details
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 italic">No products available in catalogue at this time.</p>
+        )}
+      </section>
+
+      {/* Dynamic AdSense Placement Unit */}
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <AdSenseBanner slot="8998231145" />
+      </div>
+
+      {/* 3. COMPREHENSIVE PRODUCT CATALOG LISTING MATCHING USER INTENT */}
+      <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between mb-6 border-b border-slate-200/60 pb-3 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              All Available Products
+            </h2>
+          </div>
+          {homeSearch && (
+            <span className="bg-amber-50 text-amber-850 text-[10px] font-bold rounded px-2 py-0.5 dark:bg-amber-950/40 dark:text-amber-300">
+              Matched: {generalProducts.length}
+            </span>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 animate-in fade-in duration-300">
+            {[...Array(6)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : generalProducts.length === 0 ? (
+          <div className="text-center py-12 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-8">
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Sorry, no products are available now.</p>
+            <button 
+              onClick={() => { setHomeSearch(''); setActiveCategory('all'); }}
+              className="mt-3 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+            >
+              Reset filters
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+              <AnimatePresence mode="popLayout">
+                {generalProducts.slice(0, 10).map((prod) => (
+                  <motion.div
+                    key={prod._id}
+                    layout
+                    initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.94 }}
+                    whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                    transition={{ type: 'spring', damping: 22, stiffness: 160 }}
+                    onClick={() => onNavigate('product-detail', prod.slug)}
+                    className="group flex flex-col rounded-2xl border border-slate-200 bg-white hover:border-indigo-500/40 dark:border-slate-850 dark:bg-[#0c1224] transition-all duration-200 overflow-hidden cursor-pointer shadow-xs"
+                  >
+                    {/* Image Area */}
+                    <div className="relative h-32 sm:h-48 bg-slate-100 dark:bg-slate-900 overflow-hidden shrink-0">
+                      <img
+                        src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=310'}
+                        alt={prod.name}
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-contain p-2 bg-slate-150/40 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-300 cursor-pointer"
+                      />
+                      {prod.discount && prod.discount > 0 && (
+                        <span className="absolute top-2 left-2 bg-rose-500 rounded px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold text-white uppercase tracking-wider font-mono">
+                          -{prod.discount}%
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-3 sm:p-4 flex flex-col flex-grow">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[8px] sm:text-[9px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase">
+                          {prod.brand || 'Aesthetic'}
+                        </span>
+                        <span className="text-[8px] sm:text-[9px] px-2 py-0.2 bg-slate-50 border border-slate-150 rounded text-slate-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 font-bold truncate max-w-[80px]">
+                          {(() => {
+                            if (!prod.category) return 'Item';
+                            if (typeof prod.category === 'object' && prod.category) {
+                              if (prod.category.name) return prod.category.name;
+                              const catId = prod.category._id || '';
+                              return categories.find(c => String(c._id) === String(catId))?.name || 'Item';
+                            }
+                            return categories.find(c => String(c._id) === String(prod.category))?.name || 'Item';
+                          })()}
+                        </span>
+                      </div>
+
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 mt-1 line-clamp-1 hover:text-indigo-650 dark:text-white transition-colors">
+                        {prod.name}
+                      </h3>
+
+                      <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal dark:text-slate-400">
+                        {prod.description}
+                      </p>
+
+                      <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">₹{prod.price}</span>
+                          {prod.originalPrice && (
+                            <span className="text-[9px] sm:text-[10px] text-slate-400 line-through font-mono translate-y-[-1px]">₹{prod.originalPrice}</span>
+                          )}
+                        </div>
+
+                        <div className="rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-1 px-2 text-[9px] sm:text-[10px] font-bold dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 cursor-pointer">
+                          Details
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Clear persistent Navigation trigger to all products view */}
+            <div className="flex justify-center mt-12 pb-4">
+              <motion.button
+                whileHover={{ scale: 1.05, shadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onNavigate('products')}
+                className="inline-flex items-center gap-2 rounded-full border-2 border-indigo-650 bg-indigo-650 hover:bg-indigo-700 text-white px-8 py-3.5 text-xs font-bold uppercase tracking-wider shadow-md cursor-pointer transition-all"
+              >
+                See all products
+              </motion.button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Primary Footer Advertiser Block */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <AdSenseBanner slot="5667109283" />
+      </div>
+
+      {/* 4. BRAND ABOUT US MISSION - ACCESSIBLE COHESIVE BOX */}
+      <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-12 dark:border-slate-850 dark:bg-[#0c1224] space-y-6">
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-mono">
+              <Landmark className="h-4 w-4" />
+              ABOUT US & INTEGRITY PROMISE
+            </span>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+              We Build Simple & Honest Product Directories
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+              Established in 2026, gadgetsprohub is an independent database platform created by developers and technology advocates who are deeply frustrated by crowded commercial search loops and duplicate, sponsored listings. 
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-left">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Experienced Review Team</h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Our reviews are developed through rigorous comparative hands-on tests. We extract raw benchmark values and metric data points directly.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Zero Clickbait Algorithms</h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                We believe in layout readability. We do not insert intrusive autoplay popups, artificial urgency indicators, or misleading marketing widgets to rush you.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Authorized Partner Networks</h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Links automatically connect to certified store interfaces, securing your safety against third-party mock sellers or unauthenticated gray-market listings.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-4 text-center">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 italic flex items-center justify-center gap-1">
+              <span>"</span>
+              <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 bg-clip-text text-transparent font-black">gadgetsprohub</span>
+              <span>: Hand-analyzing everyday gear, leaving no room for marketing fluff."</span>
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  );
+};

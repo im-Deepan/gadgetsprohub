@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@keyframes gradient-ltr {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+@keyframes gradient-rtl {
+  0% { background-position: 300% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes gradient-diagonal {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+@keyframes gradient-vertical {
+  0% { background-position: 50% 0%; }
+  50% { background-position: 50% 100%; }
+  100% { background-position: 50% 0%; }
+}
+
+.animate-gradient-longitudinal-ltr {
+  background-size: 300% 100%;
+  animation: gradient-ltr 8s linear infinite;
+}
+
+.animate-gradient-longitudinal-rtl {
+  background-size: 300% 100%;
+  animation: gradient-rtl 8s linear infinite;
+}
+
+.animate-gradient-longitudinal-diagonal {
+  background-size: 300% 300%;
+  animation: gradient-diagonal 10s ease infinite;
+}
+
+.animate-gradient-longitudinal-vertical {
+  background-size: 100% 300%;
+  animation: gradient-vertical 8s ease infinite;
+}
+

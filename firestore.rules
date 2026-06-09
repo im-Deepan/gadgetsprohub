@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net catch-all deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened ID helper to prevent path hijacking
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Strict identity checking with verified email validation to block email spoofing
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "admin@example.com" // Update with actual admin emails for production
+        && request.auth.token.email_verified == true;
+    }
+
+    // Entity validator logic for contact form input shapes
+    function isValidContactMessage(entry) {
+      return entry.keys().hasAll(['name', 'email', 'subject', 'message', 'createdAt'])
+        && entry.keys().size() <= 6
+        && entry.name is string && entry.name.size() > 0 && entry.name.size() <= 128
+        && entry.email is string && entry.email.size() > 0 && entry.email.size() <= 128
+        && entry.subject is string && entry.subject.size() > 0 && entry.subject.size() <= 256
+        && entry.message is string && entry.message.size() > 0 && entry.message.size() <= 5000
+        && (!('phone' in entry) || (entry.phone is string && entry.phone.size() <= 32))
+        && entry.createdAt == request.time;
+    }
+
+    // Database rules for submitted messages collection - ONLY admin can query
+    match /messages/{messageId} {
+      allow get, list, update, delete: if isAdmin();
+      allow create: if isValidId(messageId) && isValidContactMessage(request.resource.data);
+    }
+  }
+}

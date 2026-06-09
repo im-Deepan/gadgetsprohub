@@ -1,0 +1,326 @@
+import React, { useState } from 'react';
+import { Mail, Instagram, Linkedin, Send, BadgeAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+
+interface FooterProps {
+  onNavigate: (view: string, slug?: string) => void;
+  isHomePage?: boolean;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }) => {
+  const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
+  const [categories, setCategories] = useState<any[]>([]);
+
+  // States for diagnostic feed alert overlays
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+
+  // Load real categories dynamically
+  React.useEffect(() => {
+    fetch('/api/categories')
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error("fail");
+      })
+      .then(data => {
+        if (data && Array.isArray(data)) {
+          setCategories(data);
+        }
+      })
+      .catch(e => console.warn("Failed to fetch footer categories:", e));
+  }, []);
+
+  // Track social clicks helper
+  const trackSocialClick = async (platform: 'instagram' | 'linkedin') => {
+    try {
+      fetch('/api/analytics/social-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform })
+      });
+    } catch (err) {
+      console.warn("Failed to track social click:", err);
+    }
+  };
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Newsletter Reader',
+          email: email,
+          subject: 'Newsletter Subscription',
+          message: 'Please subscribe my email to the newsletter deals feed.'
+        })
+      });
+      if (res.ok) {
+        setSubscribed(true);
+        setEmail('');
+        setShowSuccessModal(true);
+      } else {
+        setShowErrorModal(true);
+      }
+    } catch (e) {
+      console.warn("Newsletter submission error:", e);
+      setShowErrorModal(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <footer className="w-full border-t border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 transition-colors duration-300">
+      
+      {/* Top Banner Ethical Disclosure */}
+      {isHomePage && (
+        <div className="bg-indigo-50/70 border-b border-indigo-100/40 py-4 px-4 dark:bg-indigo-950/20 dark:border-slate-800">
+          <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-3 text-xs md:px-8">
+            <div className="flex items-center gap-2.5 text-indigo-700 dark:text-indigo-400">
+              <BadgeAlert className="h-5 w-5 shrink-0" />
+              <span className="font-semibold uppercase tracking-wider">Affiliate Disclosure Statement</span>
+            </div>
+            <p className="text-[11px] text-slate-500 max-w-2xl text-center md:text-right leading-relaxed dark:text-slate-400">
+              gadgetsprohub is an independent product reviews platform. We review select electronic gadgets, apparel & lifestyle items. When you hover and click dynamic store tags to execute a purchase, our platform occasionally earns minor percentages in commissions from vendor outlets.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5 md:px-4">
+          
+          {/* Logo Brand / Info */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center text-lg font-bold">
+              <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 bg-clip-text text-transparent font-black tracking-tight">
+                gadgetsprohub
+              </span>
+            </div>
+            
+            <p className="text-xs text-slate-500 max-w-sm leading-relaxed dark:text-slate-400">
+              Honest critiques, comprehensive spec maps, and direct buying links for electronic accessories, trendy apparel, home designs, and trail workout gear. Discover premium products with real value.
+            </p>
+
+            <div className="flex gap-3">
+              <a 
+                href="https://www.instagram.com/gadgetsprohub_ofl?igsh=M29uYjBiZGdzM2lu" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onClick={() => trackSocialClick('instagram')}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-indigo-600 hover:text-white dark:bg-slate-900 transition-colors cursor-pointer"
+                title="Follow us on Instagram"
+              >
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a 
+                href="https://linkedin.com/company/gadgetsprohub" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onClick={() => trackSocialClick('linkedin')}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-indigo-600 hover:text-white dark:bg-slate-900 transition-colors cursor-pointer"
+                title="Connect with us on LinkedIn"
+              >
+                <Linkedin className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+
+          {/* Quick NavLinks */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-905 dark:text-white mb-4">
+              Explore Portal
+            </h4>
+            <ul className="space-y-2.5 text-xs">
+              <li>
+                <button onClick={() => onNavigate('home')} className="hover:text-indigo-600 cursor-pointer flex items-center gap-1.5 font-medium transition-colors text-left bg-transparent border-none p-0 text-slate-600 dark:text-slate-400 hover:dark:text-indigo-400">
+                  <span>🏠</span> Home Hub
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigate('products')} className="hover:text-indigo-600 cursor-pointer flex items-center gap-1.5 font-medium transition-colors text-left bg-transparent border-none p-0 text-slate-600 dark:text-slate-400 hover:dark:text-indigo-400">
+                  <span>🛒</span> Product Selections
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigate('blogs')} className="hover:text-indigo-600 cursor-pointer flex items-center gap-1.5 font-medium transition-colors text-left bg-transparent border-none p-0 text-slate-600 dark:text-slate-400 hover:dark:text-indigo-400">
+                  <span>✍️</span> Blog Feed
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigate('contact')} className="hover:text-indigo-600 cursor-pointer flex items-center gap-1.5 font-medium transition-colors text-left bg-transparent border-none p-0 text-slate-600 dark:text-slate-400 hover:dark:text-indigo-400">
+                  <span>📞</span> Contact Desk
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          {/* Categories select */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-905 dark:text-white mb-4">
+              Real Categories
+            </h4>
+            <ul className="space-y-2.5 text-xs">
+              {categories.length > 0 ? (
+                categories.map(cat => (
+                  <li key={cat._id}>
+                    <button 
+                      onClick={() => onNavigate('products', `category-${cat._id}`)} 
+                      className="hover:text-indigo-600 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-600 dark:text-slate-400 hover:dark:text-indigo-400 flex items-center gap-1.5"
+                    >
+                      <span>{cat.icon || '📦'}</span> {cat.name}
+                    </button>
+                  </li>
+                ))
+              ) : (
+                <>
+                  <li>
+                    <button onClick={() => onNavigate('products', 'category-665a0001bc93ef2d8c000001')} className="hover:text-indigo-600 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-600 dark:text-slate-400 hover:dark:text-indigo-400 flex items-center gap-1.5">
+                      <span>📱</span> Electronics
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => onNavigate('products', 'category-665a0001bc93ef2d8c000002')} className="hover:text-indigo-600 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-600 dark:text-slate-400 hover:dark:text-indigo-400 flex items-center gap-1.5">
+                      <span>👔</span> Fashion Wear
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => onNavigate('products', 'category-665a0001bc93ef2d8c000003')} className="hover:text-indigo-600 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-600 dark:text-slate-400 hover:dark:text-indigo-400 flex items-center gap-1.5">
+                      <span>🏡</span> Home & Kitchen
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => onNavigate('products', 'category-665a0001bc93ef2d8c000004')} className="hover:text-indigo-600 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-600 dark:text-slate-400 hover:dark:text-indigo-400 flex items-center gap-1.5">
+                      <span>⚽</span> Athletics Gear
+                    </button>
+                  </li>
+                </>
+              )}
+            </ul>
+          </div>
+
+          {/* Newsletter Input */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-900 dark:text-white mb-4">
+              Weekly Deals Feed
+            </h4>
+            <p className="text-[11px] text-slate-500 mb-3 leading-relaxed dark:text-slate-400">
+              Get honest product comparisons and valid discount codes directly in your inbox. Zero clutter.
+            </p>
+
+            {subscribed ? (
+              <div className="rounded-xl bg-teal-50 p-3 text-xs text-teal-800 dark:bg-teal-950/30 dark:text-teal-300">
+                <span className="font-semibold block mb-0.5">✓ Subscribed successfully!</span>
+                We will send exclusive deals soon.
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="space-y-2">
+                <div className="relative">
+                  <input
+                    type="email"
+                    required
+                    placeholder="Enter email account"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-10 text-xs text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="absolute top-1 right-1 flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Send className="h-3 w-3" />
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+        </div>
+
+        <hr className="my-8 border-slate-200 dark:border-slate-800" />
+
+        {/* Bottom copyright */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
+          <p>© 2026 gadgetsprohub Review Platform. All rights reserved.</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center sm:justify-start">
+            <button onClick={() => onNavigate('about-us')} className="hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">About Us</button>
+            <span>•</span>
+            <button onClick={() => onNavigate('privacy-policy')} className="hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Privacy Statement</button>
+            <span>•</span>
+            <button onClick={() => onNavigate('terms-conditions')} className="hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Terms & Conditions</button>
+            <span>•</span>
+            <button onClick={() => onNavigate('disclaimer')} className="hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Commission Disclosure</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Subscription Success Modal Overlay */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-150 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-zinc-900 transition-all text-left text-slate-900 dark:text-white">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-teal-50 text-teal-600 dark:bg-teal-950/40 rounded-full shrink-0">
+                <ShieldCheck className="h-6 w-6 shrink-0" />
+              </div>
+              <div className="space-y-1 my-1">
+                <h3 className="text-xs font-black uppercase tracking-wider font-sans text-teal-600">Subscribed</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed font-sans">
+                  Success! Your email has been added to our live Deals Feed to receive direct specification reviews and handpicked discount offers.
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowSuccessModal(false)}
+                className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white py-1.5 px-3.5 text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
+              >
+                Superb
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Error Modal Overlay */}
+      {showErrorModal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-rose-100 bg-white p-6 shadow-xl dark:border-rose-950/30 dark:bg-zinc-900 transition-all text-left text-slate-900 dark:text-white">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-rose-50 text-rose-600 dark:bg-rose-950/40 rounded-full shrink-0">
+                <AlertTriangle className="h-6 w-6 shrink-0" />
+              </div>
+              <div className="space-y-1 my-1">
+                <h3 className="text-xs font-black uppercase tracking-wider font-sans text-rose-600">Subscription Error</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed font-sans">
+                  We were unable to feed your email to our newsletter dispatch system right now. Please check your web connection.
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowErrorModal(false)}
+                className="rounded-lg bg-rose-600 hover:bg-rose-700 text-white py-1.5 px-3.5 text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
+              >
+                Acknowledge Error
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </footer>
+  );
+};
