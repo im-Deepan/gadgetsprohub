@@ -20,8 +20,18 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
-        const adsbygoogle = (window as any).adsbygoogle || [];
-        adsbygoogle.push({});
+        // Wait until element has width before pushing
+        const checkVisibility = () => {
+          if (adElement.current && adElement.current.offsetWidth > 0) {
+            const adsbygoogle = (window as any).adsbygoogle || [];
+            adsbygoogle.push({});
+          } else {
+            setTimeout(checkVisibility, 200); // Retry if still 0
+          }
+        };
+
+        const timer = setTimeout(checkVisibility, 300);
+        return () => clearTimeout(timer);
       }
     } catch (e) {
       console.warn('Google AdSense render fallback triggered:', e);
