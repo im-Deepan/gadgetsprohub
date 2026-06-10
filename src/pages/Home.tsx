@@ -476,7 +476,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
       {/* Pick where you left off */}
       {recentViewed.length > 0 && activeCategory === 'all' && (
-        <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-4 border-b border-slate-200/60 pb-3 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <History className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -534,7 +534,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           </div>
         </section>
       )}      {/* 2. CURATED COLLECTIONS BOARD */}
-      <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 mb-8 border-b border-slate-200/60 pb-3 dark:border-slate-800">
           <Trophy className="h-5 w-5 text-slate-600 dark:text-slate-450" />
           <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
@@ -648,12 +648,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       </section>
 
       {/* Dynamic AdSense Placement Unit */}
-      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <AdSenseBanner slot="6223881151" />
       </div>
 
       {/* 3. COMPREHENSIVE PRODUCT CATALOG LISTING MATCHING USER INTENT */}
-      <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8 border-b border-slate-200/60 pb-3 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -805,7 +805,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       </section>
 
       {/* 4. BRAND ABOUT US MISSION - ACCESSIBLE COHESIVE BOX */}
-      <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-12 dark:border-slate-850 dark:bg-[#0c1224] space-y-6">
           <div className="text-center max-w-3xl mx-auto space-y-3">
             <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-mono">
