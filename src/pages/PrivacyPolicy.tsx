@@ -25,10 +25,10 @@ export const PrivacyPolicy: React.FC = () => {
         <section className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
             <Lock className="h-4 w-4 text-indigo-500" />
-            <span>1. Data Collection</span>
+            <span>1. Data Collection & Google Sign-In</span>
           </h2>
           <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            We prioritize minimalism in data collection. We only collect information you explicitly provide (such as your email for our deals feed or messages sent via our contact desk). We do not collect sensitive personal information, identification documents, or payment details.
+            We prioritize minimalism in data collection. When you choose to authenticate via Google Sign-In, we securely request your basic profile information (such as your name and email address). This data is requested <strong>solely to enable your secure personalized profile and synchronize your product Wishlist</strong> across devices. You are never required to log in to browse the site. We do not collect sensitive personal information, identification documents, or payment details.
           </p>
         </section>
 

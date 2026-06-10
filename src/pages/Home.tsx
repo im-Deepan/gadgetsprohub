@@ -503,7 +503,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-left">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-left">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -531,6 +531,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                 Links automatically connect to certified store interfaces, securing your safety against third-party mock sellers or unauthenticated gray-market listings.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Data Transparency & Privacy</h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                We request user data (via Google Sign-In) solely to enable secure profile saving and personalized product Wishlists. You are never required to log in to browse products. For details, please review our <button onClick={() => onNavigate('privacy-policy')} className="text-indigo-600 hover:underline dark:text-indigo-400 bg-transparent border-none p-0 cursor-pointer font-semibold inline">Privacy Policy</button>.
               </p>
             </div>
           </div>

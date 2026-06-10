@@ -83,7 +83,14 @@ const AppContent: React.FC = () => {
   const [activeView, setActiveView] = useState<string>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      return params.get('view') || 'home';
+      const viewParam = params.get('view');
+      if (viewParam) return viewParam;
+      
+      const path = window.location.pathname.replace(/^\/+/, '');
+      if (path && ['home', 'products', 'product-detail', 'blogs', 'blog-detail', 'contact', 'login', 'profile', 'admin', 'privacy-policy', 'about-us', 'terms-conditions', 'disclaimer'].includes(path)) {
+        return path;
+      }
+      return 'home';
     } catch {
       return 'home';
     }
