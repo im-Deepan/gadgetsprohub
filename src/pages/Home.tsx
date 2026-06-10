@@ -336,7 +336,27 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       <Helmet>
         <title>gadgetsprohub | Premium Electronics & Smart Gear Directory</title>
         <meta name="description" content="Discover trending, premium electronics and detailed specifications. Find honest reviews and the best deals on smartphones, laptops, audio gear, and wearables at gadgetsprohub." />
+        <meta name="keywords" content="electronics, smart gear, gadget directory, smartphones, laptops, audio gear, smartwatches, tech reviews, budget gadgets, gadgetsprohub" />
         <link rel="canonical" href="https://gadgetsprohub.com" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://gadgetsprohub.com" />
+        <meta property="og:title" content="gadgetsprohub | Premium Electronics & Smart Gear Directory" />
+        <meta property="og:description" content="Discover trending, premium electronics, detailed specifications, honest specifications reviews, and the best current tech deals." />
+        <meta property="og:image" content="/favicon.png" />
+        <meta property="og:site_name" content="gadgetsprohub" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:url" content="https://gadgetsprohub.com" />
+        <meta name="twitter:title" content="gadgetsprohub | Premium Electronics & Smart Gear Directory" />
+        <meta name="twitter:description" content="Discover trending, premium electronics, detailed specifications, honest specifications reviews, and the best current tech deals." />
+        <meta name="twitter:image" content="/favicon.png" />
+        <meta name="twitter:label1" content="Directory Size" />
+        <meta name="twitter:data1" content="Thousands of Premium Gadgets" />
+
+        <meta name="robots" content="index, follow" />
       </Helmet>
 
       {/* 1. HERO & ACCESSIBLE PRODUCT SEARCH BAR SECTION */}

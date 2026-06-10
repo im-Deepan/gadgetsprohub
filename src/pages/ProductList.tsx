@@ -568,7 +568,26 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 transition-colors duration-300">
       <Helmet>
         <title>Explore Premium Tech & Electronics | gadgetsprohub</title>
-        <meta name="description" content="Browse our extensive directory of trending smartphones, laptops, wearables, and more. Find the best price and read deep dive reviews." />
+        <meta name="description" content="Browse our extensive directory of trending smartphones, laptops, wearables, audio gear, and smarter gadgets. Find full specifications, ratings, and best tech specifications reviews." />
+        <meta name="keywords" content="phone specifications, laptop reviews, smartwatches, audio devices, smart gear, compared specs, gadgetsprohub directory" />
+        <link rel="canonical" href="https://gadgetsprohub.com/products" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://gadgetsprohub.com/products" />
+        <meta property="og:title" content="Explore Premium Tech & Electronics Specs | gadgetsprohub" />
+        <meta property="og:description" content="Browse our extensive directory of trending smartphones, laptops, wearables, audio gear, and smarter gadgets. Find full specifications and tech specs reviews." />
+        <meta property="og:image" content="/favicon.png" />
+        <meta property="og:site_name" content="gadgetsprohub" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:url" content="https://gadgetsprohub.com/products" />
+        <meta name="twitter:title" content="Explore Premium Tech & Electronics | gadgetsprohub" />
+        <meta name="twitter:description" content="Browse our extensive directory of trending smartphones, laptops, wearables, and tech gear at gadgetsprohub." />
+        <meta name="twitter:image" content="/favicon.png" />
+
+        <meta name="robots" content="index, follow" />
       </Helmet>
       
       {/* HEADER SECTION */}

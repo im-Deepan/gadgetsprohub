@@ -102,8 +102,28 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       <Helmet>
         <title>{blog ? `${blog.title} - Tech Insights` : 'Blog Details'} | gadgetsprohub</title>
         <meta name="description" content={blog?.excerpt || "Read our latest technology insights at gadgetsprohub."} />
+        <meta name="keywords" content={blog ? `${blog.title}, technology news, tech insight, ${blog.category || ''} post, gadgetsprohub` : "technology insights, consumer tech news"} />
+        <link rel="canonical" href={`https://gadgetsprohub.com/blogs/${blog?.slug || ''}`} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://gadgetsprohub.com/blogs/${blog?.slug || ''}`} />
+        <meta property="og:title" content={blog ? `${blog.title} - Tech Insights | gadgetsprohub` : 'Blog Details'} />
+        <meta property="og:description" content={blog?.excerpt || "Read our latest technology insights at gadgetsprohub."} />
         {blog?.imageUrl && <meta property="og:image" content={blog.imageUrl} />}
-        <meta property="og:title" content={`${blog?.title} | gadgetsprohub`} />
+        <meta property="og:site_name" content="gadgetsprohub" />
+        {blog?.date && <meta property="article:published_time" content={new Date(blog.date).toISOString().split('T')[0]} />}
+        {blog?.category && <meta property="article:section" content={blog.category} />}
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={blog ? `${blog.title} - Tech Insights` : 'Blog Details'} />
+        <meta name="twitter:description" content={blog?.excerpt || "Read our latest technology insights at gadgetsprohub."} />
+        {blog?.imageUrl && <meta name="twitter:image" content={blog.imageUrl} />}
+        {blog?.category && <meta name="twitter:label1" content="Category" />}
+        {blog?.category && <meta name="twitter:data1" content={blog.category} />}
+
+        <meta name="robots" content="index, follow" />
       </Helmet>
       
       {/* Back button and share */}

@@ -54,6 +54,25 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
       <Helmet>
         <title>Tech Insights & News | gadgetsprohub</title>
         <meta name="description" content="Read the latest tech news, gadget reviews, buyer guides, and deep-dive comparisons at the gadgetsprohub blog." />
+        <meta name="keywords" content="technology blog, tech news, buying guides, compare phones, laptop reviews, latest devices" />
+        <link rel="canonical" href="https://gadgetsprohub.com/blogs" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://gadgetsprohub.com/blogs" />
+        <meta property="og:title" content="Tech Insights, Buyer Guides & News | gadgetsprohub" />
+        <meta property="og:description" content="Stay updated with ultimate buying guides, detailed comparisons, and current consumer technology insights on the gadgetsprohub blog." />
+        <meta property="og:image" content="/favicon.png" />
+        <meta property="og:site_name" content="gadgetsprohub" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:url" content="https://gadgetsprohub.com/blogs" />
+        <meta name="twitter:title" content="Tech Insights & News | gadgetsprohub" />
+        <meta name="twitter:description" content="Stay updated with ultimate buying guides, detailed comparisons, and tech news on the gadgetsprohub blog." />
+        <meta name="twitter:image" content="/favicon.png" />
+
+        <meta name="robots" content="index, follow" />
       </Helmet>
       
       {/* Editorial Header */}

@@ -379,10 +379,30 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   return (
     <div className="mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
       <Helmet>
-        <title>{product ? `${product.name} - Price, Specs & Reviews` : 'Product Details'} | gadgetsprohub</title>
+        <title>{product ? `${product.name} - Specifications, Price & Review` : 'Product Details'} | gadgetsprohub</title>
         <meta name="description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
-        <meta property="og:title" content={`${product?.name} | gadgetsprohub`} />
+        <meta name="keywords" content={product ? `${product.name}, ${product.brand || ''}, ${product.category || ''}, specifications, review, manual, price gadgetsprohub` : "gadget specifications, tech spec reviews"} />
+        <link rel="canonical" href={`https://gadgetsprohub.com/products/${product?.slug || ''}`} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="product" />
+        <meta property="og:url" content={`https://gadgetsprohub.com/products/${product?.slug || ''}`} />
+        <meta property="og:title" content={product ? `${product.name} Specs & Reviews | gadgetsprohub` : 'Product Details'} />
+        <meta property="og:description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
         {product?.images?.[0] && <meta property="og:image" content={product.images[0]} />}
+        <meta property="og:site_name" content="gadgetsprohub" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={product ? `${product.name} Specs & Reviews` : 'Product Details'} />
+        <meta name="twitter:description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
+        {product?.images?.[0] && <meta name="twitter:image" content={product.images[0]} />}
+        {product?.brand && <meta name="twitter:label1" content="Brand" />}
+        {product?.brand && <meta name="twitter:data1" content={product.brand} />}
+        {product?.category && <meta name="twitter:label2" content="Category" />}
+        {product?.category && <meta name="twitter:data2" content={product.category} />}
+
+        <meta name="robots" content="index, follow" />
       </Helmet>
       
       {/* 1. TOP BREADCRUMB HEADER */}
