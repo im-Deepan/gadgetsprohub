@@ -804,73 +804,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         )}
       </section>
 
-      {/* 4. BRAND ABOUT US MISSION - ACCESSIBLE COHESIVE BOX */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-12 dark:border-slate-850 dark:bg-[#0c1224] space-y-6">
-          <div className="text-center max-w-3xl mx-auto space-y-3">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-mono">
-              <Landmark className="h-4 w-4" />
-              ABOUT US & INTEGRITY PROMISE
-            </span>
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-              We Build Simple & Honest Product Directories
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
-              Established in 2026, gadgetsprohub is an independent database platform created by developers and technology advocates who are deeply frustrated by crowded commercial search loops and duplicate, sponsored listings. 
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-left">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Experienced Review Team</h4>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Our reviews are developed through rigorous comparative hands-on tests. We extract raw benchmark values and metric data points directly.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Zero Clickbait Algorithms</h4>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                We believe in layout readability. We do not insert intrusive autoplay popups, artificial urgency indicators, or misleading marketing widgets to rush you.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Authorized Partner Networks</h4>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Links automatically connect to certified store interfaces, securing your safety against third-party mock sellers or unauthenticated gray-market listings.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Data Transparency & Privacy</h4>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                We request user data (via Google Sign-In) solely to enable secure profile saving and personalized product Wishlists. You are never required to log in to browse products. For details, please review our <button onClick={() => onNavigate('privacy-policy')} className="text-indigo-600 hover:underline dark:text-indigo-400 bg-transparent border-none p-0 cursor-pointer font-semibold inline">Privacy Policy</button>.
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-4 text-center">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 italic flex items-center justify-center gap-1">
-              <span>"</span>
-              <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 bg-clip-text text-transparent font-black">gadgetsprohub</span>
-              <span>: Hand-analyzing everyday gear, leaving no room for marketing fluff."</span>
-            </p>
-          </div>
-        </div>
-      </section>
 
     </div>
   );
