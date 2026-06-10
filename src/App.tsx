@@ -310,13 +310,13 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+    <div className={`min-h-screen flex flex-col text-slate-800 dark:text-slate-100 transition-colors duration-300 ${activeView === 'login' ? 'bg-[#0b0202] dark:bg-[#0b0202]' : 'bg-slate-50 dark:bg-slate-950'}`}>
       
       {/* Structural Header Navigation */}
       <Navbar currentView={activeView} onNavigate={navigateToView} />
 
       {/* Main viewport area */}
-      <main className="flex-grow overflow-x-hidden relative">
+      <main className="flex-grow overflow-x-hidden relative flex flex-col">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeView + (selectedSlug || '')}
@@ -324,7 +324,7 @@ const AppContent: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.22, ease: "easeInOut" }}
-            className="w-full h-full"
+            className="w-full flex-grow flex flex-col"
           >
             {renderActiveView()}
           </motion.div>
@@ -332,7 +332,7 @@ const AppContent: React.FC = () => {
       </main>
 
       {/* Structural Footer */}
-      <Footer onNavigate={navigateToView} isHomePage={activeView === 'home'} />
+      {activeView !== 'login' && <Footer onNavigate={navigateToView} isHomePage={activeView === 'home'} />}
       <ScrollToTop />
       <ImageLightbox />
 

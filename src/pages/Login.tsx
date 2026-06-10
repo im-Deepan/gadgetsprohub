@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Lock, Mail, User, ShieldCheck, Heading, ArrowLeft } from 'lucide-react';
@@ -86,8 +86,15 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     setSubmitting(false);
   };
 
+  useEffect(() => {
+    document.documentElement.style.backgroundColor = '#0b0202';
+    return () => {
+      document.documentElement.style.backgroundColor = '';
+    };
+  }, []);
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 flex flex-col justify-center items-center gap-4">
+    <div className="flex-grow w-full mx-auto px-4 py-16 flex flex-col justify-center items-center gap-4 bg-[#0b0202]">
       
       {/* High Visibility Floating Back Button */}
       <button
