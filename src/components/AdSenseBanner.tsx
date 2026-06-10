@@ -10,9 +10,9 @@ interface AdSenseBannerProps {
 
 export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   slot,
-  format = 'auto',
+  format = 'horizontal',
   responsive = 'true',
-  style = { display: 'block' },
+  style = { display: 'block', minWidth: '250px', width: '100%', height: '90px' },
   className = '',
 }) => {
   const adElement = useRef<HTMLModElement>(null);
@@ -23,15 +23,11 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         // Wait until element has width before pushing
         const checkVisibility = () => {
           if (adElement.current && !adElement.current.getAttribute('data-adsbygoogle-status')) {
-            if (adElement.current.offsetWidth > 0) {
-              const adsbygoogle = (window as any).adsbygoogle || [];
-              try {
-                adsbygoogle.push({});
-              } catch (e) {
-                console.warn('AdSense push error:', e);
-              }
-            } else {
-              setTimeout(checkVisibility, 200); // Retry if still 0
+            const adsbygoogle = (window as any).adsbygoogle || [];
+            try {
+              adsbygoogle.push({});
+            } catch (e) {
+              console.warn('AdSense push error:', e);
             }
           }
         };
@@ -47,7 +43,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   const publisherId = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-5970826882216712';
 
   return (
-    <div id={`adsense-panel-${slot}`} className={`my-6 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-900/30 p-4 border border-dashed border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center min-h-[100px] transition-all duration-300 ${className}`}>
+    <div id={`adsense-panel-${slot}`} className={`my-6 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-900/30 p-4 border border-dashed border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center transition-all duration-300 ${className}`}>
       <span className="text-[9px] font-mono tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-2">
         Sponsor Advertisement
       </span>

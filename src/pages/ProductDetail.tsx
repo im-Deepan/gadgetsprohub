@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, ShieldCheck, CheckCheck, MessageSquare, Plus, Check, X, BookmarkCheck, Edit, Sparkles, Box, CheckCircle, Video, Play } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Helmet } from 'react-helmet-async';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 
 interface ProductDetailProps {
@@ -107,6 +108,32 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           videoUrl: data.videoUrl || ''
         });
         
+        // Store the viewed product in localStorage for "Pick where you left off"
+        try {
+          const stored = localStorage.getItem('aff_recent_viewed');
+          let recents: any[] = stored ? JSON.parse(stored) : [];
+          // Keep only simple info to avoid large sizes
+          const productSummary = {
+            _id: data._id,
+            name: data.name,
+            slug: data.slug,
+            price: data.price,
+            originalPrice: data.originalPrice,
+            discount: data.discount,
+            images: [data.images?.[0]],
+            brand: data.brand,
+            category: data.category,
+            description: data.description,
+            rating: data.rating
+          };
+          recents = recents.filter(p => p._id !== data._id);
+          recents.unshift(productSummary);
+          recents = recents.slice(0, 10); // Keep last 10
+          localStorage.setItem('aff_recent_viewed', JSON.stringify(recents));
+        } catch (err) {
+          console.warn('Failed to save recent product:', err);
+        }
+
         // Disable global loading state instantly so the user can interact/view the spec sheets right away!
         setLoading(false);
         
@@ -350,6 +377,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
+      <Helmet>
+        <title>{product ? `${product.name} - Price, Specs & Reviews` : 'Product Details'} | gadgetsprohub</title>
+        <meta name="description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
+        <meta property="og:title" content={`${product?.name} | gadgetsprohub`} />
+        {product?.images?.[0] && <meta property="og:image" content={product.images[0]} />}
+      </Helmet>
       
       {/* 1. TOP BREADCRUMB HEADER */}
       <div className="flex mb-8 md:px-4">

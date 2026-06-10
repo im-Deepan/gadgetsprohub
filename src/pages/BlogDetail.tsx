@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Blog } from '../types';
 import { ArrowLeft, Clock, Eye, Share2, CornerDownLeft, Sparkle, Tag } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 interface BlogDetailProps {
   blogSlug: string;
@@ -98,6 +99,12 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
 
   return (
     <article className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
+      <Helmet>
+        <title>{blog ? `${blog.title} - Tech Insights` : 'Blog Details'} | gadgetsprohub</title>
+        <meta name="description" content={blog?.excerpt || "Read our latest technology insights at gadgetsprohub."} />
+        {blog?.imageUrl && <meta property="og:image" content={blog.imageUrl} />}
+        <meta property="og:title" content={`${blog?.title} | gadgetsprohub`} />
+      </Helmet>
       
       {/* Back button and share */}
       <div className="flex items-center justify-between mb-8">

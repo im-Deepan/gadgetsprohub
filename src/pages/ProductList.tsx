@@ -3,6 +3,7 @@ import { Product, Category } from '../types';
 import { Search, Heart, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Grid, List, Star, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { Helmet } from 'react-helmet-async';
 
 interface ProductListProps {
   initialFilter?: string | null;
@@ -531,7 +532,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               </button>
             )}
             <button
-              className="rounded-lg bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-[10px] font-bold text-indigo-700 py-1.5 px-2.5 cursor-pointer dark:bg-indigo-950/30 dark:border-indigo-900 dark:text-indigo-300 transition-colors"
+              className="hidden md:block rounded-lg bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-[10px] font-bold text-indigo-700 py-1.5 px-2.5 cursor-pointer dark:bg-indigo-950/30 dark:border-indigo-900 dark:text-indigo-300 transition-colors"
             >
               See Details
             </button>
@@ -543,6 +544,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 transition-colors duration-300">
+      <Helmet>
+        <title>Explore Premium Tech & Electronics | gadgetsprohub</title>
+        <meta name="description" content="Browse our extensive directory of trending smartphones, laptops, wearables, and more. Find the best price and read deep dive reviews." />
+      </Helmet>
       
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 md:px-4">

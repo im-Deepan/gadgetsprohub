@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
+import { Helmet } from 'react-helmet-async';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 
 interface HomeProps {
@@ -38,6 +39,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [visibleCount, setVisibleCount] = useState(6);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentViewed, setRecentViewed] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const searchContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -48,8 +50,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       if (stored) {
         setRecentSearches(JSON.parse(stored));
       }
+      const viewedStored = localStorage.getItem('aff_recent_viewed');
+      if (viewedStored) {
+        setRecentViewed(JSON.parse(viewedStored));
+      }
     } catch (e) {
-      console.warn('Failed to load recent searches:', e);
+      console.warn('Failed to load recent local data:', e);
     }
   }, []);
 
@@ -186,7 +192,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
   return (
     <div className="space-y-16 pb-20 dark:bg-[#070a14] transition-colors duration-300 text-slate-900 dark:text-slate-100">
-      
+      <Helmet>
+        <title>gadgetsprohub | Premium Electronics & Smart Gear Directory</title>
+        <meta name="description" content="Discover trending, premium electronics and detailed specifications. Find honest reviews and the best deals on smartphones, laptops, audio gear, and wearables at gadgetsprohub." />
+        <link rel="canonical" href="https://gadgetsprohub.com" />
+      </Helmet>
+
       {/* 1. HERO & ACCESSIBLE PRODUCT SEARCH BAR SECTION */}
       <section className="bg-transparent py-14 border-b border-slate-200/50 dark:border-slate-800/50 text-center">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
@@ -272,8 +283,79 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             )}
           </div>
 
+          {/* Quick Categories Filter (Max 5) */}
+          {categories.length > 0 && (
+            <div className="mt-6 flex flex-wrap justify-center gap-2 max-w-3xl mx-auto">
+              {categories.slice(0, 5).map(cat => (
+                <button
+                  key={cat._id}
+                  onClick={() => {
+                    setActiveCategory(activeCategory === cat._id ? 'all' : cat._id);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer ${
+                    activeCategory === cat._id
+                      ? 'bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500 dark:border-indigo-400'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
+
         </div>
       </section>
+
+      {/* Pick where you left off */}
+      {recentViewed.length > 0 && (
+        <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-4 border-b border-slate-200/60 pb-3 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <History className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Pick where you left
+              </h2>
+            </div>
+            <button 
+              onClick={() => {
+                setRecentViewed([]);
+                localStorage.removeItem('aff_recent_viewed');
+              }}
+              className="text-xs font-bold text-slate-400 hover:text-rose-500 transition-colors bg-transparent border-none cursor-pointer p-0"
+            >
+              Clear history
+            </button>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
+            {recentViewed.slice(0, 8).map(prod => (
+              <div 
+                key={prod._id}
+                onClick={() => onNavigate('product-detail', prod.slug)}
+                className="w-48 sm:w-56 shrink-0 snap-start flex flex-col rounded-2xl border border-slate-200 bg-white hover:border-indigo-400 dark:border-slate-800 dark:bg-[#0c1224] transition-all cursor-pointer shadow-xs group"
+              >
+                <div className="h-32 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 overflow-hidden rounded-t-2xl">
+                  <img
+                    src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300'}
+                    alt={prod.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="p-3">
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 font-mono truncate">{prod.brand || 'Item'}</span>
+                    <span className="text-[10px] font-black text-slate-900 dark:text-white font-mono">₹{prod.price}</span>
+                  </div>
+                  <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {prod.name}
+                  </h3>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 2. DYNAMIC TRENDING PRODUCTS SECTION */}
       <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">

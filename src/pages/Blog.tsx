@@ -3,6 +3,7 @@ import { Blog } from '../types';
 import { Search, Compass, BookOpen, Clock, ChevronRight } from 'lucide-react';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 import { motion, AnimatePresence } from 'motion/react';
+import { Helmet } from 'react-helmet-async';
 
 interface BlogProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -50,6 +51,10 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 transition-colors duration-300">
+      <Helmet>
+        <title>Tech Insights & News | gadgetsprohub</title>
+        <meta name="description" content="Read the latest tech news, gadget reviews, buyer guides, and deep-dive comparisons at the gadgetsprohub blog." />
+      </Helmet>
       
       {/* Editorial Header */}
       <div className="text-center max-w-2xl mx-auto space-y-4 mb-12">

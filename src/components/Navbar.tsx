@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Search, Heart, User, LogOut, Menu, X, Inbox, LayoutDashboard, Gift } from 'lucide-react';
 import { Category, Product, Blog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -11,6 +12,13 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   const { user, isAuthenticated, isAdmin, logout, wishlist } = useAuth();
+  const { showToast } = useToast();
+  
+  const handleLogout = () => {
+    logout();
+    onNavigate('home');
+    showToast("Logout successful", "success");
+  };
   
   const [searchQuery, setSearchQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
@@ -298,7 +306,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                   </button>
 
                   <button
-                    onClick={logout}
+                    onClick={handleLogout}
                     className="hidden sm:flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-rose-500 shadow-sm hover:bg-rose-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                     title="Sign Out"
                   >
@@ -473,7 +481,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                       </button>
                     )}
                     <button 
-                      onClick={() => { logout(); setShowMobileMenu(false); }}
+                      onClick={() => { handleLogout(); setShowMobileMenu(false); }}
                       className="flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer transition-colors"
                     >
                       <LogOut className="h-4 w-4" />
