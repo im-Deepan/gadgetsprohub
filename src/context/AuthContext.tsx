@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { auth, googleProvider, isFirebaseMock } from '../firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -64,7 +64,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         setWishlist(data.wishlist?.map((p: any) => p._id || p) || []);
       } else {
-        // Token might be expired
         logout();
       }
     } catch (error) {
@@ -78,8 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshProfile();
   }, [token]);
 
-  const login = async (email: string, password: string) => {
-    try {
+  const fallbackBackendLogin = async (email: string, password: string) => {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -107,6 +105,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: data.user.role
       });
       return { success: true };
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      if (!isFirebaseMock) {
+        try {
+          const cred = await signInWithEmailAndPassword(auth, email, password);
+          if (!cred.user.emailVerified) {
+             await sendEmailVerification(cred.user);
+             await auth.signOut();
+             return { success: false, error: 'Please verify your email to continue. A new verification link has been sent to your inbox.' };
+          }
+          
+          // They verified their email with Firebase. Now inform the backend using the google endpoint,
+          // which issues our backend JWT.
+          const res = await fetch('/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: cred.user.email, name: cred.user.displayName || email.split('@')[0] })
+          });
+          
+          let data: any = {};
+          try {
+            data = await res.json();
+          } catch(e) {
+            data = { error: 'Server authentication issue.' };
+          }
+          
+          if (!res.ok) {
+             return { success: false, error: data.error || 'Server registration refusal.' };
+          }
+          
+          localStorage.setItem('aff_token', data.token);
+          setToken(data.token);
+          setUser({
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.name,
+            role: data.user.role
+          });
+          return { success: true };
+          
+        } catch (fbErr: any) {
+             // If account doesn't exist in Firebase or wrong password, try backend directly
+             if (fbErr.code === 'auth/invalid-credential' || fbErr.code === 'auth/user-not-found' || fbErr.code === 'auth/wrong-password') {
+                 // Try legacy backend auth if user doesn't exist in Firebase or if it's generic error
+                 return await fallbackBackendLogin(email, password);
+             } else if (fbErr.code === 'auth/operation-not-allowed') {
+                 // Email/password provider disabled in Firebase, use backend
+                 return await fallbackBackendLogin(email, password);
+             } else {
+                 return { success: false, error: fbErr.message };
+             }
+        }
+      } else {
+        return await fallbackBackendLogin(email, password);
+      }
     } catch (err: any) {
       return { success: false, error: err.message || 'Server connection error.' };
     }
@@ -114,6 +169,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (email: string, password: string, name: string) => {
     try {
+      if (!isFirebaseMock) {
+        try {
+           const cred = await createUserWithEmailAndPassword(auth, email, password);
+           await sendEmailVerification(cred.user);
+           
+           // Register in backend as well, but do not set the token yet
+           await fetch('/api/auth/register', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ email, password, name })
+           });
+           
+           await auth.signOut();
+           return { success: false, error: 'Registration successful! A verification link has been sent to your email. Please verify before signing in.' };
+        } catch (fbErr: any) {
+           if (fbErr.code === 'auth/email-already-in-use') {
+             return { success: false, error: 'Email already in use. Please sign in.' };
+           } else if (fbErr.code === 'auth/operation-not-allowed') {
+             // Fallback if not enabled
+           } else {
+             return { success: false, error: fbErr.message };
+           }
+        }
+      }
+      
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -203,7 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn("Google credentials retrieval error:", err);
       let errMsg = err.message || 'Google Auth aborted/failed.';
       if (err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup-closed-by-user') || err.message?.includes('closed by user')) {
-        errMsg = 'Google sign-in was closed before completion. Please try again.';
+        errMsg = 'Google sign-in was closed before completion. Please try again. (If you are on Render, make sure to add your site URL to Firebase Authorized Domains)';
       } else if (err.code === 'auth/cancelled-popup-request' || err.message?.includes('cancelled-popup-request')) {
         errMsg = 'Google sign-in popup opened multiple times, previous attempt cancelled. Please try again.';
       } else if (err.code === 'auth/user-cancelled' || err.message?.includes('user-cancelled')) {

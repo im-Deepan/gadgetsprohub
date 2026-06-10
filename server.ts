@@ -90,7 +90,10 @@ const isAdminEmail = (email: string | undefined): boolean => {
 
 const getStorageEmail = (email: any): string | undefined => {
   if (typeof email !== 'string') return undefined;
-  return email.toLowerCase().trim();
+  const trimmed = email.toLowerCase().trim();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(trimmed)) return undefined;
+  return trimmed;
 };
 
 // Category Schema
@@ -1037,12 +1040,15 @@ async function startServer() {
       }
       if (isMongoConnected) {
         const user = await User.findOne({ email: storageEmail });
-        if (!user || !user.password) {
-          return res.status(401).json({ error: 'Invalid credentials, please retry' });
+        if (!user) {
+          return res.status(401).json({ error: 'This email is not registered. Please sign up first.' });
+        }
+        if (!user.password) {
+          return res.status(401).json({ error: 'This account was created via Google Sign-In. Please sign in with Google.' });
         }
         const isMatch = await comparePasswords(password, user.password);
         if (!isMatch) {
-          return res.status(401).json({ error: 'Invalid credentials, please retry' });
+          return res.status(401).json({ error: 'Incorrect password. Please try again.' });
         }
         if (isAdminEmail(user.email) && user.role !== 'admin') {
           user.role = 'admin';
@@ -1052,12 +1058,15 @@ async function startServer() {
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
       } else {
         const user = localUsers.find(u => u.email === storageEmail);
-        if (!user || !user.password) {
-          return res.status(401).json({ error: 'Invalid credentials, please retry' });
+        if (!user) {
+          return res.status(401).json({ error: 'This email is not registered. Please sign up first.' });
+        }
+        if (!user.password) {
+          return res.status(401).json({ error: 'This account was created via Google Sign-In. Please sign in with Google.' });
         }
         const isMatch = await comparePasswords(password, user.password);
         if (!isMatch) {
-          return res.status(401).json({ error: 'Invalid credentials, please retry' });
+          return res.status(401).json({ error: 'Incorrect password. Please try again.' });
         }
         if (isAdminEmail(user.email)) {
           user.role = 'admin';

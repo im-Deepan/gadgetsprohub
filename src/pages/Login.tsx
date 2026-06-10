@@ -111,8 +111,8 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           </h1>
         </div>
 
-        {/* Custom Toggle tabs */}
-        <div className="flex border-b border-slate-100 p-0.5 bg-slate-50 rounded-xl dark:border-slate-800 dark:bg-slate-950 shrink-0">
+        {/* Custom Toggle tabs - Hidden per user request */}
+        {/* <div className="flex border-b border-slate-100 p-0.5 bg-slate-50 rounded-xl dark:border-slate-800 dark:bg-slate-950 shrink-0">
           <button
             onClick={() => { setActiveTab('login'); setAuthError(''); }}
             className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'login' ? 'bg-white shadow-xs text-indigo-600 dark:bg-slate-800' : 'text-slate-500'}`}
@@ -125,10 +125,10 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           >
             Register Account
           </button>
-        </div>
+        </div> */}
 
-        {/* Input Forms */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Input Forms - Hidden per user request */}
+        {/* <form onSubmit={handleSubmit} className="space-y-4">
           
           {authError && (
             <div className="rounded-xl bg-rose-50 p-3.5 text-xs font-medium text-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
@@ -190,11 +190,17 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           >
             <span>{submitting ? 'Verifying account...' : activeTab === 'login' ? 'Sign In Now' : 'Create Member Account'}</span>
           </button>
-        </form>
+        </form> */}
+
+        {authError && (
+          <div className="rounded-xl bg-rose-50 p-3.5 text-xs font-medium text-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+            {authError}
+          </div>
+        )}
 
         <div className="relative flex py-2 items-center">
           <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
-          <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Or continue with</span>
+          <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Authenticate with</span>
           <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
         </div>
 
