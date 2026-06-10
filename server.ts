@@ -810,7 +810,9 @@ async function startServer() {
   app.use(helmet({
     contentSecurityPolicy: false, // relax for AI Studio preview frame
     frameguard: false,           // allow container embedding
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false
   }));
   app.disable('x-powered-by');
 
