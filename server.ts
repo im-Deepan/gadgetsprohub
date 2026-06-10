@@ -1141,14 +1141,15 @@ async function startServer() {
   app.get('/api/products', async (req, res) => {
     try {
       await cleanExpiredTrendingProducts();
-      const { category, subcategory, brand, minPrice, maxPrice, search, rating, sort, page = 1, limit = 12, inStock, exclude } = req.query;
+      const { category, subcategory, brand, minPrice, maxPrice, search, rating, sort, page = 1, limit = 12, inStock, exclude, trending } = req.query;
       
       if (isMongoConnected) {
         const filter: any = {};
-        if (category) filter.category = String(category);
+        if (category && category !== 'trending') filter.category = String(category);
         if (subcategory) filter.subcategory = String(subcategory);
         if (brand) filter.brand = String(brand);
         if (inStock === 'true') filter.inStock = true;
+        if (trending === 'true' || category === 'trending') filter.trending = true;
         
         if (search) {
           const searchStr = String(search).trim();
@@ -1202,7 +1203,9 @@ async function startServer() {
         // Safe robust in-memory search parameters translation
         let list = [...localProducts] as any[];
         
-        if (category) {
+        if (trending === 'true' || category === 'trending') {
+          list = list.filter(p => p.trending === true);
+        } else if (category) {
           list = list.filter(p => {
             const pCatId = typeof p.category === 'object' && p.category ? (p.category as any)._id : p.category;
             return String(pCatId) === String(category);

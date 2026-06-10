@@ -574,7 +574,13 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 md:px-4">
         <div>
-          <h1 className="text-2xl font-bold font-sans tracking-tight text-slate-900 dark:text-white">Product Collection</h1>
+          <h1 className="text-2xl font-black font-sans tracking-tight text-slate-900 dark:text-white">
+            {selectedCategory === 'trending' 
+              ? 'Top Recommendations & Trending Choices'
+              : selectedCategory 
+                ? (categories.find(c => String(c._id) === String(selectedCategory))?.name || 'Curated Pack')
+                : 'Curated Directories'}
+          </h1>
         </div>
 
         {/* Top Control Bar */}
@@ -919,6 +925,13 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     >
                       <span className="flex items-center gap-1.5">📁 All Classifications</span>
                       {!selectedCategory && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
+                    </button>
+                    <button
+                      onClick={() => { setSearch(''); setSelectedCategory('trending'); setSelectedSubcategory(''); setCurrentPage(1); }}
+                      className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === 'trending' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-650 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
+                    >
+                      <span className="flex items-center gap-1.5">🔥 Trending Choices</span>
+                      {selectedCategory === 'trending' && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
                     </button>
                     {categories.map((c) => (
                       <button
