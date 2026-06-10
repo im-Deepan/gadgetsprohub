@@ -356,7 +356,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
       {/* Dynamic AdSense Placement Unit */}
       <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
-        <AdSenseBanner slot="8998231145" />
+        <AdSenseBanner slot="6223881151" />
       </div>
 
       {/* 3. COMPREHENSIVE PRODUCT CATALOG LISTING MATCHING USER INTENT */}
@@ -484,7 +484,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
       {/* Primary Footer Advertiser Block */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <AdSenseBanner slot="5667109283" />
+        <AdSenseBanner slot="6223881151" />
       </div>
 
       {/* 4. BRAND ABOUT US MISSION - ACCESSIBLE COHESIVE BOX */}
