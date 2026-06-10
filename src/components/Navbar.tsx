@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Search, Heart, User, LogOut, Menu, X, Inbox, LayoutDashboard, Gift } from 'lucide-react';
+import { Search, Heart, User, LogOut, Menu, X, Inbox, LayoutDashboard, Gift, Sun, Moon } from 'lucide-react';
 import { Category, Product, Blog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTheme } from '../context/ThemeContext';
 
 interface NavbarProps {
   currentView: string;
@@ -13,6 +14,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   const { user, isAuthenticated, isAdmin, logout, wishlist } = useAuth();
   const { showToast } = useToast();
+  const { isDark, toggleTheme } = useTheme();
   
   const handleLogout = () => {
     logout();
@@ -165,7 +167,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 onClick={() => onNavigate('home')} 
                 className="flex items-center text-sm sm:text-lg font-bold tracking-tight cursor-pointer group"
               >
-                <span className={`bg-gradient-to-r from-pink-500 via-rose-500 via-amber-400 via-emerald-400 via-teal-500 via-indigo-500 via-purple-600 to-pink-500 bg-clip-text text-transparent font-black tracking-tight px-1 transition-all group-hover:scale-[1.02] ${getGradientClass(colorFlowDir)}`}>
+                <span className={`bg-gradient-to-r from-pink-500 via-rose-500 via-amber-400 via-emerald-400 via-teal-500 via-indigo-500 via-purple-600 to-pink-500 bg-clip-text text-transparent font-black tracking-tight text-sm sm:text-xl transition-all group-hover:scale-[1.02] ${getGradientClass(colorFlowDir)}`}>
                   gadgetsprohub
                 </span>
               </button>
@@ -264,6 +266,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
 
           {/* Right Header Icons */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Dark Mode Toggle */}
+            {currentView === 'home' && (
+              <button
+                onClick={toggleTheme}
+                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-650 shadow-sm hover:bg-slate-50 hover:text-indigo-650 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                aria-label="Toggle theme"
+              >
+                {isDark ? (
+                  <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+                ) : (
+                  <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-[#1b365d]" />
+                )}
+              </button>
+            )}
+
             {/* Wishlist Link - Desktop */}
             {isAuthenticated && (
               <button

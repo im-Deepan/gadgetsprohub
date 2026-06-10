@@ -332,7 +332,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="space-y-16 pb-20 dark:bg-[#070a14] transition-colors duration-300 text-slate-900 dark:text-slate-100">
+    <div className="space-y-16 pb-20 bg-slate-50 dark:bg-[#070a14] transition-colors duration-300 text-slate-900 dark:text-slate-100">
       <Helmet>
         <title>gadgetsprohub | Premium Electronics & Smart Gear Directory</title>
         <meta name="description" content="Discover trending, premium electronics and detailed specifications. Find honest reviews and the best deals on smartphones, laptops, audio gear, and wearables at gadgetsprohub." />
@@ -349,7 +349,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           </div>
 
           <h1 className="mt-6 text-3xl font-black tracking-tight text-[#1b365d] sm:text-5xl dark:text-white leading-tight">
-            <span className="text-indigo-650 dark:text-indigo-400">Discover the Best Products Before You Buy</span>
+            <span className="text-[#1b365d] dark:text-indigo-400">Discover the Best Products Before You Buy</span>
           </h1>
 
           {/* Large Focused Dynamic Action Search Bar */}
@@ -594,7 +594,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     <div 
                       key={prod._id}
                       onClick={() => onNavigate('product-detail', prod.slug)}
-                      className="relative aspect-square bg-slate-900 dark:bg-[#030712] rounded-2xl overflow-hidden border border-slate-800 dark:border-slate-900 p-2 flex flex-col items-center justify-between cursor-pointer hover:border-slate-600 dark:hover:border-slate-750 hover:scale-[1.03] active:scale-[0.98] transition-all group/item shadow-2xs"
+                      className="relative aspect-square bg-white dark:bg-[#0c1224] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-850 p-2 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-500/40 dark:hover:border-slate-700 hover:scale-[1.03] active:scale-[0.98] transition-all group/item shadow-2xs"
                       title={`View ${prod.name}`}
                     >
                       {/* Rating Badge at the Top - Colorless style */}
@@ -611,13 +611,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         />
                       </div>
                       
-                      {/* Clean white text under the image without a black capsule, directly on the dark-styled parent container */}
+                      {/* Clean theme-adaptive text under the image */}
                       <div className="w-full text-center mt-1.5 shrink-0 z-10">
-                        <p className="text-[9px] sm:text-[10px] font-extrabold text-white truncate px-0.5 font-sans">
+                        <p className="text-[9px] sm:text-[10px] font-extrabold text-slate-950 dark:text-white truncate px-0.5 font-sans">
                           {prod.name}
                         </p>
                       </div>
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/20 via-transparent to-transparent h-1/2 rounded-b-2xl pointer-events-none" />
                     </div>
                   ))}
                   {/* Fill in empty slots if under 4 products */}
