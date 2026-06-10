@@ -310,7 +310,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col text-slate-800 dark:text-slate-100 transition-colors duration-300 ${activeView === 'login' ? 'bg-[#0b0202] dark:bg-[#0b0202]' : 'bg-slate-50 dark:bg-slate-950'}`}>
+    <div className={`min-h-screen flex flex-col text-slate-800 dark:text-slate-100 transition-colors duration-300 ${activeView === 'login' ? 'bg-slate-50 dark:bg-[#0b0202]' : 'bg-slate-50 dark:bg-slate-950'}`}>
       
       {/* Structural Header Navigation */}
       <Navbar currentView={activeView} onNavigate={navigateToView} />

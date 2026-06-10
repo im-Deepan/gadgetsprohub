@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useTheme } from '../context/ThemeContext';
 import { Lock, Mail, User, ShieldCheck, Heading, ArrowLeft } from 'lucide-react';
 
 interface LoginProps {
@@ -10,6 +11,7 @@ interface LoginProps {
 export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   const { login, register, loginWithGoogle, isAuthenticated, user } = useAuth();
   const { showToast } = useToast();
+  const { isDark } = useTheme();
   
   // Tab states
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -87,14 +89,14 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   };
 
   useEffect(() => {
-    document.documentElement.style.backgroundColor = '#0b0202';
+    document.documentElement.style.backgroundColor = isDark ? '#0b0202' : '#f8fafc';
     return () => {
       document.documentElement.style.backgroundColor = '';
     };
-  }, []);
+  }, [isDark]);
 
   return (
-    <div className="flex-grow w-full mx-auto px-4 py-16 flex flex-col justify-center items-center gap-4 bg-[#0b0202]">
+    <div className="flex-grow w-full mx-auto px-4 py-16 flex flex-col justify-center items-center gap-4 bg-slate-50 dark:bg-[#0b0202]">
       
       {/* High Visibility Floating Back Button */}
       <button
