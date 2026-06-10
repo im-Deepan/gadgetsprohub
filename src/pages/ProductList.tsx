@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Product, Category } from '../types';
-import { Search, Heart, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Grid, List, Star, X } from 'lucide-react';
+import { Search, Heart, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Grid, List, Star, X, CheckCheck, ShieldCheck, ShoppingBag, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
@@ -41,6 +41,8 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   
   // States
   const [products, setProducts] = useState<Product[]>([]);
+  const [specModalProduct, setSpecModalProduct] = useState<Product | null>(null);
+  const [loadingSpec, setLoadingSpec] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewStyle, setViewStyle] = useState<'grid' | 'list'>('grid');
@@ -277,6 +279,26 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         setMinRating('');
         setCurrentPage(1);
         setIsFilterOpen(false); // Directly close filters for home page query search!
+      } else if (initialFilter.startsWith('spec-')) {
+        const slug = initialFilter.replace('spec-', '');
+        setLoadingSpec(true);
+        // Clear previous overlays, set loading state, and fetch individual product details
+        fetch(`/api/products/${slug}`)
+          .then(res => {
+            if (res.ok) return res.json();
+            throw new Error('Product not found');
+          })
+          .then(data => {
+            if (data) {
+              setSpecModalProduct(data);
+            }
+          })
+          .catch(err => {
+            console.warn('Failed to load product spec:', err);
+          })
+          .finally(() => {
+            setLoadingSpec(false);
+          });
       }
     } else {
       setSelectedCategory('');
@@ -1015,6 +1037,235 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           </>
         )}
       </AnimatePresence>
+
+      {/* 3. Specifications Overlay Modal */}
+      <AnimatePresence>
+        {specModalProduct && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setSpecModalProduct(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-slate-100 dark:border-slate-850 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-950/20">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-indigo-600 bg-indigo-50 dark:bg-indigo-955/35 dark:text-indigo-400 px-2 py-0.5 rounded-full font-mono">
+                      {specModalProduct.brand || 'Premium Brand'} Specs Sheet
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400 font-bold uppercase tracking-wider">{specModalProduct.sku || 'SKU-SPEC'}</span>
+                  </div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white leading-snug">
+                    {specModalProduct.name}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setSpecModalProduct(null)}
+                  className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-750 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  title="Close Specifications"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Scrollable specs items */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-none">
+                {/* Intro & Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+                  {/* Photo area */}
+                  <div className="relative h-44 sm:h-52 bg-slate-50 dark:bg-slate-955/15 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={specModalProduct.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=310'}
+                      alt={specModalProduct.name}
+                      referrerPolicy="no-referrer"
+                      className="max-h-full max-w-full object-contain cursor-zoom-in"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('open-lightbox', {
+                          detail: {
+                            src: specModalProduct.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=310',
+                            images: specModalProduct.images || [],
+                            currentIndex: 0,
+                            alt: specModalProduct.name
+                          }
+                        }));
+                      }}
+                    />
+                    
+                    {/* Floating Rating overlay */}
+                    <div className="absolute top-2.5 left-2.5 bg-amber-500 text-white font-extrabold font-mono text-[10px] rounded-lg px-2 py-0.5 flex items-center gap-0.5 shadow-sm z-10">
+                      ★ {specModalProduct.rating || '4.8'}
+                    </div>
+
+                    {specModalProduct.discount && specModalProduct.discount > 0 && (
+                      <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white font-black font-mono text-[9px] rounded-lg px-2 py-0.5 uppercaseType">
+                        -{specModalProduct.discount}% Off
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Summary card info */}
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Expert Review Brief</span>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans">
+                        {specModalProduct.description || 'Check out complete pricing information and review parameters for this gadget choice.'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-950 p-3 border border-slate-100/60 dark:border-slate-800/60 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Deal price</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-lg font-black text-slate-900 font-mono dark:text-white">₹{specModalProduct.price}</span>
+                          {specModalProduct.originalPrice && (
+                            <span className="text-xs text-slate-400 line-through font-mono">₹{specModalProduct.originalPrice}</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5 text-slate-500 font-bold dark:text-slate-400 text-xs font-mono">
+                        <ShieldCheck className="h-4 w-4 text-indigo-500" />
+                        <span>Verified Price</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabular Specifications Map */}
+                {specModalProduct.specifications && Object.keys(specModalProduct.specifications).length > 0 ? (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Technical Specifications</h4>
+                    <div className="rounded-xl border border-slate-150 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-850">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead className="bg-slate-50/50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
+                          <tr>
+                            <th className="py-2.5 px-3 font-bold text-slate-500 uppercase text-[9px] tracking-wider">Parameter</th>
+                            <th className="py-2.5 px-3 font-bold text-slate-500 uppercase text-[9px] tracking-wider">Specification Metric</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {Object.entries(specModalProduct.specifications).map(([key, value]) => (
+                            <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors">
+                              <td className="py-2 px-3 font-semibold text-slate-800 dark:text-slate-200">{key}</td>
+                              <td className="py-2 px-3 text-slate-600 dark:text-slate-400 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Technical Specifications</h4>
+                    <p className="text-xs text-slate-400 italic">No specific technical parameter metrics registered yet for this item category. See expert overview for highlight claims.</p>
+                  </div>
+                )}
+
+                {/* Highlight Featured advantages */}
+                {specModalProduct.features && specModalProduct.features.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Highlighted Advantages</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {specModalProduct.features.map((feat, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-slate-705 dark:text-slate-300">
+                          <CheckCheck className="h-4 w-4 text-emerald-500 shrink-0" />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pros and Cons Split Matrix */}
+                {((specModalProduct.pros && specModalProduct.pros.length > 0) || (specModalProduct.cons && specModalProduct.cons.length > 0)) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Pros */}
+                    {specModalProduct.pros && specModalProduct.pros.length > 0 && (
+                      <div className="rounded-xl border border-emerald-100 bg-emerald-50/10 p-4 dark:border-emerald-900/20">
+                        <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block mb-2">✓ Pros</span>
+                        <ul className="space-y-1 text-xs">
+                          {specModalProduct.pros.slice(0, 4).map((p, i) => (
+                            <li key={i} className="text-slate-600 dark:text-slate-300 flex items-start gap-1">
+                              <span className="text-emerald-405">●</span>
+                              <span>{p}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Cons */}
+                    {specModalProduct.cons && specModalProduct.cons.length > 0 && (
+                      <div className="rounded-xl border border-rose-100 bg-rose-50/10 p-4 dark:border-rose-900/20">
+                        <span className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-400 block mb-2">✗ Cons</span>
+                        <ul className="space-y-1 text-xs">
+                          {specModalProduct.cons.slice(0, 4).map((c, i) => (
+                            <li key={i} className="text-slate-600 dark:text-slate-300 flex items-start gap-1">
+                              <span className="text-rose-405">■</span>
+                              <span>{c}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Footer banner */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-150 dark:border-slate-800/80 flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSpecModalProduct(null);
+                    onNavigate('product-detail', specModalProduct.slug);
+                  }}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-200 py-3 text-xs font-bold transition-all cursor-pointer shadow-3xs"
+                >
+                  <Search size={14} />
+                  <span>View Review & Full Details Page</span>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Track affiliate clicks as well
+                    fetch(`/api/products/click/${specModalProduct.slug}`, {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'}
+                    }).catch(() => {});
+                    window.open(specModalProduct.affiliateLink, '_blank', 'noreferrer,noopener');
+                  }}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-xs font-bold transition-all cursor-pointer shadow-md"
+                >
+                  <ShoppingBag size={14} />
+                  <span>Shop on Amazon</span>
+                  <ExternalLink size={11} />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Loading Specs sheet modal */}
+      {loadingSpec && (
+        <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55 flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl flex items-center gap-3.5 shadow-xl border border-slate-100 dark:border-slate-800 animate-pulse">
+            <div className="h-5 w-5 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">Loading Specification Sheet...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -147,7 +147,58 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         }
         if (prodRes.ok) {
           const pData = await prodRes.json();
-          setAllProducts(pData.products || []);
+          const pList = pData.products || [];
+          setAllProducts(pList);
+          
+          setRecentViewed(current => {
+            const cleared = localStorage.getItem('aff_history_cleared') === 'true';
+            if (cleared) {
+              return [];
+            }
+            if (current.length === 0 && pList.length > 0) {
+              const selected: any[] = [];
+              const seenBrands = new Set<string>();
+              for (const p of pList) {
+                if (!seenBrands.has(p.brand || '') && p.brand && selected.length < 5) {
+                  seenBrands.add(p.brand);
+                  selected.push({
+                    _id: p._id,
+                    name: p.name,
+                    slug: p.slug,
+                    price: p.price,
+                    originalPrice: p.originalPrice,
+                    discount: p.discount,
+                    images: p.images,
+                    brand: p.brand,
+                    category: p.category,
+                    description: p.description,
+                    rating: p.rating
+                  });
+                }
+              }
+              if (selected.length < 4) {
+                for (const p of pList) {
+                  if (selected.length < 5 && !selected.some(item => item._id === p._id)) {
+                    selected.push({
+                      _id: p._id,
+                      name: p.name,
+                      slug: p.slug,
+                      price: p.price,
+                      originalPrice: p.originalPrice,
+                      discount: p.discount,
+                      images: p.images,
+                      brand: p.brand,
+                      category: p.category,
+                      description: p.description,
+                      rating: p.rating
+                    });
+                  }
+                }
+              }
+              return selected;
+            }
+            return current;
+          });
         }
       } catch (err) {
         console.warn('Failing to assemble home aggregates data:', err);
@@ -321,6 +372,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               onClick={() => {
                 setRecentViewed([]);
                 localStorage.removeItem('aff_recent_viewed');
+                localStorage.setItem('aff_history_cleared', 'true');
               }}
               className="text-xs font-bold text-slate-400 hover:text-rose-500 transition-colors bg-transparent border-none cursor-pointer p-0"
             >
@@ -334,13 +386,24 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate('product-detail', prod.slug)}
                 className="w-48 sm:w-56 shrink-0 snap-start flex flex-col rounded-2xl border border-slate-200 bg-white hover:border-indigo-400 dark:border-slate-800 dark:bg-[#0c1224] transition-all cursor-pointer shadow-xs group"
               >
-                <div className="h-32 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 overflow-hidden rounded-t-2xl">
+                <div className="h-32 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 overflow-hidden rounded-t-2xl relative">
                   <img
                     src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300'}
                     alt={prod.name}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                   />
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate('products', `spec-${prod.slug}`);
+                    }}
+                    className="absolute bottom-2 left-2 bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-white font-extrabold font-mono text-[9px] rounded-lg px-2 py-1 flex items-center gap-1 shadow-md z-15 cursor-pointer border-none"
+                    title="View Technical Specifications"
+                  >
+                    ★ {prod.rating || '4.8'}
+                  </button>
                 </div>
                 <div className="p-3">
                   <div className="flex items-center justify-between gap-1 mb-1">
@@ -392,9 +455,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     className="h-full w-full object-contain p-2 bg-slate-100/40 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-500 cursor-pointer"
                   />
                   
-                  <span className="absolute bottom-2 left-2 bg-indigo-600 rounded px-1.5 py-0.5 text-[9px] text-white font-black font-mono shadow-sm">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate('products', `spec-${prod.slug}`);
+                    }}
+                    className="absolute bottom-2 left-2 bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-white font-extrabold font-mono text-[10px] rounded-lg px-2 py-1 flex items-center gap-1 shadow-md z-10 cursor-pointer border-none"
+                    title="View Technical Specifications"
+                  >
                     ★ {prod.rating || '4.8'}
-                  </span>
+                  </button>
 
                   {isAuthenticated && (
                     <button
@@ -502,6 +572,17 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                           -{prod.discount}%
                         </span>
                       )}
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onNavigate('products', `spec-${prod.slug}`);
+                        }}
+                        className="absolute bottom-2 left-2 bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-white font-extrabold font-mono text-[10px] rounded-lg px-2 py-1 flex items-center gap-1 shadow-md z-15 cursor-pointer border-none"
+                        title="View Technical Specifications"
+                      >
+                        ★ {prod.rating || '4.8'}
+                      </button>
                     </div>
 
                     {/* Content */}

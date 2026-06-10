@@ -110,6 +110,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         
         // Store the viewed product in localStorage for "Pick where you left off"
         try {
+          localStorage.removeItem('aff_history_cleared');
           const stored = localStorage.getItem('aff_recent_viewed');
           let recents: any[] = stored ? JSON.parse(stored) : [];
           // Keep only simple info to avoid large sizes
