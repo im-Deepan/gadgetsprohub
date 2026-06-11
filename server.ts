@@ -965,26 +965,31 @@ async function startServer() {
   });
 
   app.get('/sitemap.xml', (req, res) => {
+    // Dynamically resolve base URL to support both Render fallback domain and custom domains
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const host = req.get('host') || 'gadgetsprohub.com';
+    const baseUrl = `${protocol}://${host}`;
+
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://gadgetsprohub.com/</loc>
+    <loc>${baseUrl}/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://gadgetsprohub.com/?view=products</loc>
+    <loc>${baseUrl}/?view=products</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://gadgetsprohub.com/?view=blogs</loc>
+    <loc>${baseUrl}/?view=blogs</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://gadgetsprohub.com/?view=contact</loc>
+    <loc>${baseUrl}/?view=contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
