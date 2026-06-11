@@ -4,6 +4,9 @@ import { Search, Heart, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRigh
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
+import { Breadcrumb } from '../components/Breadcrumb';
+import { BorderGlow } from '../components/BorderGlow';
+import { GlareHover } from '../components/GlareHover';
 
 interface ProductListProps {
   initialFilter?: string | null;
@@ -470,19 +473,26 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
       onClick={() => onNavigate('product-detail', p.slug)}
-      className={`group flex rounded-2xl border border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 ${
-        viewStyle === 'grid'
-          ? 'flex-col hover:border-indigo-500/40 hover:shadow-xl'
-          : 'flex-col sm:flex-row hover:border-indigo-500/30 hover:shadow-lg'
-      }`}
+      className="group"
     >
-      {/* Card Media Area */}
-      <div className={`bg-slate-100 dark:bg-slate-950 overflow-hidden relative shrink-0 transition-all duration-300 ${
-        viewStyle === 'grid'
-          ? 'h-32 sm:h-48 w-full'
-          : 'w-full sm:w-48 h-40'
-      }`}>
-        <img
+      <BorderGlow
+        className={`flex rounded-2xl border border-slate-100/50 dark:border-slate-800/80 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 ${
+          viewStyle === 'grid'
+            ? 'flex-col hover:shadow-indigo-500/10 hover:shadow-2xl'
+            : 'flex-col sm:flex-row hover:shadow-indigo-500/10 hover:shadow-xl'
+        }`}
+        borderRadius={16}
+        glowColor="99, 102, 241"
+      >
+        <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
+        <div className={`flex w-full ${viewStyle === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'}`}>
+          {/* Card Media Area */}
+          <div className={`bg-slate-100 dark:bg-slate-950 overflow-hidden relative shrink-0 transition-all duration-300 ${
+            viewStyle === 'grid'
+              ? 'h-32 sm:h-48 w-full'
+              : 'w-full sm:w-48 h-40'
+          }`}>
+            <img
           src={p.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500'}
           alt={p.name}
           referrerPolicy="no-referrer"
@@ -560,7 +570,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             </button>
           </div>
         </div>
-      </div>
+        </div>
+        </div>
+        </GlareHover>
+      </BorderGlow>
     </motion.div>
   );
 
@@ -590,6 +603,21 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         <meta name="robots" content="index, follow" />
       </Helmet>
       
+      {/* BREADCRUMB */}
+      <div className="md:px-4">
+        <Breadcrumb 
+          className="mb-8"
+          items={[
+          { label: 'Home', onClick: () => onNavigate('home') },
+          { label: 'Products', onClick: () => onNavigate('products'), isCurrentPage: !selectedCategory && !search },
+          ...(selectedCategory ? [{ 
+            label: selectedCategory === 'trending' ? 'Trending' : (categories.find(c => String(c._id) === String(selectedCategory))?.name || 'Category'), 
+            isCurrentPage: !search 
+          }] : []),
+          ...(search ? [{ label: `Search: ${search}`, isCurrentPage: true }] : [])
+        ]} />
+      </div>
+
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 md:px-4">
         <div>
@@ -1177,22 +1205,24 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Technical Specifications</h4>
                     <div className="rounded-xl border border-slate-150 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-850">
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead className="bg-slate-50/50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
-                          <tr>
-                            <th className="py-2.5 px-3 font-bold text-slate-500 uppercase text-[9px] tracking-wider">Parameter</th>
-                            <th className="py-2.5 px-3 font-bold text-slate-500 uppercase text-[9px] tracking-wider">Specification Metric</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {Object.entries(specModalProduct.specifications).map(([key, value]) => (
-                            <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors">
-                              <td className="py-2 px-3 font-semibold text-slate-800 dark:text-slate-200">{key}</td>
-                              <td className="py-2 px-3 text-slate-600 dark:text-slate-400 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
+                      <div className="overflow-x-auto w-full">
+                        <table className="w-full text-left border-collapse text-xs min-w-[340px] sm:min-w-0">
+                          <thead className="bg-slate-50/50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
+                            <tr>
+                              <th className="py-2.5 px-3 font-bold text-slate-500 uppercase text-[9px] tracking-wider">Parameter</th>
+                              <th className="py-2.5 px-3 font-bold text-slate-500 uppercase text-[9px] tracking-wider">Specification Metric</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {Object.entries(specModalProduct.specifications).map(([key, value]) => (
+                              <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors">
+                                <td className="py-2 px-3 font-semibold text-slate-800 dark:text-slate-200">{key}</td>
+                                <td className="py-2 px-3 text-slate-600 dark:text-slate-400 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 ) : (

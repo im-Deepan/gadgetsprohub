@@ -87,18 +87,29 @@ const AppContent: React.FC = () => {
       if (viewParam) return viewParam;
       
       const path = window.location.pathname.replace(/^\/+/, '');
-      if (path && ['home', 'products', 'product-detail', 'blogs', 'blog-detail', 'contact', 'login', 'profile', 'admin', 'privacy-policy', 'about-us', 'terms-conditions', 'disclaimer'].includes(path)) {
-        return path;
+      const pathParts = path.split('/');
+      const viewPart = pathParts[0];
+
+      if (viewPart && ['home', 'products', 'product-detail', 'blogs', 'blog-detail', 'contact', 'login', 'profile', 'admin', 'privacy-policy', 'about-us', 'terms-conditions', 'disclaimer'].includes(viewPart)) {
+        return viewPart;
       }
       return 'home';
     } catch {
       return 'home';
     }
   });
+
   const [selectedSlug, setSelectedSlug] = useState<string | null>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      return params.get('slug') || null;
+      if (params.has('slug')) return params.get('slug');
+
+      const path = window.location.pathname.replace(/^\/+/, '');
+      const pathParts = path.split('/');
+      if (pathParts.length > 1) {
+        return pathParts.slice(1).join('/'); 
+      }
+      return null;
     } catch {
       return null;
     }
@@ -228,14 +239,11 @@ const AppContent: React.FC = () => {
     try {
       const url = new URL(window.location.href);
       if (view === 'home' && !slug) {
+        url.pathname = '/';
         url.search = '';
       } else {
-        url.searchParams.set('view', view);
-        if (slug) {
-          url.searchParams.set('slug', slug);
-        } else {
-          url.searchParams.delete('slug');
-        }
+        url.pathname = '/' + view + (slug ? '/' + slug : '');
+        url.search = ''; // Clean old queries
       }
       
       // Store state in history to retrieve on back/forward
@@ -244,7 +252,7 @@ const AppContent: React.FC = () => {
       console.warn("Could not sync window history:", e);
     }
 
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
   };
 
   // Synchronize app state with browser history (back/forward buttons)
@@ -257,12 +265,29 @@ const AppContent: React.FC = () => {
       } else {
         // Fallback to URL parsing if state is missing
         const params = new URLSearchParams(window.location.search);
-        const view = params.get('view') || 'home';
-        const slug = params.get('slug') || null;
+        const viewUrl = params.get('view');
+        
+        const path = window.location.pathname.replace(/^\/+/, '');
+        const pathParts = path.split('/');
+        const viewPart = pathParts[0];
+        
+        let view = 'home';
+        let slug = null;
+
+        if (viewUrl) {
+          view = viewUrl;
+          slug = params.get('slug') || null;
+        } else if (viewPart && ['home', 'products', 'product-detail', 'blogs', 'blog-detail', 'contact', 'login', 'profile', 'admin', 'privacy-policy', 'about-us', 'terms-conditions', 'disclaimer'].includes(viewPart)) {
+          view = viewPart;
+          if (pathParts.length > 1) {
+             slug = pathParts.slice(1).join('/');
+          }
+        }
+        
         setActiveView(view);
         setSelectedSlug(slug);
       }
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -324,7 +349,7 @@ const AppContent: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.22, ease: "easeInOut" }}
-            className="w-full flex-grow flex flex-col"
+            className="w-full max-w-full overflow-x-hidden flex-grow flex flex-col"
           >
             {renderActiveView()}
           </motion.div>

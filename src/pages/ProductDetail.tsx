@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { Helmet } from 'react-helmet-async';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 
+import { Breadcrumb } from '../components/Breadcrumb';
+
 interface ProductDetailProps {
   productSlug: string;
   onNavigate: (view: string, slug?: string) => void;
@@ -377,7 +379,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const specMap = product.specifications || {};
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
+    <div className="w-full mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
       <Helmet>
         <title>{product ? `${product.name} - Specifications, Price & Review` : 'Product Details'} | gadgetsprohub</title>
         <meta name="description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
@@ -405,15 +407,19 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         <meta name="robots" content="index, follow" />
       </Helmet>
       
-      {/* 1. TOP BREADCRUMB HEADER */}
-      <div className="flex mb-8 md:px-4">
-        <button
-          onClick={() => onNavigate('products')}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer transition-all hover:border-slate-350"
-        >
-          <ChevronLeft className="h-4 w-4 text-slate-500 shrink-0" />
-          <span>Back to Showcase Catalog</span>
-        </button>
+      {/* TOP BREADCRUMB HEADER */}
+      <div className="md:px-4">
+        <Breadcrumb 
+          className="mb-8"
+          items={[
+          { label: 'Home', onClick: () => onNavigate('home') },
+          { label: 'Products', onClick: () => onNavigate('products') },
+          ...(product?.category ? [{ 
+            label: typeof product.category === 'object' ? product.category.name : 'Category', 
+            onClick: () => onNavigate('products', typeof product.category === 'object' ? `category-${product.category._id}` : `category-${product.category}`)
+          }] : []),
+          { label: product ? product.name : 'Loading...', isCurrentPage: true }
+        ]} />
       </div>
 
       {/* 2. BODY SPECS EXPAND PANEL */}
@@ -422,7 +428,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         {/* Left Side: Image Gallery */}
         <div className="w-full">
           {product && (
-            <div className="flex gap-4 md:flex-row flex-col-reverse items-start w-full">
+            <div className="flex gap-4 md:flex-row flex-col-reverse items-stretch md:items-start w-full">
               {/* Sibling thumbnails panel on the left of the main image */}
               {product.images && product.images.length > 0 && (
                 <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto max-h-[430px] md:w-20 w-full shrink-0 pr-1 scrollbar-none py-1">
@@ -461,7 +467,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               )}
 
               {/* Main Display Frame */}
-              <div className="flex-1 relative h-[430px] w-full rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-xs shrink-0 flex items-center justify-center bg-slate-100/50 dark:bg-slate-950/20">
+              <div className="flex-1 relative h-[260px] xs:h-[320px] sm:h-[430px] w-full rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-xs shrink-0 flex items-center justify-center bg-slate-100/50 dark:bg-slate-950/20">
                 {showVideo ? (
                   <div className="relative w-full h-full flex items-center justify-center bg-black">
                     <video
@@ -907,22 +913,24 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         <section className="mx-auto max-w-7xl md:px-4 mb-16 space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Full Specifications Index</h3>
           <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 overflow-hidden dark:border-slate-800">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850">
-                <tr>
-                  <th className="py-3 px-4 font-bold text-slate-500 uppercase">Parameter</th>
-                  <th className="py-3 px-4 font-bold text-slate-500 uppercase">Specification Metrics</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {Object.entries(specMap).map(([key, value]) => (
-                  <tr key={key} className="hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors">
-                    <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{key}</td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400 font-mono leading-relaxed">{String(value)}</td>
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left border-collapse text-xs min-w-[400px] sm:min-w-0">
+                <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850">
+                  <tr>
+                    <th className="py-3 px-4 font-bold text-slate-500 uppercase">Parameter</th>
+                    <th className="py-3 px-4 font-bold text-slate-500 uppercase">Specification Metrics</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {Object.entries(specMap).map(([key, value]) => (
+                    <tr key={key} className="hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors">
+                      <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{key}</td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-400 font-mono leading-relaxed">{String(value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       )}

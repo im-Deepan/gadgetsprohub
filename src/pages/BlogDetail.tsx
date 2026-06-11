@@ -3,6 +3,8 @@ import { Blog } from '../types';
 import { ArrowLeft, Clock, Eye, Share2, CornerDownLeft, Sparkle, Tag } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
+import { Breadcrumb } from '../components/Breadcrumb';
+
 interface BlogDetailProps {
   blogSlug: string;
   onNavigate: (view: string, slug?: string) => void;
@@ -98,7 +100,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
   }
 
   return (
-    <article className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
+    <article className="w-full mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
       <Helmet>
         <title>{blog ? `${blog.title} - Tech Insights` : 'Blog Details'} | gadgetsprohub</title>
         <meta name="description" content={blog?.excerpt || "Read our latest technology insights at gadgetsprohub."} />
@@ -127,18 +129,16 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       </Helmet>
       
       {/* Back button and share */}
-      <div className="flex items-center justify-between mb-8">
-        <button
-          onClick={() => onNavigate('blogs')}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer transition-all hover:border-slate-350"
-        >
-          <ArrowLeft className="h-4 w-4 text-slate-500 shrink-0" />
-          <span>Back to Buying Manuals</span>
-        </button>
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 mb-8 w-full">
+        <Breadcrumb items={[
+          { label: 'Home', onClick: () => onNavigate('home') },
+          { label: 'Blogs', onClick: () => onNavigate('blogs') },
+          { label: blog ? blog.title : 'Loading...', isCurrentPage: true }
+        ]} />
 
         <button
           onClick={handleShareClick}
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer"
+          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer"
         >
           <Share2 className="h-3.5 w-3.5" />
           {copiedLink ? '✓ Copied Link!' : 'Share Guide'}
@@ -177,7 +177,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       </div>
 
       {/* Featured Graphic banner */}
-      <div className="h-[360px] rounded-3xl overflow-hidden mb-10 shrink-0 select-none border border-slate-100 dark:border-slate-800">
+      <div className="w-full h-[200px] sm:h-[360px] rounded-3xl overflow-hidden mb-10 shrink-0 select-none border border-slate-100 dark:border-slate-800">
         <img
           src={blog.featured_image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200'}
           alt={blog.title}

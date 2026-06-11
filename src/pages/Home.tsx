@@ -8,6 +8,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { Helmet } from 'react-helmet-async';
+import { BorderGlow } from '../components/BorderGlow';
+import { GlareHover } from '../components/GlareHover';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 
 interface HomeProps {
@@ -359,42 +361,77 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         <meta name="robots" content="index, follow" />
       </Helmet>
 
-      {/* 1. HERO & ACCESSIBLE PRODUCT SEARCH BAR SECTION */}
-      <section className="bg-transparent py-14 border-b border-slate-200/50 dark:border-slate-800/50 text-center">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/50 px-4 py-1.5 text-xs font-bold text-indigo-900 dark:bg-indigo-950/20 dark:border-indigo-900/30 dark:text-indigo-300">
-            <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
-            <span>Carefully Checked Products & Direct Safe Links</span>
-          </div>
+      <section className="relative overflow-hidden py-24 sm:py-32 border-b border-slate-200/50 dark:border-slate-800/50 text-center flex flex-col justify-center items-center isolate">
+        {/* Decorative background gradients */}
+        <div className="absolute inset-x-0 top-[-10rem] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[-20rem]">
+          <div className="relative left-1/2 -z-10 aspect-[1155/678] w-[36.125rem] max-w-none -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-20 sm:left-[calc(50%-40rem)] sm:w-[72.1875rem]" style={{ clipPath: "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)" }}></div>
+        </div>
 
-          <h1 className="mt-6 text-3xl font-black tracking-tight text-[#1b365d] sm:text-5xl dark:text-white leading-tight">
-            <span className="text-[#1b365d] dark:text-indigo-400">Discover the Best Products Before You Buy</span>
-          </h1>
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+          
+          <motion.div
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/80 backdrop-blur-md px-5 py-2 text-xs font-bold text-indigo-900 shadow-sm dark:bg-indigo-950/30 dark:border-indigo-800/50 dark:text-indigo-300"
+          >
+            <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
+            <span className="tracking-wide uppercase">Carefully Checked Products & Direct Safe Links</span>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
+            className="mt-8 text-4xl font-black tracking-tighter text-slate-900 sm:text-6xl lg:text-7xl dark:text-white leading-[1.1]"
+          >
+            Discover the Best <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+              Products Before You Buy
+            </span>
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+            className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
+          >
+            Search thousands of curated gadgets, deep technical specifications, and verify reviews instantly.
+          </motion.p>
 
           {/* Large Focused Dynamic Action Search Bar */}
-          <div className="mt-8 mx-auto max-w-2xl relative" ref={searchContainerRef}>
-            <form onSubmit={handleHomeSearchSubmit} className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <Search className="h-5 w-5 text-slate-400 dark:text-slate-500" />
-              </span>
-              <input
-                type="text"
-                value={homeSearch}
-                onChange={(e) => setHomeSearch(e.target.value)}
-                onFocus={() => setShowDropdown(true)}
-                placeholder="Search products, brands, cameras, or tech items..."
-                className="w-full rounded-2xl border-2 border-slate-200 bg-white py-3.5 pl-13 pr-4 text-sm sm:text-base text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-600 dark:border-slate-800 dark:bg-[#070a14] dark:text-white focus:ring-0"
-              />
-              {homeSearch && (
-                <button 
-                  type="button"
-                  onClick={() => setHomeSearch('')}
-                  className="absolute inset-y-0 right-0 flex items-center pr-4 font-bold text-xs text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' }}
+            className="mt-10 mx-auto max-w-2xl relative" 
+            ref={searchContainerRef}
+          >
+            <form onSubmit={handleHomeSearchSubmit} className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none">
+                  <Search className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+                </span>
+                <input
+                  type="text"
+                  value={homeSearch}
+                  onChange={(e) => setHomeSearch(e.target.value)}
+                  onFocus={() => setShowDropdown(true)}
+                  placeholder="Search products, brands, tech items..."
+                  className="w-full rounded-[1.75rem] border border-slate-200/50 bg-white/90 backdrop-blur-md py-4 pl-14 pr-16 text-base text-slate-900 shadow-xl outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/50 dark:bg-slate-900/90 dark:text-white"
+                />
+                {homeSearch && (
+                  <button 
+                    type="button"
+                    onClick={() => setHomeSearch('')}
+                    className="absolute inset-y-0 right-4 flex items-center p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </form>
 
             {/* Premium Interactive Recent Searches Dropdown */}
@@ -442,7 +479,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
 
           {/* Quick Categories Filter (Max 5) */}
           <div className="mt-6 flex flex-wrap justify-center gap-2 max-w-3xl mx-auto">
@@ -517,12 +554,17 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           </div>
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
             {recentViewed.slice(0, 8).map(prod => (
-              <div 
+              <div
                 key={prod._id}
-                onClick={() => onNavigate('product-detail', prod.slug)}
-                className="w-48 sm:w-56 shrink-0 snap-start flex flex-col rounded-2xl border border-slate-200 bg-white hover:border-indigo-400 dark:border-slate-800 dark:bg-[#0c1224] transition-all cursor-pointer shadow-xs group"
+                className="group"
               >
-                <div className="h-32 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 overflow-hidden rounded-t-2xl relative">
+                <BorderGlow
+                  className="w-48 sm:w-56 shrink-0 snap-start flex flex-col rounded-2xl border border-slate-200/50 bg-white dark:border-slate-800/80 dark:bg-[#0c1224] transition-all cursor-pointer shadow-xs overflow-hidden"
+                  borderRadius={16}
+                >
+                  <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
+                  <div className="flex flex-col w-full h-full" onClick={() => onNavigate('product-detail', prod.slug)}>
+                    <div className="h-32 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 overflow-hidden rounded-t-2xl relative">
                   <img
                     src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300'}
                     alt={prod.name}
@@ -549,6 +591,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     {prod.name}
                   </h3>
                 </div>
+                </div>
+                </GlareHover>
+                </BorderGlow>
               </div>
             ))}
           </div>
@@ -611,32 +656,40 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 {/* Grid with exactly up to 4 latest images of the collection */}
                 <div className="grid grid-cols-2 gap-3 bg-slate-50/50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-100/60 dark:border-slate-900 min-h-[220px] items-center justify-center">
                   {latestFour.map(prod => (
-                    <div 
-                      key={prod._id}
-                      onClick={() => onNavigate('product-detail', prod.slug)}
-                      className="relative aspect-square bg-white dark:bg-[#0c1224] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-850 p-2 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-500/40 dark:hover:border-slate-700 hover:scale-[1.03] active:scale-[0.98] transition-all group/item shadow-2xs"
-                      title={`View ${prod.name}`}
-                    >
-                      {/* Rating Badge at the Top - Colorless style */}
-                      <div className="absolute top-1.5 left-1.5 bg-white/95 text-slate-900 dark:bg-slate-900/95 dark:text-white font-extrabold font-mono text-[8px] sm:text-[9.5px] rounded-md px-1.5 py-0.5 flex items-center gap-0.5 shadow-sm z-10 border border-slate-200 dark:border-slate-800">
-                        ★ {prod.rating || '4.8'}
-                      </div>
+                    <div className="group" key={prod._id}>
+                      <BorderGlow
+                        className="relative aspect-square bg-white dark:bg-[#0c1224] rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-850/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-500/40 dark:hover:border-slate-700 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
+                        borderRadius={16}
+                      >
+                      <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
+                      <div 
+                        onClick={() => onNavigate('product-detail', prod.slug)}
+                        className="w-full h-full p-2 flex flex-col items-center justify-between group/item"
+                        title={`View ${prod.name}`}
+                      >
+                        {/* Rating Badge at the Top - Colorless style */}
+                        <div className="absolute top-1.5 left-1.5 bg-white/95 text-slate-900 dark:bg-slate-900/95 dark:text-white font-extrabold font-mono text-[8px] sm:text-[9.5px] rounded-md px-1.5 py-0.5 flex items-center gap-0.5 shadow-sm z-10 border border-slate-200 dark:border-slate-800">
+                          ★ {prod.rating || '4.8'}
+                        </div>
 
-                      <div className="flex-grow flex items-center justify-center w-full min-h-0 pt-4">
-                        <img 
-                          src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=150'} 
-                          alt={prod.name}
-                          referrerPolicy="no-referrer"
-                          className="max-h-full max-w-full object-contain p-1 group-hover/item:scale-105 transition-transform duration-300"
-                        />
+                        <div className="flex-grow flex items-center justify-center w-full min-h-0 pt-4">
+                          <img 
+                            src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=150'} 
+                            alt={prod.name}
+                            referrerPolicy="no-referrer"
+                            className="max-h-full max-w-full object-contain p-1 group-hover/item:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        
+                        {/* Clean theme-adaptive text under the image */}
+                        <div className="w-full text-center mt-1.5 shrink-0 z-10">
+                          <p className="text-[9px] sm:text-[10px] font-extrabold text-slate-950 dark:text-white truncate px-0.5 font-sans">
+                            {prod.name}
+                          </p>
+                        </div>
                       </div>
-                      
-                      {/* Clean theme-adaptive text under the image */}
-                      <div className="w-full text-center mt-1.5 shrink-0 z-10">
-                        <p className="text-[9px] sm:text-[10px] font-extrabold text-slate-950 dark:text-white truncate px-0.5 font-sans">
-                          {prod.name}
-                        </p>
-                      </div>
+                      </GlareHover>
+                      </BorderGlow>
                     </div>
                   ))}
                   {/* Fill in empty slots if under 4 products */}
@@ -717,8 +770,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     whileHover={{ y: -4, transition: { duration: 0.2 } }}
                     transition={{ type: 'spring', damping: 25, stiffness: 180 }}
                     onClick={() => onNavigate('product-detail', prod.slug)}
-                    className="group flex flex-col rounded-2xl border border-slate-200 bg-white hover:border-indigo-500/40 dark:border-slate-850 dark:bg-[#0c1224] transition-all duration-200 overflow-hidden cursor-pointer shadow-xs"
+                    className="group"
                   >
+                    <BorderGlow
+                      className="flex flex-col rounded-2xl border border-slate-200/50 bg-white hover:border-indigo-500/40 dark:border-slate-850/80 dark:bg-[#0c1224] transition-all duration-200 overflow-hidden cursor-pointer shadow-xs"
+                      borderRadius={16}
+                    >
+                      <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
+                      <div className="flex flex-col w-full h-full">
                     {/* Image Area with Badge & Top Actions */}
                     <div className="relative h-32 sm:h-48 bg-slate-100 dark:bg-slate-900 overflow-hidden shrink-0 flex items-center justify-center p-2">
                       <img
@@ -796,6 +855,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         </div>
                       </div>
                     </div>
+                    </div>
+                    </GlareHover>
+                    </BorderGlow>
                   </motion.div>
                 ))}
               </AnimatePresence>

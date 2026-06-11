@@ -4,6 +4,7 @@ import { Search, Compass, BookOpen, Clock, ChevronRight } from 'lucide-react';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
+import { Breadcrumb } from '../components/Breadcrumb';
 
 interface BlogProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -74,6 +75,16 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
 
         <meta name="robots" content="index, follow" />
       </Helmet>
+
+      {/* BREADCRUMB */}
+      <Breadcrumb 
+        className="mb-8 max-w-2xl mx-auto"
+        items={[
+        { label: 'Home', onClick: () => onNavigate('home') },
+        { label: 'Buying Manuals', onClick: () => onNavigate('blogs'), isCurrentPage: !search && !selectedSub },
+        ...(selectedSub ? [{ label: selectedSub, isCurrentPage: !search }] : []),
+        ...(search ? [{ label: `Search: ${search}`, isCurrentPage: true }] : [])
+      ]} />
       
       {/* Editorial Header */}
       <div className="text-center max-w-2xl mx-auto space-y-4 mb-12">

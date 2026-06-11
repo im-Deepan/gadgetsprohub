@@ -128,18 +128,18 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-transparent">
+    <nav className="sticky top-0 z-50 w-full">
       {/* Scrollable translated header panel */}
       <div
-        className={`w-full border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 transition-transform duration-300 ease-in-out transform ${
-          isVisible ? 'translate-y-0' : '-translate-y-full'
+        className={`w-full border-b border-slate-200/50 bg-white/80 dark:border-slate-800/50 dark:bg-[#070a14]/80 backdrop-blur-xl transition-all duration-300 ease-in-out transform ${
+          isVisible ? 'translate-y-0' : '-translate-y-full shadow-sm'
         }`}
       >
         {/* Top running longitudinal colored accent line */}
-        <div className="h-[3.5px] w-full bg-transparent" />
+        <div className={`h-[3.5px] w-full ${getGradientClass(colorFlowDir)} object-cover shadow-sm`} />
       
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-4">
+        <div className="flex h-16 sm:h-20 items-center justify-between gap-4">
           
           {/* Brand & Left burger trigger */}
           <div className="flex items-center gap-2 sm:gap-3">
@@ -267,20 +267,18 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
           {/* Right Header Icons */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Dark Mode Toggle */}
-            {currentView === 'home' && (
-              <button
-                onClick={toggleTheme}
-                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-650 shadow-sm hover:bg-slate-50 hover:text-indigo-650 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-all cursor-pointer hover:scale-105 active:scale-95"
-                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                aria-label="Toggle theme"
-              >
-                {isDark ? (
-                  <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
-                ) : (
-                  <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-[#1b365d]" />
-                )}
-              </button>
-            )}
+            <button
+              onClick={toggleTheme}
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-650 shadow-sm hover:bg-slate-50 hover:text-indigo-650 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-all cursor-pointer hover:scale-105 active:scale-95"
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle theme"
+            >
+              {isDark ? (
+                <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+              ) : (
+                <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-[#1b365d]" />
+              )}
+            </button>
 
             {/* Wishlist Link - Desktop */}
             {isAuthenticated && (
