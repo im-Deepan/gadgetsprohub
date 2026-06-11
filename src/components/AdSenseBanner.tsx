@@ -20,14 +20,22 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
+        let attempts = 0;
+        const maxAttempts = 30;
+
         // Wait until element has width before pushing
         const checkVisibility = () => {
           if (adElement.current && !adElement.current.getAttribute('data-adsbygoogle-status')) {
-            const adsbygoogle = (window as any).adsbygoogle || [];
-            try {
-              adsbygoogle.push({});
-            } catch (e) {
-              console.warn('AdSense push error:', e);
+            if (adElement.current.offsetWidth > 0) {
+              const adsbygoogle = (window as any).adsbygoogle || [];
+              try {
+                adsbygoogle.push({});
+              } catch (e) {
+                console.warn('AdSense push error:', e);
+              }
+            } else if (attempts < maxAttempts) {
+              attempts++;
+              setTimeout(checkVisibility, 200);
             }
           }
         };
