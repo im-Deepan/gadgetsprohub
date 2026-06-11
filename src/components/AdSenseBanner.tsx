@@ -10,9 +10,9 @@ interface AdSenseBannerProps {
 
 export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   slot,
-  format = 'horizontal',
+  format = 'auto',
   responsive = 'true',
-  style = { display: 'block', minWidth: '250px', width: '100%', height: '90px' },
+  style = { display: 'block' },
   className = '',
 }) => {
   const adElement = useRef<HTMLModElement>(null);
