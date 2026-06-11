@@ -30,7 +30,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
       const isAdminUser = user.role === 'admin';
       if (isAdminUser) {
         try {
-          window.open('/?view=admin', '_blank');
+          window.open('/admin', '_blank');
         } catch (e) {
           console.warn("Popup block prevented opening tab:", e);
         }

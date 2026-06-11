@@ -964,36 +964,98 @@ async function startServer() {
     res.send('Contact: mailto:security@gadgetsprohub.com\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en');
   });
 
-  app.get('/sitemap.xml', (req, res) => {
+  app.get('/sitemap.xml', async (req, res) => {
     // Dynamically resolve base URL to support both Render fallback domain and custom domains
     const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
     const host = req.get('host') || 'gadgetsprohub.com';
     const baseUrl = `${protocol}://${host}`;
 
+    let productsList: { slug: string; updatedAt?: any; createdAt?: any }[] = [];
+    let blogsList: { slug: string; updatedAt?: any; createdAt?: any }[] = [];
+
+    try {
+      if (isMongoConnected) {
+        productsList = await Product.find({}, 'slug updatedAt createdAt').lean() as any[];
+        blogsList = await Blog.find({ published: true }, 'slug updatedAt createdAt').lean() as any[];
+      } else {
+        productsList = (localProducts || []).map((p: any) => ({
+          slug: p.slug,
+          updatedAt: p.updatedAt || p.createdAt,
+        }));
+        blogsList = (localBlogs || []).map((b: any) => ({
+          slug: b.slug,
+          updatedAt: b.updatedAt || b.createdAt,
+        }));
+      }
+    } catch (e) {
+      console.warn("Sitemap production/blog query error:", e);
+    }
+
+    const staticUrls = [
+      { path: '', changefreq: 'daily', priority: '1.0' },
+      { path: 'products', changefreq: 'daily', priority: '0.9' },
+      { path: 'blogs', changefreq: 'weekly', priority: '0.8' },
+      { path: 'contact', changefreq: 'monthly', priority: '0.6' },
+      { path: 'about-us', changefreq: 'monthly', priority: '0.5' },
+      { path: 'privacy-policy', changefreq: 'monthly', priority: '0.4' },
+      { path: 'terms-conditions', changefreq: 'monthly', priority: '0.4' },
+      { path: 'disclaimer', changefreq: 'monthly', priority: '0.4' },
+    ];
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+    // Static pages
+    const todayStr = new Date().toISOString().split('T')[0];
+    for (const item of staticUrls) {
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}/${item.path}</loc>\n`;
+      xml += `    <lastmod>${todayStr}</lastmod>\n`;
+      xml += `    <changefreq>${item.changefreq}</changefreq>\n`;
+      xml += `    <priority>${item.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Dynamic products
+    for (const prod of productsList) {
+      if (!prod.slug) continue;
+      const dateVal = prod.updatedAt || prod.createdAt || new Date();
+      let dateStr = todayStr;
+      try {
+        dateStr = new Date(dateVal).toISOString().split('T')[0];
+      } catch {
+        dateStr = todayStr;
+      }
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}/product-detail/${prod.slug}</loc>\n`;
+      xml += `    <lastmod>${dateStr}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.8</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Dynamic blogs
+    for (const blog of blogsList) {
+      if (!blog.slug) continue;
+      const dateVal = blog.updatedAt || blog.createdAt || new Date();
+      let dateStr = todayStr;
+      try {
+        dateStr = new Date(dateVal).toISOString().split('T')[0];
+      } catch {
+        dateStr = todayStr;
+      }
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}/blog-detail/${blog.slug}</loc>\n`;
+      xml += `    <lastmod>${dateStr}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.7</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+
     res.type('application/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${baseUrl}/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/?view=products</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/?view=blogs</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/?view=contact</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-</urlset>`);
+    res.send(xml);
   });
 
   // Auth Routes

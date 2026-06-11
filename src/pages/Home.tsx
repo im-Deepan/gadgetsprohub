@@ -12,6 +12,8 @@ import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 import { LazySection } from '../components/LazySection';
+import { FeaturedCollections } from '../components/FeaturedCollections';
+import { RecentViewedMarquee } from '../components/RecentViewedMarquee';
 
 interface HomeProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -222,9 +224,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     
     if (activeCategory === 'all') {
       return matchesSearch;
+    } else if (activeCategory === 'trending') {
+      return matchesSearch && !!prod.trending;
     } else {
       const prodCatId = (prod.category && typeof prod.category === 'object') ? prod.category._id : prod.category;
-      return matchesSearch && prodCatId === activeCategory;
+      return matchesSearch && String(prodCatId) === String(activeCategory);
     }
   });
 
@@ -249,42 +253,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   // Dynamically group products into collections/categories with their latest 4 product images
   const collectionsData = React.useMemo(() => {
     const list: any[] = [];
-
-    // Add Trending Choices as a special curated collection if general/trending is active
-    if (activeCategory === 'all' || activeCategory === 'trending') {
-      let trendingProducts = allProducts.filter(p => p.trending);
-
-      // Filter by search query if user typed in the hero search bar
-      if (homeSearch.trim()) {
-        const query = homeSearch.toLowerCase();
-        trendingProducts = trendingProducts.filter(prod => 
-          prod.name.toLowerCase().includes(query) ||
-          (prod.brand && prod.brand.toLowerCase().includes(query)) ||
-          prod.description.toLowerCase().includes(query)
-        );
-      }
-
-      // Sort by latest added/updated
-      const sortedTrending = [...trendingProducts].sort((a, b) => {
-        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        if (bTime !== aTime) return bTime - aTime;
-        return String(b._id).localeCompare(String(a._id));
-      });
-
-      if (sortedTrending.length > 0) {
-        list.push({
-          category: {
-            _id: 'trending',
-            name: 'Top Recommendations & Trending Choices',
-            description: 'Curated premium performance gear and trending choice recommendations updated in real-time.',
-            slug: 'trending'
-          },
-          products: sortedTrending,
-          latestFour: sortedTrending.slice(0, 4)
-        });
-      }
-    }
 
     // Filter standard categories based on activeCategory
     const filteredCats = activeCategory === 'all' 
@@ -534,72 +502,27 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
       {/* Pick where you left off */}
       {recentViewed.length > 0 && activeCategory === 'all' && (
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-4 border-b border-slate-200/60 pb-3 dark:border-slate-800">
-            <div className="flex items-center gap-2">
-              <History className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-              <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                Pick where you left
-              </h2>
-            </div>
-            <button 
-              onClick={() => {
-                setRecentViewed([]);
-                localStorage.removeItem('aff_recent_viewed');
-                localStorage.setItem('aff_history_cleared', 'true');
-              }}
-              className="text-xs font-bold text-slate-400 hover:text-rose-500 transition-colors bg-transparent border-none cursor-pointer p-0"
-            >
-              Clear history
-            </button>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
-            {recentViewed.slice(0, 8).map(prod => (
-              <div
-                key={prod._id}
-                className="group"
-              >
-                <BorderGlow
-                  className="w-48 sm:w-56 shrink-0 snap-start flex flex-col rounded-2xl border border-slate-200/50 bg-white dark:border-slate-800/80 dark:bg-[#0c1224] transition-all cursor-pointer shadow-xs overflow-hidden"
-                  borderRadius={16}
-                >
-                  <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
-                  <div className="flex flex-col w-full h-full" onClick={() => onNavigate('product-detail', prod.slug)}>
-                    <div className="h-32 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 overflow-hidden rounded-t-2xl relative">
-                  <img
-                    src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300'}
-                    alt={prod.name}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
-                  />
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onNavigate('products', `spec-${prod.slug}`);
-                    }}
-                    className="absolute bottom-2 left-2 bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-white font-extrabold font-mono text-[9px] rounded-lg px-2 py-1 flex items-center gap-1 shadow-md z-15 cursor-pointer border-none"
-                    title="View Technical Specifications"
-                  >
-                    ★ {prod.rating || '4.8'}
-                  </button>
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 font-mono truncate">{prod.brand || 'Item'}</span>
-                  </div>
-                  <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    {prod.name}
-                  </h3>
-                </div>
-                </div>
-                </GlareHover>
-                </BorderGlow>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}      {/* 2. CURATED COLLECTIONS BOARD */}
+        <RecentViewedMarquee
+          recentViewed={recentViewed}
+          onNavigate={onNavigate}
+          onClear={() => {
+            setRecentViewed([]);
+            localStorage.removeItem('aff_recent_viewed');
+            localStorage.setItem('aff_history_cleared', 'true');
+          }}
+        />
+      )}
+
+      {/* FEATURED SPOTLIGHTS BENTO BANNER */}
+      {!loading && allProducts.length > 0 && (
+        <FeaturedCollections
+          onNavigate={onNavigate}
+          allProducts={allProducts}
+          categories={categories}
+        />
+      )}
+
+      {/* 2. CURATED COLLECTIONS BOARD */}
       <LazySection placeholder={
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           <div className="h-6 w-48 bg-slate-200/50 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
