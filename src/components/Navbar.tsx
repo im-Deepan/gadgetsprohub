@@ -131,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
     <nav className="sticky top-0 z-50 w-full">
       {/* Scrollable translated header panel */}
       <div
-        className={`w-full border-b border-slate-200/50 bg-white/80 dark:border-slate-800/50 dark:bg-[#070a14]/80 backdrop-blur-xl transition-all duration-300 ease-in-out transform ${
+        className={`w-full border-b border-slate-200/50 bg-white/80 dark:border-slate-800/50 dark:bg-black/85 backdrop-blur-xl transition-all duration-300 ease-in-out transform ${
           isVisible ? 'translate-y-0' : '-translate-y-full shadow-sm'
         }`}
       >

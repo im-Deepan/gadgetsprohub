@@ -89,14 +89,14 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   };
 
   useEffect(() => {
-    document.documentElement.style.backgroundColor = isDark ? '#0b0202' : '#f8fafc';
+    document.documentElement.style.backgroundColor = isDark ? '#000000' : '#f8fafc';
     return () => {
       document.documentElement.style.backgroundColor = '';
     };
   }, [isDark]);
 
   return (
-    <div className="flex-grow w-full mx-auto px-4 py-16 flex flex-col justify-center items-center gap-4 bg-slate-50 dark:bg-[#0b0202]">
+    <div className="flex-grow w-full mx-auto px-4 py-16 flex flex-col justify-center items-center gap-4 bg-slate-50 dark:bg-black">
       
       {/* High Visibility Floating Back Button */}
       <button

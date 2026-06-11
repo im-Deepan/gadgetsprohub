@@ -11,6 +11,7 @@ import { Helmet } from 'react-helmet-async';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
 import { AdSenseBanner } from '../components/AdSenseBanner';
+import { LazySection } from '../components/LazySection';
 
 interface HomeProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -334,7 +335,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="space-y-16 pb-20 bg-slate-50 dark:bg-[#070a14] transition-colors duration-300 text-slate-900 dark:text-slate-100">
+    <div className="space-y-16 pb-20 bg-slate-50 dark:bg-black transition-colors duration-300 text-slate-900 dark:text-slate-100">
       <Helmet>
         <title>gadgetsprohub | Premium Electronics & Smart Gear Directory</title>
         <meta name="description" content="Discover trending, premium electronics and detailed specifications. Find honest reviews and the best deals on smartphones, laptops, audio gear, and wearables at gadgetsprohub." />
@@ -363,7 +364,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
       <section className="relative overflow-hidden py-24 sm:py-32 border-b border-slate-200/50 dark:border-slate-800/50 text-center flex flex-col justify-center items-center isolate">
         {/* Decorative background gradients */}
-        <div className="absolute inset-x-0 top-[-10rem] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[-20rem]">
+        <div className="absolute inset-x-0 top-[-10rem] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[-20rem] dark:hidden">
           <div className="relative left-1/2 -z-10 aspect-[1155/678] w-[36.125rem] max-w-none -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-20 sm:left-[calc(50%-40rem)] sm:w-[72.1875rem]" style={{ clipPath: "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)" }}></div>
         </div>
 
@@ -599,6 +600,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           </div>
         </section>
       )}      {/* 2. CURATED COLLECTIONS BOARD */}
+      <LazySection placeholder={
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+          <div className="h-6 w-48 bg-slate-200/50 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-3xl animate-pulse"></div>
+            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-3xl animate-pulse hidden md:block"></div>
+            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-3xl animate-pulse hidden lg:block"></div>
+          </div>
+        </div>
+      }>
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 mb-8 border-b border-slate-200/60 pb-3 dark:border-slate-800">
           <Trophy className="h-5 w-5 text-slate-600 dark:text-slate-450" />
@@ -658,7 +669,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                   {latestFour.map(prod => (
                     <div className="group" key={prod._id}>
                       <BorderGlow
-                        className="relative aspect-square bg-white dark:bg-[#0c1224] rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-850/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-500/40 dark:hover:border-slate-700 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
+                        className="relative aspect-square bg-white dark:bg-[#0c1224] rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-855/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-500/40 dark:hover:border-slate-700 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
                         borderRadius={16}
                       >
                       <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
@@ -718,6 +729,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           </div>
         )}
       </section>
+      </LazySection>
 
       {/* Dynamic AdSense Placement Unit */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -725,6 +737,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       </div>
 
       {/* 3. COMPREHENSIVE PRODUCT CATALOG LISTING MATCHING USER INTENT */}
+      <LazySection placeholder={
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+          <div className="h-6 w-52 bg-slate-200/50 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-2xl animate-pulse"></div>
+            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-2xl animate-pulse"></div>
+            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-2xl animate-pulse hidden lg:block"></div>
+          </div>
+        </div>
+      }>
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8 border-b border-slate-200/60 pb-3 dark:border-slate-800">
           <div className="flex items-center gap-2">
@@ -884,6 +906,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           </div>
         )}
       </section>
+      </LazySection>
 
 
 

@@ -16,16 +16,26 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('aff_theme');
-      return saved ? JSON.parse(saved) : true;
-    } catch {
-      return true;
-    }
-  });
+  const [isDark, setIsDark] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
 
   useEffect(() => {
+    setMounted(true);
+    try {
+      const saved = localStorage.getItem('aff_theme');
+      if (saved !== null) {
+        setIsDark(JSON.parse(saved));
+      } else {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setIsDark(systemPrefersDark);
+      }
+    } catch {
+      // Ignore storage blocks in secure embeds
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     try {
       localStorage.setItem('aff_theme', JSON.stringify(isDark));
     } catch {
@@ -37,7 +47,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [isDark]);
+  }, [isDark, mounted]);
 
   const toggleTheme = () => setIsDark(prev => !prev);
 

@@ -78,7 +78,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
   };
 
   return (
-    <footer className="w-full border-t border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 transition-colors duration-300">
+    <footer className="w-full border-t border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-black dark:text-slate-300 transition-colors duration-300">
       
       {/* Top Banner Ethical Disclosure */}
       {isHomePage && (
