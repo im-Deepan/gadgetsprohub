@@ -856,7 +856,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsFilterOpen(false)}
+              aria-label="Close Filters" onClick={() => setIsFilterOpen(false)}
               className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs cursor-pointer"
             />
 
@@ -921,7 +921,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                         <button
                           onClick={() => { setSearch(''); setCurrentPage(1); }}
                           className="absolute right-2.5 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                          title="Clear input"
+                          title="Clear input" aria-label="Clear input"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -951,7 +951,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                             <button
                               onClick={(e) => handleRemoveRecentSearch(e, query)}
                               className="text-slate-400 hover:text-rose-500 rounded-full transition-colors cursor-pointer"
-                              title="Remove search"
+                              title="Remove search" aria-label="Remove search"
                             >
                               <X className="h-2.5 w-2.5" />
                             </button>
@@ -1131,7 +1131,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 <button
                   onClick={() => setSpecModalProduct(null)}
                   className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-750 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                  title="Close Specifications"
+                  title="Close Specifications" aria-label="Close Specifications"
                 >
                   <X className="h-5 w-5" />
                 </button>

@@ -292,7 +292,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                     className="group border border-slate-200 bg-white rounded-2xl overflow-hidden dark:border-slate-850 dark:bg-slate-900 flex flex-col justify-between"
                   >
                     <div className="h-32 bg-slate-100 relative shrink-0">
-                      <img src={p.images?.[0]} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img loading="lazy" src={p.images?.[0]} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       
                       <button
                         onClick={() => handleRemoveBookmark(p._id)}

@@ -446,7 +446,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                           : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                       }`}
                     >
-                      <img src={img} alt={`Thumb ${idx}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                      <img loading="lazy" src={img} alt={`Thumb ${idx}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                     </button>
                   ))}
 
@@ -1093,7 +1093,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 className="group cursor-pointer rounded-xl border border-slate-100 bg-white hover:shadow-md overflow-hidden transition-all dark:border-slate-800 dark:bg-slate-900"
               >
                 <div className="h-28 sm:h-36 bg-slate-100 overflow-hidden shrink-0">
-                  <img src={rel.images?.[0]} alt={rel.name} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
+                  <img loading="lazy" src={rel.images?.[0]} alt={rel.name} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
                 </div>
                 <div className="p-2.5 sm:p-3.5">
                   <h4 className="text-[11px] sm:text-xs font-bold text-slate-800 truncate dark:text-white group-hover:text-indigo-600">{rel.name}</h4>

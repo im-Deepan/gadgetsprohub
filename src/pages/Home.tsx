@@ -420,12 +420,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                   onChange={(e) => setHomeSearch(e.target.value)}
                   onFocus={() => setShowDropdown(true)}
                   placeholder="Search products, brands, tech items..."
-                  className="w-full rounded-[1.75rem] border border-slate-200/50 bg-white/90 backdrop-blur-md py-4 pl-14 pr-16 text-base text-slate-900 shadow-xl outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/50 dark:bg-slate-900/90 dark:text-white"
+                  className="w-full rounded-[1.75rem] border border-slate-200/50 bg-white/90 backdrop-blur-md py-4 pl-14 pr-16 text-base text-slate-900 shadow-xl outline-none transition-all placeholder:text-slate-500 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/50 dark:bg-slate-900/90 dark:text-white"
                 />
                 {homeSearch && (
                   <button 
                     type="button"
-                    onClick={() => setHomeSearch('')}
+                    aria-label="Clear search" onClick={() => setHomeSearch('')}
                     className="absolute inset-y-0 right-4 flex items-center p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-all cursor-pointer"
                   >
                     <X className="h-4 w-4" />
@@ -468,7 +468,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                       </span>
                       <button
                         type="button"
-                        onClick={(e) => handleRemoveRecentSearch(e, query)}
+                        aria-label="Remove recent search" onClick={(e) => handleRemoveRecentSearch(e, query)}
                         className="rounded-md p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-all cursor-pointer border-none bg-transparent"
                         title="Remove Search"
                       >
@@ -673,7 +673,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         </div>
 
                         <div className="flex-grow flex items-center justify-center w-full min-h-0 pt-4">
-                          <img 
+                          <img loading="lazy" 
                             src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=150'} 
                             alt={prod.name}
                             referrerPolicy="no-referrer"
@@ -796,7 +796,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleWishlist(prod._id); }}
                           className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-xs hover:text-rose-500 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:text-rose-500 transition-colors cursor-pointer border-none"
-                          title="Bookmark product"
+                          title="Bookmark product" aria-label="Bookmark product"
                         >
                           <Heart className={`h-3.5 w-3.5 ${wishlist.includes(prod._id) ? 'fill-rose-500 text-rose-500' : ''}`} />
                         </button>

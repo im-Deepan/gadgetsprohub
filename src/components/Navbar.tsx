@@ -215,7 +215,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                   onChange={handleSearchChange}
                   onFocus={() => searchQuery.length > 1 && setShowResults(true)}
                   onBlur={() => setTimeout(() => setShowResults(false), 300)}
-                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 pl-10 pr-4 text-xs text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950"
+                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 pl-10 pr-4 text-xs text-slate-900 outline-none transition-all placeholder:text-slate-500 focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950"
                 />
               </div>
             </form>
@@ -284,6 +284,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
             {isAuthenticated && (
               <button
                 onClick={() => onNavigate('profile')}
+                aria-label="Your bookmarks"
                 className="hidden sm:flex relative h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-indigo-650 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Your bookmarks"
               >
@@ -303,6 +304,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                   {isAdmin && (
                     <button
                       onClick={() => onNavigate('admin')}
+                      aria-label="Admin Dashboard"
                       className={`flex h-8 w-8 sm:h-auto sm:w-auto items-center justify-center sm:gap-1.5 rounded-full sm:px-3 sm:py-1.5 text-xs font-semibold cursor-pointer border ${currentView === 'admin' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800'}`}
                       title={isAdmin ? "Admin Dashboard" : undefined}
                     >
@@ -323,6 +325,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
 
                   <button
                     onClick={handleLogout}
+                    aria-label="Sign Out"
                     className="hidden sm:flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-rose-500 shadow-sm hover:bg-rose-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                     title="Sign Out"
                   >
@@ -376,6 +379,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 </div>
                 <button
                   onClick={() => setShowMobileMenu(false)}
+                  aria-label="Close menu"
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-900 dark:hover:bg-slate-850 dark:text-slate-350 cursor-pointer transition-colors"
                   title="Close menu"
                 >

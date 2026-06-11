@@ -808,7 +808,17 @@ async function startServer() {
   // Security Headers and Reverse Proxy configuration
   app.set('trust proxy', 1);
   app.use(helmet({
-    contentSecurityPolicy: false, // relax for AI Studio preview frame
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://pagead2.googlesyndication.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+        imgSrc: ["'self'", "data:", "blob:", "https:", "*"],
+        connectSrc: ["'self'", "wss:", "https:"],
+        frameAncestors: ["*"],
+      }
+    },
     frameguard: false,           // allow container embedding
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginOpenerPolicy: false,
@@ -941,6 +951,16 @@ async function startServer() {
   app.get('/robots.txt', (req, res) => {
     res.type('text/plain');
     res.send('User-agent: *\nAllow: /\nSitemap: /sitemap.xml');
+  });
+
+  app.get('/.well-known/security.txt', (req, res) => {
+    res.type('text/plain');
+    res.send('Contact: mailto:security@gadgetsprohub.com\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en');
+  });
+
+  app.get('/security.txt', (req, res) => {
+    res.type('text/plain');
+    res.send('Contact: mailto:security@gadgetsprohub.com\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en');
   });
 
   app.get('/sitemap.xml', (req, res) => {

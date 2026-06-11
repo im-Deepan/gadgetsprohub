@@ -118,6 +118,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                 onClick={() => trackSocialClick('instagram')}
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-indigo-600 hover:text-white dark:bg-slate-900 transition-colors cursor-pointer"
                 title="Follow us on Instagram"
+                aria-label="Follow us on Instagram"
               >
                 <Instagram className="h-4 w-4" />
               </a>
@@ -128,6 +129,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                 onClick={() => trackSocialClick('linkedin')}
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-indigo-600 hover:text-white dark:bg-slate-900 transition-colors cursor-pointer"
                 title="Connect with us on LinkedIn"
+                aria-label="Connect with us on LinkedIn"
               >
                 <Linkedin className="h-4 w-4" />
               </a>
@@ -235,6 +237,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                   <button
                     type="submit"
                     disabled={loading}
+                    aria-label="Subscribe to newsletter"
                     className="absolute top-1 right-1 flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                   >
                     <Send className="h-3 w-3" />
