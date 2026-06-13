@@ -377,26 +377,38 @@ const adminOnly = (req: express.Request, res: express.Response, next: express.Ne
     
     if (isMongoConnected) {
       User.findById(userId).then(user => {
-        if (user && isAdminEmail(user.email)) {
+        if (!user) return res.status(403).json({ error: 'Administrative privileges required' });
+        
+        if (isAdminEmail(user.email)) {
           if (user.role !== 'admin') {
             user.role = 'admin';
             user.save().catch(e => console.warn("Failed automatic database role promotion:", e));
           }
           return next();
         }
-        if (user?.role !== 'admin') return res.status(403).json({ error: 'Administrative privileges required' });
-        next();
+        
+        if (user.role === 'admin') {
+          return next();
+        }
+        
+        return res.status(403).json({ error: 'Administrative privileges required' });
       }).catch(err => {
         res.status(500).json({ error: err.message });
       });
     } else {
       const u = localUsers.find(user => user._id === userId);
-      if (u && isAdminEmail(u.email)) {
+      if (!u) return res.status(403).json({ error: 'Administrative privileges required' });
+      
+      if (isAdminEmail(u.email)) {
         u.role = 'admin';
         return next();
       }
-      if (u?.role !== 'admin') return res.status(403).json({ error: 'Administrative privileges required' });
-      next();
+      
+      if (u.role === 'admin') {
+        return next();
+      }
+      
+      return res.status(403).json({ error: 'Administrative privileges required' });
     }
   });
 };
@@ -1040,7 +1052,7 @@ async function startServer() {
         const defaultAnalytics = [
           { productId: earbudId, affiliateCode: "AUDIO001", eventType: "click", district: "Chennai", timestamp: new Date(Date.now() - 3600000 * 4), browser: "Chrome", device: "Desktop", pageUrl: "home" },
           { productId: earbudId, userId: userId1, affiliateCode: "AUDIO001", eventType: "view", district: "Madurai", timestamp: new Date(Date.now() - 3600000 * 3), browser: "Safari", device: "Mobile", pageUrl: "home" },
-          { productId: watchId, affiliateCode: "WATCH001", eventType: "click", district: "Tirunelveli", timestamp: new Date(Date.now() - 3600005 * 2), browser: "Firefox", device: "Desktop", pageUrl: "products" },
+          { productId: watchId, affiliateCode: "WATCH001", eventType: "click", district: "Tirunelveli", timestamp: new Date(Date.now() - 3600000 * 2), browser: "Firefox", device: "Desktop", pageUrl: "products" },
           { productId: watchId, userId: userId2, affiliateCode: "WATCH001", eventType: "conversion", district: "Virudhunagar", timestamp: new Date(Date.now() - 3600000 * 1), browser: "Chrome", device: "Mobile", pageUrl: "products" }
         ];
 
@@ -1219,7 +1231,11 @@ async function startServer() {
         }
         
         const user = new User({ email: storageEmail, password, name, role: initialRole });
-        await user.save();
+        try {
+          await user.save();
+        } catch (saveError: any) {
+          return res.status(400).json({ error: 'Failed to create user account: ' + saveError.message });
+        }
         const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
       } else {
@@ -2305,7 +2321,7 @@ async function startServer() {
             eventType: 'page_visit',
             pageUrl,
             ipAddress,
-            userId: null,
+            $or: [{ userId: null }, { userId: { $exists: false } }],
             timestamp: { $gte: fifteenMinutesAgo }
           });
         }
@@ -2341,7 +2357,7 @@ async function startServer() {
             a.eventType === 'page_visit' &&
             a.pageUrl === pageUrl &&
             String(a.userId) === String(userId) &&
-            new Date(a.timestamp).getTime() >= fifteenMinutesAgo
+            new Date(a.timestamp || new Date()).getTime() >= fifteenMinutesAgo
           );
         } else {
           existingLocalIdx = localAnalytics.findIndex(a => 
@@ -2349,7 +2365,7 @@ async function startServer() {
             a.pageUrl === pageUrl &&
             a.ipAddress === ipAddress &&
             !a.userId &&
-            new Date(a.timestamp).getTime() >= fifteenMinutesAgo
+            new Date(a.timestamp || new Date()).getTime() >= fifteenMinutesAgo
           );
         }
 
@@ -3032,7 +3048,8 @@ async function startServer() {
         const today = new Date();
         const dayOfWeek = today.getDay();
         const sundayDate = new Date(today);
-        const diff = today.getDate() - dayOfWeek;
+        const backDays = dayOfWeek === 0 ? 7 : dayOfWeek;
+        const diff = today.getDate() - backDays;
         sundayDate.setDate(diff);
         sundayDateString = sundayDate.toISOString().split('T')[0];
       }
