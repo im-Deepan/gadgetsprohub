@@ -2357,7 +2357,7 @@ async function startServer() {
             a.eventType === 'page_visit' &&
             a.pageUrl === pageUrl &&
             String(a.userId) === String(userId) &&
-            new Date(a.timestamp || new Date()).getTime() >= fifteenMinutesAgo
+            new Date(a?.timestamp ?? new Date()).getTime() >= fifteenMinutesAgo
           );
         } else {
           existingLocalIdx = localAnalytics.findIndex(a => 
@@ -2365,7 +2365,7 @@ async function startServer() {
             a.pageUrl === pageUrl &&
             a.ipAddress === ipAddress &&
             !a.userId &&
-            new Date(a.timestamp || new Date()).getTime() >= fifteenMinutesAgo
+            new Date(a?.timestamp ?? new Date()).getTime() >= fifteenMinutesAgo
           );
         }
 
