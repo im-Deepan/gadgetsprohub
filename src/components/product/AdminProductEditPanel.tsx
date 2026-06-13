@@ -49,7 +49,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
       </div>
 
       {isAdminEditVisible && (
-        <form onSubmit={handleAdminEditSubmit} className="space-y-2.5 pt-1 text-slate-805 dark:text-slate-100">
+        <form onSubmit={handleAdminEditSubmit} className="space-y-2.5 pt-1 text-slate-800 dark:text-slate-100">
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Product Title</label>
             <input
@@ -98,7 +98,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
             <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Affiliate Destination Link / Shop URL</label>
             <input
               type="text"
-              className="w-full text-xs p-2 rounded-lg border border-indigo-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono text-indigo-650 dark:text-indigo-400"
+              className="w-full text-xs p-2 rounded-lg border border-indigo-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono text-indigo-600 dark:text-indigo-400"
               value={adminEditForm.affiliateLink}
               onChange={e => setAdminEditForm({ ...adminEditForm, affiliateLink: e.target.value })}
               required
@@ -180,7 +180,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
           </button>
 
           {adminEditSuccess && (
-            <div className="bg-emerald-50 text-emerald-850 dark:bg-emerald-950/40 dark:text-emerald-350 p-2.5 rounded-lg text-center text-[11px] font-bold border border-emerald-200/45">
+            <div className="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-350 p-2.5 rounded-lg text-center text-[11px] font-bold border border-emerald-200/45">
               ✓ Product details & affiliate referral redirect saved live on website!
             </div>
           )}

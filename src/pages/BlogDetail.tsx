@@ -43,7 +43,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 animate-pulse text-slate-805 dark:text-slate-100">
+      <div className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 animate-pulse text-slate-800 dark:text-slate-100">
         {/* Breadcrumb Skeleton */}
         <div className="flex mb-8">
           <div className="h-9 w-40 bg-slate-200 dark:bg-slate-800 rounded-full"></div>

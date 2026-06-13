@@ -125,7 +125,7 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
             Featured
           </span>
         </div>
-        <p className="text-xs text-slate-505 dark:text-slate-400 font-sans mt-1 md:mt-0">
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-sans mt-1 md:mt-0">
           Auto-rotating highlights. Swipe or tap arrows to browse active specifications and collections.
         </p>
       </div>
@@ -265,7 +265,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className="bg-white dark:bg-[#0c1224] rounded-2xl border border-slate-200/80 dark:border-slate-800 p-2.5 flex flex-col justify-between shadow-xs transition-transform active:scale-[0.99] w-full min-h-[295px] overflow-hidden group"
+      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-2.5 flex flex-col justify-between shadow-xs transition-transform active:scale-[0.99] w-full min-h-[295px] overflow-hidden group"
     >
       <div className="flex flex-col w-full">
         {/* Aspect square image stage */}
@@ -478,12 +478,12 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md dark:border-slate-800 dark:bg-[#0c1224] transition-all duration-300 hover:shadow-xl hover:border-slate-350 dark:hover:border-slate-700 cursor-pointer flex flex-col ${
+      className={`group relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md dark:border-slate-800 dark:bg-slate-900 transition-all duration-300 hover:shadow-xl hover:border-slate-350 dark:hover:border-slate-700 cursor-pointer flex flex-col ${
         isWide ? 'h-[360px] md:h-[380px]' : 'h-[360px] md:h-[380px]'
       } ${horizontalOnLarge ? 'md:flex-row' : ''}`}
     >
       {/* Background radial gradient bloom lighting accents */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-705" />
+      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700" />
       <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-36 h-36 bg-gradient-to-tr from-cyan-500/5 to-indigo-500/5 rounded-full blur-2xl" />
 
       {/* Product Image Stage Container */}
@@ -536,7 +536,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             <button
               onClick={handlePrev}
               type="button"
-              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-200/85 bg-white/95 text-slate-700 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-850"
+              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-200/85 bg-white/95 text-slate-700 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
               aria-label="Previous image"
             >
               <ChevronLeft className="h-4.5 w-4.5" />
@@ -544,7 +544,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             <button
               onClick={handleNext}
               type="button"
-              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-200/85 bg-white/95 text-slate-700 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-850"
+              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-200/85 bg-white/95 text-slate-700 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
               aria-label="Next image"
             >
               <ChevronRight className="h-4.5 w-4.5" />
@@ -580,7 +580,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
               {currentProduct.brand || 'Elite Series'}
             </span>
             {productDiscount > 0 && (
-              <span className="text-[10px] font-black text-rose-600 bg-rose-50 dark:bg-rose-955/40 dark:text-rose-450 px-1.5 py-0.5 rounded-md font-mono">
+              <span className="text-[10px] font-black text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-400 px-1.5 py-0.5 rounded-md font-mono">
                 -{productDiscount}% OFF
               </span>
             )}

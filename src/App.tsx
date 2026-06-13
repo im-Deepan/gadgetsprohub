@@ -26,7 +26,7 @@ const Disclaimer = lazy(() => import('./pages/Disclaimer').then(m => ({ default:
 const ViewLoader: React.FC = () => (
   <div className="w-full min-h-[60vh] flex flex-col items-center justify-center py-20 px-4">
     <div className="relative flex items-center justify-center">
-      <div className="h-10 w-10 rounded-full border-4 border-slate-100 dark:border-slate-900 border-t-indigo-650 animate-spin"></div>
+      <div className="h-10 w-10 rounded-full border-4 border-slate-100 dark:border-slate-900 border-t-indigo-600 animate-spin"></div>
     </div>
     <span className="mt-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 animate-pulse uppercase tracking-[0.12em]">
       Loading page assets...

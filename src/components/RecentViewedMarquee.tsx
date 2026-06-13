@@ -90,7 +90,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
           return (
             <div
               key={`slot-${slotIndex}`}
-              className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-[#0c1224] transition-all hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 aspect-square flex flex-col justify-between p-4 group cursor-pointer ${responsiveClass}`}
+              className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900 transition-all hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 aspect-square flex flex-col justify-between p-4 group cursor-pointer ${responsiveClass}`}
               onClick={() => onNavigate('product-detail', prod.slug)}
             >
               {/* Vertical Marquee Slide with AnimatePresence */}
@@ -160,7 +160,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
 
               {/* Corner mini arrow indicating action on hover */}
               <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <ArrowRight className="h-3 w-3 text-indigo-605" />
+                <ArrowRight className="h-3 w-3 text-indigo-600" />
               </div>
             </div>
           );

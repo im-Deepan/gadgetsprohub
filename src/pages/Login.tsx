@@ -156,7 +156,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-505 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                  className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
                 />
               </div>
             </div>
@@ -172,7 +172,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                 placeholder="buyer@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-505 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
               />
             </div>
           </div>
@@ -187,7 +187,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-505 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
               />
             </div>
           </div>

@@ -218,7 +218,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 <select
                   value={selectDistrict}
                   onChange={(e) => setSelectDistrict(e.target.value)}
-                  className="w-full rounded-lg border border-slate-202 bg-white dark:border-slate-800 dark:bg-slate-950 px-3 py-2 text-xs text-slate-808 dark:text-slate-100 outline-hidden focus:border-indigo-505 focus:ring-1 focus:ring-indigo-500/25 focus:bg-white dark:focus:border-indigo-400 dark:focus:bg-slate-900 transition-all font-semibold"
+                  className="w-full rounded-lg border border-slate-202 bg-white dark:border-slate-800 dark:bg-slate-950 px-3 py-2 text-xs text-slate-808 dark:text-slate-100 outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 focus:bg-white dark:focus:border-indigo-400 dark:focus:bg-slate-900 transition-all font-semibold"
                 >
                   {TAMIL_NADU_DISTRICTS.map((dst) => (
                     <option key={dst} value={dst} className="bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-100 font-semibold selection:bg-indigo-100">
@@ -226,7 +226,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-1 leading-normal">
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 leading-normal">
                   Your regional click interactions, product views, and visit stats will automatically associate with this location's metrics.
                 </p>
               </div>
@@ -252,7 +252,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
         <div className="lg:col-span-3 space-y-8">
           
           <div className="flex border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-indigo-600 text-indigo-650 dark:text-indigo-400">
+            <div className="flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400">
               <Heart className="h-4 w-4 text-rose-500 shrink-0" />
               <span>Bookmarks ({wishlistProducts.length})</span>
             </div>
@@ -274,7 +274,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 ))}
               </div>
             ) : wishlistProducts.length === 0 ? (
-              <div className="border border-dashed border-slate-205 p-12 rounded-2xl text-center dark:border-slate-850 space-y-3">
+              <div className="border border-dashed border-slate-200 p-12 rounded-2xl text-center dark:border-slate-800 space-y-3">
                 <span className="text-3xl block">🏷️</span>
                 <p className="text-xs text-slate-400 italic">Your bookmark list is currently empty. Bookmark product specs to save them here.</p>
                 <button
@@ -289,7 +289,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 {wishlistProducts.map((p) => (
                   <div
                     key={p._id}
-                    className="group border border-slate-200 bg-white rounded-2xl overflow-hidden dark:border-slate-850 dark:bg-slate-900 flex flex-col justify-between"
+                    className="group border border-slate-200 bg-white rounded-2xl overflow-hidden dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between"
                   >
                     <div className="h-32 bg-slate-100 relative shrink-0">
                       <img loading="lazy" src={p.images?.[0]} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -307,7 +307,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                       <div>
                         <h4
                           onClick={() => onNavigate('product-detail', p.slug)}
-                          className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white truncate cursor-pointer hover:text-indigo-650 transition-colors"
+                          className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white truncate cursor-pointer hover:text-indigo-600 transition-colors"
                         >
                           {p.name}
                         </h4>
@@ -318,7 +318,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                         <span className="text-xs font-black font-mono text-slate-950 dark:text-white">₹{p.price}</span>
                         <button
                           onClick={() => onNavigate('product-detail', p.slug)}
-                          className="rounded bg-slate-100 hover:bg-slate-205 py-1 px-3.2 text-[10px] text-slate-705 font-bold dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-705 font-mono"
+                          className="rounded bg-slate-100 hover:bg-slate-200 py-1 px-3.2 text-[10px] text-slate-700 font-bold dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 font-mono"
                         >
                           Specs Deck
                         </button>
@@ -331,8 +331,8 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
           </div>
 
           {/* Tips block */}
-          <div className="rounded-2xl bg-indigo-50/40 p-6 border border-indigo-150/20 flex gap-4 text-indigo-805 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300">
-            <Sparkle className="h-6 w-6 text-indigo-505 shrink-0 animate-pulse mt-0.5" />
+          <div className="rounded-2xl bg-indigo-50/40 p-6 border border-indigo-100/20 flex gap-4 text-indigo-800 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300">
+            <Sparkle className="h-6 w-6 text-indigo-500 shrink-0 animate-pulse mt-0.5" />
             <div className="view-details-block space-y-1">
               <h4 className="text-xs font-bold uppercase tracking-wider">MEMBER BENEFITS EXCLUSIVE</h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">Bookmarks of product collections and dynamic pricing alerts are securely logged to ensure 100% platform integrity and session security across all your devices.</p>

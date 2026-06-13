@@ -74,7 +74,7 @@ export const BorderGlow: React.FC<BorderGlowProps> = ({
         }}
       />
       <div
-        className={`absolute inset-[1px] transition-colors duration-300 ${backgroundColor === 'transparent' ? 'bg-white dark:bg-[#0c1224]' : ''}`}
+        className={`absolute inset-[1px] transition-colors duration-300 ${backgroundColor === 'transparent' ? 'bg-white dark:bg-slate-900' : ''}`}
         style={{
           backgroundColor: backgroundColor !== 'transparent' ? backgroundColor : undefined,
           borderRadius: `${borderRadius - 1}px`,

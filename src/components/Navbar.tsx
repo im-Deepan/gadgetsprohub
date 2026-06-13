@@ -343,7 +343,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                   onBlur={() => setTimeout(() => setShowResults(false), 300)}
                   className="w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 pl-10 pr-10 text-xs text-slate-900 outline-none transition-all placeholder:text-slate-500 focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950"
                 />
-                <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-[10px] font-mono text-slate-450 shadow-xs pointer-events-none dark:border-slate-800 dark:bg-slate-850 dark:text-slate-500 select-none">
+                <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-[10px] font-mono text-slate-400 shadow-xs pointer-events-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-500 select-none">
                   /
                 </div>
               </div>
@@ -398,7 +398,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleTheme}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-650 shadow-sm hover:bg-slate-50 hover:text-indigo-650 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-all cursor-pointer hover:scale-105 active:scale-95"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-all cursor-pointer hover:scale-105 active:scale-95"
               title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
               aria-label="Toggle theme"
             >
@@ -414,7 +414,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
               <button
                 onClick={() => onNavigate('profile')}
                 aria-label="Your bookmarks"
-                className="hidden sm:flex relative h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-indigo-650 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="hidden sm:flex relative h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Your bookmarks"
               >
                 <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -509,7 +509,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 <button
                   onClick={() => setShowMobileMenu(false)}
                   aria-label="Close menu"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-900 dark:hover:bg-slate-850 dark:text-slate-350 cursor-pointer transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-350 cursor-pointer transition-colors"
                   title="Close menu"
                 >
                   <X className="h-5 w-5" />
@@ -530,7 +530,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                     onBlur={() => setTimeout(() => setShowResults(false), 300)}
                     className="w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-10 pr-10 text-xs text-slate-950 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   />
-                  <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-[10px] font-mono text-slate-450 dark:border-slate-800 dark:bg-slate-850 dark:text-slate-500 select-none">
+                  <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-[10px] font-mono text-slate-400 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-500 select-none">
                     /
                   </div>
                 </form>
@@ -683,7 +683,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
               className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100 z-10"
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-slate-150 pb-4 dark:border-slate-800/80">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800/80">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
                     <Keyboard className="h-5 w-5" />
@@ -755,15 +755,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 </div>
 
                 {/* Footer Shortcuts */}
-                <div className="border-t border-slate-150 pt-4 flex items-center justify-between dark:border-slate-800/80">
-                  <div className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-505">
-                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-slate-50 border border-slate-150 rounded dark:bg-slate-900 dark:border-slate-800">ESC</kbd>
+                <div className="border-t border-slate-100 pt-4 flex items-center justify-between dark:border-slate-800/80">
+                  <div className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
+                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-slate-50 border border-slate-100 rounded dark:bg-slate-900 dark:border-slate-800">ESC</kbd>
                     <span>to close or blur inputs</span>
                   </div>
                   <div className="flex items-center gap-1 text-[11px] text-indigo-500 dark:text-indigo-400 font-mono">
-                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-150 rounded text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900 dark:text-indigo-300">?</kbd>
+                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-100 rounded text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900 dark:text-indigo-300">?</kbd>
                     <span>or</span>
-                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-150 rounded text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900 dark:text-indigo-300">K</kbd>
+                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-100 rounded text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900 dark:text-indigo-300">K</kbd>
                     <span>to toggle this guide</span>
                   </div>
                 </div>

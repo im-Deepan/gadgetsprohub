@@ -12,7 +12,7 @@ export const AboutUs: React.FC = () => {
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl font-sans">
           About Us
         </h1>
-        <p className="text-xs font-mono text-indigo-605 dark:text-indigo-400 uppercase tracking-widest font-semibold">
+        <p className="text-xs font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-widest font-semibold">
           Independent Reviews & Spec Mapping
         </p>
         <p className="max-w-xl mx-auto text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -45,17 +45,17 @@ export const AboutUs: React.FC = () => {
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800">
               <span className="text-lg font-black text-indigo-600 font-mono">01</span>
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mt-1 mb-1">Spec Mapping</h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-450 leading-relaxed">We extract complete technical parameters (battery, build materials, firmware, wireless chipsets) and catalog them into structured maps.</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">We extract complete technical parameters (battery, build materials, firmware, wireless chipsets) and catalog them into structured maps.</p>
             </div>
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800">
               <span className="text-lg font-black text-indigo-600 font-mono">02</span>
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mt-1 mb-1">Pros & Cons Auditing</h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-450 leading-relaxed">We scour through thousands of user forums and review boards to distill genuine purchase feedback, identifying true drawbacks and advantages.</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">We scour through thousands of user forums and review boards to distill genuine purchase feedback, identifying true drawbacks and advantages.</p>
             </div>
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800">
               <span className="text-lg font-black text-indigo-600 font-mono">03</span>
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mt-1 mb-1">Affiliate Integrity</h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-450 leading-relaxed">We provide direct buying routes, fully disclosing our referral models. We choose partners purely based on stock availability and consumer safety.</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">We provide direct buying routes, fully disclosing our referral models. We choose partners purely based on stock availability and consumer safety.</p>
             </div>
           </div>
         </section>

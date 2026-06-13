@@ -502,7 +502,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               : 'w-full sm:w-48 h-40'
           }`}>
             <img
-          src={p.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500'}
+          src={p.images?.[0] || 'https://images.unsplash.com/photo-1005740420928-5e560c06d30e?w=500'}
           alt={p.name}
           referrerPolicy="no-referrer"
           className="h-full w-full object-contain p-2 bg-slate-100/50 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-500 cursor-pointer"
@@ -548,14 +548,14 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             {p.name}
           </h3>
           
-          <p className={`text-slate-550 line-clamp-2 mt-1.5 dark:text-slate-400 leading-normal ${
+          <p className={`text-slate-500 line-clamp-2 mt-1.5 dark:text-slate-400 leading-normal ${
             viewStyle === 'grid' ? 'text-[11px]' : 'text-xs'
           }`}>
             {p.description}
           </p>
         </div>
 
-        <div className="pt-3 mt-3 border-t border-slate-50 dark:border-slate-850 flex items-center justify-between">
+        <div className="pt-3 mt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-baseline gap-1">
             <span className="text-xs sm:text-sm font-black font-mono text-indigo-600 dark:text-indigo-400">₹{p.price}</span>
             {p.originalPrice && (
@@ -704,7 +704,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           return (
             <div className="mb-6 bg-slate-50 border border-slate-100/80 rounded-2xl p-4 dark:bg-zinc-900/30 dark:border-slate-800/80">
               <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-dashed border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-550 flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                   <span className="font-sans text-xs">📂</span> Filter by {activeCategoryObj.name} Subcategories
                 </span>
                 {selectedSubcategory && (
@@ -738,7 +738,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 cursor-pointer ${
                       selectedSubcategory === sub
                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10'
-                        : 'bg-white border border-slate-200 text-slate-705 hover:bg-slate-50 dark:bg-zinc-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-zinc-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800'
                     }`}
                   >
                     {sub}
@@ -811,9 +811,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
               {/* SEE MORE & END OF PRODUCTS PAGINATION TRIGGERS */}
               {totalPages > 1 && (
-                <div className="mt-8 pt-6 border-t border-slate-150 dark:border-slate-800 flex flex-col items-center justify-center min-h-[60px] pb-8">
+                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center min-h-[60px] pb-8">
                   {loading ? (
-                    <div className="flex items-center gap-2 text-xs font-bold text-indigo-650 dark:text-indigo-400 animate-pulse">
+                    <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 animate-pulse">
                       <span className="h-4 w-4 rounded-full border-2 border-indigo-600/40 border-t-indigo-600 animate-spin"></span>
                       <span>Loading more items...</span>
                     </div>
@@ -821,7 +821,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     <button
                       type="button"
                       onClick={() => setCurrentPage(prev => prev + 1)}
-                      className="px-6 py-2.5 rounded-full border border-indigo-100 hover:border-indigo-200 bg-indigo-50/50 hover:bg-indigo-150/10 text-indigo-700 dark:bg-indigo-950/20 dark:border-indigo-900/40 dark:text-indigo-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider"
+                      className="px-6 py-2.5 rounded-full border border-indigo-100 hover:border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/10 text-indigo-700 dark:bg-indigo-950/20 dark:border-indigo-900/40 dark:text-indigo-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider"
                     >
                       See More
                     </button>
@@ -924,7 +924,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                           setCurrentPage(1); 
                         }}
                         placeholder="Brand, feature, tags..."
-                        className="w-full text-xs rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-8 text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-[#0c1224] dark:text-white"
+                        className="w-full text-xs rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-8 text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                       />
                       {search && (
                         <button
@@ -941,10 +941,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   {recentSearches.length > 0 && (
                     <div className="space-y-2 pt-0.5">
                       <div className="flex items-center justify-between text-[10px] font-semibold">
-                        <span className="text-slate-400 dark:text-slate-550 uppercase tracking-wider font-bold">Recent Searches</span>
+                        <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wider font-bold">Recent Searches</span>
                         <button
                           onClick={handleClearAllRecentSearches}
-                          className="text-indigo-650 dark:text-indigo-400 hover:underline font-bold text-[9px] uppercase tracking-wider cursor-pointer"
+                          className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold text-[9px] uppercase tracking-wider cursor-pointer"
                         >
                           Clear All
                         </button>
@@ -977,7 +977,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   <div className="flex flex-col gap-1.5 overflow-hidden">
                     <button
                       onClick={() => { setSelectedCategory(''); setSelectedSubcategory(''); setCurrentPage(1); }}
-                      className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${!selectedCategory ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-650 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
+                      className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${!selectedCategory ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
                     >
                       <span className="flex items-center gap-1.5">📁 All Classifications</span>
                       {!selectedCategory && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
@@ -1045,7 +1045,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       value={minPrice}
                       onChange={(e) => { setMinPrice(e.target.value); setCurrentPage(1); }}
                       placeholder="Min"
-                      className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2 text-center text-slate-900 outline-none font-mono focus:border-indigo-500 dark:border-slate-800 dark:bg-[#0c1224] dark:text-white"
+                      className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2 text-center text-slate-900 outline-none font-mono focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                     />
                     <span className="text-slate-300">-</span>
                     <input
@@ -1053,7 +1053,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       value={maxPrice}
                       onChange={(e) => { setMaxPrice(e.target.value); setCurrentPage(1); }}
                       placeholder="Max"
-                      className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2 text-center text-slate-900 outline-none font-mono focus:border-indigo-500 dark:border-slate-800 dark:bg-[#0c1224] dark:text-white"
+                      className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2 text-center text-slate-900 outline-none font-mono focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                     />
                   </div>
                 </div>
@@ -1125,10 +1125,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="p-5 border-b border-slate-100 dark:border-slate-850 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-950/20">
+              <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-950/20">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-indigo-600 bg-indigo-50 dark:bg-indigo-955/35 dark:text-indigo-400 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-indigo-600 bg-indigo-50 dark:bg-indigo-950/35 dark:text-indigo-400 px-2 py-0.5 rounded-full font-mono">
                       {specModalProduct.brand || 'Premium Brand'} Specs Sheet
                     </span>
                     <span className="text-[9px] font-mono text-slate-400 font-bold uppercase tracking-wider">{specModalProduct.sku || 'SKU-SPEC'}</span>
@@ -1151,7 +1151,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 {/* Intro & Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
                   {/* Photo area */}
-                  <div className="relative h-44 sm:h-52 bg-slate-50 dark:bg-slate-955/15 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 flex items-center justify-center overflow-hidden">
+                  <div className="relative h-44 sm:h-52 bg-slate-50 dark:bg-slate-950/15 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 flex items-center justify-center overflow-hidden">
                     <img
                       src={specModalProduct.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=310'}
                       alt={specModalProduct.name}
@@ -1213,7 +1213,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 {specModalProduct.specifications && Object.keys(specModalProduct.specifications).length > 0 ? (
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Technical Specifications</h4>
-                    <div className="rounded-xl border border-slate-150 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-850">
+                    <div className="rounded-xl border border-slate-100 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-800">
                       <div className="overflow-x-auto w-full">
                         <table className="w-full text-left border-collapse text-xs min-w-[340px] sm:min-w-0">
                           <thead className="bg-slate-50/50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
@@ -1247,7 +1247,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Highlighted Advantages</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       {specModalProduct.features.map((feat, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-slate-705 dark:text-slate-300">
+                        <div key={idx} className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                           <CheckCheck className="h-4 w-4 text-emerald-500 shrink-0" />
                           <span>{feat}</span>
                         </div>
@@ -1293,7 +1293,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               </div>
 
               {/* Action Footer banner */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-150 dark:border-slate-800/80 flex flex-col sm:flex-row gap-3">
+              <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -1302,7 +1302,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     setSpecModalProduct(null);
                     onNavigate('product-detail', slug);
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white hover:bg-slate-50 text-slate-705 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-200 py-3 text-xs font-bold transition-all cursor-pointer shadow-3xs"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-200 py-3 text-xs font-bold transition-all cursor-pointer shadow-3xs"
                 >
                   <Search size={14} />
                   <span>View Review & Full Details Page</span>

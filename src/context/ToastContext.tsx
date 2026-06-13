@@ -45,7 +45,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
       
       {/* Toast Notification Mount Layout Container */}
-      <div className="fixed bottom-6 right-6 z-550 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+      <div className="fixed bottom-6 right-6 z-500 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
         {toasts.map((toast) => {
           let bgColor = 'bg-slate-900 border-slate-800 text-white dark:bg-black dark:border-slate-900';
           let Icon = Info;

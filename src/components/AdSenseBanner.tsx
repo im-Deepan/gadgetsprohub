@@ -83,7 +83,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
           <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 font-mono">
             Interactive Ad Slot Sandbox
           </span>
-          <span className="text-[9px] text-slate-450 dark:text-slate-600 font-mono mt-1 text-center max-w-md">
+          <span className="text-[9px] text-slate-400 dark:text-slate-600 font-mono mt-1 text-center max-w-md">
             Please configure the environment variable VITE_ADSENSE_CLIENT_ID in your workspace settings to authorize and stream ads here.
           </span>
         </div>

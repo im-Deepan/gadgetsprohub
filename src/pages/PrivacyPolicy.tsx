@@ -83,7 +83,7 @@ export const PrivacyPolicy: React.FC = () => {
         </section>
 
         <div className="pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
-          <p className="text-[11px] text-slate-450 italic">
+          <p className="text-[11px] text-slate-400 italic">
             Thank you for trusting gadgetsprohub. We believe in honest, transparent digital navigation.
           </p>
         </div>

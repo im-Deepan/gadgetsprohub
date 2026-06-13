@@ -28,7 +28,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-zinc-900 transition-all">
         <div className="flex items-start gap-4">
-          <div className={`p-3 rounded-full shrink-0 ${isDestructive ? 'bg-rose-50 text-rose-500 dark:bg-rose-950/30' : 'bg-amber-50 text-amber-500 dark:bg-amber-955/30'}`}>
+          <div className={`p-3 rounded-full shrink-0 ${isDestructive ? 'bg-rose-50 text-rose-500 dark:bg-rose-950/30' : 'bg-amber-50 text-amber-500 dark:bg-amber-950/30'}`}>
             <AlertTriangle className="h-6 w-6 shrink-0" />
           </div>
           <div className="space-y-1 my-1">
@@ -41,7 +41,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-355 py-2 px-3.5 text-xs font-bold transition-all cursor-pointer"
+            className="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 py-2 px-3.5 text-xs font-bold transition-all cursor-pointer"
           >
             {cancelText || 'Cancel'}
           </button>

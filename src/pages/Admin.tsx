@@ -672,7 +672,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       longDescription: 'Engineered with full range ANC microphones, premium leather earcups, and dual drivers setup. Delivers premium low registers and 30 hours of continuous playing time.',
       affiliateLink: 'https://amazon.com/dp/B501...',
       affiliateCode: 'AFFIL_HUB_26',
-      images: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500',
+      images: 'https://images.unsplash.com/photo-1005740420928-5e560c06d30e?w=500',
       features: 'Full Range ANC, Comfortable leather caps, 30h Long life',
       specKeyVal: 'Driver=40mm;ANC=Active Dual Mode;Bluetooth=V5.3;Weight=260g',
       pros: 'Exceptional isolation, Comfortable wear, Good battery',
@@ -884,7 +884,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            <div className="bg-slate-50 dark:bg-zinc-950/70 p-4 rounded-2xl border border-slate-105 dark:border-slate-850 space-y-2.5">
+            <div className="bg-slate-50 dark:bg-zinc-950/70 p-4 rounded-2xl border border-slate-105 dark:border-slate-800 space-y-2.5">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
@@ -892,7 +892,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 </span>
                 <span>Direct Live Storefront Mode Active</span>
               </div>
-              <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed font-sans">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-sans">
                 Automatic seed resets, randomized trending traffic logs, and bulk catalog wipe functions have been completely disabled as requested. This prevents unintended overwrites of your handmade affiliate products.
               </p>
               <div className="text-[10px] text-slate-400 flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg p-2 font-mono">
@@ -903,7 +903,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             <div className="pt-2">
               <button
                 onClick={openAddProduct}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-605 py-3 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-sm shadow-indigo-100 dark:shadow-none"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 py-3 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-sm shadow-indigo-100 dark:shadow-none"
               >
                 <Plus className="h-4 w-4 shrink-0" />
                 <span>Add Custom Product Card</span>
@@ -953,7 +953,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         {topFour.map(({ name, count }) => {
                           const pct = dtotal === 0 ? 0 : Math.round((count / dtotal) * 100);
                           return (
-                            <div key={name} className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl flex items-center justify-between border border-slate-100 dark:border-slate-850 hover:bg-slate-100/50 dark:hover:bg-slate-900/40 transition-all shadow-2xs">
+                            <div key={name} className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl flex items-center justify-between border border-slate-100 dark:border-slate-800 hover:bg-slate-100/50 dark:hover:bg-slate-900/40 transition-all shadow-2xs">
                               <span className="flex items-center gap-1.5 font-sans font-bold text-slate-855 dark:text-slate-200">
                                 {getDistrictEmoji(name)} {name}
                               </span>
@@ -970,11 +970,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           {remaining.map(({ name, count }) => {
                             const pct = dtotal === 0 ? 0 : Math.round((count / dtotal) * 100);
                             return (
-                              <div key={name} className="bg-slate-50/50 dark:bg-slate-950/20 p-2 rounded-lg flex items-center justify-between border border-slate-101 dark:border-slate-850/40 hover:bg-slate-100/30 dark:hover:bg-slate-900/30 transition-all">
-                                <span className="flex items-center gap-1 font-sans text-[11px] text-slate-650 dark:text-slate-400">
+                              <div key={name} className="bg-slate-50/50 dark:bg-slate-950/20 p-2 rounded-lg flex items-center justify-between border border-slate-101 dark:border-slate-800/40 hover:bg-slate-100/30 dark:hover:bg-slate-900/30 transition-all">
+                                <span className="flex items-center gap-1 font-sans text-[11px] text-slate-600 dark:text-slate-400">
                                   {getDistrictEmoji(name)} {name}
                                 </span>
-                                <span className="font-semibold text-slate-500 dark:text-slate-450 font-mono text-[11px]">
+                                <span className="font-semibold text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                                   {pct}% ({count})
                                 </span>
                               </div>
@@ -986,7 +986,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <button
                         type="button"
                         onClick={() => setShowAllDistricts(!showAllDistricts)}
-                        className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 py-2 hover:bg-slate-50 dark:hover:bg-slate-850/40 rounded-xl transition-all cursor-pointer border border-dashed border-slate-200 dark:border-slate-800"
+                        className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-xl transition-all cursor-pointer border border-dashed border-slate-200 dark:border-slate-800"
                       >
                         <span>
                           {showAllDistricts 
@@ -1059,11 +1059,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 group-hover:text-violet-600 transition-colors">
               <span>Unique Site Visitors</span>
-              <span className="h-1.5 w-1.5 rounded-full bg-violet-505 animate-ping"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-ping"></span>
             </p>
             <h3 className="text-lg font-mono font-black text-violet-600 dark:text-violet-400">{stats.totalVisitors} Visitors</h3>
           </div>
-          <div className="h-10 w-10 rounded-lg bg-violet-50 dark:bg-violet-950/30 flex items-center justify-center text-violet-605 group-hover:scale-110 transition-transform">
+          <div className="h-10 w-10 rounded-lg bg-violet-50 dark:bg-violet-950/30 flex items-center justify-center text-violet-600 group-hover:scale-110 transition-transform">
             <Users className="h-5 w-5 shrink-0" />
           </div>
         </button>
@@ -1076,7 +1076,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               tabContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
           }}
-          className="rounded-2xl border border-slate-100 bg-white p-5 hover:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-indigo-505 group"
+          className="rounded-2xl border border-slate-100 bg-white p-5 hover:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 group"
         >
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-indigo-600 transition-colors">Total Tracked Click CTR</p>
@@ -1120,7 +1120,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 group-hover:text-amber-600 transition-colors">
               <span>Customer Mail Desk</span>
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-550 animate-ping"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping"></span>
             </p>
             <h3 className="text-lg font-mono font-black text-amber-600 dark:text-amber-400">{stats.unreadMessages} Unread</h3>
           </div>
@@ -1268,7 +1268,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   {isMobile ? (
                     <div className="grid grid-cols-1 gap-4">
                       {paginatedProducts.map((p, idx) => (
-                        <div key={p._id || `prod-mob-${idx}`} className="bg-white dark:bg-zinc-900/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 shadow-xs space-y-3">
+                        <div key={p._id || `prod-mob-${idx}`} className="bg-white dark:bg-zinc-900/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-3">
                           <div className="flex justify-between items-start gap-2">
                             <h5 className="font-bold text-slate-900 dark:text-white text-xs leading-snug">{p.name}</h5>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
@@ -1291,7 +1291,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               </div>
                               <div>
                                 <span className="text-slate-400 text-[9px] block font-sans uppercase font-bold tracking-wider">CTR Clicks</span>
-                                <span className="font-semibold text-indigo-505 dark:text-indigo-400">{p.clicks || 0}</span>
+                                <span className="font-semibold text-indigo-500 dark:text-indigo-400">{p.clicks || 0}</span>
                               </div>
                             </div>
                             <div className="flex gap-2">
@@ -1372,7 +1372,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                   {/* Pagination Controls */}
                   {totalProductPages > 1 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 p-4 dark:border-slate-850 bg-slate-50/40 dark:bg-zinc-950/20 rounded-2xl gap-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 p-4 dark:border-slate-800 bg-slate-50/40 dark:bg-zinc-950/20 rounded-2xl gap-4">
                       <div>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                           Showing <span className="font-extrabold text-slate-900 dark:text-white font-mono">{startIndex + 1}</span> to{' '}
@@ -1387,7 +1387,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           type="button"
                           onClick={() => setProductPage(prev => Math.max(prev - 1, 1))}
                           disabled={currentProductPage === 1}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-805 bg-white dark:bg-zinc-900 text-[11px] font-bold text-slate-705 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 enabled:cursor-pointer disabled:opacity-40 select-none transition-all duration-200 active:scale-95"
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 enabled:cursor-pointer disabled:opacity-40 select-none transition-all duration-200 active:scale-95"
                         >
                           &larr; Previous
                         </button>
@@ -1401,7 +1401,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               className={`h-7 w-7 rounded-lg text-xs font-bold font-mono transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center ${
                                 currentProductPage === pageNumber
                                   ? 'bg-indigo-600 text-white shadow-xs'
-                                  : 'border border-slate-200 dark:border-slate-805 bg-white dark:bg-zinc-900 text-slate-655 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                                  : 'border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
                               }`}
                             >
                               {pageNumber}
@@ -1413,7 +1413,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           type="button"
                           onClick={() => setProductPage(prev => Math.min(prev + 1, totalProductPages))}
                           disabled={currentProductPage === totalProductPages}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-805 bg-white dark:bg-zinc-900 text-[11px] font-bold text-slate-705 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 enabled:cursor-pointer disabled:opacity-40 select-none transition-all duration-200 active:scale-95"
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 enabled:cursor-pointer disabled:opacity-40 select-none transition-all duration-200 active:scale-95"
                         >
                           Next &rarr;
                         </button>
@@ -1759,7 +1759,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                                   isReplying 
                                     ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' 
-                                    : 'bg-slate-100 hover:bg-slate-150 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-750'
+                                    : 'bg-slate-100 hover:bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-750'
                                 }`}
                               >
                                 <Mail className="h-3.5 w-3.5 shrink-0" />
@@ -1793,7 +1793,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 />
 
                                 {sentReplySuccess === m._id ? (
-                                  <div className="text-[11px] font-bold text-emerald-650 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400 p-2.5 rounded-lg flex items-center gap-1.5">
+                                  <div className="text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400 p-2.5 rounded-lg flex items-center gap-1.5">
                                     <span>✓ Your email response has been simulated and marked sent!</span>
                                   </div>
                                 ) : (
@@ -1822,7 +1822,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                           });
                                         }, 2500);
                                       }}
-                                      className="rounded-lg bg-indigo-650 hover:bg-indigo-700 text-white px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                                      className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
                                     >
                                       <span>Send & Mark Read</span>
                                     </button>
@@ -1843,7 +1843,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h4 className="text-sm font-black uppercase text-indigo-650 tracking-wider flex items-center gap-1.5 dark:text-indigo-400">
+                  <h4 className="text-sm font-black uppercase text-indigo-600 tracking-wider flex items-center gap-1.5 dark:text-indigo-400">
                     <span>🕒 Sunday Automation & Scheduler Portal</span>
                   </h4>
                   <p className="text-[11px] text-slate-400 mt-0.5 font-sans font-medium">Auto-manage trending product lifespans, schedule weekly additions, and trigger author reminder emails.</p>
@@ -1889,7 +1889,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   <h5 className="text-xs font-black uppercase text-slate-400 tracking-wider">Scheduled Run History Log ({sundayLogs.length})</h5>
 
                   {sundayLogsError && (
-                    <div className="bg-red-50 text-red-650 p-4 rounded-xl text-xs dark:bg-red-950/20 dark:text-red-400">
+                    <div className="bg-red-50 text-red-600 p-4 rounded-xl text-xs dark:bg-red-950/20 dark:text-red-400">
                       Error sourcing logs: {sundayLogsError}
                     </div>
                   )}
@@ -1954,7 +1954,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         <span className="text-lg shrink-0">📧</span>
                         <div className="space-y-0.5 flex-1 min-w-0">
                           <span className="text-[10px] text-slate-400 font-semibold block uppercase">ADMIN GMAIL</span>
-                          <span className="text-[10px] font-mono font-bold text-slate-805 dark:text-slate-200 break-all select-all block leading-tight">
+                          <span className="text-[10px] font-mono font-bold text-slate-800 dark:text-slate-200 break-all select-all block leading-tight">
                             (Loaded via Environment Profile)
                           </span>
                         </div>
@@ -1962,10 +1962,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     </div>
 
                     <h5 className="text-[11px] font-black uppercase text-indigo-700 tracking-wider dark:text-indigo-400 pt-2">Schedule Heartbeat status</h5>
-                    <div className="rounded-xl border border-slate-150 p-3 dark:border-slate-800 space-y-2 text-xs">
+                    <div className="rounded-xl border border-slate-100 p-3 dark:border-slate-800 space-y-2 text-xs">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-400 font-medium">Next Expected Run:</span>
-                        <span className="font-bold text-slate-850 dark:text-zinc-200">Next Sunday</span>
+                        <span className="font-bold text-slate-800 dark:text-zinc-200">Next Sunday</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-400 font-medium">Heartbeat interval:</span>
@@ -2000,7 +2000,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 <div className="space-y-6 text-slate-800 dark:text-slate-100 text-xs">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <h4 className="text-sm font-black uppercase text-indigo-650 tracking-wider flex items-center gap-1.5 dark:text-indigo-400">
+                      <h4 className="text-sm font-black uppercase text-indigo-600 tracking-wider flex items-center gap-1.5 dark:text-indigo-400">
                         <span>👥 Total Registered Platform Members</span>
                       </h4>
                       <p className="text-[11px] text-zinc-400 mt-0.5 font-sans font-medium">
@@ -2012,7 +2012,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <button
                         type="button"
                         onClick={() => loadAdminMetrics()}
-                        className="flex items-center gap-1.5 rounded-xl border border-slate-200/85 bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-355 transition-all cursor-pointer active:scale-95 shadow-xs"
+                        className="flex items-center gap-1.5 rounded-xl border border-slate-200/85 bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all cursor-pointer active:scale-95 shadow-xs"
                       >
                         <RefreshCcw className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                         <span>Refresh accounts list</span>
@@ -2039,7 +2039,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           {users.filter(u => u.role === 'admin').length} Admin(s)
                         </h4>
                       </div>
-                      <div className="h-9 w-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-550 font-bold">
+                      <div className="h-9 w-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-500 font-bold">
                          🛡️
                       </div>
                     </div>
@@ -2047,7 +2047,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     <div className="rounded-2xl border border-zinc-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shadow-xs">
                       <div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Standard Users</span>
-                        <h4 className="text-sm font-mono font-black text-slate-700 dark:text-slate-355 mt-1 block">
+                        <h4 className="text-sm font-mono font-black text-slate-700 dark:text-slate-300 mt-1 block">
                           {users.filter(u => u.role !== 'admin').length} User(s)
                         </h4>
                       </div>
@@ -2067,7 +2067,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         placeholder="Search by email address or name..."
                         value={userSearchQuery}
                         onChange={(e) => setUserSearchQuery(e.target.value)}
-                        className="w-full pl-3.5 pr-8 py-2 text-xs rounded-xl border border-slate-200 bg-white placeholder-slate-450 text-slate-850 focus:outline-hidden focus:ring-1.5 focus:ring-slate-900 dark:border-slate-800 dark:bg-zinc-950 dark:text-slate-100 dark:focus:ring-slate-300"
+                        className="w-full pl-3.5 pr-8 py-2 text-xs rounded-xl border border-slate-200 bg-white placeholder-slate-400 text-slate-800 focus:outline-hidden focus:ring-1.5 focus:ring-slate-900 dark:border-slate-800 dark:bg-zinc-950 dark:text-slate-100 dark:focus:ring-slate-300"
                       />
                       {userSearchQuery && (
                         <button
@@ -2088,7 +2088,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             key={r}
                             type="button"
                             onClick={() => setUserRoleFilter(r)}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-lg cursor-pointer capitalize transition-all ${userRoleFilter === r ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-slate-450 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-850/40'}`}
+                            className={`px-3 py-1 text-[10px] font-bold rounded-lg cursor-pointer capitalize transition-all ${userRoleFilter === r ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/40'}`}
                           >
                             {r}
                           </button>
@@ -2100,7 +2100,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   {/* Users Admin Control Table */}
                   <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-xs dark:border-slate-800 dark:bg-zinc-900/40 w-full">
                     {filteredUsers.length === 0 ? (
-                      <div className="py-12 text-center text-slate-450 italic text-xs font-medium">
+                      <div className="py-12 text-center text-slate-400 italic text-xs font-medium">
                         No registered users found matching the query filters.
                       </div>
                     ) : (
@@ -2160,7 +2160,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                         🛡️ Administrator
                                       </span>
                                     ) : (
-                                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200 dark:bg-slate-850/40 dark:text-slate-400 dark:border-slate-750/50 font-sans uppercase">
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-750/50 font-sans uppercase">
                                         👤 Standard User
                                       </span>
                                     )}
@@ -2197,7 +2197,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h4 className="text-xs font-black uppercase text-indigo-605 tracking-wider">Visitor Traffic & Click Logs</h4>
+                <h4 className="text-xs font-black uppercase text-indigo-600 tracking-wider">Visitor Traffic & Click Logs</h4>
                 <p className="text-[11px] text-slate-400 mt-0.5 font-sans font-medium">Real-time record of visitor page views, time spent, browser type, and district location.</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
@@ -2219,7 +2219,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             </div>
 
             {analyticsData.length === 0 ? (
-              <div className="border border-dashed border-slate-205 p-12 rounded-3xl text-center dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/20 max-w-lg mx-auto my-6">
+              <div className="border border-dashed border-slate-200 p-12 rounded-3xl text-center dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/20 max-w-lg mx-auto my-6">
                 <Globe className="h-10 w-10 text-indigo-500 dark:text-indigo-400 mx-auto mb-4 stroke-[1.5]" />
                 <h5 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">No Active Traffic Logs Captured</h5>
                 <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
@@ -2285,7 +2285,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               {statusLabel}
                             </span>
                           </div>
-                          <div className="inline-flex items-center gap-1 text-[10px] bg-slate-50 dark:bg-slate-850 text-slate-500 px-2 py-1 rounded-md font-bold">
+                          <div className="inline-flex items-center gap-1 text-[10px] bg-slate-50 dark:bg-slate-800 text-slate-500 px-2 py-1 rounded-md font-bold">
                             <span>{isExpanded ? 'Hide' : 'Details'}</span>
                             {isExpanded ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />}
                           </div>
@@ -2300,7 +2300,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           </div>
                           <div>
                             <span className="text-slate-400 text-[9px] uppercase tracking-wider block font-bold">Location</span>
-                            <span className="inline-flex items-center gap-1 font-bold text-slate-705 dark:text-slate-350">
+                            <span className="inline-flex items-center gap-1 font-bold text-slate-700 dark:text-slate-350">
                               <span>{getDistrictEmoji(visitorPlace)}</span>
                               <span>{visitorPlace}</span>
                             </span>
@@ -2333,7 +2333,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               </div>
                               <div className="col-span-2 pt-1">
                                 <div className="text-slate-400 uppercase font-bold tracking-wider text-[8px]">Action Type & Stay Time</div>
-                                <div className="font-bold text-slate-800 dark:text-slate-205 mt-0.5">{statusLabel} ({stayDisplay})</div>
+                                <div className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{statusLabel} ({stayDisplay})</div>
                               </div>
                             </div>
 
@@ -2395,7 +2395,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           <th className="py-3 px-4 text-center">Sole Details</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-650 dark:text-slate-300">
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-600 dark:text-slate-300">
                         {paginatedLogs.map((a, idx) => {
                           const isPage = a.eventType === 'page_visit';
                           const isClick = a.eventType === 'click';
@@ -2443,7 +2443,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             <React.Fragment key={recordId}>
                               <tr
                                 onClick={() => setExpandedVisitorId(isExpanded ? null : recordId)}
-                                className={`hover:bg-indigo-50/20 dark:hover:bg-slate-805/30 transition-colors cursor-pointer select-none ${isExpanded ? 'bg-indigo-50/30 dark:bg-indigo-950/20' : ''}`}
+                                className={`hover:bg-indigo-50/20 dark:hover:bg-slate-800/30 transition-colors cursor-pointer select-none ${isExpanded ? 'bg-indigo-50/30 dark:bg-indigo-950/20' : ''}`}
                               >
                                 {/* S.No */}
                                 <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px]">
@@ -2458,12 +2458,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                         <span className="text-[10px]">👤</span>
                                         {a.userId.name || 'Explorer'}
                                       </span>
-                                      <span className="text-[10px] font-mono text-slate-450 tracking-tight block">
+                                      <span className="text-[10px] font-mono text-slate-400 tracking-tight block">
                                         {a.userId.email}
                                       </span>
                                     </div>
                                   ) : (
-                                    <div className="flex items-center gap-1 text-[11px] font-sans text-slate-450 italic leading-tight">
+                                    <div className="flex items-center gap-1 text-[11px] font-sans text-slate-400 italic leading-tight">
                                       <span className="text-[10px]">🌐</span>
                                       <span>Guest Visitor</span>
                                     </div>
@@ -2472,7 +2472,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                                 {/* Visitor Place */}
                                 <td className="py-3.5 px-4">
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[9px] font-bold text-slate-650 dark:bg-slate-800 dark:text-slate-300 border border-slate-150/40 dark:border-slate-750">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-100/40 dark:border-slate-750">
                                     <span>{getDistrictEmoji(visitorPlace)}</span>
                                     <span>{visitorPlace}</span>
                                   </span>
@@ -2480,7 +2480,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                                 {/* Timestamp & IP */}
                                 <td className="py-3.5 px-4 font-normal">
-                                  <span className="text-[9px] font-mono font-bold block text-slate-450 dark:text-slate-500 leading-tight">
+                                  <span className="text-[9px] font-mono font-bold block text-slate-400 dark:text-slate-500 leading-tight">
                                     {new Date(a.timestamp || Date.now()).toLocaleString()}
                                   </span>
                                   <span className="text-xs font-mono font-black text-slate-800 dark:text-slate-350">
@@ -2505,13 +2505,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 </td>
 
                                 {/* Platform & Device */}
-                                <td className="py-3.5 px-4 font-bold text-slate-505 text-[10px] dark:text-slate-400 space-y-0.5">
+                                <td className="py-3.5 px-4 font-bold text-slate-500 text-[10px] dark:text-slate-400 space-y-0.5">
                                   <span className="block text-slate-700 dark:text-slate-300 font-sans">{a.browser || "Chrome"}</span>
                                   <span className="block text-[8px] font-mono tracking-tighter uppercase font-black text-slate-400">{a.device || "Desktop"}</span>
                                 </td>
 
                                 {/* Stay Time */}
-                                <td className="py-3.5 px-4 font-mono font-bold text-center text-slate-705 dark:text-slate-350">
+                                <td className="py-3.5 px-4 font-mono font-bold text-center text-slate-700 dark:text-slate-350">
                                   {stayDisplay}
                                 </td>
 
@@ -2575,14 +2575,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                         {/* Col 3: Browser Stack details */}
                                         <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-101 dark:bg-slate-900/40 dark:border-slate-800 space-y-2">
                                           <div className="text-[10px] uppercase font-bold text-slate-400">Device Hardware & Engine</div>
-                                          <div className="space-y-1 text-slate-705 dark:text-slate-300">
+                                          <div className="space-y-1 text-slate-700 dark:text-slate-300">
                                             <div className="text-xs font-bold font-sans">
                                               🖥️ {a.browser || "Chrome Standard Web Client"}
                                             </div>
                                             <div className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 uppercase font-black">
                                               Hardware Group: {a.device || "Desktop Terminal"}
                                             </div>
-                                            <div className="text-[10px] text-slate-450 leading-tight block">
+                                            <div className="text-[10px] text-slate-400 leading-tight block">
                                               Proxy Mask IP: {a.ipAddress || "127.0.0.1"}
                                             </div>
                                           </div>
@@ -2599,7 +2599,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                             <div className="text-[10px] text-slate-500 font-semibold font-mono leading-tight">
                                               Duration: {stayDisplay} (Seconds: {a.timeSpent || 0}s)
                                             </div>
-                                            <div className="text-[10px] text-indigo-700 font-bold dark:text-indigo-455 truncate max-w-xs" title={isPage ? a.pageUrl : (a.productId?.name || "Product")}>
+                                            <div className="text-[10px] text-indigo-700 font-bold dark:text-indigo-400 truncate max-w-xs" title={isPage ? a.pageUrl : (a.productId?.name || "Product")}>
                                               Target: {isPage ? (a.pageUrl || "/") : (a.productId?.name || "Affiliate Hub Item")}
                                             </div>
                                           </div>
@@ -2748,9 +2748,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       {/* 4. MODAL POPUP: CREATE OR UPDATE PRODUCT SPECIFICATION CARD */}
       {showProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 animate-in fade-in duration-200 overflow-y-auto pt-10">
-          <div className="max-w-xl w-full bg-white rounded-3xl p-6 border border-slate-150 shadow-2xl dark:bg-zinc-950 dark:border-slate-800 space-y-4 my-8 max-h-[85vh] overflow-y-auto">
+          <div className="max-w-xl w-full bg-white rounded-3xl p-6 border border-slate-100 shadow-2xl dark:bg-zinc-950 dark:border-slate-800 space-y-4 my-8 max-h-[85vh] overflow-y-auto">
             
-            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-850">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
               <h3 className="text-sm font-black text-slate-900 dark:text-white tracking-widest uppercase">
                 {editingProduct ? 'Edit Product Details' : 'Add New Product'}
               </h3>
@@ -2838,7 +2838,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <select
                         value={prodForm.category}
                         onChange={(e) => setProdForm({ ...prodForm, category: e.target.value, subcategory: "" })}
-                        className="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-900 p-2.5 outline-none dark:border-slate-800 dark:bg-[#0c1224] dark:text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        className="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-900 p-2.5 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                       >
                         {categories.map(c => (
                           <option key={c._id} value={c._id} className="dark:bg-slate-900 dark:text-slate-100">{c.name}</option>

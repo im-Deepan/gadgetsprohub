@@ -107,7 +107,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
             placeholder="Search guides, headphones reviews, trial shoes tips..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full text-xs rounded-full border border-slate-200 bg-white py-3 pl-10 pr-4 text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-505 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+            className="w-full text-xs rounded-full border border-slate-200 bg-white py-3 pl-10 pr-4 text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
           />
         </div>
       </div>
@@ -160,7 +160,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
               >
                 <div className="h-48 bg-slate-100 overflow-hidden relative shrink-0">
                   <img
-                    src={b.featured_image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500'}
+                    src={b.featured_image || 'https://images.unsplash.com/photo-1005740420928-5e560c06d30e?w=500'}
                     alt={b.title}
                     referrerPolicy="no-referrer"
                     className="h-full w-full object-cover group-hover:scale-102 transition-transform duration-500"

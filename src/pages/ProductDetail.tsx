@@ -353,7 +353,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 animate-pulse text-slate-805 dark:text-slate-100">
+      <div className="mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 animate-pulse text-slate-800 dark:text-slate-100">
         {/* Breadcrumb Skeleton */}
         <div className="flex mb-8 md:px-4">
           <div className="h-9 w-48 bg-slate-200 dark:bg-slate-800 rounded-full"></div>
@@ -553,7 +553,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                       <button
                         type="button"
                         onClick={() => setShowVideo(false)}
-                        className="mt-4 px-3.5 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-indigo-450 dark:text-indigo-400 border border-slate-750 transition-all cursor-pointer"
+                        className="mt-4 px-3.5 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-indigo-400 dark:text-indigo-400 border border-slate-750 transition-all cursor-pointer"
                       >
                         Back to main photo
                       </button>
@@ -839,7 +839,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 overflow-hidden dark:border-slate-800">
             <div className="overflow-x-auto w-full">
               <table className="w-full text-left border-collapse text-xs min-w-[400px] sm:min-w-0">
-                <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850">
+                <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="py-3 px-4 font-bold text-slate-500 uppercase">Parameter</th>
                     <th className="py-3 px-4 font-bold text-slate-500 uppercase">Specification Metrics</th>

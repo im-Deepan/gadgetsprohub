@@ -21,7 +21,7 @@ interface HomeProps {
 }
 
 const ProductCardSkeleton = () => (
-  <div className="group flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-[#0c1224] overflow-hidden animate-pulse">
+  <div className="group flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900 overflow-hidden animate-pulse">
     <div className="h-32 sm:h-44 bg-slate-100 dark:bg-slate-900/50 shrink-0"></div>
     <div className="p-3 sm:p-5 flex flex-col flex-grow space-y-2.5">
       <div className="h-3.5 w-1/3 bg-slate-100 dark:bg-slate-900/50 rounded"></div>
@@ -443,7 +443,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
             {/* Premium Interactive Recent Searches Dropdown */}
             {showDropdown && recentSearches.length > 0 && (
-              <div className="absolute z-50 left-0 right-0 mt-2 rounded-2xl border border-slate-250 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-[#0c1224] text-left animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute z-50 left-0 right-0 mt-2 rounded-2xl border border-slate-250 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-900 text-left animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-slate-800/80">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
                     <Clock className="h-3 w-3 text-slate-400 shrink-0" />
@@ -452,7 +452,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                   <button
                     type="button"
                     onClick={handleClearAllRecentSearches}
-                    className="text-[10px] font-bold uppercase text-rose-500 hover:text-rose-605 transition-colors cursor-pointer border-none bg-transparent p-0"
+                    className="text-[10px] font-bold uppercase text-rose-500 hover:text-rose-600 transition-colors cursor-pointer border-none bg-transparent p-0"
                   >
                     Clear All
                   </button>
@@ -470,7 +470,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                       className="group flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
                     >
                       <span className="flex items-center gap-2 truncate">
-                        <History className="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-550 transition-colors shrink-0" />
+                        <History className="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors shrink-0" />
                         <span className="truncate">{query}</span>
                       </span>
                       <button
@@ -573,7 +573,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       }>
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 mb-8 border-b border-slate-200/60 pb-3 dark:border-slate-800">
-          <Trophy className="h-5 w-5 text-slate-600 dark:text-slate-450" />
+          <Trophy className="h-5 w-5 text-slate-600 dark:text-slate-400" />
           <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
             Curated Collections
           </h2>
@@ -585,7 +585,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-[#0c1224] rounded-3xl border border-slate-200 dark:border-slate-855 p-5 animate-pulse space-y-4">
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-855 p-5 animate-pulse space-y-4">
                 <div className="h-6 w-1/3 bg-slate-100 rounded"></div>
                 <div className="grid grid-cols-2 gap-2">
                   {[...Array(4)].map((_, j) => (
@@ -611,7 +611,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             {collectionsData.map(({ category, latestFour }) => (
               <div 
                 key={category._id}
-                className="group flex flex-col bg-white dark:bg-[#0c1224] rounded-3xl border border-slate-200/80 dark:border-slate-850 shadow-xs hover:border-slate-400 dark:hover:border-slate-700 transition-all p-5 hover:translate-y-[-4px] duration-250 cursor-default"
+                className="group flex flex-col bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-slate-400 dark:hover:border-slate-700 transition-all p-5 hover:translate-y-[-4px] duration-250 cursor-default"
               >
                 {/* Collection Info Header */}
                 <div className="mb-4">
@@ -630,7 +630,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                   {latestFour.map(prod => (
                     <div className="group" key={prod._id}>
                       <BorderGlow
-                        className="relative aspect-square bg-white dark:bg-[#0c1224] rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-855/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-500/40 dark:hover:border-slate-700 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
+                        className="relative aspect-square bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-855/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-500/40 dark:hover:border-slate-700 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
                         borderRadius={16}
                       >
                       <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
@@ -679,7 +679,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
                   <button
                     onClick={() => onNavigate('products', `category-${category._id}`)}
-                    className="w-full text-center bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-300 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border-none"
+                    className="w-full text-center bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border-none"
                   >
                     <span>See More</span>
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -717,7 +717,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             </h2>
           </div>
           {homeSearch && (
-            <span className="bg-amber-50 text-amber-850 text-[10px] font-bold rounded px-2 py-0.5 dark:bg-amber-950/40 dark:text-amber-300 font-mono">
+            <span className="bg-amber-50 text-amber-800 text-[10px] font-bold rounded px-2 py-0.5 dark:bg-amber-950/40 dark:text-amber-300 font-mono">
               Matched: {latestProductsToShow.length}
             </span>
           )}
@@ -756,7 +756,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     className="group"
                   >
                     <BorderGlow
-                      className="flex flex-col rounded-2xl border border-slate-200/50 bg-white hover:border-indigo-500/40 dark:border-slate-850/80 dark:bg-[#0c1224] transition-all duration-200 overflow-hidden cursor-pointer shadow-xs"
+                      className="flex flex-col rounded-2xl border border-slate-200/50 bg-white hover:border-indigo-500/40 dark:border-slate-800/80 dark:bg-slate-900 transition-all duration-200 overflow-hidden cursor-pointer shadow-xs"
                       borderRadius={16}
                     >
                       <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
@@ -767,7 +767,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=310'}
                         alt={prod.name}
                         referrerPolicy="no-referrer"
-                        className="max-h-full max-w-full object-contain p-2 bg-slate-150/40 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-300"
+                        className="max-h-full max-w-full object-contain p-2 bg-slate-100/40 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-300"
                       />
                       {prod.discount && prod.discount > 0 && (
                         <span className="absolute top-2 left-2 bg-rose-500 rounded px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold text-white uppercase tracking-wider font-mono shadow-xs">
@@ -799,7 +799,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         <span className="text-[8px] sm:text-[9px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate max-w-[80px]">
                           {prod.brand || 'Premium'}
                         </span>
-                        <span className="text-[8.5px] px-1.5 py-0.2 bg-slate-50 border border-slate-150 rounded text-slate-500 dark:bg-slate-900/40 dark:border-slate-800 dark:text-slate-400 font-bold font-mono truncate max-w-[90px]">
+                        <span className="text-[8.5px] px-1.5 py-0.2 bg-slate-50 border border-slate-100 rounded text-slate-500 dark:bg-slate-900/40 dark:border-slate-800 dark:text-slate-400 font-bold font-mono truncate max-w-[90px]">
                           {(() => {
                             if (!prod.category) return 'Item';
                             if (typeof prod.category === 'object' && prod.category) {
@@ -823,7 +823,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                       {/* Pricing Tag and Details Trigger */}
                       <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80">
                         <div className="flex items-baseline gap-1">
-                          <span className="text-xs sm:text-sm font-black text-indigo-650 dark:text-indigo-455 font-mono">₹{prod.price}</span>
+                          <span className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">₹{prod.price}</span>
                           {prod.originalPrice && (
                             <span className="text-[9px] sm:text-[10px] text-slate-400 line-through font-mono translate-y-[-0.5px]">₹{prod.originalPrice}</span>
                           )}
@@ -847,14 +847,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               {latestProductsToShow.length > visibleCount && (
                 <button
                   onClick={() => setVisibleCount(prev => prev + 6)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 hover:border-indigo-300 bg-white hover:bg-slate-50 text-indigo-700 dark:border-slate-800 dark:bg-[#0c1224] dark:hover:bg-slate-900 dark:text-indigo-300 px-6 py-2.5 text-xs font-bold shadow-xs cursor-pointer transition-all border-solid"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 hover:border-indigo-300 bg-white hover:bg-slate-50 text-indigo-700 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-900 dark:text-indigo-300 px-6 py-2.5 text-xs font-bold shadow-xs cursor-pointer transition-all border-solid"
                 >
                   Load More Products
                 </button>
               )}
               <button
                 onClick={() => onNavigate('products')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-none bg-indigo-650 hover:bg-indigo-700 text-white px-6 py-2.5 text-xs font-bold shadow-sm hover:shadow-md cursor-pointer transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-none bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 text-xs font-bold shadow-sm hover:shadow-md cursor-pointer transition-all"
               >
                 <span>See All Products</span>
                 <ArrowRight className="h-3.5 w-3.5" />

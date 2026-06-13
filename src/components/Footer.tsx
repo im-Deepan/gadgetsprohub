@@ -269,7 +269,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
       {/* Subscription Success Modal Overlay */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-150 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-zinc-900 transition-all text-left text-slate-900 dark:text-white">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-zinc-900 transition-all text-left text-slate-900 dark:text-white">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-teal-50 text-teal-600 dark:bg-teal-950/40 rounded-full shrink-0">
                 <ShieldCheck className="h-6 w-6 shrink-0" />
