@@ -27,8 +27,8 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
     if (recentViewed.length <= 1) return;
 
     const interval = setInterval(() => {
-      setSlotCycles((prev) => prev.map((val) => val + 1));
-    }, 4500);
+      setSlotCycles((prev) => prev.map((val) => (val + 1) % recentViewed.length));
+    }, 4505);
 
     return () => clearInterval(interval);
   }, [recentViewed.length]);

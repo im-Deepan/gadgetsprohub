@@ -26,6 +26,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   const [showResults, setShowResults] = useState(false);
   const [searchResults, setSearchResults] = useState<{ products: Product[]; blogs: Blog[] }>({ products: [], blogs: [] });
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const showMobileMenuRef = React.useRef(showMobileMenu);
+  useEffect(() => {
+    showMobileMenuRef.current = showMobileMenu;
+  }, [showMobileMenu]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   
@@ -48,6 +52,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
     lastScrollYRef.current = window.scrollY;
     
     const handleScroll = () => {
+      if (showMobileMenuRef.current) {
+        setIsVisible(true);
+        return;
+      }
       const currentScrollY = window.scrollY;
       const prevScrollY = lastScrollYRef.current;
       const diff = currentScrollY - prevScrollY;
@@ -145,7 +153,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
             showToast("Navigated: Admin Dashboard", "info");
           }
           break;
-        case 'k':
         case '?':
           e.preventDefault();
           setShowShortcutsModal(prev => !prev);
@@ -204,25 +211,31 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
       .catch(err => console.warn('Navbar categorizing check failing:', err));
   }, []);
 
-  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchQuery(val);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
 
-    if (val.trim().length > 1) {
-      try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(val)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults(data);
-          setShowResults(true);
+  // Debounce search query to prevent flooding the backend API on rapid user typing
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (trimmed.length > 1) {
+      const timer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`);
+          if (res.ok) {
+            const data = await res.json();
+            setSearchResults(data);
+            setShowResults(true);
+          }
+        } catch (err) {
+          console.error('Navbar query fail:', err);
         }
-      } catch (err) {
-        console.error('Navbar query fail:', err);
-      }
+      }, 300); // 300ms debounce input typing rate
+      return () => clearTimeout(timer);
     } else {
       setShowResults(false);
     }
-  };
+  }, [searchQuery]);
 
   const handleResultClick = (view: string, slug: string) => {
     onNavigate(view, slug);

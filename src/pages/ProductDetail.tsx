@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, ShieldCheck, CheckCheck, MessageSquare, Plus, Check, X, BookmarkCheck, Edit, Sparkles, Box, CheckCircle, Video, Play } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Helmet } from 'react-helmet-async';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 
@@ -17,6 +18,7 @@ interface ProductDetailProps {
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNavigate }) => {
   const { wishlist, toggleWishlist, isAuthenticated, user, token } = useAuth();
+  const { showToast } = useToast();
   
   // States
   const [product, setProduct] = useState<Product | null>(null);
@@ -98,21 +100,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         setActiveImageIdx(0);
         setShowVideo(false);
         
-        // Prefill direct admin edit parameters
-        setAdminEditForm({
-          name: data.name || '',
-          price: String(data.price || ''),
-          originalPrice: String(data.originalPrice || ''),
-          discount: String(data.discount || ''),
-          affiliateLink: data.affiliateLink || '',
-          description: data.description || '',
-          longDescription: data.longDescription || '',
-          features: data.features?.join(', ') || '',
-          pros: data.pros?.join(', ') || '',
-          cons: data.cons?.join(', ') || '',
-          videoUrl: data.videoUrl || ''
-        });
-        
         // Store the viewed product in localStorage for "Pick where you left off"
         try {
           localStorage.removeItem('aff_history_cleared');
@@ -165,6 +152,25 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     }
   };
 
+  // Sync admin form with product changes to prevent stale data
+  useEffect(() => {
+    if (product) {
+      setAdminEditForm({
+        name: product.name || '',
+        price: String(product.price || ''),
+        originalPrice: String(product.originalPrice || ''),
+        discount: String(product.discount || ''),
+        affiliateLink: product.affiliateLink || '',
+        description: product.description || '',
+        longDescription: product.longDescription || '',
+        features: product.features?.join(', ') || '',
+        pros: product.pros?.join(', ') || '',
+        cons: product.cons?.join(', ') || '',
+        videoUrl: product.videoUrl || ''
+      });
+    }
+  }, [product]);
+
   const handleAdminEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product || !token) return;
@@ -196,7 +202,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       });
 
       if (res.ok) {
-        setProduct(prev => prev ? { ...prev, ...payload } : null);
+        const cleanPayload = Object.fromEntries(
+          Object.entries(payload).filter(([_, val]) => val !== undefined)
+        );
+        setProduct(prev => prev ? { ...prev, ...cleanPayload } : null);
         setAdminEditSuccess(true);
         setTimeout(() => setAdminEditSuccess(false), 2500);
       } else {
@@ -219,6 +228,24 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
     return () => clearInterval(interval);
   }, [product, activeImageIdx]);
+
+  useEffect(() => {
+    if (product) {
+      setAdminEditForm({
+        name: product.name || '',
+        price: String(product.price || ''),
+        originalPrice: String(product.originalPrice || ''),
+        discount: String(product.discount || ''),
+        affiliateLink: product.affiliateLink || '',
+        description: product.description || '',
+        longDescription: product.longDescription || '',
+        features: product.features?.join(', ') || '',
+        pros: product.pros?.join(', ') || '',
+        cons: product.cons?.join(', ') || '',
+        videoUrl: product.videoUrl || ''
+      });
+    }
+  }, [product]);
 
   useEffect(() => {
     if (productSlug) {
@@ -247,6 +274,26 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   // Click tracker and external routing proxy
   const handleAffiliateClick = async () => {
     if (!product) return;
+    
+    let validatedUrl = '';
+    try {
+      if (product.affiliateLink) {
+        let rawLink = product.affiliateLink.trim();
+        if (!/^https?:\/\//i.test(rawLink)) {
+          rawLink = 'https://' + rawLink;
+        }
+        const parsed = new URL(rawLink);
+        validatedUrl = parsed.toString();
+      }
+    } catch (err) {
+      console.warn("Invalid affiliate link format:", err);
+    }
+
+    if (!validatedUrl) {
+      alert("This product's e-commerce reference link is currently invalid or unavailable. Please contact support.");
+      return;
+    }
+
     try {
       // Trigger API endpoint click tracking logging
       await fetch(`/api/products/click/${product.slug}`, {
@@ -261,7 +308,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     // Trigger visual overlay popup and open link
     setShowRedirectingModal(true);
     setTimeout(() => {
-      window.open(product.affiliateLink, '_blank', 'noreferrer,noopener');
+      window.open(validatedUrl, '_blank', 'noreferrer,noopener');
       setShowRedirectingModal(false);
     }, 2200);
   };
@@ -454,45 +501,64 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                   ))}
 
                   {/* Add Video thumbnail */}
-                  <button
-                    type="button"
-                    onClick={() => setShowVideo(true)}
-                    className={`w-20 h-16 rounded-xl border-2 overflow-hidden shrink-0 cursor-pointer transition-all flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-900 ${
-                      showVideo 
-                        ? 'border-indigo-600 ring-2 ring-indigo-100 dark:ring-indigo-950/50 bg-indigo-50/20 text-indigo-600' 
-                        : 'border-slate-350 dark:border-slate-700 hover:border-slate-400 bg-slate-50 dark:bg-slate-950 text-slate-500'
-                    }`}
-                  >
-                    <Video className={`h-5 w-5 ${showVideo ? 'text-indigo-600 dark:text-indigo-400 animate-pulse' : ''}`} />
-                    <span className="text-[9px] font-bold mt-1">Video Demo</span>
-                  </button>
+                  {product.videoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setShowVideo(true)}
+                      className={`w-20 h-16 rounded-xl border-2 overflow-hidden shrink-0 cursor-pointer transition-all flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-900 ${
+                        showVideo 
+                          ? 'border-indigo-600 ring-2 ring-indigo-100 dark:ring-indigo-950/50 bg-indigo-50/20 text-indigo-600' 
+                          : 'border-slate-350 dark:border-slate-700 hover:border-slate-400 bg-slate-50 dark:bg-slate-950 text-slate-500'
+                      }`}
+                    >
+                      <Video className={`h-5 w-5 ${showVideo ? 'text-indigo-600 dark:text-indigo-400 animate-pulse' : ''}`} />
+                      <span className="text-[9px] font-bold mt-1">Video Demo</span>
+                    </button>
+                  )}
                 </div>
               )}
 
               {/* Main Display Frame */}
               <div className="flex-1 relative h-[260px] xs:h-[320px] sm:h-[430px] w-full rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-xs shrink-0 flex items-center justify-center bg-slate-100/50 dark:bg-slate-950/20">
                 {showVideo ? (
-                  <div className="relative w-full h-full flex items-center justify-center bg-black">
-                    <video
-                      key={product.videoUrl || 'fallback-video'}
-                      className="w-full h-full object-contain pointer-events-auto"
-                      controls
-                      playsInline
-                      preload="metadata"
-                      referrerPolicy="no-referrer"
-                      poster={product.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'}
-                    >
-                      <source 
-                        src={product.videoUrl || "https://assets.mixkit.co/videos/preview/mixkit-rotating-tech-product-display-42023-large.mp4"} 
-                        type="video/mp4" 
-                      />
-                      Your browser does not support the video tag.
-                    </video>
-                    
-                    <div className="absolute top-3 left-3 bg-indigo-600/90 backdrop-blur-xs text-white text-[9px] font-black uppercase font-mono px-2 py-1 rounded-md tracking-wider shadow-sm select-none">
-                      Interactive Video Demo
+                  product.videoUrl ? (
+                    <div className="relative w-full h-full flex items-center justify-center bg-black">
+                      <video
+                        key={product.videoUrl}
+                        className="w-full h-full object-contain pointer-events-auto"
+                        controls
+                        playsInline
+                        preload="metadata"
+                        referrerPolicy="no-referrer"
+                        poster={product.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'}
+                      >
+                        <source 
+                          src={product.videoUrl} 
+                          type="video/mp4" 
+                        />
+                        Your browser does not support the video tag.
+                      </video>
+                      
+                      <div className="absolute top-3 left-3 bg-indigo-600/90 backdrop-blur-xs text-white text-[9px] font-black uppercase font-mono px-2 py-1 rounded-md tracking-wider shadow-sm select-none">
+                        Interactive Video Demo
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="w-full h-full bg-slate-950 text-slate-300 flex flex-col items-center justify-center p-6 text-center select-none">
+                      <span className="text-3xl mb-3">🎬</span>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-white">No Video Demo Found</h4>
+                      <p className="text-[11px] text-slate-400 mt-2 max-w-xs leading-relaxed">
+                        A video demonstration is not currently available for this specific product model.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowVideo(false)}
+                        className="mt-4 px-3.5 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-indigo-450 dark:text-indigo-400 border border-slate-750 transition-all cursor-pointer"
+                      >
+                        Back to main photo
+                      </button>
+                    </div>
+                  )
                 ) : (
                   <img
                     src={(product.images && product.images[activeImageIdx]) || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'}
@@ -552,7 +618,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         {/* Right Side: Product Details */}
         <div className="space-y-6">
           {/* Admin Live Product details modifier action panel */}
-          {user && (user.role === 'admin') && (
+          {user && (user.id || user._id) && token && (user.role === 'admin') && (
             <AdminProductEditPanel
               isAdminEditVisible={isAdminEditVisible}
               setIsAdminEditVisible={setIsAdminEditVisible}

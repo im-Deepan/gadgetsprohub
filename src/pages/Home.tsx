@@ -59,7 +59,21 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       }
       const viewedStored = localStorage.getItem('aff_recent_viewed');
       if (viewedStored) {
-        setRecentViewed(JSON.parse(viewedStored));
+        const parsed = JSON.parse(viewedStored);
+        if (Array.isArray(parsed)) {
+          // Deduplicate based on id & _id
+          const seen = new Set<string>();
+          const uniques: any[] = [];
+          for (const item of parsed) {
+            if (!item) continue;
+            const itemId = String(item._id || item.id || '');
+            if (itemId && !seen.has(itemId)) {
+              seen.add(itemId);
+              uniques.push(item);
+            }
+          }
+          setRecentViewed(uniques);
+        }
       }
     } catch (e) {
       console.warn('Failed to load recent local data:', e);
@@ -165,9 +179,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             if (current.length === 0 && pList.length > 0) {
               const selected: any[] = [];
               const seenBrands = new Set<string>();
+              const seenIds = new Set<string>();
               for (const p of pList) {
-                if (!seenBrands.has(p.brand || '') && p.brand && selected.length < 5) {
+                const pId = String(p._id || p.id || '');
+                if (!seenBrands.has(p.brand || '') && p.brand && pId && !seenIds.has(pId) && selected.length < 5) {
                   seenBrands.add(p.brand);
+                  seenIds.add(pId);
                   selected.push({
                     _id: p._id,
                     name: p.name,
@@ -183,9 +200,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                   });
                 }
               }
-              if (selected.length < 4) {
+              if (selected.length < 5) {
                 for (const p of pList) {
-                  if (selected.length < 5 && !selected.some(item => item._id === p._id)) {
+                  const pId = String(p._id || p.id || '');
+                  if (pId && !seenIds.has(pId) && selected.length < 5) {
+                    seenIds.add(pId);
                     selected.push({
                       _id: p._id,
                       name: p.name,

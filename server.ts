@@ -26,6 +26,17 @@ const getJwtSecret = (): string => {
 };
 const JWT_SECRET_KEY = getJwtSecret();
 
+const cleanUndefined = (obj: any): any => {
+  if (!obj || typeof obj !== 'object') return obj;
+  const result: any = Array.isArray(obj) ? [] : {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+  return result;
+};
+
 let isMongoConnected = false;
 
 // ========== SCHEMAS & MODELS ==========
@@ -2677,7 +2688,7 @@ async function startServer() {
   // Products CRUD
   app.post('/api/admin/products', adminOnly, async (req, res) => {
     try {
-      const payload = req.body;
+      const payload = cleanUndefined(req.body);
       const slug = payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       
       if (isMongoConnected) {
@@ -2709,8 +2720,9 @@ async function startServer() {
   app.put('/api/admin/products/:id', adminOnly, async (req, res): Promise<any> => {
     try {
       const pId = req.params.id;
+      const payload = cleanUndefined(req.body);
       if (isMongoConnected) {
-        const product = await Product.findByIdAndUpdate(pId, req.body, { new: true });
+        const product = await Product.findByIdAndUpdate(pId, payload, { new: true });
         await syncProductsToSeedFile();
         return res.json(product);
       } else {
@@ -2719,7 +2731,7 @@ async function startServer() {
         
         localProducts[index] = {
           ...localProducts[index],
-          ...req.body,
+          ...payload,
           updatedAt: new Date()
         };
         await syncProductsToSeedFile();

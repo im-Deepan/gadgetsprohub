@@ -30,12 +30,18 @@ const ProductCardSkeleton = () => (
 
 const getCategoryEmoji = (categoryName: string) => {
   const norm = categoryName.toLowerCase();
-  if (norm.includes('shoe') || norm.includes('footwear')) return '👟';
-  if (norm.includes('electron') || norm.includes('tech') || norm.includes('gadget') || norm.includes('appliances')) return '🔌';
-  if (norm.includes('fashion') || norm.includes('cloth') || norm.includes('wear') || norm.includes('style') || norm.includes('bag')) return '👕';
-  if (norm.includes('home') || norm.includes('decor') || norm.includes('garden') || norm.includes('furniture')) return '🏠';
+  if (norm.includes('phone') || norm.includes('mobile') || norm.includes('audio') || norm.includes('headphone') || norm.includes('earphone') || norm.includes('speaker') || norm.includes('sound')) return '🎧';
+  if (norm.includes('watch') || norm.includes('clock') || norm.includes('wearable') || norm.includes('smartwatch')) return '⌚';
+  if (norm.includes('comput') || norm.includes('laptop') || norm.includes('desktop') || norm.includes('screen') || norm.includes('monitor')) return '💻';
+  if (norm.includes('camera') || norm.includes('photo') || norm.includes('video') || norm.includes('lens')) return '📷';
+  if (norm.includes('game') || norm.includes('gaming') || norm.includes('console') || norm.includes('play')) return '🎮';
+  if (norm.includes('shoe') || norm.includes('footwear') || norm.includes('sneaker')) return '👟';
+  if (norm.includes('electron') || norm.includes('tech') || norm.includes('gadget') || norm.includes('appliances') || norm.includes('power')) return '🔌';
+  if (norm.includes('fashion') || norm.includes('cloth') || norm.includes('wear') || norm.includes('style') || norm.includes('bag') || norm.includes('backpack')) return '👕';
+  if (norm.includes('home') || norm.includes('decor') || norm.includes('garden') || norm.includes('furniture') || norm.includes('kitchen')) return '🏠';
   if (norm.includes('sport') || norm.includes('fit') || norm.includes('gym')) return '⚽';
   if (norm.includes('book') || norm.includes('educat') || norm.includes('read')) return '📚';
+  if (norm.includes('health') || norm.includes('beauty') || norm.includes('care') || norm.includes('medical')) return '🏥';
   return '📦';
 };
 

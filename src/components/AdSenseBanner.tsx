@@ -15,9 +15,12 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   style = { display: 'block' },
   className = '',
 }) => {
-  const adElement = useRef<HTMLModElement>(null);
+  const adElement = useRef<HTMLElement>(null);
+
+  const publisherId = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID || '';
 
   useEffect(() => {
+    if (!publisherId) return; // Do not push empty client ads in dev mode or missing client id
     try {
       if (typeof window !== 'undefined') {
         let attempts = 0;
@@ -46,9 +49,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     } catch (e) {
       console.warn('Google AdSense render fallback triggered:', e);
     }
-  }, []);
-
-  const publisherId = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-5970826882216712';
+  }, [publisherId]);
 
   // Ensure style always has block layout and safety dimensions to satisfy Google publisher tag layout requirements
   const resolvedStyle: React.CSSProperties = {
@@ -65,21 +66,32 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         Sponsor Advertisement
       </span>
       
-      <div className="w-full min-w-[250px] min-h-[90px] block relative text-center overflow-x-auto">
-        <ins
-          className="adsbygoogle"
-          style={resolvedStyle}
-          data-ad-client={publisherId}
-          data-ad-slot={slot}
-          data-ad-format={format}
-          data-full-width-responsive={responsive}
-          ref={adElement}
-        />
-      </div>
+      {publisherId ? (
+        <div className="w-full min-w-[250px] min-h-[90px] block relative text-center overflow-x-auto">
+          <ins
+            className="adsbygoogle"
+            style={resolvedStyle}
+            data-ad-client={publisherId}
+            data-ad-slot={slot}
+            data-ad-format={format}
+            data-full-width-responsive={responsive}
+            ref={adElement}
+          />
+        </div>
+      ) : (
+        <div className="w-full h-24 bg-slate-100/50 dark:bg-slate-950/20 rounded-xl flex flex-col items-center justify-center p-4 border border-dotted border-slate-300 dark:border-slate-800">
+          <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 font-mono">
+            Interactive Ad Slot Sandbox
+          </span>
+          <span className="text-[9px] text-slate-450 dark:text-slate-600 font-mono mt-1 text-center max-w-md">
+            Please configure the environment variable VITE_ADSENSE_CLIENT_ID in your workspace settings to authorize and stream ads here.
+          </span>
+        </div>
+      )}
 
       {/* Subtle indicator showing that context ad slot holds active listeners */}
-      <span className="text-[8px] font-mono text-slate-350 dark:text-slate-600 mt-2 cursor-default select-none">
-        AdSense Client: {publisherId} | Slot Ref: {slot}
+      <span className="text-[8px] font-mono text-slate-400 dark:text-slate-500 mt-2 cursor-default select-none">
+        AdSense Client: {publisherId || 'Local Sandbox Mode (Unconfigured)'} | Slot Ref: {slot}
       </span>
     </div>
   );

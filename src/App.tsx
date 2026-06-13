@@ -134,7 +134,8 @@ const AppContent: React.FC = () => {
         return viewPart;
       }
       return 'home';
-    } catch {
+    } catch (err) {
+      console.warn("Simple router active view parsing failed, falling back safely:", err);
       return 'home';
     }
   });
@@ -150,7 +151,8 @@ const AppContent: React.FC = () => {
         return pathParts.slice(1).join('/'); 
       }
       return null;
-    } catch {
+    } catch (err) {
+      console.warn("Simple router slug parsing failed, falling back safely:", err);
       return null;
     }
   });
@@ -158,7 +160,8 @@ const AppContent: React.FC = () => {
   const [detectedCity, setDetectedCity] = useState<string>(() => {
     try {
       return localStorage.getItem('aff_preferred_city') || 'Chennai';
-    } catch {
+    } catch (err) {
+      console.warn("Storage preferred city resolution failed, falling back safely:", err);
       return 'Chennai';
     }
   });
@@ -246,7 +249,9 @@ const AppContent: React.FC = () => {
           headers,
           body: JSON.stringify(body),
           keepalive: true
-        }).catch(() => {});
+        }).catch((err) => {
+          console.warn("Analytics telemetry request could not be completed:", err);
+        });
       } catch (err) {
         console.warn("Telemetry reporting failure:", err);
       }
