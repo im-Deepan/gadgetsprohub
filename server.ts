@@ -1339,7 +1339,11 @@ async function startServer() {
         let user = await User.findOne({ email: storageEmail });
         if (!user) {
           user = new User({ email: storageEmail, name, googleId, profileImage, role: initialRole });
-          await user.save();
+          try {
+            await user.save();
+          } catch (err: any) {
+            return res.status(500).json({ error: 'Failed to create user account: ' + err.message });
+          }
         } else if (isAdminEmail(user.email) && user.role !== 'admin') {
           user.role = 'admin';
           await user.save().catch(e => console.warn(e));
@@ -1819,7 +1823,11 @@ async function startServer() {
         } else {
           user.wishlist.push(pId as any);
         }
-        await user.save();
+        try {
+          await user.save();
+        } catch(error: any) {
+          return res.status(500).json({ error: 'Failed to update wishlist: ' + error.message });
+        }
         return res.json(user.wishlist);
       } else {
         const user = localUsers.find(u => u._id === uId);
@@ -2409,7 +2417,11 @@ async function startServer() {
         
         if (name) user.name = name;
         if (district) user.district = district;
-        await user.save();
+        try {
+          await user.save();
+        } catch(error: any) {
+          return res.status(500).json({ error: 'Failed to update user profile: ' + error.message });
+        }
         
         const populated = await User.findById(uId).populate('wishlist');
         return res.json(populated);
