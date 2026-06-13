@@ -7,6 +7,9 @@ import { AdSenseBanner } from '../components/AdSenseBanner';
 
 import { Breadcrumb } from '../components/Breadcrumb';
 
+import { AdminProductEditPanel } from '../components/product/AdminProductEditPanel';
+import { ReviewForm } from '../components/product/ReviewForm';
+
 interface ProductDetailProps {
   productSlug: string;
   onNavigate: (view: string, slug?: string) => void;
@@ -550,160 +553,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         <div className="space-y-6">
           {/* Admin Live Product details modifier action panel */}
           {user && (user.role === 'admin') && (
-            <div className="rounded-2xl border border-violet-200/60 bg-violet-50/15 p-5 dark:border-violet-900/40 dark:bg-violet-950/20 shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Edit className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                  <span className="text-xs font-bold text-violet-800 dark:text-violet-300">🔧 Admin Live Creator Deck</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAdminEditVisible(!isAdminEditVisible)}
-                  className="text-xs font-bold text-violet-700 hover:text-violet-950 dark:text-violet-400 dark:hover:text-violet-300 underline cursor-pointer"
-                >
-                  {isAdminEditVisible ? 'Hide Editor Panel' : '✏️ Quick Edit Product Specs'}
-                </button>
-              </div>
-
-              {isAdminEditVisible && (
-                <form onSubmit={handleAdminEditSubmit} className="space-y-2.5 pt-1 text-slate-805 dark:text-slate-100">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Product Title</label>
-                    <input
-                      type="text"
-                      className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                      value={adminEditForm.name}
-                      onChange={e => setAdminEditForm({ ...adminEditForm, name: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Price ($)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                        value={adminEditForm.price}
-                        onChange={e => setAdminEditForm({ ...adminEditForm, price: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Original Price ($)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                        value={adminEditForm.originalPrice}
-                        onChange={e => setAdminEditForm({ ...adminEditForm, originalPrice: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Discount (%)</label>
-                      <input
-                        type="number"
-                        className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                        value={adminEditForm.discount}
-                        onChange={e => setAdminEditForm({ ...adminEditForm, discount: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Affiliate Destination Link / Shop URL</label>
-                    <input
-                      type="text"
-                      className="w-full text-xs p-2 rounded-lg border border-indigo-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono text-indigo-650 dark:text-indigo-400"
-                      value={adminEditForm.affiliateLink}
-                      onChange={e => setAdminEditForm({ ...adminEditForm, affiliateLink: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Demo Video URL (Direct MP4 clip link)</label>
-                    <input
-                      type="text"
-                      className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono"
-                      value={adminEditForm.videoUrl}
-                      onChange={e => setAdminEditForm({ ...adminEditForm, videoUrl: e.target.value })}
-                      placeholder="e.g. https://assets.mixkit.co/...-large.mp4"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Short Outline Summary</label>
-                    <input
-                      type="text"
-                      className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                      value={adminEditForm.description}
-                      onChange={e => setAdminEditForm({ ...adminEditForm, description: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Deep specification details (Text/Markdown)</label>
-                    <textarea
-                      rows={3}
-                      className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-sans"
-                      value={adminEditForm.longDescription}
-                      onChange={e => setAdminEditForm({ ...adminEditForm, longDescription: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Highlighted Advantages (Comma separated)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Active Noise Cancellation, Smart Battery, Waterproof"
-                      className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                      value={adminEditForm.features}
-                      onChange={e => setAdminEditForm({ ...adminEditForm, features: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Verified Pros (Comma separated)</label>
-                      <textarea
-                        rows={2}
-                        placeholder="Comfortable, dynamic sound..."
-                        className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                        value={adminEditForm.pros}
-                        onChange={e => setAdminEditForm({ ...adminEditForm, pros: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Verified Cons (Comma separated)</label>
-                      <textarea
-                        rows={2}
-                        placeholder="Expensive, heavy..."
-                        className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                        value={adminEditForm.cons}
-                        onChange={e => setAdminEditForm({ ...adminEditForm, cons: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSavingAdminEdit}
-                    className="w-full py-2.5 rounded-lg bg-violet-700 hover:bg-violet-800 dark:bg-violet-600 dark:hover:bg-violet-500 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    {isSavingAdminEdit ? 'Saving alterations...' : '✓ Put Save to Live Storefront'}
-                  </button>
-
-                  {adminEditSuccess && (
-                     <div className="bg-emerald-50 text-emerald-850 dark:bg-emerald-950/40 dark:text-emerald-350 p-2.5 rounded-lg text-center text-[11px] font-bold border border-emerald-200/45">
-                        ✓ Product details & affiliate referral redirect saved live on website!
-                     </div>
-                  )}
-                </form>
-              )}
-            </div>
+            <AdminProductEditPanel
+              isAdminEditVisible={isAdminEditVisible}
+              setIsAdminEditVisible={setIsAdminEditVisible}
+              adminEditForm={adminEditForm}
+              setAdminEditForm={setAdminEditForm}
+              handleAdminEditSubmit={handleAdminEditSubmit}
+              isSavingAdminEdit={isSavingAdminEdit}
+              adminEditSuccess={adminEditSuccess}
+            />
           )}
 
           <div className="space-y-2.5">
@@ -956,80 +814,19 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           </div>
 
           {/* Add Review Form */}
-          <div className="rounded-2xl border border-slate-100 p-5 bg-white shadow-xs dark:border-slate-800 dark:bg-zinc-900/40">
-            <h4 className="text-xs font-bold uppercase text-slate-800 mb-4 tracking-wider dark:text-white">Submit Verified Commend</h4>
-            
-            {isAuthenticated ? (
-              <form onSubmit={handleReviewSubmit} className="space-y-3.5">
-                {reviewSuccess && (
-                  <div className="rounded-xl bg-teal-50 p-3 text-xs text-teal-800">
-                    ✓ Feedback submitted on active viewport state successfully.
-                  </div>
-                )}
-                {reviewError && (
-                  <div className="rounded-xl bg-rose-50 p-3 text-xs text-rose-800">
-                    {reviewError}
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Rating Score (1-5 Stars)</label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map(starIdx => (
-                      <button
-                        type="button"
-                        key={starIdx}
-                        onClick={() => setReviewRating(starIdx)}
-                        className="text-amber-400 hover:scale-110 active:scale-95 transition-transform cursor-pointer"
-                      >
-                        <Star className={`h-5 w-5 ${starIdx <= reviewRating ? 'fill-amber-400' : 'text-slate-200'}`} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Review Core Summary</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Incredible spatial depth!"
-                    value={reviewTitle}
-                    onChange={(e) => setReviewTitle(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2.5 text-slate-950 outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Descriptive Comment</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Add specification clarifications or active workout usage opinions..."
-                    value={reviewContent}
-                    onChange={(e) => setReviewContent(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2.5 text-slate-950 outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-slate-900 hover:bg-indigo-600 text-white font-bold py-2.5 text-xs tracking-wider transition-colors cursor-pointer active:scale-97"
-                >
-                  Post Feedback
-                </button>
-              </form>
-            ) : (
-              <div className="text-center p-4">
-                <p className="text-xs text-slate-400 mb-3.5 leading-relaxed">Login with your account to leave a star rating and review.</p>
-                <button
-                  onClick={() => onNavigate('login')}
-                  className="rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-700 py-1.5 px-4 text-[10px] font-bold cursor-pointer transition-all active:scale-95 dark:bg-indigo-950/40 dark:border-indigo-900 dark:text-indigo-300"
-                >
-                  Go to Login Drawer
-                </button>
-              </div>
-            )}
-          </div>
+          <ReviewForm
+            isAuthenticated={isAuthenticated}
+            reviewSuccess={reviewSuccess}
+            reviewError={reviewError}
+            reviewRating={reviewRating}
+            setReviewRating={setReviewRating}
+            reviewTitle={reviewTitle}
+            setReviewTitle={setReviewTitle}
+            reviewContent={reviewContent}
+            setReviewContent={setReviewContent}
+            handleReviewSubmit={handleReviewSubmit}
+            onNavigate={onNavigate}
+          />
         </div>
 
         {/* Map Feedbacks Columns */}

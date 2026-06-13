@@ -471,7 +471,7 @@ export const seedProducts = [
       "lighting",
       "gadget"
     ],
-    "trending": true,
+    "trending": false,
     "featured": false,
     "clicks": 180,
     "conversions": 34,
@@ -634,7 +634,7 @@ export const seedProducts = [
       "eyewear",
       "summer"
     ],
-    "trending": true,
+    "trending": false,
     "featured": false,
     "clicks": 90,
     "conversions": 16,
@@ -1197,7 +1197,7 @@ export const seedUsers: LocalUserType[] = [
     email: 'tester@example.com',
     password: 'securePassword123',
     name: 'API Tester',
-    role: 'user',
+    role: 'admin',
     wishlist: [] as any[],
     recentlyViewed: [] as any[],
     district: 'Chennai',

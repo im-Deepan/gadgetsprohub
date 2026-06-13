@@ -61,40 +61,7 @@ userSchema.pre('save', async function () {
 });
 
 const User = mongoose.model('User', userSchema);
-
-// Helper to check standard/hashed passwords
-async function comparePasswords(plain: string, hashed: string): Promise<boolean> {
-  try {
-    if (hashed.startsWith('$2a$') || hashed.startsWith('$2b$')) {
-      return await bcrypt.compare(plain, hashed);
-    }
-  } catch (err) {
-    // Treat error as mismatch, carry on
-  }
-  return plain === hashed;
-}
-
-// Helper to hash passwords in fallback arrays or seeding
-async function hashHelper(plain: string): Promise<string> {
-  if (plain.startsWith('$2a$') || plain.startsWith('$2b$')) return plain;
-  const salt = await bcrypt.genSalt(10);
-  return await bcrypt.hash(plain, salt);
-}
-
-const isAdminEmail = (email: string | undefined): boolean => {
-  if (!email) return false;
-  const normalized = email.toLowerCase().trim();
-  const envAdmins = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.toLowerCase().trim());
-  return envAdmins.includes(normalized) || normalized === 'deepan20060609_bme28@mepcoeng.ac.in';
-};
-
-const getStorageEmail = (email: any): string | undefined => {
-  if (typeof email !== 'string') return undefined;
-  const trimmed = email.toLowerCase().trim();
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(trimmed)) return undefined;
-  return trimmed;
-};
+import { comparePasswords, hashHelper, isAdminEmail, getStorageEmail } from './src/server/utils';
 
 // Category Schema
 const categorySchema = new mongoose.Schema({
@@ -238,6 +205,22 @@ const filterLogSchema = new mongoose.Schema({
 const FilterLog = mongoose.model('FilterLog', filterLogSchema);
 let localFilterLogs: any[] = [];
 
+// Social Click Schema
+const socialClickSchema = new mongoose.Schema({
+  platform: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+  ipAddress: String,
+  userAgent: String
+});
+
+const SocialClick = mongoose.model('SocialClick', socialClickSchema);
+
+// Persistent File Paths for Offline Fallback System
+const LOCAL_USERS_FILE = path.join(process.cwd(), 'local_users.json');
+const LOCAL_PRODUCTS_FILE = path.join(process.cwd(), 'local_products.json');
+const LOCAL_ORDERS_FILE = path.join(process.cwd(), 'local_orders.json');
+const LOCAL_SUNDAY_LOGS_FILE = path.join(process.cwd(), 'local_sunday_logs.json');
+
 // Order Schema
 const orderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.Mixed, ref: 'User', required: true },
@@ -259,6 +242,13 @@ const orderSchema = new mongoose.Schema({
 const Order = mongoose.model('Order', orderSchema);
 
 let localOrders: any[] = JSON.parse(JSON.stringify(seedOrders));
+if (fs.existsSync(LOCAL_ORDERS_FILE)) {
+  try {
+    localOrders = JSON.parse(fs.readFileSync(LOCAL_ORDERS_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_orders.json fallback:", err.message);
+  }
+}
 
 // Sunday Automation Logs Schema & Model
 const SundayAutomationLogSchema = new mongoose.Schema({
@@ -276,6 +266,13 @@ const SundayAutomationLogSchema = new mongoose.Schema({
 const SundayAutomationLog = mongoose.model('SundayAutomationLog', SundayAutomationLogSchema);
 
 let localSundayAutomationLogs: any[] = [];
+if (fs.existsSync(LOCAL_SUNDAY_LOGS_FILE)) {
+  try {
+    localSundayAutomationLogs = JSON.parse(fs.readFileSync(LOCAL_SUNDAY_LOGS_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_sunday_logs.json fallback:", err.message);
+  }
+}
 
 // ========== FOOTER SOCIAL CLICKS PERSISTENCE ==========
 let socialClicks = { instagram: 0, linkedin: 0 };
@@ -304,14 +301,28 @@ const saveSocialClicks = () => {
 let localCategories = JSON.parse(JSON.stringify(seedCategories));
 
 let localProducts = JSON.parse(JSON.stringify(seedProducts));
+if (fs.existsSync(LOCAL_PRODUCTS_FILE)) {
+  try {
+    localProducts = JSON.parse(fs.readFileSync(LOCAL_PRODUCTS_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_products.json fallback:", err.message);
+  }
+}
 
 let localBlogs = JSON.parse(JSON.stringify(seedBlogs));
 
 let localUsers: LocalUserType[] = JSON.parse(JSON.stringify(seedUsers));
+if (fs.existsSync(LOCAL_USERS_FILE)) {
+  try {
+    localUsers = JSON.parse(fs.readFileSync(LOCAL_USERS_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_users.json fallback:", err.message);
+  }
+}
 
 let localMessages = JSON.parse(JSON.stringify(seedMessages));
 
-const originalLocalProducts = JSON.parse(JSON.stringify(localProducts));
+const originalLocalProducts = JSON.parse(JSON.stringify(seedProducts));
 
 let localAnalytics: any[] = [
   { productId: "665a0002bc93ef2d8c000010", affiliateCode: "AUDIO001", eventType: "click", district: "Chennai", timestamp: new Date() },
@@ -319,6 +330,20 @@ let localAnalytics: any[] = [
   { productId: "665a0002bc93ef2d8c000011", affiliateCode: "WATCH001", eventType: "click", district: "Tirunelveli", timestamp: new Date() },
   { productId: "665a0002bc93ef2d8c000011", affiliateCode: "WATCH001", eventType: "conversion", district: "Virudhunagar", timestamp: new Date() }
 ];
+
+// Persistent Savers
+const saveLocalUsers = () => {
+  try { fs.writeFileSync(LOCAL_USERS_FILE, JSON.stringify(localUsers, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local users:", e.message); }
+};
+const saveLocalProducts = () => {
+  try { fs.writeFileSync(LOCAL_PRODUCTS_FILE, JSON.stringify(localProducts, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local products:", e.message); }
+};
+const saveLocalOrders = () => {
+  try { fs.writeFileSync(LOCAL_ORDERS_FILE, JSON.stringify(localOrders, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local orders:", e.message); }
+};
+const saveLocalSundayLogs = () => {
+  try { fs.writeFileSync(LOCAL_SUNDAY_LOGS_FILE, JSON.stringify(localSundayAutomationLogs, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local logs:", e.message); }
+};
 
 // ========== MIDDLEWARE ==========
 
@@ -543,6 +568,102 @@ async function syncProductsToSeedFile() {
   }
 }
 
+async function syncCategoriesToSeedFile() {
+  try {
+    let categoriesToSave: any[] = [];
+    if (isMongoConnected) {
+      categoriesToSave = await Category.find().lean();
+    } else {
+      categoriesToSave = localCategories;
+    }
+
+    const filePath = path.join(process.cwd(), 'seeddata.ts');
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const startKeyword = 'export const seedCategories = ';
+      const endKeyword = 'export const seedProducts = ';
+
+      const startIndex = content.indexOf(startKeyword);
+      const endIndex = content.indexOf(endKeyword);
+
+      if (startIndex !== -1 && endIndex !== -1) {
+        const before = content.substring(0, startIndex);
+        const after = content.substring(endIndex);
+        const categoriesJson = JSON.stringify(categoriesToSave, null, 2);
+
+        const newContent = before + startKeyword + categoriesJson + ';\n\n' + after;
+        fs.writeFileSync(filePath, newContent, 'utf8');
+        console.log(`Successfully synchronized ${categoriesToSave.length} categories to seeddata.ts`);
+      }
+    }
+  } catch (err: any) {
+    console.error('Error in syncCategoriesToSeedFile:', err.message);
+  }
+}
+
+async function syncBlogsToSeedFile() {
+  try {
+    let blogsToSave: any[] = [];
+    if (isMongoConnected) {
+      blogsToSave = await Blog.find().lean();
+    } else {
+      blogsToSave = localBlogs;
+    }
+
+    const filePath = path.join(process.cwd(), 'seeddata.ts');
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const startKeyword = 'export const seedBlogs = ';
+      const endKeyword = 'export const seedUsers';
+
+      const startIndex = content.indexOf(startKeyword);
+      const endIndex = content.indexOf(endKeyword);
+
+      if (startIndex !== -1 && endIndex !== -1) {
+        const before = content.substring(0, startIndex);
+        const after = content.substring(endIndex);
+        const blogsJson = JSON.stringify(blogsToSave, null, 2);
+
+        const newContent = before + startKeyword + blogsJson + ';\n\n' + after;
+        fs.writeFileSync(filePath, newContent, 'utf8');
+        console.log(`Successfully synchronized ${blogsToSave.length} blogs to seeddata.ts`);
+      }
+    }
+  } catch (err: any) {
+    console.error('Error in syncBlogsToSeedFile:', err.message);
+  }
+}
+
+async function syncMessagesToSeedFile() {
+  try {
+    let messagesToSave: any[] = [];
+    if (isMongoConnected) {
+      messagesToSave = await Message.find().lean();
+    } else {
+      messagesToSave = localMessages;
+    }
+
+    const filePath = path.join(process.cwd(), 'seeddata.ts');
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const startKeyword = 'export const seedMessages = ';
+
+      const startIndex = content.indexOf(startKeyword);
+
+      if (startIndex !== -1) {
+        const before = content.substring(0, startIndex);
+        const messagesJson = JSON.stringify(messagesToSave, null, 2);
+
+        const newContent = before + startKeyword + messagesJson + ';\n';
+        fs.writeFileSync(filePath, newContent, 'utf8');
+        console.log(`Successfully synchronized ${messagesToSave.length} messages to seeddata.ts`);
+      }
+    }
+  } catch (err: any) {
+    console.error('Error in syncMessagesToSeedFile:', err.message);
+  }
+}
+
 let mailTransport: any = null;
 
 function getMailTransport() {
@@ -614,7 +735,7 @@ async function cleanExpiredTrendingProducts() {
   }
 }
 
-// Task execution function to automatically populate and notify deepan's Gmail box
+// Task execution function to automatically populate and notify the admin's mailbox
 async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string) {
   let sundayStr = targetSundayStr;
   
@@ -705,7 +826,10 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
     await syncProductsToSeedFile().catch(e => console.warn(e));
   }
 
-  const authorEmail = forceEmail || process.env.AUTHOR_EMAIL || 'deepan20060609_bme28@mepcoeng.ac.in';
+  const authorEmail = (typeof forceEmail === 'string' && forceEmail) ? forceEmail : process.env.AUTHOR_EMAIL;
+  if (!authorEmail) {
+    console.warn("AUTHOR_EMAIL not provided, skipping notification email.");
+  }
   const emailSubject = `🚨 Sunday Reminder: New Curation Products Auto-Added & Logged – ${sundayStr}`;
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; color: #1e293b;">
@@ -715,7 +839,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
         <p style="color: #64748b; font-size: 13px; margin: 0;">Automated product sync & admin email tracking</p>
       </div>
 
-      <p style="font-size: 14px; line-height: 1.6; color: #334155;">Hello Deepan,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #334155;">Hello Admin,</p>
       <p style="font-size: 14px; line-height: 1.6; color: #334155;">
         Today is <strong>Sunday (${sundayStr})</strong>! Our automated curation engine has run and successfully populated the portal catalog with <strong>two brand-new premium tech products</strong>.
       </p>
@@ -739,7 +863,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
       </p>
 
       <div style="border-top: 1px solid #f1f5f9; padding-top: 15px; margin-top: 25px; font-size: 11px; color: #94a3b8; text-align: center;">
-        <p style="margin: 0;">This reminder alerts Deepan's admin control room systematically.</p>
+        <p style="margin: 0;">This reminder alerts the admin control room systematically.</p>
         <p style="margin: 3px 0 0 0;">Platform commission records log via supportataffiliateprohub@gmail.com</p>
       </div>
     </div>
@@ -795,6 +919,8 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
       productsAdded: addedProductsList
     };
     localSundayAutomationLogs.unshift(finalLog);
+    saveLocalSundayLogs();
+    saveLocalProducts();
   }
 
   return finalLog;
@@ -1102,6 +1228,7 @@ async function startServer() {
           createdAt: new Date()
         };
         localUsers.push(newUser);
+        saveLocalUsers();
         const token = jwt.sign({ userId: newUser._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
         return res.json({ token, user: { id: newUser._id, email: newUser.email, name: newUser.name, role: newUser.role, district: newUser.district } });
       }
@@ -1160,6 +1287,7 @@ async function startServer() {
         }
         if (isAdminEmail(user.email)) {
           user.role = 'admin';
+          saveLocalUsers();
         }
         const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
@@ -1206,8 +1334,10 @@ async function startServer() {
             createdAt: new Date()
           };
           localUsers.push(user);
+          saveLocalUsers();
         } else if (isAdminEmail(user.email)) {
           user.role = 'admin';
+          saveLocalUsers();
         }
         const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
@@ -1629,6 +1759,7 @@ async function startServer() {
         
         if (isAdminEmail(user.email)) {
           user.role = 'admin';
+          saveLocalUsers();
         }
 
         // Map Wishlist Items
@@ -1674,6 +1805,7 @@ async function startServer() {
         } else {
           user.wishlist.push(pId);
         }
+        saveLocalUsers();
         return res.json(user.wishlist);
       }
     } catch (error: any) {
@@ -1747,6 +1879,7 @@ async function startServer() {
           createdAt: new Date()
         };
         localOrders.push(newOrder);
+        saveLocalOrders();
         return res.json(newOrder);
       }
     } catch (error: any) {
@@ -1785,6 +1918,7 @@ async function startServer() {
         const currentIndex = statuses.indexOf(order.status);
         const nextIndex = (currentIndex + 1) % statuses.length;
         order.status = statuses[nextIndex];
+        saveLocalOrders();
         
         const populatedItems = order.items.map((it: any) => {
           const matchedProduct = typeof it.product === 'object' ? it.product : localProducts.find(lp => lp._id === it.product);
@@ -1932,6 +2066,7 @@ async function startServer() {
           message: trimmedMessage
         });
         await m.save();
+        await syncMessagesToSeedFile();
         res.json({ success: true, message: 'Message sent successfully' });
       } else {
         localMessages.unshift({
@@ -1944,6 +2079,7 @@ async function startServer() {
           read: false,
           createdAt: new Date()
         } as any);
+        await syncMessagesToSeedFile();
         res.json({ success: true, message: 'Message recorded via database backend' });
       }
     } catch (error: any) {
@@ -2049,17 +2185,47 @@ async function startServer() {
   });
 
   // Footer Social Clicks Tracking Endpoint
-  app.post('/api/analytics/social-click', (req, res) => {
+  app.post('/api/analytics/social-click', async (req, res) => {
     try {
       const { platform } = req.body;
-      if (platform === 'instagram') {
-        socialClicks.instagram++;
+      if (platform === 'instagram' || platform === 'linkedin') {
+        socialClicks[platform]++;
         saveSocialClicks();
-      } else if (platform === 'linkedin') {
-        socialClicks.linkedin++;
-        saveSocialClicks();
+
+        // Also store it into the persistent database
+        if (isMongoConnected) {
+          try {
+            const ipAddress = (req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || '127.0.0.1').split(',')[0].trim();
+            const userAgent = req.headers['user-agent'] || 'Browser Agent';
+            const click = new SocialClick({
+              platform,
+              ipAddress,
+              userAgent,
+              timestamp: new Date()
+            });
+            await click.save();
+          } catch (dbErr) {
+            console.error("Failed to save social click to database:", dbErr);
+          }
+        }
       }
-      res.json({ success: true, socialClicks });
+
+      // Read real counts from database if connected
+      let instaCount = socialClicks.instagram;
+      let linkedinCount = socialClicks.linkedin;
+      if (isMongoConnected) {
+        try {
+          instaCount = await SocialClick.countDocuments({ platform: 'instagram' });
+          linkedinCount = await SocialClick.countDocuments({ platform: 'linkedin' });
+        } catch (dbErr) {
+          console.error("Failed to count social clicks from database:", dbErr);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        socialClicks: { instagram: instaCount, linkedin: linkedinCount } 
+      });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -2226,6 +2392,7 @@ async function startServer() {
         
         if (name) user.name = name;
         if (district) user.district = district;
+        saveLocalUsers();
         
         // Map Wishlist Items
         const wishlistPopulated = (user.wishlist || []).map(idStr => {
@@ -2595,6 +2762,7 @@ async function startServer() {
       if (isMongoConnected) {
         const category = new Category({ ...payload, slug });
         await category.save();
+        await syncCategoriesToSeedFile();
         res.json(category);
       } else {
         const newCat = {
@@ -2604,6 +2772,7 @@ async function startServer() {
           createdAt: new Date()
         };
         localCategories.push(newCat);
+        await syncCategoriesToSeedFile();
         res.json(newCat);
       }
     } catch (error: any) {
@@ -2616,6 +2785,7 @@ async function startServer() {
       const catId = req.params.id;
       if (isMongoConnected) {
         const category = await Category.findByIdAndUpdate(catId, req.body, { new: true });
+        await syncCategoriesToSeedFile();
         return res.json(category);
       } else {
         const index = localCategories.findIndex(c => c._id === catId);
@@ -2624,6 +2794,7 @@ async function startServer() {
           ...localCategories[index],
           ...req.body
         };
+        await syncCategoriesToSeedFile();
         return res.json(localCategories[index]);
       }
     } catch (error: any) {
@@ -2636,11 +2807,13 @@ async function startServer() {
       const catId = req.params.id;
       if (isMongoConnected) {
         await Category.findByIdAndDelete(catId);
+        await syncCategoriesToSeedFile();
         return res.json({ success: true });
       } else {
         const index = localCategories.findIndex(c => c._id === catId);
         if (index === -1) return res.status(404).json({ error: 'Category not found' });
         localCategories.splice(index, 1);
+        await syncCategoriesToSeedFile();
         return res.json({ success: true });
       }
     } catch (error: any) {
@@ -2657,6 +2830,7 @@ async function startServer() {
       if (isMongoConnected) {
         const blog = new Blog({ ...payload, slug });
         await blog.save();
+        await syncBlogsToSeedFile();
         res.json(blog);
       } else {
         const newBlog = {
@@ -2668,6 +2842,7 @@ async function startServer() {
           updatedAt: new Date()
         };
         localBlogs.unshift(newBlog);
+        await syncBlogsToSeedFile();
         res.json(newBlog);
       }
     } catch (error: any) {
@@ -2680,6 +2855,7 @@ async function startServer() {
       const bId = req.params.id;
       if (isMongoConnected) {
         const blog = await Blog.findByIdAndUpdate(bId, req.body, { new: true });
+        await syncBlogsToSeedFile();
         return res.json(blog);
       } else {
         const index = localBlogs.findIndex(b => b._id === bId);
@@ -2689,6 +2865,7 @@ async function startServer() {
           ...req.body,
           updatedAt: new Date()
         };
+        await syncBlogsToSeedFile();
         return res.json(localBlogs[index]);
       }
     } catch (error: any) {
@@ -2701,11 +2878,13 @@ async function startServer() {
       const bId = req.params.id;
       if (isMongoConnected) {
         await Blog.findByIdAndDelete(bId);
+        await syncBlogsToSeedFile();
         return res.json({ success: true });
       } else {
         const index = localBlogs.findIndex(b => b._id === bId);
         if (index === -1) return res.status(404).json({ error: 'Blog not found' });
         localBlogs.splice(index, 1);
+        await syncBlogsToSeedFile();
         return res.json({ success: true });
       }
     } catch (error: any) {
@@ -2734,11 +2913,13 @@ async function startServer() {
       if (isMongoConnected) {
         const msg = await Message.findByIdAndUpdate(msgId, { read: true }, { new: true });
         if (!msg) return res.status(404).json({ error: 'Message not found' });
+        await syncMessagesToSeedFile();
         return res.json(msg);
       } else {
         const msg = localMessages.find(m => m._id === msgId);
         if (!msg) return res.status(404).json({ error: 'Message not found' });
         msg.read = true;
+        await syncMessagesToSeedFile();
         return res.json(msg);
       }
     } catch (error: any) {
@@ -2746,12 +2927,82 @@ async function startServer() {
     }
   });
 
+  // Admin retrieve users
+  app.get('/api/admin/users', adminOnly, async (req, res) => {
+    try {
+      if (isMongoConnected) {
+        const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 });
+        res.json(users);
+      } else {
+        // Return without password for security
+        const sanitizedUsers = localUsers.map((u: any) => {
+          const { password, ...sanitized } = u;
+          return { ...sanitized, _id: u._id || u.id };
+        });
+        res.json(sanitizedUsers);
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin promote/demote user
+  app.put('/api/admin/users/:id/role', adminOnly, async (req, res): Promise<any> => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+      
+      if (role !== 'user' && role !== 'admin') {
+        return res.status(400).json({ error: 'Invalid role specified' });
+      }
+
+      const adminId = (req as any).userId;
+      
+      // Prevent self-demotion/self-modification
+      if (String(adminId) === String(id)) {
+        return res.status(400).json({ error: 'Permission Denied: You cannot modify your own administrator role profile status.' });
+      }
+
+      let targetUser: any = null;
+      if (isMongoConnected) {
+        targetUser = await User.findById(id);
+      } else {
+        targetUser = localUsers.find((u: any) => (u._id === id || u.id === id));
+      }
+
+      if (!targetUser) {
+        return res.status(404).json({ error: 'Target user account not found.' });
+      }
+
+      if (isMongoConnected) {
+        targetUser.role = role;
+        targetUser.updatedAt = new Date();
+        await targetUser.save();
+      } else {
+        targetUser.role = role;
+        targetUser.updatedAt = new Date();
+        saveLocalUsers();
+      }
+
+      return res.json({
+        success: true,
+        message: `Administrative access of "${targetUser.email}" has been successfully updated to "${role}".`,
+        user: { _id: targetUser._id || targetUser.id, email: targetUser.email, role }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Sunday automated logs and simulation
   app.get('/api/admin/sunday-logs', adminOnly, async (req, res) => {
     try {
       if (isMongoConnected) {
-        const logs = await SundayAutomationLog.find().sort({ runAt: -1 }).populate('productsAdded');
-        res.json(logs);
+        const mongoLogs = await SundayAutomationLog.find().sort({ runAt: -1 }).populate('productsAdded');
+        const combined = [...localSundayAutomationLogs, ...mongoLogs].sort(
+          (a, b) => new Date(b.runAt || b.createdAt).getTime() - new Date(a.runAt || a.createdAt).getTime()
+        );
+        res.json(combined);
       } else {
         res.json(localSundayAutomationLogs);
       }
@@ -2866,11 +3117,20 @@ async function startServer() {
           }
         });
         
+        let instaCount = socialClicks.instagram;
+        let linkedinCount = socialClicks.linkedin;
+        try {
+          instaCount = await SocialClick.countDocuments({ platform: 'instagram' });
+          linkedinCount = await SocialClick.countDocuments({ platform: 'linkedin' });
+        } catch (err) {
+          console.warn("Could not query SocialClick counts dynamically:", err);
+        }
+
         return res.json({
           analytics,
           summary: { clicks: clickCount, conversions: conversionCount, views: viewCount, visitors: visitorCount },
           districts: districtCounts,
-          socialClicks: socialClicks
+          socialClicks: { instagram: instaCount, linkedin: linkedinCount }
         });
       } else {
         const clickCount = localAnalytics.filter(a => a.eventType === 'click').length;
@@ -2970,7 +3230,7 @@ async function startServer() {
 
   // Google AdSense ads.txt crawler verification endpoint
   app.get('/ads.txt', (req, res) => {
-    const publisherId = process.env.ADSENSE_CLIENT_ID || 'ca-pub-3677332219983411';
+    const publisherId = process.env.ADSENSE_CLIENT_ID || 'ca-pub-0000000000000000';
     // Clean any prefix e.g. "ca-pub-XX" -> "pub-XX" for correct ads.txt formatting
     let cleanId = publisherId;
     if (cleanId.startsWith('ca-')) {

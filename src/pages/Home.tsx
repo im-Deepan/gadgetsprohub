@@ -14,6 +14,7 @@ import { AdSenseBanner } from '../components/AdSenseBanner';
 import { LazySection } from '../components/LazySection';
 import { FeaturedCollections } from '../components/FeaturedCollections';
 import { RecentViewedMarquee } from '../components/RecentViewedMarquee';
+import { Breadcrumb } from '../components/Breadcrumb';
 
 interface HomeProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -329,6 +330,24 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
         <meta name="robots" content="index, follow" />
       </Helmet>
+
+      {/* BREADCRUMB */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 -mb-12 relative z-20">
+        <Breadcrumb 
+          items={[
+            { label: 'Home', onClick: () => { setActiveCategory('all'); setHomeSearch(''); }, isCurrentPage: activeCategory === 'all' && !homeSearch },
+            ...(activeCategory !== 'all' ? [{
+              label: activeCategory === 'trending' ? 'Trending' : (categories.find(c => String(c._id) === String(activeCategory))?.name || 'Category'),
+              onClick: () => { setHomeSearch(''); },
+              isCurrentPage: !homeSearch
+            }] : []),
+            ...(homeSearch ? [{
+              label: `Search: ${homeSearch}`,
+              isCurrentPage: true
+            }] : [])
+          ]}
+        />
+      </div>
 
       <section className="relative overflow-hidden py-24 sm:py-32 border-b border-slate-200/50 dark:border-slate-800/50 text-center flex flex-col justify-center items-center isolate">
         {/* Decorative background gradients */}

@@ -1,48 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Product, Category, Blog, Message } from '../types';
-import { Plus, Edit, Trash2, Heart, MailOpen, MailCheck, Coins, Eye, MousePointerClick, ShieldCheck, Mail, CheckCircle, RefreshCcw, Database, TrendingUp, Globe, Sparkles, AlertTriangle, Users, ChevronDown, ChevronUp, Image, Instagram, Linkedin } from 'lucide-react';
+import { Plus, Edit, Trash2, Heart, MailOpen, MailCheck, Coins, Eye, MousePointerClick, ShieldCheck, Mail, CheckCircle, RefreshCcw, Database, TrendingUp, Globe, Sparkles, AlertTriangle, Users, ChevronDown, ChevronUp, Image, Instagram, Linkedin, Lock, Clock } from 'lucide-react';
 import { useDeviceType } from '../hooks/useDeviceType';
+import { TabErrorView } from '../components/admin/TabErrorView';
+import { getDistrictEmoji } from '../utils/emoji';
 
-const getDistrictEmoji = (name: string): string => {
-  switch (name) {
-    case 'Chennai': return '🏙️';
-    case 'Madurai': return '🕌';
-    case 'Tirunelveli': return '🌊';
-    case 'Virudhunagar': return '🌾';
-    case 'Coimbatore': return '🏭';
-    case 'Salem': return '🗻';
-    case 'Tiruchirappalli': return '🏛️';
-    case 'Kanyakumari': return '🌅';
-    default: return '📍';
-  }
-};
-
-interface TabErrorProps {
-  message: string;
-  title: string;
-  onRetry: () => void;
-}
-
-const TabErrorView: React.FC<TabErrorProps> = ({ message, title, onRetry }) => {
-  return (
-    <div className="border border-rose-100 dark:border-rose-950/60 bg-rose-50/10 dark:bg-rose-950/10 p-8 rounded-2xl text-center space-y-4 my-4 max-w-2xl mx-auto">
-      <AlertTriangle className="h-8 w-8 text-rose-500 mx-auto animate-bounce shrink-0" />
-      <div className="space-y-1">
-        <h4 className="text-xs font-black uppercase text-rose-600 dark:text-rose-400 tracking-wider font-sans">{title}</h4>
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed font-sans">{message}</p>
-      </div>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-1.5 text-xs font-bold shadow-xs cursor-pointer transition-all active:scale-95"
-      >
-        <RefreshCcw className="h-3.5 w-3.5 shrink-0" />
-        <span>Retry Sourcing This Resource</span>
-      </button>
-    </div>
-  );
-};
+import { AlertDialog } from '../components/admin/AlertDialog';
+import { ConfirmDialog } from '../components/admin/ConfirmDialog';
 
 interface AdminProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -54,7 +19,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const tabContainerRef = useRef<HTMLDivElement>(null);
   
   // Tab selector
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler' | 'users'>('products');
   const [messagesFilter, setMessagesFilter] = useState<'all' | 'unread'>('all');
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
@@ -73,6 +38,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Tab-specific Error states for robust fault-isolation
@@ -81,6 +47,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [blogsError, setBlogsError] = useState<string | null>(null);
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [telemetryError, setTelemetryError] = useState<string | null>(null);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [updatingUserRole, setUpdatingUserRole] = useState<string | null>(null);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
 
   // Custom Dialog & Alert simulation to bypass iframe sandboxed confirm() and alert() restrictions
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -244,6 +214,30 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     }
   }, [token, user, authLoading]);
 
+
+
+  // Polling for general user list synchronization
+  useEffect(() => {
+    if (!token || activeTab !== 'users') return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const usersRes = await fetch('/api/admin/users', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (usersRes.ok) {
+          const uData = await usersRes.json();
+          setUsers(uData || []);
+        }
+      } catch (err: any) {
+        console.warn("User list synchronization polling failed:", err.message);
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [token, activeTab]);
+
   const loadAdminMetrics = async () => {
     setLoading(true);
     // Reset all tab errors
@@ -253,6 +247,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setMessagesError(null);
     setTelemetryError(null);
     setSundayLogsError(null);
+    setUsersError(null);
 
     let pData: Product[] = [];
     let cData: Category[] = [];
@@ -348,7 +343,27 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       setTelemetryError(e.message || "Failed to connect to Traffic Analytics server.");
     }
 
-    // 6. Fetch Sunday Automation Logs
+    // 6. Fetch User Accounts Sourcing
+    try {
+      if (token) {
+        const usersRes = await fetch('/api/admin/users', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (usersRes.ok) {
+          const uData = await usersRes.json();
+          setUsers(uData || []);
+        } else {
+          const errData = await usersRes.json().catch(() => ({}));
+          setUsersError(errData.error || `Failed to fetch User Accounts: status ${usersRes.status}`);
+        }
+      }
+    } catch (e: any) {
+      setUsersError(e.message || "Failed to connect to User Accounts server.");
+    }
+
+    // 6b. Fetch Active Pending Elevations/Demotions skipped (Direct flow enabled)
+
+    // 7. Fetch Sunday Automation Logs
     try {
       if (token) {
         const logsRes = await fetch('/api/admin/sunday-logs', {
@@ -395,6 +410,42 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       console.warn("Error reloading metrics:", err);
     } finally {
       setRefreshingTraffic(false);
+    }
+  };
+
+  const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'admin', adminPasswordValue: string) => {
+    if (userId === user?._id || userId === (user as any)?.id) {
+      triggerAlert("Permission Denied", "You cannot demote or modify your own administrator role profile status.");
+      return;
+    }
+
+    setUpdatingUserRole(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ role: newRole, adminPassword: adminPasswordValue })
+      });
+      if (res.ok) {
+        const updatedResponse = await res.json();
+        
+        setUsers(prev => prev.map(u => (u._id === userId || u.id === userId) ? { ...u, role: newRole } : u));
+
+        triggerAlert(
+          newRole === 'admin' ? "Elevation Success" : "Demotion Success", 
+          updatedResponse.message || `The user role has been set to "${newRole}" successfully.`
+        );
+      } else {
+        const err = await res.json().catch(() => ({}));
+        triggerAlert("Change Failed", err.error || "Failed to update member role privilege level.");
+      }
+    } catch (err: any) {
+      triggerAlert("Change Failed", err.message || "Network communication error occurred.");
+    } finally {
+      setUpdatingUserRole(null);
     }
   };
 
@@ -994,7 +1045,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       </div>
 
       {/* 1. TOP STATS METRIC INDEX PANEL */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-10 md:px-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10 md:px-4">
         {/* KPI: Unique Visitors */}
         <button
           onClick={() => {
@@ -1033,25 +1084,6 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           </div>
           <div className="h-10 w-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
             <MousePointerClick className="h-5 w-5 animate-pulse shrink-0" />
-          </div>
-        </button>
-
-        {/* KPI: Conversions */}
-        <button
-          onClick={() => {
-            setActiveTab('telemetry');
-            setTimeout(() => {
-              tabContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-          }}
-          className="rounded-2xl border border-slate-100 bg-white p-5 hover:border-rose-400 dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-rose-500 group"
-        >
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-rose-600 transition-colors">Total conversions purchases</p>
-            <h3 className="text-lg font-mono font-black text-rose-600 dark:text-rose-400">~{stats.totalConversions} Orders</h3>
-          </div>
-          <div className="h-10 w-10 rounded-lg bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
-            <CheckCircle className="h-5 w-5 shrink-0" />
           </div>
         </button>
 
@@ -1171,6 +1203,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         >
           🕒 Sunday Scheduler
         </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'users' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/40'}`}
+        >
+          👥 No of Users ({users.length})
+        </button>
       </div>
 
       {/* 3. DYNAMIC WORKVIEW SECTION GRID TABLES */}
@@ -1229,8 +1267,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                   {isMobile ? (
                     <div className="grid grid-cols-1 gap-4">
-                      {paginatedProducts.map(p => (
-                        <div key={p._id} className="bg-white dark:bg-zinc-900/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 shadow-xs space-y-3">
+                      {paginatedProducts.map((p, idx) => (
+                        <div key={p._id || `prod-mob-${idx}`} className="bg-white dark:bg-zinc-900/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 shadow-xs space-y-3">
                           <div className="flex justify-between items-start gap-2">
                             <h5 className="font-bold text-slate-900 dark:text-white text-xs leading-snug">{p.name}</h5>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
@@ -1290,8 +1328,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {paginatedProducts.map(p => (
-                              <tr key={p._id} className="hover:bg-slate-50/20 transition-all">
+                            {paginatedProducts.map((p, idx) => (
+                              <tr key={p._id || `prod-desk-${idx}`} className="hover:bg-slate-50/20 transition-all">
                                 <td className="py-3 px-4 font-bold text-slate-900 dark:text-white truncate max-w-xs">{p.name}</td>
                                 <td className="py-3 px-4 text-slate-500">
                                   {(() => {
@@ -1473,20 +1511,20 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-xs dark:border-slate-800 dark:bg-zinc-900/40 col-span-2">
                   {isMobile ? (
                     <div className="divide-y divide-slate-100 dark:divide-slate-800/80 p-5 space-y-4">
-                      {categories.map(c => (
-                        <div key={c._id} className="pt-4 first:pt-0 flex items-center justify-between gap-4">
+                      {categories.map((c, idx) => (
+                        <div key={c._id || `cat-mob-${idx}`} className="pt-4 first:pt-0 flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3">
                             <span className="text-2xl shrink-0 p-1.5 bg-slate-50 dark:bg-slate-900 rounded-xl">{c.icon || '📦'}</span>
                             <div>
-                              <h5 className="font-bold text-slate-900 dark:text-white text-xs">{c.name}</h5>
-                              <span className="font-mono text-[10px] text-slate-400 block truncate max-w-[140px]">{c.slug}</span>
-                              {c.subcategories && c.subcategories.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1 max-w-[180px]">
-                                  {c.subcategories.map(sub => (
-                                    <span key={sub} className="text-[8px] px-1.5 py-0.5 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 rounded font-semibold">{sub}</span>
-                                  ))}
-                                </div>
-                              )}
+                               <h5 className="font-bold text-slate-900 dark:text-white text-xs">{c.name}</h5>
+                               <span className="font-mono text-[10px] text-slate-400 block truncate max-w-[140px]">{c.slug}</span>
+                               {c.subcategories && c.subcategories.length > 0 && (
+                                 <div className="flex flex-wrap gap-1 mt-1 max-w-[180px]">
+                                   {c.subcategories.map((sub, sIdx) => (
+                                     <span key={`${sub || 'sub'}-${sIdx}`} className="text-[8px] px-1.5 py-0.5 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 rounded font-semibold">{sub}</span>
+                                   ))}
+                                 </div>
+                               )}
                             </div>
                           </div>
                           <div className="flex gap-1.5 shrink-0">
@@ -1521,16 +1559,16 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {categories.map(c => (
-                            <tr key={c._id} className="hover:bg-slate-50/20">
+                          {categories.map((c, idx) => (
+                            <tr key={c._id || `cat-desk-${idx}`} className="hover:bg-slate-50/20">
                               <td className="py-3 px-4 font-semibold text-lg">{c.icon || '📦'}</td>
                               <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">{c.name}</td>
                               <td className="py-3 px-4 text-slate-500 font-mono text-[11px] font-semibold">{c.slug}</td>
                               <td className="py-3 px-4">
                                 <div className="flex flex-wrap gap-1 max-w-[200px]">
                                   {c.subcategories && c.subcategories.length > 0 ? (
-                                    c.subcategories.map(sub => (
-                                      <span key={sub} className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 rounded font-semibold">{sub}</span>
+                                    c.subcategories.map((sub, sIdx) => (
+                                      <span key={`${sub || 'sub'}-${sIdx}`} className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 rounded font-semibold">{sub}</span>
                                     ))
                                   ) : (
                                     <span className="text-slate-400 italic text-[10px]">None</span>
@@ -1580,8 +1618,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-xs dark:border-slate-800 dark:bg-zinc-900/40">
                   {isMobile ? (
                     <div className="divide-y divide-slate-100 dark:divide-slate-800/80 p-5 space-y-4">
-                      {blogs.map(b => (
-                        <div key={b._id} className="pt-4 first:pt-0 space-y-2">
+                      {blogs.map((b, idx) => (
+                        <div key={b._id || `blog-mob-${idx}`} className="pt-4 first:pt-0 space-y-2">
                           <h5 className="font-bold text-slate-900 dark:text-white text-xs leading-snug">{b.title}</h5>
                           <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
                             <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">{b.category}</span>
@@ -1602,8 +1640,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {blogs.map(b => (
-                            <tr key={b._id} className="hover:bg-slate-50/20">
+                          {blogs.map((b, idx) => (
+                            <tr key={b._id || `blog-desk-${idx}`} className="hover:bg-slate-50/20">
                               <td className="py-3 px-4 font-bold text-slate-900 truncate max-w-sm dark:text-white">{b.title}</td>
                               <td className="py-3 px-4 text-slate-500 font-semibold">{b.category}</td>
                               <td className="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">{b.views || 0}</td>
@@ -1670,13 +1708,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                   return (
                     <div className="space-y-4">
-                      {displayedMessages.map((m) => {
+                      {displayedMessages.map((m, idx) => {
                         const isReplying = activeReplyId === m._id;
                         const replyText = replyTextMap[m._id] || '';
                         
                         return (
                           <div
-                            key={m._id}
+                            key={m._id || `msg-${idx}`}
                             className={`rounded-2xl border p-5 space-y-3.5 transition-all ${!m.read ? 'bg-indigo-50/40 border-indigo-100 dark:bg-indigo-950/20 dark:border-indigo-900 shadow-xs' : 'bg-slate-50/20 border-slate-200 dark:border-slate-800'}`}
                           >
                             <div className="flex items-center justify-between gap-4 border-b pb-2 dark:border-slate-800">
@@ -1841,7 +1879,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <div className="bg-white/80 p-3 rounded-xl border border-indigo-50 dark:border-indigo-950/40 dark:bg-zinc-950/40 space-y-1.5">
                         <span className="font-bold text-slate-800 dark:text-emerald-300 block">📬 Automatic Weekly Notification</span>
                         <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
-                          Every Sunday, a detailed automation run is triggered. It appends **2 brand-new premium items** to the live stock list and automatically emails the designated author's mailbox (`deepan20060609_bme28@mepcoeng.ac.in`) with a complete status update.
+                          Every Sunday, a detailed automation run is triggered. It appends **2 brand-new premium items** to the live stock list and automatically emails the designated administrator's mailbox with a complete status update.
                         </p>
                       </div>
                     </div>
@@ -1873,8 +1911,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {sundayLogs.map((log: any) => (
-                              <tr key={log._id || log.sundayDate} className="hover:bg-slate-50/20 dark:hover:bg-slate-800/20">
+                            {sundayLogs.map((log: any, idx: number) => (
+                              <tr key={log._id || log.sundayDate || `log-${idx}`} className="hover:bg-slate-50/20 dark:hover:bg-slate-800/20">
                                 <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-zinc-200">
                                   {log.sundayDate}
                                 </td>
@@ -1915,9 +1953,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <div className="flex items-center gap-2 bg-indigo-50/40 p-3 rounded-xl border border-indigo-100/30 dark:bg-indigo-950/20 dark:border-indigo-900/20 w-full min-w-0">
                         <span className="text-lg shrink-0">📧</span>
                         <div className="space-y-0.5 flex-1 min-w-0">
-                          <span className="text-[10px] text-slate-400 font-semibold block uppercase">AUTHOR GMAIL</span>
+                          <span className="text-[10px] text-slate-400 font-semibold block uppercase">ADMIN GMAIL</span>
                           <span className="text-[10px] font-mono font-bold text-slate-805 dark:text-slate-200 break-all select-all block leading-tight">
-                            deepan20060609_bme28@mepcoeng.ac.in
+                            (Loaded via Environment Profile)
                           </span>
                         </div>
                       </div>
@@ -1938,6 +1976,207 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 </div>
               </div>
             </div>
+          ) : activeTab === 'users' ? (
+            usersError ? (
+              <TabErrorView 
+                title="Member Profiles Sourcing Error" 
+                message={usersError} 
+                onRetry={loadAdminMetrics} 
+              />
+            ) : (() => {
+              const filteredUsers = users.filter(usr => {
+                const matchesSearch = 
+                  (usr.email || '').toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                  (usr.name || '').toLowerCase().includes(userSearchQuery.toLowerCase());
+                
+                const matchesRole = 
+                  userRoleFilter === 'all' || 
+                  usr.role === userRoleFilter;
+
+                return matchesSearch && matchesRole;
+              });
+
+              return (
+                <div className="space-y-6 text-slate-800 dark:text-slate-100 text-xs">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-sm font-black uppercase text-indigo-650 tracking-wider flex items-center gap-1.5 dark:text-indigo-400">
+                        <span>👥 Total Registered Platform Members</span>
+                      </h4>
+                      <p className="text-[11px] text-zinc-400 mt-0.5 font-sans font-medium">
+                        A comprehensive overview of registered members. Revoke administrator credentials securely using a security challenge.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => loadAdminMetrics()}
+                        className="flex items-center gap-1.5 rounded-xl border border-slate-200/85 bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-355 transition-all cursor-pointer active:scale-95 shadow-xs"
+                      >
+                        <RefreshCcw className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <span>Refresh accounts list</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Summary Metric Bento Grid Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="rounded-2xl border border-slate-105 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/60 flex items-center justify-between shadow-xs">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total registered members</span>
+                        <h4 className="text-sm font-mono font-black text-slate-800 dark:text-slate-200 mt-1">{users.length} Account(s)</h4>
+                      </div>
+                      <div className="h-9 w-9 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center text-slate-500 font-bold">
+                        👥
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-indigo-100 bg-indigo-50/10 p-4 dark:border-indigo-950/20 dark:bg-slate-900 flex items-center justify-between shadow-xs">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 block">Active Administrators</span>
+                        <h4 className="text-sm font-mono font-black text-indigo-600 dark:text-indigo-400 mt-1">
+                          {users.filter(u => u.role === 'admin').length} Admin(s)
+                        </h4>
+                      </div>
+                      <div className="h-9 w-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-550 font-bold">
+                         🛡️
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-zinc-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shadow-xs">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Standard Users</span>
+                        <h4 className="text-sm font-mono font-black text-slate-700 dark:text-slate-355 mt-1 block">
+                          {users.filter(u => u.role !== 'admin').length} User(s)
+                        </h4>
+                      </div>
+                      <div className="h-9 w-9 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center text-slate-400 font-bold">
+                         👤
+                      </div>
+                    </div>
+                  </div>
+
+
+
+                  {/* Filter and Search Utility Box */}
+                  <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-slate-50/50 p-4 rounded-2xl dark:bg-zinc-900/40 border border-slate-100 dark:border-slate-800">
+                    <div className="relative w-full sm:max-w-xs">
+                      <input
+                        type="text"
+                        placeholder="Search by email address or name..."
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        className="w-full pl-3.5 pr-8 py-2 text-xs rounded-xl border border-slate-200 bg-white placeholder-slate-450 text-slate-850 focus:outline-hidden focus:ring-1.5 focus:ring-slate-900 dark:border-slate-800 dark:bg-zinc-950 dark:text-slate-100 dark:focus:ring-slate-300"
+                      />
+                      {userSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setUserSearchQuery('')}
+                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-mono font-bold"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <span className="text-[11px] font-bold uppercase text-slate-400 whitespace-nowrap">Filter Role:</span>
+                      <div className="flex bg-white dark:bg-zinc-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 gap-1">
+                        {(['all', 'admin', 'user'] as const).map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setUserRoleFilter(r)}
+                            className={`px-3 py-1 text-[10px] font-bold rounded-lg cursor-pointer capitalize transition-all ${userRoleFilter === r ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-slate-450 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-850/40'}`}
+                          >
+                            {r}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Users Admin Control Table */}
+                  <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-xs dark:border-slate-800 dark:bg-zinc-900/40 w-full">
+                    {filteredUsers.length === 0 ? (
+                      <div className="py-12 text-center text-slate-450 italic text-xs font-medium">
+                        No registered users found matching the query filters.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase text-[10px] tracking-wider dark:bg-slate-900/20 dark:border-slate-800">
+                              <th className="py-3 px-4 font-bold">Member Information</th>
+                              <th className="py-3 px-4 font-bold">Region/District</th>
+                              <th className="py-3 px-4 font-bold">Role Privilege</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {filteredUsers.map((usr: any, idx: number) => {
+                              const usrId = usr._id || usr.id || `usr-${idx}`;
+                              const isSelf = usrId === user?._id || usrId === (user as any)?.id;
+                              const isCurrentAdmin = usr.role === 'admin';
+
+                              return (
+                                <tr key={usrId} className="hover:bg-slate-50/20 dark:hover:bg-slate-800/20 transition-colors">
+                                  <td className="py-3.5 px-4 animate-fadeIn">
+                                    <div className="flex items-center gap-3">
+                                      <div className="h-8 w-8 rounded-full bg-slate-100 text-slate-700 font-bold items-center justify-center flex border border-slate-200 dark:bg-slate-800 dark:text-slate-350 dark:border-slate-700">
+                                        {usr.profileImage ? (
+                                          <img
+                                            src={usr.profileImage}
+                                            alt={usr.name}
+                                            referrerPolicy="no-referrer"
+                                            className="h-full w-full rounded-full object-cover"
+                                          />
+                                        ) : (
+                                          <span>{(usr.name || usr.email || 'U')[0].toUpperCase()}</span>
+                                        )}
+                                      </div>
+                                      <div className="space-y-0.5">
+                                        <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                                          <span>{usr.name || 'Anonymous User'}</span>
+                                          {isSelf && (
+                                            <span className="text-[9px] bg-slate-900 text-white rounded px-1.5 py-0.2 font-extrabold dark:bg-slate-100 dark:text-slate-900 uppercase">
+                                              You
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-[11px] text-slate-400 font-mono font-medium">{usr.email}</div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-zinc-350">
+                                    <span className="inline-flex items-center gap-1 text-[11px]">
+                                      <span>{getDistrictEmoji(usr.district || 'Chennai')}</span>
+                                      <span>{usr.district || 'Chennai'}</span>
+                                    </span>
+                                  </td>
+                                  <td className="py-3.5 px-4">
+                                    {isCurrentAdmin ? (
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-black text-rose-600 border border-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/30 font-sans uppercase">
+                                        🛡️ Administrator
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200 dark:bg-slate-850/40 dark:text-slate-400 dark:border-slate-750/50 font-sans uppercase">
+                                        👤 Standard User
+                                      </span>
+                                    )}
+                                  </td>
+
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
           ) : (
 
           /* VIEW TAB : TELEMETRY TRAFFIC LOGS */
@@ -1996,7 +2235,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     const isConv = a.eventType === 'conversion';
                     const isView = a.eventType === 'view';
                     const absoluteIndex = startIndex + idx;
-                    const recordId = a._id || absoluteIndex.toString();
+                    const recordId = `log-mob-${a._id || absoluteIndex}-${idx}`;
                     const isExpanded = expandedVisitorId === recordId;
 
                     // Display nice status color badge
@@ -2163,7 +2402,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           const isConv = a.eventType === 'conversion';
                           const isView = a.eventType === 'view';
                           const absoluteIndex = startIndex + idx;
-                          const recordId = a._id || absoluteIndex.toString();
+                          const recordId = `log-desk-${a._id || absoluteIndex}-${idx}`;
                           const isExpanded = expandedVisitorId === recordId;
 
                           // Display nice status color badge
@@ -2789,74 +3028,26 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       )}
 
       {/* Custom Confirmation Modal overlay (bypassing sandboxed confirm blocker) */}
-      {confirmDialog.isOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-zinc-900 transition-all">
-            <div className="flex items-start gap-4">
-              <div className={`p-3 rounded-full shrink-0 ${confirmDialog.isDestructive ? 'bg-rose-50 text-rose-500 dark:bg-rose-950/30' : 'bg-amber-50 text-amber-500 dark:bg-amber-950/30'}`}>
-                <AlertTriangle className="h-6 w-6 shrink-0" />
-              </div>
-              <div className="space-y-1 my-1">
-                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider font-sans">{confirmDialog.title}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed font-sans">{confirmDialog.message}</p>
-              </div>
-            </div>
-            
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
-                className="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-350 py-2 px-3.5 text-xs font-bold transition-all cursor-pointer"
-              >
-                {confirmDialog.cancelText || 'Cancel'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirmDialog.onConfirm) {
-                    confirmDialog.onConfirm();
-                  }
-                  setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                }}
-                className={`rounded-lg py-2 px-3.5 text-xs font-bold text-white transition-all shadow-sm active:scale-95 cursor-pointer ${
-                  confirmDialog.isDestructive 
-                    ? 'bg-rose-600 hover:bg-rose-700' 
-                    : 'bg-indigo-600 hover:bg-indigo-700'
-                }`}
-              >
-                {confirmDialog.confirmText || 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        isDestructive={confirmDialog.isDestructive}
+        cancelText={confirmDialog.cancelText}
+        confirmText={confirmDialog.confirmText}
+        onConfirm={confirmDialog.onConfirm || (() => {})}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+      />
+
+
 
       {/* Custom Alert/Notification Modal overlay (bypassing sandboxed alert blocker) */}
-      {alertDialog.isOpen && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-zinc-900 transition-all">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-indigo-50 text-indigo-500 dark:bg-indigo-950/30 rounded-full shrink-0">
-                <ShieldCheck className="h-6 w-6 shrink-0" />
-              </div>
-              <div className="space-y-1 my-1">
-                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider font-sans">{alertDialog.title}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed font-sans whitespace-pre-wrap">{alertDialog.message}</p>
-              </div>
-            </div>
-            
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setAlertDialog(prev => ({ ...prev, isOpen: false }))}
-                className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
-              >
-                Dismiss Info
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        onDismiss={() => setAlertDialog(prev => ({ ...prev, isOpen: false }))}
+      />
 
     </div>
   );

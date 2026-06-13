@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Search, Heart, User, LogOut, Menu, X, Inbox, LayoutDashboard, Gift, Sun, Moon } from 'lucide-react';
+import { Search, Heart, User, LogOut, Menu, X, Inbox, LayoutDashboard, Gift, Sun, Moon, Keyboard } from 'lucide-react';
 import { Category, Product, Blog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../context/ThemeContext';
@@ -32,26 +32,138 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   // Custom states for running color longitudinally in catchy directions
   const [colorFlowDir, setColorFlowDir] = useState<'ltr' | 'rtl' | 'diagonal' | 'vertical'>('ltr');
 
+  // Interactive search bar Refs for global power user focus shortcuts
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Global power users keyboard shortcuts help state
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
   // Scroll behavior state
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollYRef = React.useRef(0);
 
+  // Scroll handler with instant reaction at any vertical screen position
   useEffect(() => {
+    lastScrollYRef.current = window.scrollY;
+    
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+      const prevScrollY = lastScrollYRef.current;
+      const diff = currentScrollY - prevScrollY;
       
-      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+      if (Math.abs(diff) < 1) return;
+
+      if (currentScrollY <= 15) {
+        // At the absolute top -> always show
+        setIsVisible(true);
+      } else if (diff > 1 && currentScrollY > 70) {
+        // Scrolling down even slightly (or sliding up) -> hide navbar
         setIsVisible(false);
-      } else if (currentScrollY < lastScrollY) {
+      } else if (diff < -1) {
+        // Scrolling up even slightly (or sliding down) -> reveal navbar instantly
         setIsVisible(true);
       }
       
-      setLastScrollY(currentScrollY);
+      lastScrollYRef.current = currentScrollY;
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, []);
+
+  // Global Keyboard shortcuts implementation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is actively writing in form/input elements
+      const target = e.target as HTMLElement;
+      if (target) {
+        const tagName = target.tagName.toLowerCase();
+        if (tagName === 'input' || tagName === 'textarea' || target.getAttribute('contenteditable') === 'true') {
+          // Pressing escape inside the input blurs it & closes live search
+          if (e.key === 'Escape') {
+            target.blur();
+            setShowResults(false);
+          }
+          return;
+        }
+      }
+
+      const key = e.key.toLowerCase();
+
+      switch (key) {
+        case '/':
+          e.preventDefault();
+          setIsVisible(true); // make sure navigation bar slides back in
+          setTimeout(() => {
+            if (showMobileMenu && mobileSearchInputRef.current) {
+              mobileSearchInputRef.current.focus();
+            } else if (searchInputRef.current) {
+              searchInputRef.current.focus();
+            }
+          }, 50);
+          showToast("Search field focused", "info");
+          break;
+        case 'h':
+          e.preventDefault();
+          onNavigate('home');
+          showToast("Navigated: Home Screen", "info");
+          break;
+        case 'p':
+          e.preventDefault();
+          onNavigate('products');
+          showToast("Navigated: All Products", "info");
+          break;
+        case 'b':
+          e.preventDefault();
+          onNavigate('blogs');
+          showToast("Navigated: Blog Reviews", "info");
+          break;
+        case 'c':
+          e.preventDefault();
+          onNavigate('contact');
+          showToast("Navigated: Contact Page", "info");
+          break;
+        case 't':
+          e.preventDefault();
+          toggleTheme();
+          showToast("Theme changed", "success");
+          break;
+        case 'w':
+          if (isAuthenticated) {
+            e.preventDefault();
+            onNavigate('profile');
+            showToast("Navigated: Bookmarks & History", "info");
+          } else {
+            showToast("Login to view bookmarks!", "info");
+          }
+          break;
+        case 'a':
+          if (isAdmin) {
+            e.preventDefault();
+            onNavigate('admin');
+            showToast("Navigated: Admin Dashboard", "info");
+          }
+          break;
+        case 'k':
+        case '?':
+          e.preventDefault();
+          setShowShortcutsModal(prev => !prev);
+          break;
+        case 'escape':
+          if (showShortcutsModal) {
+            e.preventDefault();
+            setShowShortcutsModal(false);
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onNavigate, isAdmin, isAuthenticated, toggleTheme, showMobileMenu, showShortcutsModal, showToast]);
 
   useEffect(() => {
     const dirs: ('ltr' | 'rtl' | 'diagonal' | 'vertical')[] = ['ltr', 'rtl', 'diagonal', 'vertical'];
@@ -128,11 +240,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full">
+    <nav className="sticky top-0 z-50 w-full animate-fade-in">
       {/* Scrollable translated header panel */}
-      <div
-        className={`w-full border-b border-slate-200/50 bg-white/80 dark:border-slate-800/50 dark:bg-black/85 backdrop-blur-xl transition-all duration-300 ease-in-out transform ${
-          isVisible ? 'translate-y-0' : '-translate-y-full shadow-sm'
+      <div 
+        className={`w-full border-b border-slate-200/50 bg-white/80 dark:border-slate-800/50 dark:bg-black/85 backdrop-blur-xl shadow-xs transition-transform duration-300 ease-in-out transform ${
+          isVisible ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
         {/* Top running longitudinal colored accent line */}
@@ -209,14 +321,18 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
               <div className="relative flex items-center">
                 <Search className="absolute left-3.5 h-4 w-4 text-slate-400" />
                 <input
+                  ref={searchInputRef}
                   type="text"
                   placeholder="Find products, electronic gadgets..."
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onFocus={() => searchQuery.length > 1 && setShowResults(true)}
                   onBlur={() => setTimeout(() => setShowResults(false), 300)}
-                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 pl-10 pr-4 text-xs text-slate-900 outline-none transition-all placeholder:text-slate-500 focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950"
+                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 pl-10 pr-10 text-xs text-slate-900 outline-none transition-all placeholder:text-slate-500 focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950"
                 />
+                <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-[10px] font-mono text-slate-450 shadow-xs pointer-events-none dark:border-slate-800 dark:bg-slate-850 dark:text-slate-500 select-none">
+                  /
+                </div>
               </div>
             </form>
 
@@ -392,14 +508,18 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 <form onSubmit={handleSearchSubmit} className="relative flex items-center">
                   <Search className="absolute left-3.5 h-4 w-4 text-slate-400" />
                   <input
+                    ref={mobileSearchInputRef}
                     type="text"
                     placeholder="Find product catalog items..."
                     value={searchQuery}
                     onChange={handleSearchChange}
                     onFocus={() => searchQuery.length > 1 && setShowResults(true)}
                     onBlur={() => setTimeout(() => setShowResults(false), 300)}
-                    className="w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-xs text-slate-950 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                    className="w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-10 pr-10 text-xs text-slate-950 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   />
+                  <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-[10px] font-mono text-slate-450 dark:border-slate-800 dark:bg-slate-850 dark:text-slate-500 select-none">
+                    /
+                  </div>
                 </form>
 
                 {/* Mobile Search Live Popover Results */}
@@ -476,6 +596,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                   Contact Us
                 </button>
 
+                <button 
+                  onClick={() => { setShowShortcutsModal(true); setShowMobileMenu(false); }}
+                  className="flex items-center gap-2.5 text-left text-sm py-2 px-3 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-all"
+                >
+                  <Keyboard className="h-4 w-4 text-slate-500" />
+                  <span className="flex-grow">Keyboard Shortcuts</span>
+                  <kbd className="px-1.5 py-0.5 text-[9px] font-mono text-slate-500 bg-slate-100 border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded">?</kbd>
+                </button>
+
                 {isAuthenticated && (
                   <div className="pt-2 mt-2 border-t dark:border-slate-800">
                     <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Account</p>
@@ -514,6 +643,117 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
               {/* Mobile Footer brand marker */}
               <div className="border-t pt-4 dark:border-slate-800 text-center">
                 <p className="text-[10px] text-slate-400 font-mono">gadgetsprohub Product Directory</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Keyboard Shortcuts modal */}
+      <AnimatePresence>
+        {showShortcutsModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowShortcutsModal(false)}
+              className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs"
+            />
+            {/* Modal Body */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', duration: 0.4 }}
+              className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100 z-10"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-150 pb-4 dark:border-slate-800/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+                    <Keyboard className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold tracking-tight">Keyboard Shortcuts Guide</h3>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Boost your browsing speed & efficiency</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowShortcutsModal(false)}
+                  className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Shortcuts Grid List */}
+              <div className="py-4 space-y-4">
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Left Column: Navigation Keys */}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Navigation</p>
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-slate-600 dark:text-slate-300">Go to Home</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">H</kbd>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-slate-600 dark:text-slate-300">Go to Products</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">P</kbd>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-slate-600 dark:text-slate-300">Go to Blog</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">B</kbd>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-slate-600 dark:text-slate-300">Go to Contact</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">C</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Actions Keys */}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Actions</p>
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-slate-600 dark:text-slate-300">Focus Search</span>
+                        <kbd className="px-2.5 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">/</kbd>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-slate-600 dark:text-slate-300">Toggle Theme</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">T</kbd>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Bookmarks & History</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">W</kbd>
+                      </div>
+                      {isAdmin && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-slate-600 dark:text-slate-300">Admin Console</span>
+                          <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">A</kbd>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Shortcuts */}
+                <div className="border-t border-slate-150 pt-4 flex items-center justify-between dark:border-slate-800/80">
+                  <div className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-505">
+                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-slate-50 border border-slate-150 rounded dark:bg-slate-900 dark:border-slate-800">ESC</kbd>
+                    <span>to close or blur inputs</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[11px] text-indigo-500 dark:text-indigo-400 font-mono">
+                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-150 rounded text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900 dark:text-indigo-300">?</kbd>
+                    <span>or</span>
+                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-150 rounded text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900 dark:text-indigo-300">K</kbd>
+                    <span>to toggle this guide</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
