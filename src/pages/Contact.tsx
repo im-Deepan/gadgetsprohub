@@ -14,6 +14,7 @@ export const Contact: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successDetail, setSuccessDetail] = useState('');
 
   // Diagnostic feeding/submission alert overlays
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -65,10 +66,14 @@ export const Contact: React.FC = () => {
         setDoc(messageDocRef, payload)
           .then(() => {
             console.log('Successfully recorded contact message in live Firestore database:', messageId);
+            setSuccessDetail('Your inquiry feed was submitted successfully! Our expert research editors will review the requested specifications shortly.');
           })
           .catch((fErr: any) => {
             console.warn('Optional Firestore background logging failed:', fErr.message || fErr);
+            setSuccessDetail('Your inquiry was processed on our primary servers! (Note: Background Cloud Firestore backup was skipped, but your response is saved safely).');
           });
+      } else {
+        setSuccessDetail('Your inquiry feed was submitted successfully! Our expert research editors will review the requested specifications shortly.');
       }
 
       setSuccess(true);
@@ -244,7 +249,7 @@ export const Contact: React.FC = () => {
               <div className="space-y-1 my-1">
                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider font-sans">Message Handled</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed font-sans whitespace-pre-wrap">
-                  Your inquiry feed was submitted successfully! Our expert research editors will review the requested specifications shortly.
+                  {successDetail || 'Your inquiry feed was submitted successfully! Our expert research editors will review the requested specifications shortly.'}
                 </p>
               </div>
             </div>

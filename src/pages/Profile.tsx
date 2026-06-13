@@ -315,7 +315,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                       </div>
 
                       <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
-                        <span className="text-xs font-black font-mono text-slate-950 dark:text-white-none">₹{p.price}</span>
+                        <span className="text-xs font-black font-mono text-slate-950 dark:text-white">₹{p.price}</span>
                         <button
                           onClick={() => onNavigate('product-detail', p.slug)}
                           className="rounded bg-slate-100 hover:bg-slate-205 py-1 px-3.2 text-[10px] text-slate-705 font-bold dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-705 font-mono"

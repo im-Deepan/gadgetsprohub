@@ -785,16 +785,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         </button>
                       )}
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onNavigate('products', `spec-${prod.slug}`);
-                        }}
-                        className="absolute bottom-2 left-2 bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-white font-extrabold font-mono text-[9px] rounded-lg px-2 py-1 flex items-center gap-1 shadow-md z-10 cursor-pointer border-none"
-                        title="View Technical Specifications"
+                      <div
+                        className="absolute bottom-2 left-2 bg-amber-500 text-white font-extrabold font-mono text-[9px] rounded-lg px-2 py-1 flex items-center gap-1 shadow-md z-10 border-none select-none"
+                        title="Rating"
                       >
                         ★ {prod.rating || '4.8'}
-                      </button>
+                      </div>
                     </div>
 
                     {/* Product Metadata & Info */}

@@ -28,20 +28,22 @@ const ProductCardSkeleton = () => (
   </div>
 );
 
-const getCategoryEmoji = (categoryName: string) => {
-  const norm = categoryName.toLowerCase();
-  if (norm.includes('phone') || norm.includes('mobile') || norm.includes('audio') || norm.includes('headphone') || norm.includes('earphone') || norm.includes('speaker') || norm.includes('sound')) return '🎧';
+const getCategoryEmoji = (categoryName: string | undefined | null) => {
+  if (!categoryName) return '📦';
+  const norm = categoryName.trim().toLowerCase();
+  if (norm.includes('phone') || norm.includes('mobile') || norm.includes('smartphone') || norm.includes('tablet')) return '📱';
+  if (norm.includes('audio') || norm.includes('headphone') || norm.includes('earphone') || norm.includes('speaker') || norm.includes('sound') || norm.includes('mic')) return '🎧';
   if (norm.includes('watch') || norm.includes('clock') || norm.includes('wearable') || norm.includes('smartwatch')) return '⌚';
   if (norm.includes('comput') || norm.includes('laptop') || norm.includes('desktop') || norm.includes('screen') || norm.includes('monitor')) return '💻';
   if (norm.includes('camera') || norm.includes('photo') || norm.includes('video') || norm.includes('lens')) return '📷';
   if (norm.includes('game') || norm.includes('gaming') || norm.includes('console') || norm.includes('play')) return '🎮';
   if (norm.includes('shoe') || norm.includes('footwear') || norm.includes('sneaker')) return '👟';
-  if (norm.includes('electron') || norm.includes('tech') || norm.includes('gadget') || norm.includes('appliances') || norm.includes('power')) return '🔌';
+  if (norm.includes('electron') || norm.includes('tech') || norm.includes('gadget') || norm.includes('appliances') || norm.includes('power') || norm.includes('charger')) return '🔌';
   if (norm.includes('fashion') || norm.includes('cloth') || norm.includes('wear') || norm.includes('style') || norm.includes('bag') || norm.includes('backpack')) return '👕';
   if (norm.includes('home') || norm.includes('decor') || norm.includes('garden') || norm.includes('furniture') || norm.includes('kitchen')) return '🏠';
-  if (norm.includes('sport') || norm.includes('fit') || norm.includes('gym')) return '⚽';
+  if (norm.includes('sport') || norm.includes('fit') || norm.includes('gym') || norm.includes('athletic')) return '⚽';
   if (norm.includes('book') || norm.includes('educat') || norm.includes('read')) return '📚';
-  if (norm.includes('health') || norm.includes('beauty') || norm.includes('care') || norm.includes('medical')) return '🏥';
+  if (norm.includes('health') || norm.includes('beauty') || norm.includes('care') || norm.includes('medical') || norm.includes('wellness')) return '🏥';
   return '📦';
 };
 
@@ -157,15 +159,16 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             if (found) catName = found.name;
           }
         } else {
-          const found = categories.find(c => String(c._id) === String(p.category));
+          const catStr = typeof p.category === 'string' ? p.category : String(p.category);
+          const found = categories.find(c => String(c._id) === catStr);
           if (found) {
             catName = found.name;
           } else {
-            const foundByName = categories.find(c => c.name.toLowerCase() === String(p.category).toLowerCase());
+            const foundByName = categories.find(c => c.name.toLowerCase() === catStr.toLowerCase());
             if (foundByName) {
               catName = foundByName.name;
             } else {
-              catName = String(p.category);
+              catName = catStr;
             }
           }
         }
@@ -921,7 +924,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                           setCurrentPage(1); 
                         }}
                         placeholder="Brand, feature, tags..."
-                        className="w-full text-xs rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-8 text-slate-900 outline-none focus:border-indigo-505 dark:border-slate-800 dark:bg-[#0c1224] dark:text-white"
+                        className="w-full text-xs rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-8 text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-[#0c1224] dark:text-white"
                       />
                       {search && (
                         <button
@@ -981,7 +984,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     </button>
                     <button
                       onClick={() => { setSearch(''); setSelectedCategory('trending'); setSelectedSubcategory(''); setCurrentPage(1); }}
-                      className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === 'trending' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-650 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
+                      className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === 'trending' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
                     >
                       <span className="flex items-center gap-1.5">🔥 Trending Choices</span>
                       {selectedCategory === 'trending' && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
@@ -990,7 +993,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       <button
                         key={c._id}
                         onClick={() => { setSearch(''); setSelectedCategory(c._id); setSelectedSubcategory(''); setCurrentPage(1); }}
-                        className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === c._id ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-655 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
+                        className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === c._id ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
                       >
                         <span className="truncate flex items-center">
                           <span className="mr-2 text-sm">{c.icon || '📦'}</span>
@@ -1172,7 +1175,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     </div>
 
                     {specModalProduct.discount && specModalProduct.discount > 0 && (
-                      <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white font-black font-mono text-[9px] rounded-lg px-2 py-0.5 uppercaseType">
+                      <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white font-black font-mono text-[9px] rounded-lg px-2 py-0.5 uppercase tracking-wider">
                         -{specModalProduct.discount}% Off
                       </div>
                     )}
@@ -1294,10 +1297,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 <button
                   type="button"
                   onClick={() => {
+                    if (!specModalProduct) return;
+                    const slug = specModalProduct.slug;
                     setSpecModalProduct(null);
-                    onNavigate('product-detail', specModalProduct.slug);
+                    onNavigate('product-detail', slug);
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-200 py-3 text-xs font-bold transition-all cursor-pointer shadow-3xs"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white hover:bg-slate-50 text-slate-705 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-200 py-3 text-xs font-bold transition-all cursor-pointer shadow-3xs"
                 >
                   <Search size={14} />
                   <span>View Review & Full Details Page</span>
@@ -1306,12 +1311,15 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 <button
                   type="button"
                   onClick={() => {
+                    if (!specModalProduct) return;
                     // Track affiliate clicks as well
                     fetch(`/api/products/click/${specModalProduct.slug}`, {
                       method: 'POST',
                       headers: {'Content-Type': 'application/json'}
                     }).catch(() => {});
-                    window.open(specModalProduct.affiliateLink, '_blank', 'noreferrer,noopener');
+                    if (specModalProduct.affiliateLink) {
+                      window.open(specModalProduct.affiliateLink, '_blank', 'noreferrer,noopener');
+                    }
                   }}
                   className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-xs font-bold transition-all cursor-pointer shadow-md"
                 >
