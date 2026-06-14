@@ -113,6 +113,8 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
         const data = await res.json();
         // Since database gives populated wishlist
         setWishlistProducts(data.wishlist || []);
+      } else {
+        console.warn("Failed to source user profile details with status:", res.status);
       }
     } catch (e) {
       console.warn("Failing of sourcing populated user profile wishlists:", e);

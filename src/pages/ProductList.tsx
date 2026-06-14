@@ -9,7 +9,7 @@ import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
 
 import { getCategoryId, getCategoryName } from '../utils/category';
-import { safeSetItem } from '../utils/localStorage';
+import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 
 interface ProductListProps {
   initialFilter?: string | null;
@@ -197,12 +197,8 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
   // Recent Searches using localStorage
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    try {
-      const stored = localStorage.getItem('aff_recent_searches');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    const stored = safeGetItem('aff_recent_searches');
+    return stored ? JSON.parse(stored) : [];
   });
 
   // Save search query to recent searches with debounced effect
@@ -230,11 +226,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
   const handleClearAllRecentSearches = () => {
     setRecentSearches([]);
-    try {
-      localStorage.removeItem('aff_recent_searches');
-    } catch (err) {
-      console.warn('Failed to clear recent searches:', err);
-    }
+    safeRemoveItem('aff_recent_searches');
   };
 
   // Parse initial filters from incoming routing params
@@ -966,13 +958,13 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       <button
                         key={c._id}
                         onClick={() => { setSearch(''); setSelectedCategory(c._id); setSelectedSubcategory(''); setCurrentPage(1); }}
-                        className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === c._id ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
+                        className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${String(selectedCategory) === String(c._id) ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
                       >
                         <span className="truncate flex items-center">
                           <span className="mr-2 text-sm">{c.icon || '📦'}</span>
                           <span>{c.name}</span>
                         </span>
-                        {selectedCategory === c._id && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
+                        {String(selectedCategory) === String(c._id) && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
                       </button>
                     ))}
                   </div>

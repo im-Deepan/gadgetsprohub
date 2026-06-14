@@ -687,6 +687,62 @@ async function syncMessagesToSeedFile() {
   }
 }
 
+async function resolveUniqueSlug(
+  baseSlug: string,
+  type: 'product' | 'blog',
+  excludeId?: string
+): Promise<{ exists: boolean; finalSlug: string }> {
+  let slug = baseSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  if (!slug) {
+    slug = 'item-' + Math.random().toString(36).substring(2, 6);
+  }
+
+  let exists = false;
+  let finalSlug = slug;
+
+  const checkIfExist = async (testSlug: string): Promise<boolean> => {
+    if (isMongoConnected) {
+      if (type === 'product') {
+        const query: any = { slug: testSlug };
+        if (excludeId) {
+          query._id = { $ne: excludeId };
+        }
+        const item = await Product.findOne(query);
+        return !!item;
+      } else {
+        const query: any = { slug: testSlug };
+        if (excludeId) {
+          query._id = { $ne: excludeId };
+        }
+        const item = await Blog.findOne(query);
+        return !!item;
+      }
+    } else {
+      if (type === 'product') {
+        return localProducts.some(p => p.slug === testSlug && p._id !== excludeId);
+      } else {
+        return localBlogs.some(b => b.slug === testSlug && b._id !== excludeId);
+      }
+    }
+  };
+
+  exists = await checkIfExist(slug);
+
+  if (exists) {
+    let i = 1;
+    while (true) {
+      finalSlug = `${slug}-${i}`;
+      const stillExists = await checkIfExist(finalSlug);
+      if (!stillExists) {
+        break;
+      }
+      i++;
+    }
+  }
+
+  return { exists, finalSlug };
+}
+
 let mailTransport: any = null;
 
 function getMailTransport() {
@@ -2714,13 +2770,42 @@ async function startServer() {
   });
 
   // Products CRUD
-  app.post('/api/admin/products', adminOnly, async (req, res) => {
+  app.get('/api/admin/check-slug', adminOnly, async (req, res): Promise<any> => {
+    try {
+      const { slug, type, excludeId } = req.query;
+      if (!slug || typeof slug !== 'string') {
+        return res.status(400).json({ error: 'Proposed slug is required' });
+      }
+      if (type !== 'product' && type !== 'blog') {
+        return res.status(400).json({ error: 'Type must be either "product" or "blog"' });
+      }
+      const result = await resolveUniqueSlug(slug, type as 'product' | 'blog', excludeId as string);
+      return res.json({
+        exists: result.exists,
+        originalSlug: slug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        suggestedSlug: result.finalSlug
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/admin/products', adminOnly, async (req, res): Promise<any> => {
     try {
       const payload = cleanUndefined(req.body);
-      const slug = payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const proposedSlug = payload.slug || payload.name;
+      const { exists, finalSlug } = await resolveUniqueSlug(proposedSlug, 'product');
+      
+      if (exists) {
+        return res.status(409).json({
+          error: `The slug '${finalSlug.replace(/-\d+$/, '')}' already exists. We suggest using '${finalSlug}' instead.`,
+          code: 'SLUG_COLLISION',
+          suggestedSlug: finalSlug
+        });
+      }
       
       if (isMongoConnected) {
-        const product = new Product({ ...payload, slug });
+        const product = new Product({ ...payload, slug: finalSlug });
         await product.save();
         await syncProductsToSeedFile();
         res.json(product);
@@ -2728,7 +2813,7 @@ async function startServer() {
         const newProduct = {
           _id: "prod_a_" + Math.random().toString(36).substring(2, 9),
           ...payload,
-          slug,
+          slug: finalSlug,
           clicks: 0,
           conversions: 0,
           rating: 4.0,
@@ -2749,6 +2834,20 @@ async function startServer() {
     try {
       const pId = req.params.id;
       const payload = cleanUndefined(req.body);
+      
+      const proposedSlug = payload.slug || payload.name;
+      if (proposedSlug) {
+        const { exists, finalSlug } = await resolveUniqueSlug(proposedSlug, 'product', pId);
+        if (exists) {
+          return res.status(409).json({
+            error: `The slug '${finalSlug.replace(/-\d+$/, '')}' already exists. We suggest '${finalSlug}' instead.`,
+            code: 'SLUG_COLLISION',
+            suggestedSlug: finalSlug
+          });
+        }
+        payload.slug = finalSlug;
+      }
+
       if (isMongoConnected) {
         const product = await Product.findByIdAndUpdate(pId, payload, { new: true });
         await syncProductsToSeedFile();
@@ -2862,13 +2961,22 @@ async function startServer() {
   });
 
   // Blogs CRUD
-  app.post('/api/admin/blogs', adminOnly, async (req, res) => {
+  app.post('/api/admin/blogs', adminOnly, async (req, res): Promise<any> => {
     try {
       const payload = req.body;
-      const slug = payload.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const proposedSlug = payload.slug || payload.title;
+      const { exists, finalSlug } = await resolveUniqueSlug(proposedSlug, 'blog');
+      
+      if (exists) {
+        return res.status(409).json({
+          error: `The slug '${finalSlug.replace(/-\d+$/, '')}' already exists. We suggest using '${finalSlug}' instead.`,
+          code: 'SLUG_COLLISION',
+          suggestedSlug: finalSlug
+        });
+      }
       
       if (isMongoConnected) {
-        const blog = new Blog({ ...payload, slug });
+        const blog = new Blog({ ...payload, slug: finalSlug });
         await blog.save();
         await syncBlogsToSeedFile();
         res.json(blog);
@@ -2876,7 +2984,7 @@ async function startServer() {
         const newBlog = {
           _id: "blog_a_" + Math.random().toString(36).substring(2, 9),
           ...payload,
-          slug,
+          slug: finalSlug,
           views: 0,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -2893,8 +3001,23 @@ async function startServer() {
   app.put('/api/admin/blogs/:id', adminOnly, async (req, res): Promise<any> => {
     try {
       const bId = req.params.id;
+      const payload = req.body;
+      
+      const proposedSlug = payload.slug || payload.title;
+      if (proposedSlug) {
+        const { exists, finalSlug } = await resolveUniqueSlug(proposedSlug, 'blog', bId);
+        if (exists) {
+          return res.status(409).json({
+            error: `The slug '${finalSlug.replace(/-\d+$/, '')}' already exists. We suggest '${finalSlug}' instead.`,
+            code: 'SLUG_COLLISION',
+            suggestedSlug: finalSlug
+          });
+        }
+        payload.slug = finalSlug;
+      }
+
       if (isMongoConnected) {
-        const blog = await Blog.findByIdAndUpdate(bId, req.body, { new: true });
+        const blog = await Blog.findByIdAndUpdate(bId, payload, { new: true });
         await syncBlogsToSeedFile();
         return res.json(blog);
       } else {
@@ -2902,7 +3025,7 @@ async function startServer() {
         if (index === -1) return res.status(404).json({ error: 'Blog not found' });
         localBlogs[index] = {
           ...localBlogs[index],
-          ...req.body,
+          ...payload,
           updatedAt: new Date()
         };
         await syncBlogsToSeedFile();

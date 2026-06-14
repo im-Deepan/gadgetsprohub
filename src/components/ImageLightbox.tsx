@@ -17,7 +17,30 @@ export const ImageLightbox: React.FC = () => {
     currentIndex: number;
   } | null>(null);
 
+  const [scale, setScale] = useState(1);
+  const [translateX, setTranslateX] = useState(0);
+  const [translateY, setTranslateY] = useState(0);
+  const [dragY, setDragY] = useState(0);
+
   const touchStartRef = useRef<number | null>(null);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const isSingleTouchRef = useRef(false);
+  const initialDistanceRef = useRef(0);
+  const initialScaleRef = useRef(1);
+  const lastTapRef = useRef<number>(0);
+  const panStartXRef = useRef(0);
+  const panStartYRef = useRef(0);
+  const swipeDeltaXRef = useRef(0);
+  const swipeDeltaYRef = useRef(0);
+
+  useEffect(() => {
+    // Reset Zoom/Translate state when main image changes
+    setScale(1);
+    setTranslateX(0);
+    setTranslateY(0);
+    setDragY(0);
+  }, [lightboxData?.currentIndex]);
 
   useEffect(() => {
     const handleOpen = (e: Event) => {
@@ -92,27 +115,111 @@ export const ImageLightbox: React.FC = () => {
     };
   }, [lightboxData]);
 
-  // Touch handlers for mobile swiping
+  // Premium multi-gesture mobile handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartRef.current = e.touches[0].clientX;
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      startXRef.current = touch.clientX;
+      startYRef.current = touch.clientY;
+      panStartXRef.current = translateX;
+      panStartYRef.current = translateY;
+      isSingleTouchRef.current = true;
+      swipeDeltaXRef.current = 0;
+      swipeDeltaYRef.current = 0;
+
+      touchStartRef.current = touch.clientX;
+    } else if (e.touches.length === 2) {
+      isSingleTouchRef.current = false;
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      initialDistanceRef.current = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      initialScaleRef.current = scale;
+    }
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartRef.current === null) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const deltaX = touchEndX - touchStartRef.current;
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isSingleTouchRef.current) {
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - startXRef.current;
+      const deltaY = touch.clientY - startYRef.current;
+      swipeDeltaXRef.current = deltaX;
+      swipeDeltaYRef.current = deltaY;
 
-    // Minimum swipe threshold of 50px
-    if (Math.abs(deltaX) > 50) {
-      if (deltaX > 0) {
-        // Swipe right -> show previous
-        handleNavigate('prev');
+      if (scale > 1) {
+        if (e.cancelable) e.preventDefault();
+        const maxPanX = Math.max(0, 160 * (scale - 1));
+        const maxPanY = Math.max(0, 160 * (scale - 1));
+        const newX = panStartXRef.current + deltaX;
+        const newY = panStartYRef.current + deltaY;
+        setTranslateX(Math.max(-maxPanX * 1.5, Math.min(maxPanX * 1.5, newX)));
+        setTranslateY(Math.max(-maxPanY * 1.5, Math.min(maxPanY * 1.5, newY)));
       } else {
-        // Swipe left -> show next
-        handleNavigate('next');
+        if (Math.abs(deltaY) > Math.abs(deltaX)) {
+          // Swipe down or up to dismiss
+          setDragY(deltaY);
+        } else {
+          setDragY(0);
+        }
+      }
+    } else if (e.touches.length === 2) {
+      if (e.cancelable) e.preventDefault();
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const distance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      if (initialDistanceRef.current > 0) {
+        const factor = distance / initialDistanceRef.current;
+        const targetScale = Math.max(1, Math.min(4, initialScaleRef.current * factor));
+        setScale(targetScale);
       }
     }
+  };
+
+  const handleTouchEnd = () => {
+    if (isSingleTouchRef.current) {
+      if (scale === 1) {
+        if (Math.abs(dragY) > 80) {
+          // Vertically swiped past threshold -> Dismiss!
+          setLightboxData(null);
+          return;
+        } else {
+          setDragY(0);
+        }
+
+        const deltaX = swipeDeltaXRef.current;
+        const deltaY = swipeDeltaYRef.current;
+        if (Math.abs(deltaX) > 50 && Math.abs(deltaY) < 40) {
+          if (deltaX > 0) {
+            handleNavigate('prev');
+          } else {
+            handleNavigate('next');
+          }
+        }
+      } else {
+        const maxPanX = Math.max(0, 160 * (scale - 1));
+        const maxPanY = Math.max(0, 160 * (scale - 1));
+        setTranslateX(prev => Math.max(-maxPanX, Math.min(maxPanX, prev)));
+        setTranslateY(prev => Math.max(-maxPanY, Math.min(maxPanY, prev)));
+      }
+    }
+
     touchStartRef.current = null;
+    isSingleTouchRef.current = false;
+  };
+
+  const handleDoubleTap = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    const now = Date.now();
+    const DOUBLE_PRESS_THRESHOLD = 300;
+    if (now - lastTapRef.current < DOUBLE_PRESS_THRESHOLD) {
+      if (scale > 1) {
+        setScale(1);
+        setTranslateX(0);
+        setTranslateY(0);
+      } else {
+        setScale(2.5);
+      }
+    }
+    lastTapRef.current = now;
   };
 
   return (
@@ -123,7 +230,8 @@ export const ImageLightbox: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[999] flex flex-col items-center justify-center p-4 bg-black/85 backdrop-blur-md cursor-zoom-out"
+          className="fixed inset-0 z-[999] flex flex-col items-center justify-center p-4 backdrop-blur-md cursor-zoom-out transition-colors duration-200"
+          style={{ backgroundColor: `rgba(0, 0, 0, ${0.85 * Math.max(0.12, 1 - Math.abs(dragY) / 380)})` }}
           onClick={() => setLightboxData(null)}
         >
           {/* Close button */}
@@ -139,6 +247,12 @@ export const ImageLightbox: React.FC = () => {
             <X size={22} />
           </button>
 
+          {/* Interactive touch action helper tip badge */}
+          <div className="absolute top-6 left-6 hidden sm:flex items-center gap-1.5 bg-white/10 border border-white/5 text-white/70 px-3 py-1.5 rounded-full text-[10px] uppercase font-bold tracking-wider select-none pointer-events-none">
+            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping"></span>
+            Pinch to Zoom • Tap-Drag to pan • Swipe vertical to dismiss
+          </div>
+
           {/* Lightbox main viewport */}
           <motion.div
             initial={{ scale: 0.95, y: 15 }}
@@ -148,17 +262,23 @@ export const ImageLightbox: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-4xl max-h-[85vh] flex flex-col items-center justify-center gap-4 pointer-events-auto bg-transparent"
           >
-            {/* Swipable Image Frame */}
+            {/* Interactive Image Frame */}
             <div 
-              className="relative w-full flex items-center justify-center cursor-default select-none"
+              className="relative w-full flex items-center justify-center cursor-default select-none overflow-hidden py-4"
               onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onClick={handleDoubleTap}
             >
               <img
                 src={lightboxData.src}
                 alt={lightboxData.alt}
                 referrerPolicy="no-referrer"
-                className="max-w-full max-h-[58vh] md:max-h-[62vh] object-contain rounded-2xl shadow-3xl border border-white/10 bg-slate-900/60 transition-all duration-300 pointer-events-auto"
+                className="max-w-full max-h-[58vh] md:max-h-[62vh] object-contain rounded-2xl shadow-3xl border border-white/10 bg-slate-900/60 pointer-events-auto touch-none"
+                style={{
+                  transform: `translate3d(${translateX}px, ${translateY + dragY}px, 0) scale(${scale})`,
+                  transition: scale === 1 && dragY === 0 ? 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease' : 'none'
+                }}
               />
             </div>
 
@@ -169,7 +289,7 @@ export const ImageLightbox: React.FC = () => {
             )}
 
             {/* Slight Translucent Navigation Bar at the Bottom */}
-            <div className="flex items-center gap-3 bg-black/45 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 shadow-xl max-w-full select-none select-none">
+            <div className="flex items-center gap-3 bg-black/45 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 shadow-xl max-w-full select-none">
               {lightboxData.images.length > 1 && (
                 <button
                   type="button"

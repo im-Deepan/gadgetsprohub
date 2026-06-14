@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
-import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, ShieldCheck, CheckCheck, MessageSquare, Plus, Check, X, BookmarkCheck, Edit, Sparkles, Box, CheckCircle, Video, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, ShieldCheck, CheckCheck, MessageSquare, Plus, Check, X, BookmarkCheck, Edit, Sparkles, Box, CheckCircle, Video, Play, Copy, Share2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Helmet } from 'react-helmet-async';
@@ -12,7 +12,7 @@ import { AdminProductEditPanel } from '../components/product/AdminProductEditPan
 import { ReviewForm } from '../components/product/ReviewForm';
 
 import { getCategoryId, getCategoryName } from '../utils/category';
-import { safeSetItem } from '../utils/localStorage';
+import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 
 interface ProductDetailProps {
   productSlug: string;
@@ -61,6 +61,84 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   // Past Orders simulation logger
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  
+  // Link copying state
+  const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
+
+  const handleShareClick = async () => {
+    if (!product) return;
+
+    const shareData = {
+      title: product.name,
+      text: product.description || `Check out this amazing product: ${product.name}`,
+      url: window.location.href,
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        showToast("Shared successfully!", "success");
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      } catch (err: any) {
+        // If the user cancelled or aborted, don't show error
+        if (err.name !== 'AbortError') {
+          console.error("Error sharing:", err);
+          fallbackShareToClipboard();
+        }
+      }
+    } else {
+      fallbackShareToClipboard();
+    }
+  };
+
+  const fallbackShareToClipboard = () => {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => {
+        showToast("Product link copied to clipboard for sharing!", "success");
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy parent link:", err);
+        showToast("Failed to copy link to clipboard.", "error");
+      });
+  };
+
+  const handleCopyLinkClick = () => {
+    if (!product) return;
+    
+    let validatedUrl = '';
+    try {
+      if (product.affiliateLink) {
+        let rawLink = product.affiliateLink.trim();
+        if (!/^https?:\/\//i.test(rawLink)) {
+          rawLink = 'https://' + rawLink;
+        }
+        const parsed = new URL(rawLink);
+        validatedUrl = parsed.toString();
+      }
+    } catch (err) {
+      console.warn("Invalid affiliate link format:", err);
+    }
+
+    if (!validatedUrl) {
+      showToast("This product's e-commerce reference link is currently invalid or unavailable.", "error");
+      return;
+    }
+
+    navigator.clipboard.writeText(validatedUrl)
+      .then(() => {
+        showToast("Affiliate link copied to clipboard successfully!", "success");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy link:", err);
+        showToast("Failed to copy link to clipboard.", "error");
+      });
+  };
 
   const handlePlaceSimulatedOrder = async () => {
     if (!token || !product) return;
@@ -105,8 +183,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         
         // Store the viewed product in localStorage for "Pick where you left off"
         try {
-          localStorage.removeItem('aff_history_cleared');
-          const stored = localStorage.getItem('aff_recent_viewed');
+          safeRemoveItem('aff_history_cleared');
+          const stored = safeGetItem('aff_recent_viewed');
           let recents: any[] = stored ? JSON.parse(stored) : [];
           // Keep only simple info to avoid large sizes
           const productSummary = {
@@ -431,21 +509,32 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   // Specifications fields map
   const specMap = product.specifications || {};
 
+  // Resolve dynamic URL based on current host origin
+  const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
+  const dynamicUrl = `${dynamicOrigin}/products/${product?.slug || ''}`;
+  const dynamicCategory = typeof product.category === 'object' ? product.category.name : (product.category || '');
+
   return (
     <div className="w-full mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
       <Helmet>
         <title>{product ? `${product.name} - Specifications, Price & Review` : 'Product Details'} | gadgetsprohub</title>
         <meta name="description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
-        <meta name="keywords" content={product ? `${product.name}, ${product.brand || ''}, ${product.category || ''}, specifications, review, manual, price gadgetsprohub` : "gadget specifications, tech spec reviews"} />
-        <link rel="canonical" href={`https://gadgetsprohub.com/products/${product?.slug || ''}`} />
+        <meta name="keywords" content={product ? `${product.name}, ${product.brand || ''}, ${dynamicCategory}, specifications, review, manual, price gadgetsprohub` : "gadget specifications, tech spec reviews"} />
+        <link rel="canonical" href={dynamicUrl} />
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="product" />
-        <meta property="og:url" content={`https://gadgetsprohub.com/products/${product?.slug || ''}`} />
-        <meta property="og:title" content={product ? `${product.name} Specs & Reviews | gadgetsprohub` : 'Product Details'} />
+        <meta property="og:url" content={dynamicUrl} />
+        <meta property="og:title" content={product ? `${product.name} Specs, Price & Reviews | gadgetsprohub` : 'Product Details'} />
         <meta property="og:description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
         {product?.images?.[0] && <meta property="og:image" content={product.images[0]} />}
+        {product?.images?.[0] && <meta property="og:image:alt" content={product.name} />}
         <meta property="og:site_name" content="gadgetsprohub" />
+        
+        {/* Rich Product Details for Social Cards */}
+        {product?.price && <meta property="product:price:amount" content={String(product.price)} />}
+        <meta property="product:price:currency" content="INR" />
+        <meta property="og:availability" content="instock" />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -455,7 +544,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         {product?.brand && <meta name="twitter:label1" content="Brand" />}
         {product?.brand && <meta name="twitter:data1" content={product.brand} />}
         {product?.category && <meta name="twitter:label2" content="Category" />}
-        {product?.category && <meta name="twitter:data2" content={product.category} />}
+        {product?.category && <meta name="twitter:data2" content={dynamicCategory} />}
 
         <meta name="robots" content="index, follow" />
       </Helmet>
@@ -745,6 +834,24 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 <ShoppingBag className="h-5 w-5 shrink-0" />
                 Buy on Amazon
                 <ExternalLink className="h-3.5 w-3.5" />
+              </button>
+
+              <button
+                onClick={handleCopyLinkClick}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-5 py-3.5 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${copied ? 'bg-emerald-50 border-emerald-250 text-emerald-600 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-450' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/60'}`}
+                title="Copy affiliate product link code"
+              >
+                {copied ? <CheckCheck className="h-4 w-4 text-emerald-500 animate-bounce shrink-0" /> : <Copy className="h-4 w-4 shrink-0" />}
+                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+              </button>
+
+              <button
+                onClick={handleShareClick}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-5 py-3.5 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${shared ? 'bg-indigo-50 border-indigo-250 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-800 dark:text-indigo-400' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/60'}`}
+                title="Share this product with friends"
+              >
+                {shared ? <Check className="h-4 w-4 text-indigo-500 shrink-0 animate-pulse" /> : <Share2 className="h-4 w-4 shrink-0" />}
+                <span>{shared ? 'Shared!' : 'Share'}</span>
               </button>
 
               {isAuthenticated && (

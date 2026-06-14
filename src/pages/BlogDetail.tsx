@@ -195,7 +195,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
         </p>
 
         {/* Dynamic formatting for paragraphs split by spaces to make it beautiful */}
-        {blog.content?.split('\n\n').map((paragraph, index) => (
+        {(blog.content || '').split('\n\n').filter(Boolean).map((paragraph, index) => (
           <p key={index} className="leading-relaxed whitespace-pre-line text-slate-600 dark:text-slate-300">
             {paragraph}
           </p>

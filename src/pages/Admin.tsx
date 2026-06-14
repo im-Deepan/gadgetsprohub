@@ -195,6 +195,55 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     featured: false
   });
 
+  // Slug Checking state
+  const [slugChecking, setSlugChecking] = useState(false);
+  const [slugCheckError, setSlugCheckError] = useState('');
+  const [suggestedSlug, setSuggestedSlug] = useState('');
+
+  useEffect(() => {
+    const rawVal = prodForm.slug || prodForm.name;
+    if (!rawVal || rawVal.trim().length < 3) {
+      setSlugCheckError('');
+      setSuggestedSlug('');
+      return;
+    }
+
+    const proposed = rawVal.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    if (!proposed || proposed === 'noise-cancelling-pro-anc') {
+      setSlugCheckError('');
+      setSuggestedSlug('');
+      return;
+    }
+
+    const delayDebounce = setTimeout(async () => {
+      setSlugChecking(true);
+      try {
+        const excludeQuery = editingProduct ? `&excludeId=${editingProduct._id}` : '';
+        const res = await fetch(`/api/admin/check-slug?slug=${encodeURIComponent(proposed)}&type=product${excludeQuery}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.exists) {
+            setSlugCheckError(`⚠️ This Web Link Name already exists.`);
+            setSuggestedSlug(data.suggestedSlug);
+          } else {
+            setSlugCheckError('');
+            setSuggestedSlug('');
+          }
+        }
+      } catch (err) {
+        console.warn("Error auto-checking slug validity:", err);
+      } finally {
+        setSlugChecking(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [prodForm.slug, prodForm.name, editingProduct, token]);
+
   // Form fields for categories/blogs
   const [catName, setCatName] = useState('');
   const [catIcon, setCatIcon] = useState('📦');
@@ -652,7 +701,41 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         triggerAlert("Submission Successful", `The product "${nameSaved}" was successfully fed to the storefront catalog database!`);
       } else {
         const err = await res.json().catch(() => ({}));
-        triggerAlert("Submission Failed", err.error || "The server rejected the product submission. Please verify fields format.");
+        if (err.code === 'SLUG_COLLISION' && err.suggestedSlug) {
+          requestConfirmation(
+            "Slug Collision Detected",
+            `The web link name (slug) is already in use. Would you like to auto-fix and save this product as "${err.suggestedSlug}"?`,
+            async () => {
+              setProdForm(prev => ({ ...prev, slug: err.suggestedSlug }));
+              const rePayload = { ...payload, slug: err.suggestedSlug };
+              try {
+                const reRes = await fetch(url, {
+                  method,
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify(rePayload)
+                });
+                if (reRes.ok) {
+                  setShowProductModal(false);
+                  const nameSaved = prodForm.name;
+                  setEditingProduct(null);
+                  await loadAdminMetrics();
+                  triggerAlert("Submission Successful", `The product "${nameSaved}" was successfully fed to the storefront catalog database with unique slug: "${err.suggestedSlug}"!`);
+                } else {
+                  const reErr = await reRes.json().catch(() => ({}));
+                  triggerAlert("Submission Failed", reErr.error || "The server rejected the product submission.");
+                }
+              } catch (reErr: any) {
+                triggerAlert("Submission Error", "An error occurred during submission: " + reErr.message);
+              }
+            },
+            { confirmText: "Use Suggested Suffix", cancelText: "Cancel" }
+          );
+        } else {
+          triggerAlert("Submission Failed", err.error || "The server rejected the product submission. Please verify fields format.");
+        }
       }
     } catch (err: any) {
       console.warn("Product form submission error:", err);
@@ -974,7 +1057,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           {remaining.map(({ name, count }) => {
                             const pct = dtotal === 0 ? 0 : Math.round((count / dtotal) * 100);
                             return (
-                              <div key={name} className="bg-slate-50/50 dark:bg-slate-950/20 p-2 rounded-lg flex items-center justify-between border border-slate-101 dark:border-slate-800/40 hover:bg-slate-100/30 dark:hover:bg-slate-900/30 transition-all">
+                              <div key={name} className="bg-slate-50/50 dark:bg-slate-950/20 p-2 rounded-lg flex items-center justify-between border border-slate-100 dark:border-slate-800/40 hover:bg-slate-100/30 dark:hover:bg-slate-900/30 transition-all">
                                 <span className="flex items-center gap-1 font-sans text-[11px] text-slate-600 dark:text-slate-400">
                                   {getDistrictEmoji(name)} {name}
                                 </span>
@@ -2387,10 +2470,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   )}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-slate-101 bg-white overflow-hidden shadow-xs dark:border-slate-800 dark:bg-zinc-900/40 pb-4">
+                <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs dark:border-slate-800 dark:bg-zinc-900/40 pb-4">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left font-sans text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-120 text-slate-500 uppercase tracking-widest font-black text-[9px] dark:bg-slate-800/40 dark:border-slate-800 select-none">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-widest font-black text-[9px] dark:bg-slate-800/40 dark:border-slate-800 select-none">
                         <tr>
                           <th className="py-3 px-3 text-center w-12">S.No</th>
                           <th className="py-3 px-4">Visitor Name</th>
@@ -2564,7 +2647,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                         </div>
 
                                         {/* Col 2: Geographic specifications */}
-                                        <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-101 dark:bg-slate-900/40 dark:border-slate-800 space-y-2">
+                                        <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200 dark:bg-slate-900/40 dark:border-slate-800 space-y-2">
                                           <div className="text-[10px] uppercase font-bold text-slate-400">Visitor Place / Location</div>
                                           <div className="space-y-1">
                                             <div className="text-xs font-bold text-slate-800 dark:text-slate-250 flex items-center gap-1.5">
@@ -2581,7 +2664,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                         </div>
 
                                         {/* Col 3: Browser Stack details */}
-                                        <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-101 dark:bg-slate-900/40 dark:border-slate-800 space-y-2">
+                                        <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200 dark:bg-slate-900/40 dark:border-slate-800 space-y-2">
                                           <div className="text-[10px] uppercase font-bold text-slate-400">Device Hardware & Engine</div>
                                           <div className="space-y-1 text-slate-700 dark:text-slate-300">
                                             <div className="text-xs font-bold font-sans">
@@ -2597,7 +2680,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                         </div>
 
                                         {/* Col 4: Session Metrics & actions */}
-                                        <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-101 dark:bg-slate-900/40 dark:border-slate-800 space-y-2">
+                                        <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200 dark:bg-slate-900/40 dark:border-slate-800 space-y-2">
                                           <div className="text-[10px] uppercase font-bold text-slate-400">Action & Stay Context</div>
                                           <div className="space-y-1">
                                             <div className="text-xs font-bold flex items-center gap-1">
@@ -2818,6 +2901,28 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         onChange={(e) => setProdForm({ ...prodForm, slug: e.target.value })}
                         className="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-900 p-2.5 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                       />
+                      {slugChecking && <p className="text-[10px] text-indigo-500 mt-1 animate-pulse font-semibold">Checking link availability...</p>}
+                      {slugCheckError && (
+                        <div className="mt-1.5 space-y-1 bg-amber-500/5 border border-amber-500/10 p-2 rounded-lg">
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">{slugCheckError}</p>
+                          {suggestedSlug && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setProdForm(prev => ({ ...prev, slug: suggestedSlug }));
+                                setSlugCheckError('');
+                                setSuggestedSlug('');
+                              }}
+                              className="text-[9px] bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-black px-2.5 py-1 rounded-md cursor-pointer transition-all block w-fit shadow-xs uppercase tracking-wider mt-1"
+                            >
+                              Auto-fix using: <span className="font-mono underline lowercase">{suggestedSlug}</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {!slugChecking && !slugCheckError && (prodForm.slug || prodForm.name) && (prodForm.slug || prodForm.name).trim() !== 'noise-cancelling-pro-anc' && (
+                        <p className="text-[10px] text-emerald-600 dark:text-emerald-450 font-bold mt-1 flex items-center gap-1">✓ Web Link Name is available!</p>
+                      )}
                     </div>
                   </div>
 

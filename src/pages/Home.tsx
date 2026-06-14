@@ -17,7 +17,7 @@ import { RecentViewedMarquee } from '../components/RecentViewedMarquee';
 import { Breadcrumb } from '../components/Breadcrumb';
 
 import { getCategoryId, getCategoryName } from '../utils/category';
-import { safeSetItem } from '../utils/localStorage';
+import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 
 interface HomeProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -56,11 +56,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   // Load recent searches on client side
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('aff_recent_searches');
+      const stored = safeGetItem('aff_recent_searches');
       if (stored) {
         setRecentSearches(JSON.parse(stored));
       }
-      const viewedStored = localStorage.getItem('aff_recent_viewed');
+      const viewedStored = safeGetItem('aff_recent_viewed');
       if (viewedStored) {
         const parsed = JSON.parse(viewedStored);
         if (Array.isArray(parsed)) {
@@ -100,7 +100,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     const trimmed = query.trim();
     if (trimmed.length > 1) {
       try {
-        const stored = localStorage.getItem('aff_recent_searches');
+        const stored = safeGetItem('aff_recent_searches');
         let current: string[] = stored ? JSON.parse(stored) : [];
         const filtered = current.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
         const updated = [trimmed, ...filtered].slice(0, 5);
@@ -123,7 +123,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     e.stopPropagation();
     setRecentSearches([]);
     try {
-      localStorage.removeItem('aff_recent_searches');
+      safeRemoveItem('aff_recent_searches');
     } catch (err) {
       console.warn('Failed to clear recent searches:', err);
     }
@@ -171,7 +171,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           setAllProducts(pList);
           
           setRecentViewed(current => {
-            const cleared = localStorage.getItem('aff_history_cleared') === 'true';
+            const cleared = safeGetItem('aff_history_cleared') === 'true';
             if (cleared) {
               return [];
             }
@@ -544,7 +544,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           onNavigate={onNavigate}
           onClear={() => {
             setRecentViewed([]);
-            localStorage.removeItem('aff_recent_viewed');
+            safeRemoveItem('aff_recent_viewed');
             safeSetItem('aff_history_cleared', 'true');
           }}
         />

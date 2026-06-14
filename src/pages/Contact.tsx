@@ -45,7 +45,7 @@ export const Contact: React.FC = () => {
       return;
     }
     
-    if (phone && phone.trim() !== '' && !/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im.test(phone)) {
+    if (phone && phone.trim() !== '' && !/^\+?[0-9\s\-()\.]{7,20}$/.test(phone)) {
       const msg = 'Please enter a valid phone number.';
       setErrorMsg(msg);
       setErrorMessage(msg);
