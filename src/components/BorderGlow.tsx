@@ -8,22 +8,17 @@ interface BorderGlowProps {
   borderRadius?: number;
   glowRadius?: number;
   glowIntensity?: number;
-  coneSpread?: number;
-  animated?: boolean;
   colors?: string[];
   className?: string;
 }
 
 export const BorderGlow: React.FC<BorderGlowProps> = ({
   children,
-  edgeSensitivity = 30,
   glowColor = '40 80 80',
   backgroundColor = 'transparent',
   borderRadius = 28,
   glowRadius = 300,
   glowIntensity = 1,
-  coneSpread = 25,
-  animated = false,
   colors = ['#c084fc', '#f472b6', '#38bdf8'],
   className = ''
 }) => {

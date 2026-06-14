@@ -11,6 +11,9 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { AdminProductEditPanel } from '../components/product/AdminProductEditPanel';
 import { ReviewForm } from '../components/product/ReviewForm';
 
+import { getCategoryId, getCategoryName } from '../utils/category';
+import { safeSetItem } from '../utils/localStorage';
+
 interface ProductDetailProps {
   productSlug: string;
   onNavigate: (view: string, slug?: string) => void;
@@ -122,7 +125,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           recents = recents.filter(p => p._id !== data._id);
           recents.unshift(productSummary);
           recents = recents.slice(0, 10); // Keep last 10
-          localStorage.setItem('aff_recent_viewed', JSON.stringify(recents));
+          safeSetItem('aff_recent_viewed', JSON.stringify(recents));
         } catch (err) {
           console.warn('Failed to save recent product:', err);
         }
@@ -131,7 +134,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         setLoading(false);
         
         // Fetch related products in the background so it doesn't block loading
-        const catId = typeof data.category === 'object' ? data.category._id : data.category;
+        const catId = getCategoryId(data.category);
         fetch(`/api/products?category=${catId}&limit=4`)
           .then(async (relRes) => {
             if (relRes.ok) {
@@ -486,6 +489,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                     <button
                       key={idx}
                       type="button"
+                      aria-label={`View thumbnail ${idx + 1}`}
                       onClick={() => {
                         setActiveImageIdx(idx);
                         setShowVideo(false);
@@ -496,7 +500,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                           : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                       }`}
                     >
-                      <img loading="lazy" src={img} alt={`Thumb ${idx}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                      <img loading="lazy" src={img} alt={`Thumb ${idx}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" 
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393295-5887e240974b?w=100&q=40'; }}
+                      />
                     </button>
                   ))}
 
@@ -565,6 +571,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                     alt={product.name}
                     referrerPolicy="no-referrer"
                     className="h-full w-full object-contain p-4 transition-transform hover:scale-101 duration-305 cursor-zoom-in"
+                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393295-5887e240974b?w=600'; }}
                     onClick={(e) => {
                       e.stopPropagation();
                       window.dispatchEvent(new CustomEvent('open-lightbox', {
@@ -633,15 +640,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-4">
               <span className="text-[10px] px-3 py-1 rounded-full bg-slate-50 border border-slate-100 text-slate-500 font-bold dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
-                {(() => {
-                  if (!product.category) return 'Selection Line';
-                  if (typeof product.category === 'object' && product.category) {
-                    if (product.category.name) return product.category.name;
-                    const catId = product.category._id || '';
-                    return categories.find(c => String(c._id) === String(catId))?.name || 'Selection Line';
-                  }
-                  return categories.find(c => String(c._id) === String(product.category))?.name || 'Selection Line';
-                })()}
+                {getCategoryName(product.category, categories)}
               </span>
               <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">{product.sku || 'SKU-NONE'}</span>
             </div>
@@ -667,8 +666,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                         : 'text-slate-350 dark:text-slate-600 cursor-not-allowed opacity-40'
                     }`}
                     title={prevProduct ? `View Previous Model: ${prevProduct.name}` : "No previous product"}
+                    aria-label="Previous product"
                   >
-                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>Prev</span>
                   </button>
 
@@ -689,9 +689,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                         : 'text-slate-350 dark:text-slate-600 cursor-not-allowed opacity-40'
                     }`}
                     title={nextProduct ? `View Next Model: ${nextProduct.name}` : "No next product"}
+                    aria-label="Next product"
                   >
                     <span>Next</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
+                    <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 </div>
               )}
@@ -751,8 +752,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                   onClick={() => toggleWishlist(product._id)}
                   className={`flex h-12 w-12 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300'}`}
                   title="Bookmark item"
+                  aria-label={wishlist.includes(product._id) ? "Remove from wishlist" : "Add to wishlist"}
                 >
-                  <Heart className={`h-5 w-5 ${wishlist.includes(product._id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                  <Heart className={`h-5 w-5 ${wishlist.includes(product._id) ? 'fill-rose-500 text-rose-500' : ''}`} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -924,8 +926,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                     </div>
                   </div>
 
-                  <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{rev.title}</p>
-                  <p className="text-[11px] text-slate-600 leading-relaxed dark:text-slate-400 italic">"{rev.content}"</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{rev.title ? rev.title.replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''}</p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed dark:text-slate-400 italic">"{rev.content ? rev.content.replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''}"</p>
                 </div>
               ))}
             </div>

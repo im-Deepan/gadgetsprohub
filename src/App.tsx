@@ -7,6 +7,7 @@ import { Footer } from './components/Footer';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ImageLightbox } from './components/ImageLightbox';
 import { motion, AnimatePresence } from 'motion/react';
+import { safeSetItem, safeGetItem } from './utils/localStorage';
 
 // Code-Split Dynamic Page Imports
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -58,20 +59,16 @@ const AppContent: React.FC = () => {
 
   // Visitor logging and deferred Google AdSense script loading to achieve incredible PageSpeed performance scores
   useEffect(() => {
-    try {
-      let visitorId = localStorage.getItem('affiliate_visitor_id');
-      if (!visitorId) {
-        visitorId = 'vis_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem('affiliate_visitor_id', visitorId);
-      }
-      fetch('/api/visit', {
+    let visitorId = safeGetItem('affiliate_visitor_id');
+    if (!visitorId) {
+      visitorId = 'vis_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      safeSetItem('affiliate_visitor_id', visitorId);
+    }
+    fetch('/api/visit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visitorId })
       }).catch(err => console.warn('Visitor logging call failed:', err));
-    } catch (e) {
-      console.warn('Visitor storage query issues:', e);
-    }
 
     // Lazy load AdSense on user interaction or safety timeout
     let scriptLoaded = false;
@@ -120,17 +117,19 @@ const AppContent: React.FC = () => {
   }, []);
 
   // Simple state router
+  const allowedViews = ['home', 'products', 'product-detail', 'blogs', 'blog-detail', 'contact', 'login', 'profile', 'admin', 'privacy-policy', 'about-us', 'terms-conditions', 'disclaimer'];
+  
   const [activeView, setActiveView] = useState<string>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const viewParam = params.get('view');
-      if (viewParam) return viewParam;
+      if (viewParam && allowedViews.includes(viewParam)) return viewParam;
       
       const path = window.location.pathname.replace(/^\/+/, '');
       const pathParts = path.split('/');
       const viewPart = pathParts[0];
 
-      if (viewPart && ['home', 'products', 'product-detail', 'blogs', 'blog-detail', 'contact', 'login', 'profile', 'admin', 'privacy-policy', 'about-us', 'terms-conditions', 'disclaimer'].includes(viewPart)) {
+      if (viewPart && allowedViews.includes(viewPart)) {
         return viewPart;
       }
       return 'home';
@@ -158,25 +157,16 @@ const AppContent: React.FC = () => {
   });
 
   const [detectedCity, setDetectedCity] = useState<string>(() => {
-    try {
-      return localStorage.getItem('aff_preferred_city') || 'Chennai';
-    } catch (err) {
-      console.warn("Storage preferred city resolution failed, falling back safely:", err);
-      return 'Chennai';
-    }
+    return safeGetItem('aff_preferred_city') || 'Chennai';
   });
 
   // Fetch primary location / district of user automatically and silently on app boot
   useEffect(() => {
     const fetchLocation = async () => {
-      try {
-        const cached = localStorage.getItem('aff_preferred_city');
-        if (cached && cached !== 'Chennai') {
-          setDetectedCity(cached);
-          return;
-        }
-      } catch (e) {
-        console.warn('Storage read failed:', e);
+      const cached = safeGetItem('aff_preferred_city');
+      if (cached && cached !== 'Chennai') {
+        setDetectedCity(cached);
+        return;
       }
 
       // Try proxy/location (CORS-friendly)
@@ -187,7 +177,7 @@ const AppContent: React.FC = () => {
           if (data && data.city && typeof data.city === 'string') {
             const city = data.city.trim();
             if (city) {
-              localStorage.setItem('aff_preferred_city', city);
+              safeSetItem('aff_preferred_city', city);
               setDetectedCity(city);
               console.log(`[Auto Location] Detected location via proxy: ${city}`);
               return;
@@ -202,75 +192,75 @@ const AppContent: React.FC = () => {
     fetchLocation();
   }, []);
 
+  const logVisit = React.useCallback((timeSpentSeconds: number, currentPath: string, viewCity: string) => {
+    try {
+      const ua = navigator.userAgent;
+      let browser = "Chrome";
+      let device = "Desktop";
+
+      if (ua.includes("Firefox")) browser = "Firefox";
+      else if (ua.includes("SamsungBrowser")) browser = "Samsung Browser";
+      else if (ua.includes("Opera") || ua.includes("OPR")) browser = "Opera";
+      else if (ua.includes("Trident")) browser = "Internet Explorer";
+      else if (ua.includes("Edge") || ua.includes("Edg")) browser = "Edge";
+      else if (ua.includes("Chrome")) browser = "Chrome";
+      else if (ua.includes("Safari")) browser = "Safari";
+
+      if (/Android/i.test(ua)) device = "Android Mobile";
+      else if (/iPhone|iPad|iPod/i.test(ua)) device = "iOS Device";
+      else if (/Windows/i.test(ua)) device = "Windows Desktop";
+      else if (/Macintosh/i.test(ua)) device = "macOS Desktop";
+      else if (/Linux/i.test(ua)) device = "Linux Desktop";
+
+      const body = {
+        pageUrl: currentPath,
+        timeSpent: timeSpentSeconds,
+        browser,
+        device,
+        district: viewCity
+      };
+
+      const tokenVal = safeGetItem('aff_token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (tokenVal) {
+        headers['Authorization'] = `Bearer ${tokenVal}`;
+      }
+
+      fetch('/api/analytics/page-view', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        keepalive: true
+      }).catch((err) => {
+        console.warn("Analytics telemetry request could not be completed:", err);
+      });
+    } catch (err) {
+      console.warn("Telemetry reporting failure:", err);
+    }
+  }, []);
+
   // Tracks activeView and selectedSlug to determine page URL and times spent on each view
   useEffect(() => {
     const pageStartTime = Date.now();
     const currentPath = selectedSlug ? `${activeView}/${selectedSlug}` : activeView;
-
-    const logVisit = (timeSpentSeconds: number) => {
-      try {
-        const ua = navigator.userAgent;
-        let browser = "Chrome";
-        let device = "Desktop";
-
-        if (ua.includes("Firefox")) browser = "Firefox";
-        else if (ua.includes("SamsungBrowser")) browser = "Samsung Browser";
-        else if (ua.includes("Opera") || ua.includes("OPR")) browser = "Opera";
-        else if (ua.includes("Trident")) browser = "Internet Explorer";
-        else if (ua.includes("Edge") || ua.includes("Edg")) browser = "Edge";
-        else if (ua.includes("Chrome")) browser = "Chrome";
-        else if (ua.includes("Safari")) browser = "Safari";
-
-        if (/Android/i.test(ua)) device = "Android Mobile";
-        else if (/iPhone|iPad|iPod/i.test(ua)) device = "iOS Device";
-        else if (/Windows/i.test(ua)) device = "Windows Desktop";
-        else if (/Macintosh/i.test(ua)) device = "macOS Desktop";
-        else if (/Linux/i.test(ua)) device = "Linux Desktop";
-
-        // Get location preference
-        const preferredCity = user?.district || detectedCity;
-
-        const body = {
-          pageUrl: currentPath,
-          timeSpent: timeSpentSeconds,
-          browser,
-          device,
-          district: preferredCity
-        };
-
-        const tokenVal = localStorage.getItem('aff_token');
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (tokenVal) {
-          headers['Authorization'] = `Bearer ${tokenVal}`;
-        }
-
-        fetch('/api/analytics/page-view', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(body),
-          keepalive: true
-        }).catch((err) => {
-          console.warn("Analytics telemetry request could not be completed:", err);
-        });
-      } catch (err) {
-        console.warn("Telemetry reporting failure:", err);
-      }
-    };
+    const viewCity = user?.district || detectedCity || 'Chennai';
 
     // Log instantaneous visual landing (0 seconds spent)
-    logVisit(0);
+    logVisit(0, currentPath, viewCity);
 
     return () => {
       // Log active duration spent on cleanup
       const durationSeconds = Math.round((Date.now() - pageStartTime) / 1000);
       if (durationSeconds > 0) {
-        logVisit(durationSeconds);
+        logVisit(durationSeconds, currentPath, viewCity);
       }
     };
-  }, [activeView, selectedSlug, user?.id, user?.district, detectedCity]);
+  }, [activeView, selectedSlug, user, detectedCity, logVisit]);
 
   // Manage body scroll positions on navigating
   const navigateToView = (view: string, slug?: string) => {
+    if (!allowedViews.includes(view)) return;
+    
     if (activeView === view && selectedSlug === (slug || null)) {
       // If we are already on this view, still push state if history current is different 
       // (though usually they are in sync)
@@ -319,10 +309,10 @@ const AppContent: React.FC = () => {
         let view = 'home';
         let slug = null;
 
-        if (viewUrl) {
+        if (viewUrl && allowedViews.includes(viewUrl)) {
           view = viewUrl;
           slug = params.get('slug') || null;
-        } else if (viewPart && ['home', 'products', 'product-detail', 'blogs', 'blog-detail', 'contact', 'login', 'profile', 'admin', 'privacy-policy', 'about-us', 'terms-conditions', 'disclaimer'].includes(viewPart)) {
+        } else if (viewPart && allowedViews.includes(viewPart)) {
           view = viewPart;
           if (pathParts.length > 1) {
              slug = pathParts.slice(1).join('/');
@@ -343,7 +333,7 @@ const AppContent: React.FC = () => {
     }
 
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeView, selectedSlug]);
+  }, []); // Remove dependencies so it doesn't run on every view change
 
   // Custom visual view switcher render
   const renderActiveView = () => {
@@ -375,7 +365,12 @@ const AppContent: React.FC = () => {
       case 'disclaimer':
         return <Disclaimer />;
       default:
-        return <Home onNavigate={navigateToView} />;
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <h2 className="text-2xl font-bold mb-4">Page Not Found</h2>
+            <button onClick={() => navigateToView('home')} className="bg-indigo-600 text-white px-6 py-2 rounded-lg">Return Home</button>
+          </div>
+        );
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Search, Heart, User, LogOut, Menu, X, Inbox, LayoutDashboard, Gift, Sun, Moon, Keyboard } from 'lucide-react';
@@ -191,14 +191,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
     };
   }, [showMobileMenu]);
 
-  const getGradientClass = (dir: 'ltr' | 'rtl' | 'diagonal' | 'vertical') => {
+  const getGradientClass = useCallback((dir: 'ltr' | 'rtl' | 'diagonal' | 'vertical') => {
     switch (dir) {
       case 'ltr': return 'animate-gradient-longitudinal-ltr bg-gradient-to-r';
       case 'rtl': return 'animate-gradient-longitudinal-rtl bg-gradient-to-l';
       case 'diagonal': return 'animate-gradient-longitudinal-diagonal bg-gradient-to-tr';
       case 'vertical': return 'animate-gradient-longitudinal-vertical bg-gradient-to-b';
+      default: return 'bg-gradient-to-r';
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetch('/api/categories')
@@ -237,8 +238,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
     }
   }, [searchQuery]);
 
-  const handleResultClick = (view: string, slug: string) => {
-    onNavigate(view, slug);
+  const handleResultClick = (view: string, slug?: string) => {
+    if (slug) {
+      onNavigate(view, slug);
+    } else {
+      onNavigate(view);
+    }
     setSearchQuery('');
     setShowResults(false);
   };
@@ -307,12 +312,37 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
             >
               Home
             </button>
-            <button 
-              onClick={() => onNavigate('products')}
-              className={`transition-colors hover:text-indigo-600 cursor-pointer ${currentView === 'products' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
+            <div 
+              className="relative flex items-center h-full"
+              onMouseEnter={() => setShowCategoryDropdown(true)}
+              onMouseLeave={() => setShowCategoryDropdown(false)}
             >
-              Products
-            </button>
+              <button 
+                onClick={() => onNavigate('products')}
+                className={`transition-colors hover:text-indigo-600 cursor-pointer py-2 ${currentView === 'products' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
+              >
+                Products
+              </button>
+              
+              {showCategoryDropdown && categories.length > 0 && (
+                <div className="absolute top-full left-0 mt-0 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900 z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex flex-col gap-1">
+                    {categories.map((cat: any) => (
+                      <button
+                        key={cat._id}
+                        onClick={() => {
+                          setShowCategoryDropdown(false);
+                          if (cat.slug) onNavigate('products', `category-${cat.slug}`);
+                        }}
+                        className="w-full text-left rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-400 cursor-pointer"
+                      >
+                        {cat.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button 
               onClick={() => onNavigate('blogs')}

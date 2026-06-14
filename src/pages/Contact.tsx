@@ -27,6 +27,42 @@ export const Contact: React.FC = () => {
     setErrorMsg('');
     setSuccess(false);
 
+    if (!name.trim() || name.trim().length < 2) {
+      const msg = 'Please enter your full name.';
+      setErrorMsg(msg);
+      setErrorMessage(msg);
+      setShowErrorModal(true);
+      setSubmitting(false);
+      return;
+    }
+
+    if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+      const msg = 'Please enter a valid email address.';
+      setErrorMsg(msg);
+      setErrorMessage(msg);
+      setShowErrorModal(true);
+      setSubmitting(false);
+      return;
+    }
+    
+    if (phone && phone.trim() !== '' && !/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im.test(phone)) {
+      const msg = 'Please enter a valid phone number.';
+      setErrorMsg(msg);
+      setErrorMessage(msg);
+      setShowErrorModal(true);
+      setSubmitting(false);
+      return;
+    }
+
+    if (!message.trim() || message.trim().length < 10) {
+      const msg = 'Please enter a message with at least 10 characters.';
+      setErrorMsg(msg);
+      setErrorMessage(msg);
+      setShowErrorModal(true);
+      setSubmitting(false);
+      return;
+    }
+
     try {
       // 1. Submit to main API server proxy (which handles MongoDB/Local state)
       const res = await fetch('/api/contact', {
@@ -126,7 +162,7 @@ export const Contact: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-bold">Editorial & Support Help Desk</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">supportataffiliateprohub@gmail.com</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">support@gadgetsprohub.com</p>
                 </div>
               </div>
             </div>
@@ -161,8 +197,9 @@ export const Contact: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Full Name</label>
+                <label htmlFor="contact-name" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Full Name</label>
                 <input
+                  id="contact-name"
                   type="text"
                   required
                   placeholder="Your name"
@@ -173,8 +210,9 @@ export const Contact: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</label>
+                <label htmlFor="contact-email" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</label>
                 <input
+                  id="contact-email"
                   type="email"
                   required
                   placeholder="e.g. buyer@gmail.com"
@@ -187,8 +225,9 @@ export const Contact: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone (Optional)</label>
+                <label htmlFor="contact-phone" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone (Optional)</label>
                 <input
+                  id="contact-phone"
                   type="tel"
                   placeholder="+1 (206) ..."
                   value={phone}
@@ -198,8 +237,9 @@ export const Contact: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Subject Of Inquiry</label>
+                <label htmlFor="contact-subject" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Subject Of Inquiry</label>
                 <input
+                  id="contact-subject"
                   type="text"
                   required
                   placeholder="e.g. Headphone specification mismatch"
@@ -211,8 +251,9 @@ export const Contact: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Descriptive Message Body</label>
+              <label htmlFor="contact-message" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Descriptive Message Body</label>
               <textarea
+                id="contact-message"
                 required
                 rows={5}
                 placeholder="Include key specs fields or the product slug for detailed reviews..."

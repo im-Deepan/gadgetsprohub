@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { safeSetItem, safeGetItem } from '../utils/localStorage';
 
 interface ThemeContextType {
   isDark: boolean;
@@ -20,27 +21,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [mounted, setMounted] = useState<boolean>(false);
 
   useEffect(() => {
-    setMounted(true);
-    try {
-      const saved = localStorage.getItem('aff_theme');
-      if (saved !== null) {
-        setIsDark(JSON.parse(saved));
-      } else {
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setIsDark(systemPrefersDark);
+    let resolvedIsDark = false;
+    const saved = safeGetItem('aff_theme');
+    if (saved !== null) {
+      try {
+        resolvedIsDark = JSON.parse(saved);
+      } catch {
+        resolvedIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
-    } catch {
-      // Ignore storage blocks in secure embeds
+    } else {
+      resolvedIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
+    
+    setIsDark(resolvedIsDark);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
-    try {
-      localStorage.setItem('aff_theme', JSON.stringify(isDark));
-    } catch {
-      // Ignore storage blocks in secure embeds
-    }
+    safeSetItem('aff_theme', JSON.stringify(isDark));
 
     if (isDark) {
       document.documentElement.classList.add('dark');

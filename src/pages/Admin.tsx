@@ -575,10 +575,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   // Helper specification mapping builders
   const parseSpecs = (specsStr: string) => {
     const obj: Record<string, string> = {};
+    if (!specsStr) return obj;
     specsStr.split(';').forEach(p => {
+      if (!p.trim()) return;
       const parts = p.split('=');
-      if (parts.length === 2) {
-        obj[parts[0].trim()] = parts[1].trim();
+      if (parts.length >= 2) {
+        obj[parts[0].trim()] = parts.slice(1).join('=').trim();
+      } else if (parts.length === 1) {
+        obj[parts[0].trim()] = 'Yes';
       }
     });
     return obj;
@@ -1055,6 +1059,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             }, 100);
           }}
           className="rounded-2xl border border-slate-100 bg-white p-5 hover:border-violet-500 dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-violet-500 group"
+          aria-label="View unique visitors telemetry"
         >
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 group-hover:text-violet-600 transition-colors">
@@ -1077,6 +1082,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             }, 100);
           }}
           className="rounded-2xl border border-slate-100 bg-white p-5 hover:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 group"
+          aria-label="View total click CTR metrics"
         >
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-indigo-600 transition-colors">Total Tracked Click CTR</p>
@@ -1096,6 +1102,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             }, 100);
           }}
           className="rounded-2xl border border-slate-100 bg-white p-5 hover:border-teal-400 dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-teal-500 group"
+          aria-label="View estimated curator commissions"
         >
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-teal-600 transition-colors">Estimated Curator Commission</p>
@@ -1116,6 +1123,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             }, 100);
           }}
           className="rounded-2xl border border-slate-100 bg-white p-5 hover:border-amber-400 dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-amber-500 group"
+          aria-label="View unread customer messages"
         >
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 group-hover:text-amber-600 transition-colors">

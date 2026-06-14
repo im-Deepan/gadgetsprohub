@@ -17,7 +17,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
 }) => {
   const adElement = useRef<HTMLElement>(null);
 
-  const publisherId = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID || '';
+  const publisherId = typeof import.meta.env !== 'undefined' ? import.meta.env.VITE_ADSENSE_CLIENT_ID || '' : '';
 
   useEffect(() => {
     if (!publisherId) return; // Do not push empty client ads in dev mode or missing client id

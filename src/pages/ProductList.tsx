@@ -8,6 +8,9 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
 
+import { getCategoryId, getCategoryName } from '../utils/category';
+import { safeSetItem } from '../utils/localStorage';
+
 interface ProductListProps {
   initialFilter?: string | null;
   onNavigate: (view: string, slug?: string) => void;
@@ -148,36 +151,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
     products.forEach(p => {
       // Find the normalized category name of this product
-      let catName = 'Curated';
-      if (p.category) {
-        if (typeof p.category === 'object' && p.category) {
-          if ((p.category as any).name) {
-            catName = (p.category as any).name;
-          } else {
-            const catId = p.category._id || '';
-            const found = categories.find(c => String(c._id) === String(catId));
-            if (found) catName = found.name;
-          }
-        } else {
-          const catStr = typeof p.category === 'string' ? p.category : String(p.category);
-          const found = categories.find(c => String(c._id) === catStr);
-          if (found) {
-            catName = found.name;
-          } else {
-            const foundByName = categories.find(c => c.name.toLowerCase() === catStr.toLowerCase());
-            if (foundByName) {
-              catName = foundByName.name;
-            } else {
-              catName = catStr;
-            }
-          }
-        }
-      }
-
-      // Clean category formatting (e.g., lowercase "home & garden" to title case "Home & Garden")
-      if (catName && catName !== 'Curated') {
-        catName = catName.charAt(0).toUpperCase() + catName.slice(1);
-      }
+      const catName = getCategoryName(p.category, categories);
 
       const name = (p.name || '').toLowerCase();
       const desc = (p.description || '').toLowerCase();
@@ -239,7 +213,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         setRecentSearches(prev => {
           const filtered = prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
           const updated = [trimmed, ...filtered].slice(0, 5);
-          localStorage.setItem('aff_recent_searches', JSON.stringify(updated));
+          safeSetItem('aff_recent_searches', JSON.stringify(updated));
           return updated;
         });
       }, 1000);
@@ -251,11 +225,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     e.stopPropagation();
     const updated = recentSearches.filter(s => s !== queryToRemove);
     setRecentSearches(updated);
-    try {
-      localStorage.setItem('aff_recent_searches', JSON.stringify(updated));
-    } catch (err) {
-      console.warn('Failed to update recent searches:', err);
-    }
+    safeSetItem('aff_recent_searches', JSON.stringify(updated));
   };
 
   const handleClearAllRecentSearches = () => {
@@ -350,7 +320,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       let catId = '';
       if (currentProds.length > 0) {
         const firstProd = currentProds[0];
-        catId = firstProd ? (typeof firstProd.category === 'object' && firstProd.category ? firstProd.category._id : String(firstProd.category)) : '';
+        catId = getCategoryId(firstProd.category);
       }
       
       const params = new URLSearchParams();
@@ -411,54 +381,63 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     fetchSimilarProducts(nextPage, false);
   };
 
-  // Sync and fetch products from endpoints
-  const fetchProductsList = async (pageToFetch: number) => {
-    setLoading(true);
-    if (pageToFetch === 1) {
-      setProducts([]);
-    }
-    try {
-      const params = new URLSearchParams();
-      if (debouncedSearch) params.append('search', debouncedSearch);
-      if (selectedCategory) params.append('category', selectedCategory);
-      if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
-      if (minPrice) params.append('minPrice', minPrice);
-      if (maxPrice) params.append('maxPrice', maxPrice);
-      if (minRating) params.append('rating', minRating);
-      if (sortField) params.append('sort', sortField);
-      
-      const limitVal = '200';
-      params.append('page', String(pageToFetch));
-      params.append('limit', limitVal);
-
-      const res = await fetch(`/api/products?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        const incomingProducts = data.products || [];
-        if (pageToFetch === 1) {
-          setProducts(incomingProducts);
-          if (debouncedSearch) {
-            fetchSimilarProducts(1, true, incomingProducts);
-          }
-        } else {
-          setProducts(prev => {
-            const existingIds = new Set(prev.map(p => p._id));
-            const uniqueIncoming = incomingProducts.filter((p: any) => !existingIds.has(p._id));
-            return [...prev, ...uniqueIncoming];
-          });
-        }
-        setTotalPages(data.pages || 1);
-        setTotalItems(data.total || 0);
-      }
-    } catch (e) {
-      console.warn("Failing to connect to product API catalog:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const controller = new AbortController();
+    
+    const fetchProductsList = async (pageToFetch: number) => {
+      setLoading(true);
+      if (pageToFetch === 1) {
+        setProducts([]);
+      }
+      try {
+        const params = new URLSearchParams();
+        if (debouncedSearch) params.append('search', debouncedSearch);
+        if (selectedCategory) params.append('category', selectedCategory);
+        if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
+        if (minPrice) params.append('minPrice', minPrice);
+        if (maxPrice) params.append('maxPrice', maxPrice);
+        if (minRating) params.append('rating', minRating);
+        if (sortField) params.append('sort', sortField);
+        
+        const limitVal = '200';
+        params.append('page', String(pageToFetch));
+        params.append('limit', limitVal);
+
+        const res = await fetch(`/api/products?${params.toString()}`, { signal: controller.signal });
+        if (res.ok) {
+          const data = await res.json();
+          const incomingProducts = data.products || [];
+          if (pageToFetch === 1) {
+            setProducts(incomingProducts);
+            if (debouncedSearch) {
+              fetchSimilarProducts(1, true, incomingProducts);
+            }
+          } else {
+            setProducts(prev => {
+              const existingIds = new Set(prev.map(p => p._id));
+              const uniqueIncoming = incomingProducts.filter((p: any) => !existingIds.has(p._id));
+              return [...prev, ...uniqueIncoming];
+            });
+          }
+          setTotalPages(data.pages || 1);
+          setTotalItems(data.total || 0);
+        }
+      } catch (e: any) {
+        if (e.name !== 'AbortError') {
+          console.warn("Failing to connect to product API catalog:", e);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchProductsList(currentPage);
+    
+    return () => {
+      controller.abort();
+    };
   }, [debouncedSearch, selectedCategory, selectedSubcategory, minPrice, maxPrice, minRating, sortField, currentPage]);
 
 
@@ -529,15 +508,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         <div>
           <div className="flex items-center justify-between gap-1 text-[9px] font-bold text-slate-400">
             <span>
-              {(() => {
-                if (!p.category) return 'Curated';
-                if (typeof p.category === 'object' && p.category) {
-                  if (p.category.name) return p.category.name;
-                  const catId = p.category._id || '';
-                  return categories.find(c => String(c._id) === String(catId))?.name || 'Curated';
-                }
-                return categories.find(c => String(c._id) === String(p.category))?.name || 'Curated';
-              })()}
+              {getCategoryName(p.category, categories)}
             </span>
             <span className="uppercase font-mono">{p.brand || 'Premium'}</span>
           </div>
@@ -663,16 +634,18 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               onClick={() => setViewStyle('grid')}
               className={`p-1.5 px-2.5 rounded-md hover:text-indigo-600 transition-all cursor-pointer flex items-center gap-1.5 ${viewStyle === 'grid' ? 'bg-white shadow-xs text-indigo-600 dark:bg-slate-800' : 'text-slate-400'}`}
               title="Grid show"
+              aria-label="Grid view"
             >
-              <Grid className="h-4 w-4" />
+              <Grid className="h-4 w-4" aria-hidden="true" />
               <span className="text-[10px] font-bold sm:hidden">Tiles</span>
             </button>
             <button
               onClick={() => setViewStyle('list')}
               className={`p-1.5 px-2.5 rounded-md hover:text-indigo-600 transition-all cursor-pointer flex items-center gap-1.5 ${viewStyle === 'list' ? 'bg-white shadow-xs text-indigo-600 dark:bg-slate-800' : 'text-slate-400'}`}
               title="List show"
+              aria-label="List view"
             >
-              <List className="h-4 w-4" />
+              <List className="h-4 w-4" aria-hidden="true" />
               <span className="text-[10px] font-bold sm:hidden">List</span>
             </button>
           </div>

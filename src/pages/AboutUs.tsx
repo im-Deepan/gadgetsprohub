@@ -80,7 +80,7 @@ export const AboutUs: React.FC = () => {
           <div className="flex gap-2 shrink-0">
             <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3.5 py-2 text-[10px] font-bold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400">
               <Mail className="h-3.5 w-3.5" />
-              <span>supportataffiliateprohub@gmail.com</span>
+              <span>support@gadgetsprohub.com</span>
             </div>
           </div>
         </div>

@@ -16,6 +16,9 @@ import { FeaturedCollections } from '../components/FeaturedCollections';
 import { RecentViewedMarquee } from '../components/RecentViewedMarquee';
 import { Breadcrumb } from '../components/Breadcrumb';
 
+import { getCategoryId, getCategoryName } from '../utils/category';
+import { safeSetItem } from '../utils/localStorage';
+
 interface HomeProps {
   onNavigate: (view: string, slug?: string) => void;
 }
@@ -101,7 +104,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         let current: string[] = stored ? JSON.parse(stored) : [];
         const filtered = current.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
         const updated = [trimmed, ...filtered].slice(0, 5);
-        localStorage.setItem('aff_recent_searches', JSON.stringify(updated));
+        safeSetItem('aff_recent_searches', JSON.stringify(updated));
         setRecentSearches(updated);
       } catch (err) {
         console.warn('Failed to save search:', err);
@@ -113,11 +116,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     e.stopPropagation();
     const updated = recentSearches.filter(s => s !== queryToRemove);
     setRecentSearches(updated);
-    try {
-      localStorage.setItem('aff_recent_searches', JSON.stringify(updated));
-    } catch (err) {
-      console.warn('Failed to remove recent search:', err);
-    }
+    safeSetItem('aff_recent_searches', JSON.stringify(updated));
   };
 
   const handleClearAllRecentSearches = (e: React.MouseEvent) => {
@@ -247,7 +246,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     } else if (activeCategory === 'trending') {
       return matchesSearch && !!prod.trending;
     } else {
-      const prodCatId = (prod.category && typeof prod.category === 'object') ? prod.category._id : prod.category;
+      const prodCatId = getCategoryId(prod.category);
       return matchesSearch && String(prodCatId) === String(activeCategory);
     }
   });
@@ -281,7 +280,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
     const standardCols = filteredCats.map(cat => {
       let catProducts = allProducts.filter(prod => {
-        const prodCatId = (prod.category && typeof prod.category === 'object') ? prod.category._id : prod.category;
+        const prodCatId = getCategoryId(prod.category);
         return String(prodCatId) === String(cat._id);
       });
 
@@ -546,7 +545,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           onClear={() => {
             setRecentViewed([]);
             localStorage.removeItem('aff_recent_viewed');
-            localStorage.setItem('aff_history_cleared', 'true');
+            safeSetItem('aff_history_cleared', 'true');
           }}
         />
       )}
@@ -635,7 +634,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                       >
                       <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
                       <div 
-                        onClick={() => onNavigate('product-detail', prod.slug)}
+                        onClick={() => {
+                          if (prod.slug) onNavigate('product-detail', prod.slug);
+                        }}
                         className="w-full h-full p-2 flex flex-col items-center justify-between group/item"
                         title={`View ${prod.name}`}
                       >
@@ -752,7 +753,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     exit={{ opacity: 0, scale: 0.95 }}
                     whileHover={{ y: -4, transition: { duration: 0.2 } }}
                     transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-                    onClick={() => onNavigate('product-detail', prod.slug)}
+                    onClick={() => {
+                      if (prod.slug) onNavigate('product-detail', prod.slug);
+                    }}
                     className="group"
                   >
                     <BorderGlow
@@ -800,15 +803,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                           {prod.brand || 'Premium'}
                         </span>
                         <span className="text-[8.5px] px-1.5 py-0.2 bg-slate-50 border border-slate-100 rounded text-slate-500 dark:bg-slate-900/40 dark:border-slate-800 dark:text-slate-400 font-bold font-mono truncate max-w-[90px]">
-                          {(() => {
-                            if (!prod.category) return 'Item';
-                            if (typeof prod.category === 'object' && prod.category) {
-                              if (prod.category.name) return prod.category.name;
-                              const catId = prod.category._id || '';
-                              return categories.find(c => String(c._id) === String(catId))?.name || 'Item';
-                            }
-                            return categories.find(c => String(c._id) === String(prod.category))?.name || 'Item';
-                          })()}
+                          {getCategoryName(prod.category, categories)}
                         </span>
                       </div>
 

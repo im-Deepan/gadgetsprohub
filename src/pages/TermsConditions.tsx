@@ -90,7 +90,7 @@ export const TermsConditions: React.FC = () => {
         </section>
 
         <div className="pt-6 border-t border-slate-100 dark:border-slate-800 text-center text-[10px] text-slate-400">
-          Should you require any clarifications regarding these rules, feel free to pitch our legal box: supportataffiliateprohub@gmail.com
+          Should you require any clarifications regarding these rules, feel free to contact our legal team: support@gadgetsprohub.com
         </div>
       </div>
     </div>

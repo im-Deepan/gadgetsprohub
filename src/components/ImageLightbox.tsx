@@ -46,7 +46,7 @@ export const ImageLightbox: React.FC = () => {
 
   const handleNavigate = (direction: 'next' | 'prev') => {
     setLightboxData((prev) => {
-      if (!prev || prev.images.length <= 1) return prev;
+      if (!prev || !prev.images || prev.images.length <= 1) return prev;
       const { images, currentIndex } = prev;
       let nextIdx = currentIndex;
       if (direction === 'prev') {
@@ -64,7 +64,7 @@ export const ImageLightbox: React.FC = () => {
 
   const jumpToImage = (idx: number) => {
     setLightboxData((prev) => {
-      if (!prev) return null;
+      if (!prev || !prev.images || idx < 0 || idx >= prev.images.length) return prev;
       return {
         ...prev,
         currentIndex: idx,

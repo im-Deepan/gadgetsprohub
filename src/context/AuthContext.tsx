@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { auth, googleProvider, isFirebaseMock } from '../firebase';
 import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -31,11 +32,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('aff_token');
-    } catch {
-      return null;
-    }
+    return safeGetItem('aff_token');
   });
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -63,8 +60,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           wishlist: data.wishlist?.map((p: any) => p._id || p) || []
         });
         setWishlist(data.wishlist?.map((p: any) => p._id || p) || []);
+      } else if (res.status === 401 || res.status === 403) {
+        // Safe logout processing without ending loading prematurely
+        safeRemoveItem('aff_token');
+        setToken(null);
+        setUser(null);
+        setWishlist([]);
       } else {
-        logout();
+        // For other errors, don't clear session automatically
+        console.warn(`Profile refresh failed with status: ${res.status}`);
       }
     } catch (error) {
       console.warn("Profile fetching failed:", error);
@@ -78,33 +82,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [token]);
 
   const fallbackBackendLogin = async (email: string, password: string) => {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      
-      let data: any = {};
+      setLoading(true);
       try {
-        const text = await res.text();
-        data = JSON.parse(text);
-      } catch (jsonErr) {
-        data = { error: 'The authentication server returned an unexpected response. Please try registering or logging in again.' };
-      }
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        let data: any = {};
+        try {
+          const text = await res.text();
+          data = JSON.parse(text);
+        } catch (jsonErr) {
+          data = { error: 'The authentication server returned an unexpected response. Please try registering or logging in again.' };
+        }
 
-      if (!res.ok) {
-        return { success: false, error: data.error || 'Authentication failure.' };
+        if (!res.ok) {
+          return { success: false, error: data.error || 'Authentication failure.' };
+        }
+        
+        safeSetItem('aff_token', data.token);
+        setToken(data.token);
+        setUser({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role
+        });
+        return { success: true };
+      } finally {
+        setLoading(false);
       }
-      
-      localStorage.setItem('aff_token', data.token);
-      setToken(data.token);
-      setUser({
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.name,
-        role: data.user.role
-      });
-      return { success: true };
   };
 
   const login = async (email: string, password: string) => {
@@ -128,7 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           let data: any = {};
           try {
-            data = await res.json();
+            const text = await res.text();
+            data = JSON.parse(text);
           } catch(e) {
             data = { error: 'Server authentication issue.' };
           }
@@ -137,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
              return { success: false, error: data.error || 'Server registration refusal.' };
           }
           
-          localStorage.setItem('aff_token', data.token);
+          safeSetItem('aff_token', data.token);
           setToken(data.token);
           setUser({
             id: data.user.id,
@@ -182,12 +192,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
            });
            
            await auth.signOut();
-           return { success: false, error: 'Registration successful! A verification link has been sent to your email. Please verify before signing in.' };
+           // Changed from { success: false, error: ... } to { success: true, message: ... } to indicate success
+           return { success: true, message: 'Registration successful! A verification link has been sent to your email. Please verify before signing in.' } as any;
         } catch (fbErr: any) {
            if (fbErr.code === 'auth/email-already-in-use') {
              return { success: false, error: 'Email already in use. Please sign in.' };
            } else if (fbErr.code === 'auth/operation-not-allowed') {
-             // Fallback if not enabled
+             // Fallback to backend registration if Firebase auth is disabled
+             console.warn('Firebase auth operation-not-allowed, falling back to backend register.');
+             // Break out of the firebase block to hit the backend fallback
            } else {
              return { success: false, error: fbErr.message };
            }
@@ -212,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: data.error || 'Registration failed.' };
       }
       
-      localStorage.setItem('aff_token', data.token);
+      safeSetItem('aff_token', data.token);
       setToken(data.token);
       setUser({
         id: data.user.id,
@@ -270,7 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: data.error || 'Server registration refusal.' };
       }
 
-      localStorage.setItem('aff_token', data.token);
+      safeSetItem('aff_token', data.token);
       setToken(data.token);
       setUser({
         id: data.user.id,
@@ -294,11 +307,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    try {
-      localStorage.removeItem('aff_token');
-    } catch {
-      // safe
-    }
+    safeRemoveItem('aff_token');
     setToken(null);
     setUser(null);
     setWishlist([]);
@@ -306,6 +315,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const toggleWishlist = async (productId: string) => {
     if (!token) return;
+    const previousWishlist = [...wishlist];
+    
+    // Optimistic UI update
+    const isWished = wishlist.includes(productId);
+    setWishlist(isWished ? wishlist.filter(id => id !== productId) : [...wishlist, productId]);
+    
     try {
       const res = await fetch(`/api/user/wishlist/${productId}`, {
         method: 'POST',
@@ -316,9 +331,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const updated = await res.json();
         setWishlist(updated);
+      } else {
+        // Rollback on server error
+        setWishlist(previousWishlist);
       }
     } catch (e) {
-      console.warn("Failed to toggle wishlist item:", e);
+      console.warn("Failed to toggle wishlist item network error:", e);
+      // Rollback on network error
+      setWishlist(previousWishlist);
     }
   };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { History, Sparkles, ArrowRight } from 'lucide-react';
+import { History, ArrowRight } from 'lucide-react';
 import { Product } from '../types';
 
 interface RecentViewedMarqueeProps {
@@ -91,7 +91,9 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
             <div
               key={`slot-${slotIndex}`}
               className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900 transition-all hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 aspect-square flex flex-col justify-between p-4 group cursor-pointer ${responsiveClass}`}
-              onClick={() => onNavigate('product-detail', prod.slug)}
+              onClick={() => {
+                if (prod.slug) onNavigate('product-detail', prod.slug);
+              }}
             >
               {/* Vertical Marquee Slide with AnimatePresence */}
               <div className="relative w-full h-[62%] flex items-center justify-center overflow-hidden bg-slate-50/50 dark:bg-slate-950/45 rounded-xl border border-slate-100 dark:border-slate-900/60 p-2">

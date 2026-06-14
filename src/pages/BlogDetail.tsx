@@ -139,8 +139,9 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
         <button
           onClick={handleShareClick}
           className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer"
+          aria-label="Share this guide"
         >
-          <Share2 className="h-3.5 w-3.5" />
+          <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
           {copiedLink ? '✓ Copied Link!' : 'Share Guide'}
         </button>
       </div>
@@ -152,7 +153,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
             {blog.category || 'Tech'}
           </span>
           <span className="text-[10px] font-semibold text-slate-400 font-mono">
-            {blog.createdAt ? new Date(blog.createdAt).toLocaleDateString() : 'Active Review'}
+            {blog.createdAt && !isNaN(new Date(blog.createdAt).getTime()) ? new Date(blog.createdAt).toLocaleDateString() : 'Active Review'}
           </span>
         </div>
 
@@ -170,7 +171,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
           </div>
           <span>•</span>
           <div className="flex items-center gap-1">
-            <Eye className="h-4 w-4" />
+            <Eye className="h-4 w-4" aria-hidden="true" />
             <span>{blog.views || 0} unique reads</span>
           </div>
         </div>
@@ -183,6 +184,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
           alt={blog.title}
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200'; }}
         />
       </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Sparkles, Flame, Laptop, Smartphone, Headphones, Watch, ArrowRight, Grid, Plus } from 'lucide-react';
 import { Product, Category } from '../types';
+import { getCategoryId } from '../utils/category';
 
 interface FeaturedCollectionsProps {
   onNavigate: (view: string, id?: string) => void;
@@ -49,7 +50,7 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
     // Map other categories from categories list
     categories.forEach((cat) => {
       const catProducts = allProducts.filter(p => {
-        const prodCatId = (p.category && typeof p.category === 'object') ? p.category._id : p.category;
+        const prodCatId = getCategoryId(p.category);
         return String(prodCatId) === String(cat._id);
       });
 
@@ -209,8 +210,9 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
   };
 
   useEffect(() => {
-    if (products.length <= 1) return;
-    resetTimer();
+    if (products.length > 1) {
+      resetTimer();
+    }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -239,7 +241,9 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
   if (!currentProduct) return null;
 
   const handleCardClick = () => {
-    onNavigate('product-detail', currentProduct.slug);
+    if (currentProduct.slug) {
+      onNavigate('product-detail', currentProduct.slug);
+    }
   };
 
   const slideVariants = {
@@ -260,7 +264,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
   };
 
   // Safe checks for discount
-  const productDiscount = currentProduct.discount && currentProduct.discount > 0 ? currentProduct.discount : 0;
+  const productDiscount = typeof currentProduct.discount === 'number' && !isNaN(currentProduct.discount) && currentProduct.discount > 0 ? currentProduct.discount : 0;
 
   return (
     <div
@@ -315,17 +319,17 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
                 onClick={handlePrev}
                 type="button"
                 className="pointer-events-auto h-6 w-6 rounded-full bg-white/90 text-slate-700 active:scale-90 flex items-center justify-center cursor-pointer border-none shadow-xs dark:bg-slate-900/90 dark:text-slate-200"
-                aria-label="Previous Spotlight"
+                aria-label="Previous image"
               >
-                <ChevronLeft className="h-3.5 w-3.5" />
+                <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
               <button
                 onClick={handleNext}
                 type="button"
                 className="pointer-events-auto h-6 w-6 rounded-full bg-white/90 text-slate-700 active:scale-90 flex items-center justify-center cursor-pointer border-none shadow-xs dark:bg-slate-900/90 dark:text-slate-200"
-                aria-label="Next Spotlight"
+                aria-label="Next image"
               >
-                <ChevronRight className="h-3.5 w-3.5" />
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
           )}
@@ -416,8 +420,9 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
   };
 
   useEffect(() => {
-    if (products.length <= 1) return;
-    resetTimer();
+    if (products.length > 1) {
+      resetTimer();
+    }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -448,7 +453,9 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
 
   // Direct safe product details redirection
   const handleCardClick = () => {
-    onNavigate('product-detail', currentProduct.slug);
+    if (currentProduct.slug) {
+      onNavigate('product-detail', currentProduct.slug);
+    }
   };
 
   // Framer motion animation configurations (Directional sliding)
@@ -473,7 +480,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
   };
 
   const isWide = isLarge || horizontalOnLarge;
-  const productDiscount = currentProduct.discount && currentProduct.discount > 0 ? currentProduct.discount : 0;
+  const productDiscount = typeof currentProduct.discount === 'number' && !isNaN(currentProduct.discount) && currentProduct.discount > 0 ? currentProduct.discount : 0;
 
   return (
     <div
@@ -539,7 +546,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
               className="pointer-events-auto h-8 w-8 rounded-full border border-slate-200/85 bg-white/95 text-slate-700 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
               aria-label="Previous image"
             >
-              <ChevronLeft className="h-4.5 w-4.5" />
+              <ChevronLeft className="h-4.5 w-4.5" aria-hidden="true" />
             </button>
             <button
               onClick={handleNext}
@@ -547,7 +554,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
               className="pointer-events-auto h-8 w-8 rounded-full border border-slate-200/85 bg-white/95 text-slate-700 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
               aria-label="Next image"
             >
-              <ChevronRight className="h-4.5 w-4.5" />
+              <ChevronRight className="h-4.5 w-4.5" aria-hidden="true" />
             </button>
           </div>
         )}

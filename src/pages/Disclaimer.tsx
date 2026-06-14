@@ -75,12 +75,12 @@ export const Disclaimer: React.FC = () => {
             <span>4. Trademark & Media Fair-Use Statement</span>
           </h2>
           <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            All trademark titles (such as Apple, Samsung, Sony, AudioPro, Nike, etc.) and associated product mock photos/specifications are the intellectual properties of their respective trademark holders. gadgetsprohub references these names and specifications purely under laminative nominative fair-use exceptions to identify, contrast, and review consumer goods. We have no direct endorsement, official partnership, or corporate sponsorship with actual manufacturers unless explicitly documented on a specific review.
+            All trademark titles (such as Apple, Samsung, Sony, AudioPro, Nike, etc.) and associated product mock photos/specifications are the intellectual properties of their respective trademark holders. gadgetsprohub references these names and specifications purely under nominative fair-use exceptions to identify, contrast, and review consumer goods. We have no direct endorsement, official partnership, or corporate sponsorship with actual manufacturers unless explicitly documented on a specific review.
           </p>
         </section>
 
         <div className="pt-6 border-t border-slate-100 dark:border-slate-800 text-center text-[10px] text-slate-400">
-          For any copyright, DMCA, or partnership inquiries regarding this disclaimer, please direct mail us: supportataffiliateprohub@gmail.com
+          For any copyright, DMCA, or partnership inquiries regarding this disclaimer, please direct mail us: support@gadgetsprohub.com
         </div>
       </div>
     </div>
