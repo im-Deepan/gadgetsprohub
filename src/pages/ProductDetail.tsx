@@ -3,7 +3,7 @@ import { Product } from '../types';
 import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, ShieldCheck, CheckCheck, MessageSquare, Plus, Check, X, BookmarkCheck, Edit, Sparkles, Box, CheckCircle, Video, Play, Copy, Share2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from '../components/Helmet';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 
 import { Breadcrumb } from '../components/Breadcrumb';

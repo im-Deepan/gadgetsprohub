@@ -226,6 +226,33 @@ const socialClickSchema = new mongoose.Schema({
 
 const SocialClick = mongoose.model('SocialClick', socialClickSchema);
 
+// Subscriber Schema
+const subscriberSchema = new mongoose.Schema({
+  email: { type: String, unique: true, required: true, lowercase: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Subscriber = mongoose.model('Subscriber', subscriberSchema);
+
+let localSubscribers: any[] = [];
+const LOCAL_SUBSCRIBERS_FILE = path.join(process.cwd(), 'local_subscribers.json');
+
+if (fs.existsSync(LOCAL_SUBSCRIBERS_FILE)) {
+  try {
+    localSubscribers = JSON.parse(fs.readFileSync(LOCAL_SUBSCRIBERS_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_subscribers.json fallback:", err.message);
+  }
+}
+
+const saveLocalSubscribers = () => {
+  try {
+    fs.writeFileSync(LOCAL_SUBSCRIBERS_FILE, JSON.stringify(localSubscribers, null, 2), 'utf8');
+  } catch (e: any) {
+    console.warn("Failed saving local subscribers:", e.message);
+  }
+};
+
 // Persistent File Paths for Offline Fallback System
 const LOCAL_USERS_FILE = path.join(process.cwd(), 'local_users.json');
 const LOCAL_PRODUCTS_FILE = path.join(process.cwd(), 'local_products.json');
@@ -2175,6 +2202,50 @@ async function startServer() {
       }
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Newsletter Subscription Route
+  app.post('/api/newsletter/subscribe', async (req, res): Promise<any> => {
+    try {
+      const { email } = req.body;
+      if (typeof email !== 'string') {
+        return res.status(400).json({ error: 'Email must be a standard text string' });
+      }
+
+      const trimmedEmail = email.trim().toLowerCase();
+      if (!trimmedEmail || trimmedEmail.length > 128 || !trimmedEmail.includes('@')) {
+        return res.status(400).json({ error: 'A valid email under 128 characters is required' });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({ error: 'Please enter a valid email address' });
+      }
+
+      if (isMongoConnected) {
+        const existing = await Subscriber.findOne({ email: trimmedEmail });
+        if (existing) {
+          return res.status(400).json({ error: 'This email is already subscribed to our newsletter' });
+        }
+        const s = new Subscriber({ email: trimmedEmail });
+        await s.save();
+      } else {
+        const existing = localSubscribers.some(s => s.email === trimmedEmail);
+        if (existing) {
+          return res.status(400).json({ error: 'This email is already subscribed to our newsletter' });
+        }
+        localSubscribers.unshift({
+          _id: "s_f_" + Math.random().toString(36).substring(2, 9),
+          email: trimmedEmail,
+          createdAt: new Date()
+        });
+        saveLocalSubscribers();
+      }
+
+      res.json({ success: true, message: 'Thank you for subscribing to our newsletter!' });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'An error occurred during newsletter subscription' });
     }
   });
 

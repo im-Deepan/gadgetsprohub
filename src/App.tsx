@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ImageLightbox } from './components/ImageLightbox';
+import { ProductPageSkeleton, BlogPageSkeleton } from './components/PageSkeletons';
 import { motion, AnimatePresence } from 'motion/react';
 import { safeSetItem, safeGetItem } from './utils/localStorage';
 
@@ -341,11 +342,19 @@ const AppContent: React.FC = () => {
       case 'home':
         return <Home onNavigate={navigateToView} />;
       case 'products':
-        return <ProductList initialFilter={selectedSlug} onNavigate={navigateToView} />;
+        return (
+          <Suspense fallback={<ProductPageSkeleton />}>
+            <ProductList initialFilter={selectedSlug} onNavigate={navigateToView} />
+          </Suspense>
+        );
       case 'product-detail':
         return <ProductDetail productSlug={selectedSlug || ''} onNavigate={navigateToView} />;
       case 'blogs':
-        return <BlogList onNavigate={navigateToView} />;
+        return (
+          <Suspense fallback={<BlogPageSkeleton />}>
+            <BlogList onNavigate={navigateToView} />
+          </Suspense>
+        );
       case 'blog-detail':
         return <BlogDetail blogSlug={selectedSlug || ''} onNavigate={navigateToView} />;
       case 'contact':

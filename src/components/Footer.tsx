@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Instagram, Linkedin, Send, BadgeAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { NewsletterSubscribe } from './NewsletterSubscribe';
 
 interface FooterProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -17,20 +18,21 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
   // States for diagnostic feed alert overlays
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorText, setErrorText] = useState('');
 
   // Load real categories dynamically
   React.useEffect(() => {
     fetch('/api/categories')
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error("fail");
-      })
-      .then(data => {
-        if (data && Array.isArray(data)) {
-          setCategories(data);
-        }
-      })
-      .catch(e => console.warn("Failed to fetch footer categories:", e));
+       .then(res => {
+         if (res.ok) return res.json();
+         throw new Error("fail");
+       })
+       .then(data => {
+         if (data && Array.isArray(data)) {
+           setCategories(data);
+         }
+       })
+       .catch(e => console.warn("Failed to fetch footer categories:", e));
   }, []);
 
   // Track social clicks helper
@@ -51,27 +53,30 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
     if (!email) return;
 
     setLoading(true);
+    setErrorText('');
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch('/api/newsletter/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'Newsletter Reader',
-          email: email,
-          subject: 'Newsletter Subscription',
-          message: 'Please subscribe my email to the newsletter deals feed.'
-        })
+        body: JSON.stringify({ email })
       });
+      const data = await res.json();
       if (res.ok) {
         setSubscribed(true);
         setEmail('');
         setShowSuccessModal(true);
+        showToast("Subscribed to our newsletter successfully!", "success");
       } else {
+        const errMsg = data.error || "We were unable to feed your email to our newsletter dispatch system right now. Please check your web connection.";
+        setErrorText(errMsg);
         setShowErrorModal(true);
+        showToast(errMsg, "error");
       }
     } catch (e) {
       console.warn("Newsletter submission error:", e);
+      setErrorText("A network connection error occurred. Please try again later.");
       setShowErrorModal(true);
+      showToast("Connection to newsletter service failed.", "error");
     } finally {
       setLoading(false);
     }
@@ -218,33 +223,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
               Get honest product comparisons and valid discount codes directly in your inbox. Zero clutter.
             </p>
 
-            {subscribed ? (
-              <div className="rounded-xl bg-teal-50 p-3 text-xs text-teal-800 dark:bg-teal-950/30 dark:text-teal-300">
-                <span className="font-semibold block mb-0.5">✓ Subscribed successfully!</span>
-                We will send exclusive deals soon.
-              </div>
-            ) : (
-              <form onSubmit={handleSubscribe} className="space-y-2">
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    placeholder="Enter email account"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-10 text-xs text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    aria-label="Subscribe to newsletter"
-                    className="absolute top-1 right-1 flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <Send className="h-3 w-3" />
-                  </button>
-                </div>
-              </form>
-            )}
+            <NewsletterSubscribe variant="minimal" />
           </div>
 
         </div>
@@ -306,7 +285,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
               <div className="space-y-1 my-1">
                 <h3 className="text-xs font-black uppercase tracking-wider font-sans text-rose-600">Subscription Error</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed font-sans">
-                  We were unable to feed your email to our newsletter dispatch system right now. Please check your web connection.
+                  {errorText || "We were unable to feed your email to our newsletter dispatch system right now. Please check your web connection."}
                 </p>
               </div>
             </div>

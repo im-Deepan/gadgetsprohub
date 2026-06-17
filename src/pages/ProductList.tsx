@@ -3,7 +3,7 @@ import { Product, Category } from '../types';
 import { Search, Heart, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Grid, List, Star, X, CheckCheck, ShieldCheck, ShoppingBag, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from '../components/Helmet';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';

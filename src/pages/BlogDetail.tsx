@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Blog } from '../types';
 import { ArrowLeft, Clock, Eye, Share2, Sparkle, Tag } from 'lucide-react';
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from '../components/Helmet';
 
 import { Breadcrumb } from '../components/Breadcrumb';
 

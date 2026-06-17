@@ -3,7 +3,7 @@ import { Blog } from '../types';
 import { Search, Compass, BookOpen, Clock, ChevronRight } from 'lucide-react';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 import { motion, AnimatePresence } from 'motion/react';
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from '../components/Helmet';
 import { Breadcrumb } from '../components/Breadcrumb';
 
 interface BlogProps {

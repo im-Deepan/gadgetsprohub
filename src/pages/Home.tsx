@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from '../components/Helmet';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
 import { AdSenseBanner } from '../components/AdSenseBanner';
@@ -15,6 +15,7 @@ import { LazySection } from '../components/LazySection';
 import { FeaturedCollections } from '../components/FeaturedCollections';
 import { RecentViewedMarquee } from '../components/RecentViewedMarquee';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { NewsletterSubscribe } from '../components/NewsletterSubscribe';
 
 import { getCategoryId, getCategoryName } from '../utils/category';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
@@ -860,7 +861,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       </section>
       </LazySection>
 
-
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-12 mb-8" id="home-newsletter-subscribe-section">
+        <NewsletterSubscribe variant="inline" />
+      </div>
 
     </div>
   );
