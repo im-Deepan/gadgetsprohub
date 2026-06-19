@@ -50,8 +50,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleTheme = () => setIsDark(prev => !prev);
 
+  // Use a fallback to false during initial mismatch window to ensure server layout safety
+  const resolvedIsDark = mounted ? isDark : false;
+
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDark: resolvedIsDark, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

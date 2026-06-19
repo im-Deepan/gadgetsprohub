@@ -236,29 +236,35 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   }, []);
 
   // Filter products in real-time based on the hero search query and active category filter
-  const filteredProducts = allProducts.filter(prod => {
-    const matchesSearch = 
-      prod.name.toLowerCase().includes(homeSearch.toLowerCase()) ||
-      (prod.brand && prod.brand.toLowerCase().includes(homeSearch.toLowerCase())) ||
-      prod.description.toLowerCase().includes(homeSearch.toLowerCase());
-    
-    if (activeCategory === 'all') {
-      return matchesSearch;
-    } else if (activeCategory === 'trending') {
-      return matchesSearch && !!prod.trending;
-    } else {
-      const prodCatId = getCategoryId(prod.category);
-      return matchesSearch && String(prodCatId) === String(activeCategory);
-    }
-  });
+  const filteredProducts = React.useMemo(() => {
+    return allProducts.filter(prod => {
+      const matchesSearch = 
+        prod.name.toLowerCase().includes(homeSearch.toLowerCase()) ||
+        (prod.brand && prod.brand.toLowerCase().includes(homeSearch.toLowerCase())) ||
+        prod.description.toLowerCase().includes(homeSearch.toLowerCase());
+      
+      if (activeCategory === 'all') {
+        return matchesSearch;
+      } else if (activeCategory === 'trending') {
+        return matchesSearch && !!prod.trending;
+      } else {
+        const prodCatId = getCategoryId(prod.category);
+        return matchesSearch && String(prodCatId) === String(activeCategory);
+      }
+    });
+  }, [allProducts, homeSearch, activeCategory]);
 
   // Identify products listed under "Top Recommendations & Trending Choices" section (first 8 trending/products)
-  const trendingToShow = (trending.length > 0 ? trending : allProducts).slice(0, 8);
+  const trendingToShow = React.useMemo(() => {
+    return (trending.length > 0 ? trending : allProducts).slice(0, 8);
+  }, [trending, allProducts]);
 
   // General products are filtered products
-  const generalProducts = homeSearch 
-    ? filteredProducts 
-    : filteredProducts.filter(prod => !trendingToShow.some(t => t._id === prod._id));
+  const generalProducts = React.useMemo(() => {
+    return homeSearch 
+      ? filteredProducts 
+      : filteredProducts.filter(prod => !trendingToShow.some(t => String(t._id || t.id || '') === String(prod._id || prod.id || '')));
+  }, [filteredProducts, homeSearch, trendingToShow]);
 
   // Sort filtered products by latest added/updated
   const latestProductsToShow = React.useMemo(() => {

@@ -432,8 +432,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
     // Calculate aggregates safely with whichever metrics loaded successfully
     try {
-      const clicks = telemetryClicks || pData.reduce((acc, p) => acc + (p.clicks || 0), 0);
-      const conversions = telemetryConversions || pData.reduce((acc, p) => acc + (p.conversions || 0), 0) || Math.round(clicks * 0.12);
+      const clicks = (telemetryClicks !== undefined && telemetryClicks !== null) ? telemetryClicks : pData.reduce((acc, p) => acc + (p.clicks || 0), 0);
+      const conversions = (telemetryConversions !== undefined && telemetryConversions !== null) ? telemetryConversions : (pData.reduce((acc, p) => acc + (p.conversions || 0), 0) || Math.round(clicks * 0.12));
       const estimated = Number((clicks * 0.08 + conversions * 4.5).toFixed(2));
       const unreads = mData.filter(m => !m.read).length;
 
@@ -664,7 +664,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       price: Number(prodForm.price) || 0,
       originalPrice: Number(prodForm.originalPrice) || undefined,
       discount: Number(prodForm.discount) || undefined,
-      category: prodForm.category || categories?.[0]?._id,
+      category: prodForm.category || categories?.[0]?._id || '',
       subcategory: prodForm.subcategory || undefined,
       description: prodForm.description,
       longDescription: prodForm.longDescription,
@@ -1257,7 +1257,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       </div>
 
       {/* 2. ADMIN VIEW NAVIGATION TABS */}
-      <div ref={tabContainerRef} className="flex flex-wrap border-b border-slate-100 pb-3 gap-2 md:px-4 mb-8 dark:border-slate-800">
+      <div ref={tabContainerRef} className="relative z-30 overflow-visible flex flex-wrap border-b border-slate-100 pb-3 gap-2 md:px-4 mb-8 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('products')}
           className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'products' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/40'}`}
@@ -2937,10 +2937,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Sale Price ($)</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Sale Price (₹)</label>
                       <input
                         type="number"
                         required
+                        min="0"
+                        step="0.01"
                         value={prodForm.price}
                         onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })}
                         className="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-900 p-2.5 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-center"
@@ -2966,7 +2968,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         className="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-900 p-2.5 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                       >
                         <option value="">-- No Subcategory --</option>
-                        {(categories.find(c => String(c._id) === String(prodForm.category || categories?.[0]?._id))?.subcategories || []).map(sub => (
+                        {(categories.find(c => String(c._id) === String(prodForm.category || categories?.[0]?._id || ''))?.subcategories || []).map(sub => (
                           <option key={sub} value={sub} className="dark:bg-slate-900 dark:text-slate-100">{sub}</option>
                         ))}
                       </select>
@@ -2975,9 +2977,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Original Price ($)</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Original Price (₹)</label>
                       <input
                         type="number"
+                        min="0"
+                        step="0.01"
                         value={prodForm.originalPrice}
                         onChange={(e) => setProdForm({ ...prodForm, originalPrice: e.target.value })}
                         className="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-900 p-2.5 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-center"
@@ -2987,6 +2991,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Active Discount %</label>
                       <input
                         type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
                         value={prodForm.discount}
                         onChange={(e) => setProdForm({ ...prodForm, discount: e.target.value })}
                         className="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-900 p-2.5 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-center"

@@ -358,6 +358,19 @@ if (fs.existsSync(LOCAL_USERS_FILE)) {
   }
 }
 
+// Secure fallback users dynamically by hashing plaintext passwords on startup
+Promise.all(localUsers.map(async (u) => {
+  if (u.password && !u.password.startsWith('$2a$') && !u.password.startsWith('$2b$')) {
+    u.password = await hashHelper(u.password);
+  }
+})).then(() => {
+  try {
+    fs.writeFileSync(LOCAL_USERS_FILE, JSON.stringify(localUsers, null, 2), 'utf8');
+  } catch (err) {
+    // Ignore write failure in read-only setups
+  }
+}).catch(err => console.warn("Error hashing initial users in-memory:", err));
+
 let localMessages = JSON.parse(JSON.stringify(seedMessages));
 
 const originalLocalProducts = JSON.parse(JSON.stringify(seedProducts));
@@ -732,14 +745,22 @@ async function resolveUniqueSlug(
       if (type === 'product') {
         const query: any = { slug: testSlug };
         if (excludeId) {
-          query._id = { $ne: excludeId };
+          const idsToExclude: any[] = [excludeId];
+          if (mongoose.Types.ObjectId.isValid(excludeId)) {
+            idsToExclude.push(new mongoose.Types.ObjectId(excludeId));
+          }
+          query._id = { $nin: idsToExclude };
         }
         const item = await Product.findOne(query);
         return !!item;
       } else {
         const query: any = { slug: testSlug };
         if (excludeId) {
-          query._id = { $ne: excludeId };
+          const idsToExclude: any[] = [excludeId];
+          if (mongoose.Types.ObjectId.isValid(excludeId)) {
+            idsToExclude.push(new mongoose.Types.ObjectId(excludeId));
+          }
+          query._id = { $nin: idsToExclude };
         }
         const item = await Blog.findOne(query);
         return !!item;
@@ -1179,6 +1200,48 @@ async function startServer() {
   });
 
   // ========== API ROUTES ==========
+
+  // Lightweight health-check endpoint verifying DB connectivity gracefully without hanging
+  app.get('/api/health-check', async (req, res) => {
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Database ping timeout (2000ms achieved)')), 2000)
+    );
+
+    try {
+      if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
+        await Promise.race([
+          mongoose.connection.db.admin().ping(),
+          timeoutPromise
+        ]);
+        return res.json({
+          status: 'healthy',
+          database: 'connected',
+          atlas: true,
+          timestamp: new Date()
+        });
+      } else {
+        const stateNames = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+        const state = mongoose.connection.readyState;
+        const stateName = (state >= 0 && state < stateNames.length) ? stateNames[state] : 'unknown';
+        return res.status(503).json({
+          status: 'unhealthy',
+          database: stateName,
+          atlas: false,
+          fallbackMode: true,
+          timestamp: new Date()
+        });
+      }
+    } catch (err: any) {
+      console.warn("Health check: DB connectivity check failed or timed out:", err.message);
+      return res.status(503).json({
+        status: 'unhealthy',
+        database: 'error',
+        error: err.message,
+        fallbackMode: true,
+        timestamp: new Date()
+      });
+    }
+  });
 
   // SEO Routes (Robots & Sitemap)
   app.get('/robots.txt', (req, res) => {
@@ -2218,7 +2281,7 @@ async function startServer() {
         return res.status(400).json({ error: 'A valid email under 128 characters is required' });
       }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
       if (!emailRegex.test(trimmedEmail)) {
         return res.status(400).json({ error: 'Please enter a valid email address' });
       }

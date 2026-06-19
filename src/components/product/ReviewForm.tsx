@@ -77,6 +77,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Descriptive Comment</label>
             <textarea
               rows={3}
+              required
               placeholder="Add specification clarifications or active workout usage opinions..."
               value={reviewContent}
               onChange={(e) => setReviewContent(e.target.value)}

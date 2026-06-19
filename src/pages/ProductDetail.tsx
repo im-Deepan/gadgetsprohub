@@ -48,7 +48,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     features: '',
     pros: '',
     cons: '',
-    videoUrl: ''
+    videoUrl: '',
+    specifications: ''
   });
 
   // Add Review states
@@ -247,7 +248,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         features: product.features?.join(', ') || '',
         pros: product.pros?.join(', ') || '',
         cons: product.cons?.join(', ') || '',
-        videoUrl: product.videoUrl || ''
+        videoUrl: product.videoUrl || '',
+        specifications: Object.entries(product.specifications || {})
+          .map(([k, v]) => `${k}=${v}`)
+          .join('; ')
       });
     }
   }, [product]);
@@ -259,6 +263,19 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     setAdminEditSuccess(false);
 
     try {
+      const specificationsObj: Record<string, string> = {};
+      if (adminEditForm.specifications) {
+        adminEditForm.specifications.split(';').forEach((pStr: string) => {
+          if (!pStr.trim()) return;
+          const parts = pStr.split('=');
+          if (parts.length >= 2) {
+            specificationsObj[parts[0].trim()] = parts.slice(1).join('=').trim();
+          } else if (parts.length === 1) {
+            specificationsObj[parts[0].trim()] = 'Yes';
+          }
+        });
+      }
+
       const payload = {
         name: adminEditForm.name,
         price: Number(adminEditForm.price) || 0,
@@ -270,7 +287,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         features: adminEditForm.features.split(',').map((f: string) => f.trim()).filter(Boolean),
         pros: adminEditForm.pros.split(',').map((f: string) => f.trim()).filter(Boolean),
         cons: adminEditForm.cons.split(',').map((f: string) => f.trim()).filter(Boolean),
-        videoUrl: adminEditForm.videoUrl
+        videoUrl: adminEditForm.videoUrl,
+        specifications: specificationsObj
       };
 
       const res = await fetch(`/api/admin/products/${product._id}`, {
@@ -288,9 +306,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         );
         setProduct(prev => prev ? { ...prev, ...cleanPayload } : null);
         setAdminEditSuccess(true);
-        setTimeout(() => setAdminEditSuccess(false), 2500);
+        setTimeout(() => setAdminEditSuccess(false), 2505);
       } else {
-        alert("Failed to save changes. Ensure you are authorized.");
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.error || "Ensure you are authorized as an administrator.";
+        alert(`Failed to save changes: ${errMsg}`);
       }
     } catch (err) {
       console.warn("Product live save error:", err);
@@ -308,24 +328,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     }, 10000); // 10 seconds rotation loop
 
     return () => clearInterval(interval);
-  }, [product, activeImageIdx]);
-
-  useEffect(() => {
-    if (product) {
-      setAdminEditForm({
-        name: product.name || '',
-        price: String(product.price || ''),
-        originalPrice: String(product.originalPrice || ''),
-        discount: String(product.discount || ''),
-        affiliateLink: product.affiliateLink || '',
-        description: product.description || '',
-        longDescription: product.longDescription || '',
-        features: product.features?.join(', ') || '',
-        pros: product.pros?.join(', ') || '',
-        cons: product.cons?.join(', ') || '',
-        videoUrl: product.videoUrl || ''
-      });
-    }
   }, [product]);
 
   useEffect(() => {
@@ -557,8 +559,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           { label: 'Home', onClick: () => onNavigate('home') },
           { label: 'Products', onClick: () => onNavigate('products') },
           ...(product?.category ? [{ 
-            label: typeof product.category === 'object' ? product.category.name : 'Category', 
-            onClick: () => onNavigate('products', typeof product.category === 'object' ? `category-${product.category._id}` : `category-${product.category}`)
+            label: getCategoryName(product.category, categories), 
+            onClick: () => onNavigate('products', `category-${getCategoryId(product.category)}`)
           }] : []),
           { label: product ? product.name : 'Loading...', isCurrentPage: true }
         ]} />
@@ -624,7 +626,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                         controls
                         playsInline
                         preload="metadata"
-                        referrerPolicy="no-referrer"
                         poster={product.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'}
                       >
                         <source 
@@ -656,7 +657,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                   )
                 ) : (
                   <img
-                    src={(product.images && product.images[activeImageIdx]) || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'}
+                    src={(product.images && activeImageIdx < product.images.length && activeImageIdx >= 0 ? product.images[activeImageIdx] : undefined) || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'}
                     alt={product.name}
                     referrerPolicy="no-referrer"
                     className="h-full w-full object-contain p-4 transition-transform hover:scale-101 duration-305 cursor-zoom-in"
@@ -665,7 +666,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                       e.stopPropagation();
                       window.dispatchEvent(new CustomEvent('open-lightbox', {
                         detail: {
-                          src: (product.images && product.images[activeImageIdx]) || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
+                          src: (product.images && activeImageIdx < product.images.length && activeImageIdx >= 0 ? product.images[activeImageIdx] : undefined) || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
                           images: product.images || [],
                           currentIndex: activeImageIdx,
                           alt: product.name
@@ -984,7 +985,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             {(!product.reviews || product.reviews.length === 0) ? (
               <p className="text-xs text-slate-400 font-medium">aggrigated score based on the original store</p>
             ) : (
-              <p className="text-xs text-slate-400 font-medium">Aggregated score based on {product.reviews.length} user inputs.</p>
+              <p className="text-xs text-slate-400 font-medium">Aggregated score based on {product.reviews?.length || 0} user inputs.</p>
             )}
           </div>
 
@@ -1018,7 +1019,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                       <div className="h-7 w-7 rounded-full bg-slate-200 flex items-center justify-center uppercase font-bold text-[10px] dark:bg-slate-800 dark:text-slate-300">
-                        {rev.userId?.name?.[0] || 'U'}
+                        {rev.userId?.name ? rev.userId.name.trim().charAt(0).toUpperCase() || 'U' : 'U'}
                       </div>
                       <div>
                         <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{rev.userId?.name || 'Verified Explorer'}</p>

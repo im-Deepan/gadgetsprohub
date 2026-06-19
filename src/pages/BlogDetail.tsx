@@ -195,7 +195,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
         </p>
 
         {/* Dynamic formatting for paragraphs split by spaces to make it beautiful */}
-        {(blog.content || '').split('\n\n').filter(Boolean).map((paragraph, index) => (
+        {(typeof blog.content === 'string' ? blog.content : '').split('\n\n').filter(Boolean).map((paragraph, index) => (
           <p key={index} className="leading-relaxed whitespace-pre-line text-slate-600 dark:text-slate-300">
             {paragraph}
           </p>
@@ -203,7 +203,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       </div>
 
       {/* Associated Meta tags */}
-      {blog.tags && blog.tags.length > 0 && (
+      {Array.isArray(blog.tags) && blog.tags.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 pt-10 border-t border-slate-100 dark:border-slate-800 mt-12">
           <Tag className="h-4 w-4 text-slate-400 flex shrink-0" />
           {blog.tags.map(t => (

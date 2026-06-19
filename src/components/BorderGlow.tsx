@@ -3,6 +3,9 @@ import React, { useRef, useState } from 'react';
 interface BorderGlowProps {
   children: React.ReactNode;
   edgeSensitivity?: number;
+  /**
+   * Space-separated RGB triplet format (e.g., '40 80 80' or with comma '40, 80, 80') representing the accent glow color.
+   */
   glowColor?: string;
   backgroundColor?: string;
   borderRadius?: number;
@@ -12,19 +15,35 @@ interface BorderGlowProps {
   className?: string;
 }
 
+const AMBIENT_COLORS = [
+  { glow: '99, 102, 241', colors: ['#c084fc', '#6366f1', '#38bdf8'] }, // Indigo/Purple
+  { glow: '236, 72, 153', colors: ['#f472b6', '#ec4899', '#fca5a5'] }, // Pink/Rose
+  { glow: '20, 184, 166', colors: ['#2dd4bf', '#14b8a6', '#93c5fd'] }, // Teal/Blue
+  { glow: '168, 85, 247', colors: ['#c084fc', '#a855f7', '#f472b6'] }, // Purple/Pink
+  { glow: '6, 182, 212', colors: ['#67e8f9', '#06b6d4', '#38bdf8'] },  // Cyan/Blue
+  { glow: '249, 115, 22', colors: ['#fdba74', '#f97316', '#fca5a5'] },  // Orange/Amber
+  { glow: '16, 185, 129', colors: ['#34d399', '#10b981', '#a7f3d0'] }   // Emerald/Green
+];
+
 export const BorderGlow: React.FC<BorderGlowProps> = ({
   children,
-  glowColor = '40 80 80',
+  glowColor,
   backgroundColor = 'transparent',
   borderRadius = 28,
   glowRadius = 300,
   glowIntensity = 1,
-  colors = ['#c084fc', '#f472b6', '#38bdf8'],
+  colors,
   className = ''
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: -1000, y: -1000 });
   const [opacity, setOpacity] = useState(0);
+
+  // Initialize a random color configuration state on mount to ensure dynamic visual variation across multiple card instances
+  const [randomColorCfg] = useState(() => AMBIENT_COLORS[Math.floor(Math.random() * AMBIENT_COLORS.length)]);
+
+  const finalGlowColor = glowColor !== undefined ? glowColor : randomColorCfg.glow;
+  const finalColors = colors !== undefined ? colors : randomColorCfg.colors;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
@@ -36,10 +55,10 @@ export const BorderGlow: React.FC<BorderGlowProps> = ({
   const handleMouseLeave = () => setOpacity(0);
 
   // Handle color formatting if '40 80 80' instead of '40, 80, 80'
-  const rgbColor = glowColor.includes(',') ? glowColor : glowColor.split(' ').join(', ');
+  const rgbColor = finalGlowColor.includes(',') ? finalGlowColor : finalGlowColor.split(' ').join(', ');
 
   // Dynamic gradient based on colors if animated/multi-color is needed, but we'll stick to a smooth spotlight
-  const gradientColors = colors.length >= 3 ? colors : ['#c084fc', '#f472b6', '#38bdf8'];
+  const gradientColors = finalColors.length >= 3 ? finalColors : ['#c084fc', '#f472b6', '#38bdf8'];
 
   return (
     <div

@@ -9,7 +9,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const refreshProfile = async () => {
+  const refreshProfile = React.useCallback(async () => {
     if (!token) {
       setLoading(false);
       return;
@@ -75,11 +75,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     refreshProfile();
-  }, [token]);
+  }, [refreshProfile]);
 
   const fallbackBackendLogin = async (email: string, password: string) => {
       setLoading(true);
@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const text = await res.text();
           data = JSON.parse(text);
         } catch (jsonErr) {
-          data = { error: 'The authentication server returned an unexpected response. Please try registering or logging in again.' };
+          data = { error: 'The server returned an unexpected response. Please try again.' };
         }
 
         if (!res.ok) {
@@ -140,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const text = await res.text();
             data = JSON.parse(text);
           } catch(e) {
-            data = { error: 'Server authentication issue.' };
+            data = { error: 'The server returned an unexpected response. Please try again.' };
           }
           
           if (!res.ok) {
@@ -181,29 +181,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!isFirebaseMock) {
         try {
-           const cred = await createUserWithEmailAndPassword(auth, email, password);
-           await sendEmailVerification(cred.user);
-           
-           // Register in backend as well, but do not set the token yet
-           await fetch('/api/auth/register', {
-             method: 'POST',
-             headers: { 'Content-Type': 'application/json' },
-             body: JSON.stringify({ email, password, name })
-           });
-           
-           await auth.signOut();
-           // Changed from { success: false, error: ... } to { success: true, message: ... } to indicate success
-           return { success: true, message: 'Registration successful! A verification link has been sent to your email. Please verify before signing in.' } as any;
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
+          await sendEmailVerification(cred.user);
+          
+          // Register in backend as well, but do not set the token yet
+          const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, name })
+          });
+          
+          let data: any = {};
+          try {
+            const text = await res.text();
+            data = JSON.parse(text);
+          } catch (jsonErr) {
+            data = { error: 'The server returned an unexpected response. Please try again.' };
+          }
+
+          if (!res.ok) {
+            // Delete created user from firebase auth as registration failed on the backend
+            try {
+              await cred.user.delete();
+            } catch (delErr) {
+              console.warn("Failed to delete Firebase user after backend registry error:", delErr);
+            }
+            return { success: false, error: data.error || 'Backend registration failed.' };
+          }
+          
+          await auth.signOut();
+          return { success: true, message: 'Registration successful! A verification link has been sent to your email. Please verify before signing in.' };
         } catch (fbErr: any) {
-           if (fbErr.code === 'auth/email-already-in-use') {
-             return { success: false, error: 'Email already in use. Please sign in.' };
-           } else if (fbErr.code === 'auth/operation-not-allowed') {
-             // Fallback to backend registration if Firebase auth is disabled
-             console.warn('Firebase auth operation-not-allowed, falling back to backend register.');
-             // Break out of the firebase block to hit the backend fallback
-           } else {
-             return { success: false, error: fbErr.message };
-           }
+          if (fbErr.code === 'auth/email-already-in-use') {
+            return { success: false, error: 'Email already in use. Please sign in.' };
+          } else if (fbErr.code === 'auth/operation-not-allowed') {
+            // Fallback to backend registration if Firebase auth is disabled
+            console.warn('Firebase auth operation-not-allowed, falling back to backend register.');
+          } else {
+            return { success: false, error: fbErr.message };
+          }
         }
       }
       
@@ -218,7 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const text = await res.text();
         data = JSON.parse(text);
       } catch (jsonErr) {
-        data = { error: 'The server returned an unexpected response. Please try registering again.' };
+        data = { error: 'The server returned an unexpected response. Please try again.' };
       }
 
       if (!res.ok) {

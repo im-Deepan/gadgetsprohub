@@ -37,7 +37,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
       const res = await fetch(`/api/blogs?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setBlogs(data.blogs || []);
+        setBlogs(data?.blogs || []);
       }
     } catch (e) {
       console.warn("Failing to synchronize blog posts database list:", e);
@@ -188,7 +188,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
                   </p>
 
                   <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-800 flex justify-between items-center">
-                    <span className="text-[10px] font-mono text-slate-400 font-bold">{b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'Curated Deal'}</span>
+                    <span className="text-[10px] font-mono text-slate-400 font-bold">{b.createdAt && !isNaN(new Date(b.createdAt).getTime()) ? new Date(b.createdAt).toLocaleDateString() : 'Curated Deal'}</span>
                     <button
                       className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 cursor-pointer"
                     >

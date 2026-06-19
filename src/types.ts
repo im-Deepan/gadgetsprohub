@@ -25,6 +25,7 @@ export interface Review {
 
 export interface Product {
   _id: string;
+  id?: string; // Optional alias for view compatibility
   name: string;
   slug: string;
   description: string;
@@ -66,21 +67,25 @@ export interface Blog {
   content: string;
   excerpt?: string;
   featured_image?: string;
+  imageUrl?: string; // Optional alias for view compatibility
   author?: string;
   category?: string;
   tags?: string[];
   views: number;
   published: boolean;
   createdAt?: string;
+  date?: string; // Optional alias for view compatibility
 }
 
 export interface User {
   id: string;
+  _id?: string; // MongoDB or database compatibility key alias
   email: string;
   name: string;
   role: 'user' | 'admin';
   profileImage?: string;
   wishlist?: string[];
+  district?: string; // Users pre-preferred or auto-detected geographical district/city
 }
 
 export interface Message {
@@ -90,6 +95,10 @@ export interface Message {
   phone?: string;
   subject: string;
   message: string;
+  /**
+   * Indicates whether the contact message has been read by an administrator.
+   * Defaults to false on initial message ingestion.
+   */
   read: boolean;
   createdAt: string;
 }

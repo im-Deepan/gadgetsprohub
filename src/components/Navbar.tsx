@@ -9,9 +9,10 @@ import { useTheme } from '../context/ThemeContext';
 interface NavbarProps {
   currentView: string;
   onNavigate: (view: string, slug?: string) => void;
+  onPreload?: (view: any) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPreload }) => {
   const { user, isAuthenticated, isAdmin, logout, wishlist } = useAuth();
   const { showToast } = useToast();
   const { isDark, toggleTheme } = useTheme();
@@ -176,6 +177,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
     const dirs: ('ltr' | 'rtl' | 'diagonal' | 'vertical')[] = ['ltr', 'rtl', 'diagonal', 'vertical'];
     const randomDir = dirs[Math.floor(Math.random() * dirs.length)];
     setColorFlowDir(randomDir);
+
+    // Set up a dynamic interval ticker to rotate to another random color/gradient flow direction every 5 seconds!
+    const interval = setInterval(() => {
+      setColorFlowDir((current) => {
+        const filtered = dirs.filter(d => d !== current);
+        return filtered[Math.floor(Math.random() * filtered.length)];
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Disable body scroll when mobile menu is open, and force header visibility
@@ -297,7 +308,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 onClick={() => onNavigate('home')} 
                 className="flex items-center text-sm sm:text-lg font-bold tracking-tight cursor-pointer group"
               >
-                <span className={`bg-gradient-to-r from-pink-500 via-rose-500 via-amber-400 via-emerald-400 via-teal-500 via-indigo-500 via-purple-600 to-pink-500 bg-clip-text text-transparent font-black tracking-tight text-sm sm:text-xl transition-all group-hover:scale-[1.02] ${getGradientClass(colorFlowDir)}`}>
+                <span className={`from-pink-500 via-rose-500 via-amber-400 via-emerald-400 via-teal-500 via-indigo-500 via-purple-600 to-pink-500 bg-clip-text text-transparent font-black tracking-tight text-sm sm:text-xl transition-all group-hover:scale-[1.02] ${getGradientClass(colorFlowDir)}`}>
                   gadgetsprohub
                 </span>
               </button>
@@ -308,17 +319,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
           <div className="hidden lg:flex items-center gap-6 text-sm font-medium">
             <button 
               onClick={() => onNavigate('home')}
+              onMouseEnter={() => onPreload?.('home')}
               className={`transition-colors hover:text-indigo-600 cursor-pointer ${currentView === 'home' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
             >
               Home
             </button>
             <div 
               className="relative flex items-center h-full"
-              onMouseEnter={() => setShowCategoryDropdown(true)}
+              onMouseEnter={() => {
+                setShowCategoryDropdown(true);
+                onPreload?.('products');
+              }}
               onMouseLeave={() => setShowCategoryDropdown(false)}
             >
               <button 
                 onClick={() => onNavigate('products')}
+                onMouseEnter={() => onPreload?.('products')}
                 className={`transition-colors hover:text-indigo-600 cursor-pointer py-2 ${currentView === 'products' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
               >
                 Products
@@ -334,6 +350,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                           setShowCategoryDropdown(false);
                           if (cat.slug) onNavigate('products', `category-${cat.slug}`);
                         }}
+                        onMouseEnter={() => onPreload?.('products')}
                         className="w-full text-left rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-400 cursor-pointer"
                       >
                         {cat.name}
@@ -346,12 +363,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
 
             <button 
               onClick={() => onNavigate('blogs')}
+              onMouseEnter={() => onPreload?.('blogs')}
               className={`transition-colors hover:text-indigo-600 cursor-pointer ${currentView === 'blogs' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
             >
               Blog
             </button>
             <button 
               onClick={() => onNavigate('contact')}
+              onMouseEnter={() => onPreload?.('contact')}
               className={`transition-colors hover:text-indigo-600 cursor-pointer ${currentView === 'contact' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
             >
               Contact
@@ -532,7 +551,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
               {/* Drawer Header Brand & Close controller */}
               <div className="flex items-center justify-between border-b pb-4 dark:border-slate-800">
                 <div className="flex items-center">
-                  <span className={`bg-gradient-to-r from-pink-500 via-rose-500 via-amber-400 via-emerald-400 via-teal-500 via-indigo-500 via-purple-600 to-pink-500 bg-clip-text text-transparent font-black text-lg tracking-tight ${getGradientClass(colorFlowDir)}`}>
+                  <span className={`from-pink-500 via-rose-500 via-amber-400 via-emerald-400 via-teal-500 via-indigo-500 via-purple-600 to-pink-500 bg-clip-text text-transparent font-black text-lg tracking-tight ${getGradientClass(colorFlowDir)}`}>
                     gadgetsprohub
                   </span>
                 </div>
@@ -615,12 +634,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
               <div className="flex flex-col gap-1 font-semibold flex-grow">
                 <button 
                   onClick={() => { onNavigate('home'); setShowMobileMenu(false); }}
+                  onMouseEnter={() => onPreload?.('home')}
                   className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'home' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
                 >
                   Home
                 </button>
                 <button 
                   onClick={() => { onNavigate('products'); setShowMobileMenu(false); }}
+                  onMouseEnter={() => onPreload?.('products')}
                   className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'products' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
                 >
                   All Products
@@ -628,12 +649,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 
                 <button 
                   onClick={() => { onNavigate('blogs'); setShowMobileMenu(false); }}
+                  onMouseEnter={() => onPreload?.('blogs')}
                   className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'blogs' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
                 >
                   Blog Reviews
                 </button>
                 <button 
                   onClick={() => { onNavigate('contact'); setShowMobileMenu(false); }}
+                  onMouseEnter={() => onPreload?.('contact')}
                   className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'contact' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
                 >
                   Contact Us

@@ -255,7 +255,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
         {/* 2. WISHLIST BOOKMARKS CONTAINER */}
         <div className="lg:col-span-3 space-y-8">
           
-          <div className="flex border-b border-slate-200 dark:border-slate-800">
+          <div className="relative z-30 overflow-visible flex border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400">
               <Heart className="h-4 w-4 text-rose-500 shrink-0" />
               <span>Bookmarks ({wishlistProducts.length})</span>

@@ -28,7 +28,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     if (!emailRegex.test(trimmedEmail)) {
       setErrorText('Please enter a valid email address.');
       return;

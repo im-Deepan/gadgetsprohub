@@ -48,8 +48,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [removeToast]);
 
   React.useEffect(() => {
+    const currentTimeouts = timeoutIds.current;
     return () => {
-      Object.values(timeoutIds.current).forEach(clearTimeout);
+      Object.values(currentTimeouts).forEach(clearTimeout);
     };
   }, []);
 

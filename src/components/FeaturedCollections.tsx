@@ -254,12 +254,12 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
     active: {
       opacity: 1,
       x: 0,
-      transition: { duration: 0.35, ease: 'easeOut' }
+      transition: { duration: 0.35, ease: 'easeOut' as any }
     },
     exit: (dir: 'left' | 'right') => ({
       opacity: 0,
       x: dir === 'right' ? -40 : 40,
-      transition: { duration: 0.25, ease: 'easeIn' }
+      transition: { duration: 0.25, ease: 'easeIn' as any }
     })
   };
 
@@ -312,24 +312,24 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* Left/Right controls (small, tap areas, hidden by default, visible on touch) */}
+          {/* Left/Right controls (stand out, highly visible on touch, never clipped) */}
           {products.length > 1 && (
-            <div className="absolute inset-x-1.5 flex items-center justify-between z-20 pointer-events-none opacity-80">
+            <div className="absolute inset-x-2.5 flex items-center justify-between z-30 pointer-events-none">
               <button
                 onClick={handlePrev}
                 type="button"
-                className="pointer-events-auto h-6 w-6 rounded-full bg-white/90 text-slate-700 active:scale-90 flex items-center justify-center cursor-pointer border-none shadow-xs dark:bg-slate-900/90 dark:text-slate-200"
+                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all"
                 aria-label="Previous image"
               >
-                <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                <ChevronLeft className="h-4 w-4 stroke-[2.5]" aria-hidden="true" />
               </button>
               <button
                 onClick={handleNext}
                 type="button"
-                className="pointer-events-auto h-6 w-6 rounded-full bg-white/90 text-slate-700 active:scale-90 flex items-center justify-center cursor-pointer border-none shadow-xs dark:bg-slate-900/90 dark:text-slate-200"
+                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all"
                 aria-label="Next image"
               >
-                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                <ChevronRight className="h-4 w-4 stroke-[2.5]" aria-hidden="true" />
               </button>
             </div>
           )}
@@ -366,11 +366,11 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
             </span>
           )}
           <span className="text-xs font-black text-slate-900 dark:text-white">
-            ${currentProduct.price}
+            ₹{currentProduct.price}
           </span>
           {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
             <span className="text-[10px] text-slate-400 line-through dark:text-slate-600 font-medium">
-              ${currentProduct.originalPrice}
+              ₹{currentProduct.originalPrice}
             </span>
           )}
         </div>
@@ -469,13 +469,13 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
       opacity: 1,
       x: 0,
       scale: 1,
-      transition: { duration: 0.45, ease: 'easeOut' }
+      transition: { duration: 0.45, ease: 'easeOut' as any }
     },
     exit: (dir: 'left' | 'right') => ({
       opacity: 0,
       x: dir === 'right' ? -60 : 60,
       scale: 0.95,
-      transition: { duration: 0.35, ease: 'easeIn' }
+      transition: { duration: 0.35, ease: 'easeIn' as any }
     })
   };
 
@@ -539,7 +539,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
 
         {/* Slider manual arrows */}
         {products.length > 1 && (
-          <div className="absolute inset-x-4 flex items-center justify-between z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+          <div className="absolute inset-x-4 flex items-center justify-between z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
             <button
               onClick={handlePrev}
               type="button"
@@ -609,11 +609,11 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             </span>
             <div className="flex items-baseline gap-1">
               <span className="text-sm font-black text-slate-900 dark:text-white">
-                ${currentProduct.price}
+                ₹{currentProduct.price}
               </span>
               {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
                 <span className="text-[10px] text-slate-400 line-through dark:text-slate-600">
-                  ${currentProduct.originalPrice}
+                  ₹{currentProduct.originalPrice}
                 </span>
               )}
             </div>

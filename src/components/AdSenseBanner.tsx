@@ -15,7 +15,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   style = { display: 'block' },
   className = '',
 }) => {
-  const adElement = useRef<HTMLElement>(null);
+  const adElement = useRef<any>(null);
 
   const publisherId = typeof import.meta.env !== 'undefined' ? import.meta.env.VITE_ADSENSE_CLIENT_ID || '' : '';
 

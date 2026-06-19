@@ -12,6 +12,7 @@ interface AdminEditFormState {
   features: string;
   pros: string;
   cons: string;
+  specifications: string;
 }
 
 interface AdminProductEditPanelProps {
@@ -67,6 +68,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                 value={adminEditForm.price}
                 onChange={e => setAdminEditForm({ ...adminEditForm, price: e.target.value })}
@@ -78,6 +80,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                 value={adminEditForm.originalPrice}
                 onChange={e => setAdminEditForm({ ...adminEditForm, originalPrice: e.target.value })}
@@ -87,6 +90,9 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
               <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Discount (%)</label>
               <input
                 type="number"
+                step="0.01"
+                min="0"
+                max="100"
                 className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                 value={adminEditForm.discount}
                 onChange={e => setAdminEditForm({ ...adminEditForm, discount: e.target.value })}
@@ -134,6 +140,17 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
               className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-sans"
               value={adminEditForm.longDescription}
               onChange={e => setAdminEditForm({ ...adminEditForm, longDescription: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Product Specifications (Semicolon separated parameter=value pairs)</label>
+            <textarea
+              rows={2}
+              placeholder="e.g. Battery=5000 mAh; Weight=185g; OS=Android 14"
+              className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono text-indigo-600 dark:text-indigo-400"
+              value={adminEditForm.specifications}
+              onChange={e => setAdminEditForm({ ...adminEditForm, specifications: e.target.value })}
             />
           </div>
 

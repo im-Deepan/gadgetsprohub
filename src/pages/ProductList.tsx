@@ -462,7 +462,6 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             : 'flex-col sm:flex-row hover:shadow-indigo-500/10 hover:shadow-xl'
         }`}
         borderRadius={16}
-        glowColor="99, 102, 241"
       >
         <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
         <div className={`flex w-full ${viewStyle === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'}`}>
