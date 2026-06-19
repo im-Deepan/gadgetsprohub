@@ -13,6 +13,7 @@ import { ReviewForm } from '../components/product/ReviewForm';
 
 import { getCategoryId, getCategoryName } from '../utils/category';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
+import { mapErrorToFriendly } from '../utils/errorMapper';
 
 interface ProductDetailProps {
   productSlug: string;
@@ -79,7 +80,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
       try {
         await navigator.share(shareData);
-        showToast("Shared successfully!", "success");
+        showToast("Product details shared successfully!", "success", 4000, "User Action");
         setShared(true);
         setTimeout(() => setShared(false), 2000);
       } catch (err: any) {
@@ -97,13 +98,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const fallbackShareToClipboard = () => {
     navigator.clipboard.writeText(window.location.href)
       .then(() => {
-        showToast("Product link copied to clipboard for sharing!", "success");
+        showToast("Product link copied to clipboard for direct sharing.", "success", 4000, "User Action");
         setShared(true);
         setTimeout(() => setShared(false), 2000);
       })
       .catch((err) => {
         console.error("Failed to copy parent link:", err);
-        showToast("Failed to copy link to clipboard.", "error");
+        showToast("Unable to copy product link to your clipboard. Please check browser permissions.", "error", 4000, "User Action");
       });
   };
 
@@ -125,19 +126,19 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     }
 
     if (!validatedUrl) {
-      showToast("This product's e-commerce reference link is currently invalid or unavailable.", "error");
+      showToast("The e-commerce reference link is currently unavailable. Please try again soon.", "warning", 4000, "User Action");
       return;
     }
 
     navigator.clipboard.writeText(validatedUrl)
       .then(() => {
-        showToast("Affiliate link copied to clipboard successfully!", "success");
+        showToast("Reference purchase link successfully copied to your clipboard.", "success", 4000, "User Action");
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       })
       .catch((err) => {
         console.error("Failed to copy link:", err);
-        showToast("Failed to copy link to clipboard.", "error");
+        showToast("Unable to copy reference link. Please try copying manually.", "error", 4000, "User Action");
       });
   };
 
@@ -159,13 +160,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       });
       if (orderRes.ok) {
         setOrderSuccess(true);
+        showToast("Your purchase reference request has been successfully submitted.", "success", 4000, "User Action");
         setTimeout(() => setOrderSuccess(false), 3500);
       } else {
         const errData = await orderRes.json();
-        alert(errData.error || "Failed to submit order entry.");
+        const friendly = mapErrorToFriendly(errData?.error || "Failed to submit order.", "submit your purchase reference");
+        showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (e) {
       console.warn("Could not submit simulated order:", e);
+      const friendly = mapErrorToFriendly(e, "submit your purchase reference");
+      showToast(friendly.message, friendly.type, 4000, friendly.category);
     } finally {
       setOrderLoading(false);
     }
@@ -306,14 +311,18 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         );
         setProduct(prev => prev ? { ...prev, ...cleanPayload } : null);
         setAdminEditSuccess(true);
+        showToast("Product specifications and parameters have been updated.", "success", 4000, "System Status");
         setTimeout(() => setAdminEditSuccess(false), 2505);
       } else {
         const errData = await res.json().catch(() => ({}));
         const errMsg = errData.error || "Ensure you are authorized as an administrator.";
-        alert(`Failed to save changes: ${errMsg}`);
+        const friendly = mapErrorToFriendly(errMsg, "update product parameters");
+        showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (err) {
       console.warn("Product live save error:", err);
+      const friendly = mapErrorToFriendly(err, "update product parameters");
+      showToast(friendly.message, friendly.type, 4000, friendly.category);
     } finally {
       setIsSavingAdminEdit(false);
     }
@@ -373,16 +382,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     }
 
     if (!validatedUrl) {
-      alert("This product's e-commerce reference link is currently invalid or unavailable. Please contact support.");
+      showToast("This link is currently unavailable. Please inspect other items.", "warning");
       return;
     }
 
     try {
+      const preferredCity = safeGetItem('aff_preferred_city') || 'Chennai';
       // Trigger API endpoint click tracking logging
       await fetch(`/api/products/click/${product.slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id })
+        body: JSON.stringify({ userId: user?.id, district: user?.district || preferredCity })
       });
     } catch (e) {
       console.warn('Click tracking API logging fail:', e);
@@ -429,8 +439,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       setReviewTitle('');
       setReviewContent('');
       setReviewSuccess(true);
+      showToast("Thank you! Your product review has been successfully registered.", "success", 4000, "User Action");
     } catch (err: any) {
-      setReviewError(err.message || 'Failing to log reviews.');
+      const friendly = mapErrorToFriendly(err, "submit product review");
+      setReviewError(friendly.message);
+      showToast(friendly.message, friendly.type, 4000, friendly.category);
     }
   };
 

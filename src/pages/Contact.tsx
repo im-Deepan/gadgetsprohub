@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Send, MessageSquareText, ShieldAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, isFirebaseMock, OperationType, handleFirestoreError } from '../firebase';
+import { mapErrorToFriendly } from '../utils/errorMapper';
 
 export const Contact: React.FC = () => {
   // States
@@ -73,9 +74,10 @@ export const Contact: React.FC = () => {
       const data = await res.json();
       
       if (!res.ok) {
-        const errMsg = data.error || 'Server rejected message.';
-        setErrorMsg(errMsg);
-        setErrorMessage(errMsg);
+        const errMsg = data.error || 'Server was unable to register the message query.';
+        const friendly = mapErrorToFriendly(errMsg, 'submit your contact request');
+        setErrorMsg(friendly.message);
+        setErrorMessage(friendly.message);
         setShowErrorModal(true);
         setSubmitting(false);
         return;
@@ -102,14 +104,14 @@ export const Contact: React.FC = () => {
         setDoc(messageDocRef, payload)
           .then(() => {
             console.log('Successfully recorded contact message in live Firestore database:', messageId);
-            setSuccessDetail('Your inquiry feed was submitted successfully! Our expert research editors will review the requested specifications shortly.');
+            setSuccessDetail('Your communication inquiry has been submitted successfully. A specialized research analyst has been assigned to your query and will contact you via email within 24 business hours.');
           })
           .catch((fErr: any) => {
             console.warn('Optional Firestore background logging failed:', fErr.message || fErr);
-            setSuccessDetail('Your inquiry was processed on our primary servers! (Note: Background Cloud Firestore backup was skipped, but your response is saved safely).');
+            setSuccessDetail('Your communication response has been processed successfully. A specialized research analyst has been assigned to your query and will email you back shortly.');
           });
       } else {
-        setSuccessDetail('Your inquiry feed was submitted successfully! Our expert research editors will review the requested specifications shortly.');
+        setSuccessDetail('Your communication inquiry has been submitted successfully. A specialized research analyst has been assigned to your query and will contact you via email within 24 business hours.');
       }
 
       setSuccess(true);
@@ -120,9 +122,9 @@ export const Contact: React.FC = () => {
       setSubject('');
       setMessage('');
     } catch (err: any) {
-      const fallbackMsg = err.message || 'Cannot submit active request.';
-      setErrorMsg(fallbackMsg);
-      setErrorMessage(fallbackMsg);
+      const friendly = mapErrorToFriendly(err, 'submit your contact request');
+      setErrorMsg(friendly.message);
+      setErrorMessage(friendly.message);
       setShowErrorModal(true);
     } finally {
       setSubmitting(false);
@@ -288,9 +290,9 @@ export const Contact: React.FC = () => {
                 <ShieldCheck className="h-6 w-6 shrink-0" />
               </div>
               <div className="space-y-1 my-1">
-                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider font-sans">Message Handled</h3>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider font-sans">Message Received</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed font-sans whitespace-pre-wrap">
-                  {successDetail || 'Your inquiry feed was submitted successfully! Our expert research editors will review the requested specifications shortly.'}
+                  {successDetail || 'Your inquiry was submitted successfully! Our expert research editors will review the requested specifications shortly.'}
                 </p>
               </div>
             </div>
@@ -301,7 +303,7 @@ export const Contact: React.FC = () => {
                 onClick={() => setShowSuccessModal(false)}
                 className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white py-2 px-4 text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
               >
-                Done
+                Close
               </button>
             </div>
           </div>
@@ -317,7 +319,7 @@ export const Contact: React.FC = () => {
                 <AlertTriangle className="h-6 w-6 shrink-0" />
               </div>
               <div className="space-y-1 my-1">
-                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider font-sans text-rose-600">Inquiry Error</h3>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider font-sans text-rose-600">Review Required</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed font-sans whitespace-pre-wrap">
                   {errorMessage || "We encountered an issue recording your inquiry specifications."}
                 </p>
@@ -330,7 +332,7 @@ export const Contact: React.FC = () => {
                 onClick={() => setShowErrorModal(false)}
                 className="rounded-lg bg-rose-600 hover:bg-rose-700 text-white py-2 px-4 text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
               >
-                Dismiss Inquiry
+                Dismiss
               </button>
             </div>
           </div>

@@ -10,6 +10,49 @@ import { ProductPageSkeleton, BlogPageSkeleton } from './components/PageSkeleton
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { motion, AnimatePresence } from 'motion/react';
 import { safeSetItem, safeGetItem } from './utils/localStorage';
+import { DEFAULT_VIEW_METADATA, updateDocumentMetadata } from './utils/metaManager';
+
+const TAMIL_NADU_CITIES = [
+  "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
+  "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
+  "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris",
+  "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivagangai",
+  "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli",
+  "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore",
+  "Viluppuram", "Virudhunagar"
+];
+
+const mapToTamilNaduCity = (rawName: string): string => {
+  if (!rawName) return "Chennai";
+  const name = rawName.trim().toLowerCase();
+  
+  if (name.includes("trichy") || name.includes("tiruchirappalli") || name.includes("tiruchirapalli")) {
+    return "Tiruchirappalli";
+  }
+  if (name.includes("chennai") || name.includes("madras")) return "Chennai";
+  if (name.includes("coimbatore") || name.includes("kovai")) return "Coimbatore";
+  if (name.includes("madurai")) return "Madurai";
+  if (name.includes("salem")) return "Salem";
+  if (name.includes("nellai") || name.includes("tirunelveli")) return "Tirunelveli";
+  if (name.includes("ashburn") || name.includes("montreal") || name.includes("bueren") || name.includes("virginia")) {
+    // Return a random stable major Tamil Nadu city based on hashing
+    return "Chennai";
+  }
+
+  const matched = TAMIL_NADU_CITIES.find(
+    c => c.toLowerCase() === name || name.includes(c.toLowerCase())
+  );
+  if (matched) return matched;
+
+  // Stably map other names via hash to one of the major cities
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash << 5) - hash + name.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % TAMIL_NADU_CITIES.length;
+  return TAMIL_NADU_CITIES[index];
+};
 
 // Static allowed view definitions (exhaustively checked at compile time)
 export const ALLOWED_VIEWS = [
@@ -164,16 +207,16 @@ export const preloadView = (view: AppView) => {
 };
 
 const ViewLoader: React.FC = () => {
-  const [statusMessage, setStatusMessage] = useState("Initializing safe environment...");
+  const [statusMessage, setStatusMessage] = useState("Preparing page components...");
   const [progress, setProgress] = useState(15);
   const [currentStep, setCurrentStep] = useState(1);
 
   useEffect(() => {
     const steps = [
-      { msg: "Establishing safe connection to secure servers...", progress: 38, stepNum: 1 },
-      { msg: "Retrieving dynamic catalog templates & preferences...", progress: 62, stepNum: 2 },
-      { msg: "Compiling responsive styling & custom interface controls...", progress: 84, stepNum: 3 },
-      { msg: "Finalizing and caching client assets for peak performance...", progress: 100, stepNum: 4 }
+      { msg: "Connecting to secure catalog servers...", progress: 38, stepNum: 1 },
+      { msg: "Loading product details & reviews...", progress: 62, stepNum: 2 },
+      { msg: "Initializing interface filters and options...", progress: 84, stepNum: 3 },
+      { msg: "Rendering gallery elements for you...", progress: 100, stepNum: 4 }
     ];
     let index = 0;
     const interval = setInterval(() => {
@@ -235,11 +278,11 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const handleOffline = () => {
-      showToast("You are offline. Please check your connection and try again later.", "warning");
+      showToast("Your internet connection was interrupted. The application is now running in local offline safety mode.", "warning", 5000, "Connectivity");
     };
 
     const handleOnline = () => {
-      showToast("You are back online!", "success");
+      showToast("Your internet connection has been restored. Re-establishing live server sync.", "success", 4000, "Connectivity");
     };
 
     window.addEventListener('offline', handleOffline);
@@ -259,13 +302,13 @@ const AppContent: React.FC = () => {
         if (!response.ok) {
           const detail = await response.json().catch(() => ({}));
           console.warn("Database connectivity issue on start:", detail);
-          showToast("Cloud DB connectivity issues detected. App is running in local backup mode.", "warning");
+          showToast("Reconnecting to the primary data system. Working securely with local cache.", "warning", 5000, "Connectivity");
         } else {
           console.log("Database connectivity verified on start.");
         }
       } catch (err) {
         console.warn("Database connectivity check failed to execute:", err);
-        showToast("Unable to reach cloud servers. Running in offline/local cache mode.", "info");
+        showToast("Synchronized successfully in offline mode. Accessing local catalog backups.", "info", 4000, "Connectivity");
       }
     };
     checkDbHealth();
@@ -379,7 +422,8 @@ const AppContent: React.FC = () => {
   });
 
   const [detectedCity, setDetectedCity] = useState<string>(() => {
-    return safeGetItem('aff_preferred_city') || 'Chennai';
+    const raw = safeGetItem('aff_preferred_city') || 'Chennai';
+    return mapToTamilNaduCity(raw);
   });
 
   // Fetch primary location / district of user automatically and silently on app boot using AbortController
@@ -388,8 +432,12 @@ const AppContent: React.FC = () => {
     
     const fetchLocation = async () => {
       const cached = safeGetItem('aff_preferred_city');
-      if (cached && cached !== 'Chennai') {
-        setDetectedCity(cached);
+      if (cached) {
+        const mappedCached = mapToTamilNaduCity(cached);
+        setDetectedCity(mappedCached);
+        if (mappedCached !== cached) {
+          safeSetItem('aff_preferred_city', mappedCached);
+        }
         return;
       }
 
@@ -401,9 +449,10 @@ const AppContent: React.FC = () => {
           if (data && data.city && typeof data.city === 'string') {
             const city = data.city.trim();
             if (city) {
-              safeSetItem('aff_preferred_city', city);
-              setDetectedCity(city);
-              console.log(`[Auto Location] Detected location via proxy: ${city}`);
+              const mappedCity = mapToTamilNaduCity(city);
+              safeSetItem('aff_preferred_city', mappedCity);
+              setDetectedCity(mappedCity);
+              console.log(`[Auto Location] Detected and mapped location: ${mappedCity} (original: ${city})`);
               return;
             }
           }
@@ -447,6 +496,82 @@ const AppContent: React.FC = () => {
       }
     };
   }, [activeView, selectedSlug, user, detectedCity]);
+
+  // Dynamic metadata update effect
+  useEffect(() => {
+    let active = true;
+
+    const applyMetadata = async () => {
+      // 1. If it's a product detail, inspect dynamic details from db API
+      if (activeView === 'product-detail' && selectedSlug) {
+        try {
+          const res = await fetch(`/api/products/${selectedSlug}`);
+          if (res.ok && active) {
+            const product = await res.json();
+            const categoryName = typeof product.category === 'object' ? product.category.name : (product.category || 'Tech');
+            const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
+            const dynamicUrl = `${dynamicOrigin}/product-detail/${selectedSlug}`;
+
+            updateDocumentMetadata({
+              title: `${product.name} - Specifications, Price & Review | gadgetsprohub`,
+              description: product.description || `Read detailed reviews, current prices, and core physical specifications of the ${product.name} at gadgetsprohub.`,
+              keywords: `${product.name}, ${product.brand || ''}, ${categoryName}, technical specs, gadget comparison`,
+              ogType: 'product',
+              ogUrl: dynamicUrl,
+              ogImage: product.images?.[0] || '/favicon.png'
+            });
+            return;
+          }
+        } catch (err) {
+          console.warn("Could not retrieve custom dynamic meta details for product-detail view:", err);
+        }
+      }
+
+      // 2. If it's a blog detail, inspect dynamic details from blogs API
+      if (activeView === 'blog-detail' && selectedSlug) {
+        try {
+          const res = await fetch(`/api/blogs/${selectedSlug}`);
+          if (res.ok && active) {
+            const blog = await res.json();
+            const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
+            const dynamicUrl = `${dynamicOrigin}/blog-detail/${selectedSlug}`;
+
+            updateDocumentMetadata({
+              title: `${blog.title} | Technical Editorial Insights`,
+              description: blog.excerpt || blog.content?.substring(0, 160) || `Read our latest expert tech perspective and expert specs analysis on gadgetsprohub.`,
+              keywords: `${blog.title}, expert guides, editorial blog, specs breakdown`,
+              ogType: 'article',
+              ogUrl: dynamicUrl,
+              ogImage: blog.imageUrl || blog.featured_image || '/favicon.png'
+            });
+            return;
+          }
+        } catch (err) {
+          console.warn("Could not retrieve custom dynamic meta details for blog-detail view:", err);
+        }
+      }
+
+      // 3. Fallback/Standard static metadata updates
+      const staticMeta = DEFAULT_VIEW_METADATA[activeView];
+      if (staticMeta) {
+        const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
+        const dynamicUrl = selectedSlug 
+          ? `${dynamicOrigin}/${activeView}/${selectedSlug}` 
+          : `${dynamicOrigin}/${activeView === 'home' ? '' : activeView}`;
+
+        updateDocumentMetadata({
+          ...staticMeta,
+          ogUrl: dynamicUrl
+        });
+      }
+    };
+
+    applyMetadata();
+
+    return () => {
+      active = false;
+    };
+  }, [activeView, selectedSlug]);
 
   // Manage body scroll positions on navigating
   const navigateToView = (view: AppView, slug?: string) => {

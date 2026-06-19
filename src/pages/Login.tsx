@@ -29,11 +29,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     if (isAuthenticated && user) {
       const isAdminUser = user.role === 'admin';
       if (isAdminUser) {
-        try {
-          window.open('/admin', '_blank');
-        } catch (e) {
-          console.warn("Popup block prevented opening tab:", e);
-        }
+        showToast("Welcome back, Administrator. Redirecting to control panel.", "success", 4000, "User Action");
         onNavigate('admin');
       } else {
         onNavigate('home');
@@ -49,26 +45,26 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     if (activeTab === 'login') {
       const res = await login(email, password);
       if (!res.success) {
-        const errorMsg = res.error || 'Check login inputs.';
+        const errorMsg = res.error || 'The credentials you entered are incorrect. Please verify and try again.';
         setAuthError(errorMsg);
-        showToast(errorMsg, 'error');
+        showToast(errorMsg, 'error', 4000, "User Action");
       } else {
-        showToast('Successfully signed in. Welcome back!', 'success');
+        showToast('Successfully verified credentials. Welcome back to your affiliate portal!', 'success', 4000, "User Action");
       }
     } else {
       if (!name) {
-        setAuthError('Name is required.');
-        showToast('Name is required.', 'warning');
+        setAuthError('A profile name is required.');
+        showToast('Please check that a profile name has been provided.', 'warning', 4000, "User Action");
         setSubmitting(false);
         return;
       }
       const res = await register(email, password, name);
       if (!res.success) {
-        const errorMsg = res.error || 'Server error creating registration.';
+        const errorMsg = res.error || 'The system was unable to complete your registration. Please check inputs and try again.';
         setAuthError(errorMsg);
-        showToast(errorMsg, 'error');
+        showToast(errorMsg, 'error', 4000, "User Action");
       } else {
-        showToast('Account registered successfully! Welcome aboard!', 'success');
+        showToast('Your account is registered successfully! Welcome to the affiliate network.', 'success', 4000, "User Action");
       }
     }
     setSubmitting(false);
@@ -79,11 +75,11 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     setAuthError('');
     const res = await loginWithGoogle();
     if (!res.success) {
-      const errorMsg = res.error || 'Google Login aborted.';
+      const errorMsg = res.error || 'The Google Sign-In request was cancelled or declined.';
       setAuthError(errorMsg);
-      showToast(errorMsg, 'error');
+      showToast(errorMsg, 'error', 4000, "User Action");
     } else {
-      showToast('Successfully authenticated via Google!', 'success');
+      showToast('Successfully authenticated through secure Google Sign-In services!', 'success', 4000, "User Action");
     }
     setSubmitting(false);
   };

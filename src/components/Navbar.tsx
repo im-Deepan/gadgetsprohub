@@ -20,7 +20,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
   const handleLogout = () => {
     logout();
     onNavigate('home');
-    showToast("Logout successful", "success");
+    showToast("You have successfully signed out of your account.", "success", 4000, "User Action");
   };
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,47 +111,47 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               searchInputRef.current.focus();
             }
           }, 50);
-          showToast("Search field focused", "info");
+          showToast("Search field focused via keyboard shortcut.", "info", 4000, "User Action");
           break;
         case 'h':
           e.preventDefault();
           onNavigate('home');
-          showToast("Navigated: Home Screen", "info");
+          showToast("Navigated to Homepage view.", "info", 3000, "User Action");
           break;
         case 'p':
           e.preventDefault();
           onNavigate('products');
-          showToast("Navigated: All Products", "info");
+          showToast("Navigated to Products Catalog view.", "info", 3000, "User Action");
           break;
         case 'b':
           e.preventDefault();
           onNavigate('blogs');
-          showToast("Navigated: Blog Reviews", "info");
+          showToast("Navigated to Editorial Articles view.", "info", 3000, "User Action");
           break;
         case 'c':
           e.preventDefault();
           onNavigate('contact');
-          showToast("Navigated: Contact Page", "info");
+          showToast("Navigated to Contact Support view.", "info", 3000, "User Action");
           break;
         case 't':
           e.preventDefault();
           toggleTheme();
-          showToast("Theme changed", "success");
+          showToast("Visual color theme refreshed.", "success", 4000, "User Action");
           break;
         case 'w':
           if (isAuthenticated) {
             e.preventDefault();
             onNavigate('profile');
-            showToast("Navigated: Bookmarks & History", "info");
+            showToast("Navigated to Profile Settings.", "info", 3000, "User Action");
           } else {
-            showToast("Login to view bookmarks!", "info");
+            showToast("Please sign in to view your synchronized bookmarks.", "warning", 4000, "User Action");
           }
           break;
         case 'a':
           if (isAdmin) {
             e.preventDefault();
             onNavigate('admin');
-            showToast("Navigated: Admin Dashboard", "info");
+            showToast("Launching security-credentialed Admin Control Panel.", "success", 4000, "User Action");
           }
           break;
         case '?':
@@ -456,12 +456,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               ) : (
                 <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-[#1b365d]" />
               )}
-            </button>
-
-            {/* Wishlist Link - Desktop */}
+            </button>            {/* Wishlist Link - Desktop */}
             {isAuthenticated && (
               <button
                 onClick={() => onNavigate('profile')}
+                onMouseEnter={() => onPreload?.('profile')}
                 aria-label="Your bookmarks"
                 className="hidden sm:flex relative h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Your bookmarks"
@@ -482,6 +481,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                   {isAdmin && (
                     <button
                       onClick={() => onNavigate('admin')}
+                      onMouseEnter={() => onPreload?.('admin')}
                       aria-label="Admin Dashboard"
                       className={`flex h-8 w-8 sm:h-auto sm:w-auto items-center justify-center sm:gap-1.5 rounded-full sm:px-3 sm:py-1.5 text-xs font-semibold cursor-pointer border ${currentView === 'admin' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800'}`}
                       title={isAdmin ? "Admin Dashboard" : undefined}
@@ -493,6 +493,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
                   <button
                     onClick={() => onNavigate('profile')}
+                    onMouseEnter={() => onPreload?.('profile')}
                     className="flex h-8 w-8 sm:h-auto sm:w-auto items-center justify-center sm:gap-2 rounded-full border border-slate-100 bg-white sm:px-3 sm:py-1.5 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900 cursor-pointer"
                   >
                     <div className="h-5 w-5 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-[10px] uppercase shrink-0">
@@ -513,6 +514,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               ) : (
                 <button
                   onClick={() => onNavigate('login')}
+                  onMouseEnter={() => onPreload?.('login')}
                   className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
                 >
                   <User className="h-3.5 w-3.5" />

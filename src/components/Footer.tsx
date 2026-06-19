@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Instagram, Linkedin, Send, BadgeAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { NewsletterSubscribe } from './NewsletterSubscribe';
+import { mapErrorToFriendly } from '../utils/errorMapper';
 
 interface FooterProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -65,18 +66,20 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
         setSubscribed(true);
         setEmail('');
         setShowSuccessModal(true);
-        showToast("Subscribed to our newsletter successfully!", "success");
+        showToast("You have successfully registered for our newsletter!", "success", 4000, "User Action");
       } else {
-        const errMsg = data.error || "We were unable to feed your email to our newsletter dispatch system right now. Please check your web connection.";
-        setErrorText(errMsg);
+        const errMsg = data.error || "We could not subscribe your email at this moment. Please check your connection and try again.";
+        const friendly = mapErrorToFriendly(errMsg, "subscribe to newsletter");
+        setErrorText(friendly.message);
         setShowErrorModal(true);
-        showToast(errMsg, "error");
+        showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (e) {
       console.warn("Newsletter submission error:", e);
-      setErrorText("A network connection error occurred. Please try again later.");
+      const friendly = mapErrorToFriendly(e, "subscribe to newsletter");
+      setErrorText(friendly.message);
       setShowErrorModal(true);
-      showToast("Connection to newsletter service failed.", "error");
+      showToast(friendly.message, friendly.type, 4000, friendly.category);
     } finally {
       setLoading(false);
     }
@@ -267,7 +270,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                 onClick={() => setShowSuccessModal(false)}
                 className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white py-1.5 px-3.5 text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
               >
-                Superb
+                Close
               </button>
             </div>
           </div>
@@ -283,9 +286,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                 <AlertTriangle className="h-6 w-6 shrink-0" />
               </div>
               <div className="space-y-1 my-1">
-                <h3 className="text-xs font-black uppercase tracking-wider font-sans text-rose-600">Subscription Error</h3>
+                <h3 className="text-xs font-black uppercase tracking-wider font-sans text-rose-600">Subscription Notice</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed font-sans">
-                  {errorText || "We were unable to feed your email to our newsletter dispatch system right now. Please check your web connection."}
+                  {errorText || "We were unable to complete your subscription. Please check your network connection."}
                 </p>
               </div>
             </div>
@@ -296,7 +299,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                 onClick={() => setShowErrorModal(false)}
                 className="rounded-lg bg-rose-600 hover:bg-rose-700 text-white py-1.5 px-3.5 text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
               >
-                Acknowledge Error
+                Dismiss
               </button>
             </div>
           </div>

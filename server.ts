@@ -180,6 +180,63 @@ const analyticsSchema = new mongoose.Schema({
 
 const Analytics = mongoose.model('Analytics', analyticsSchema);
 
+const TAMIL_NADU_DISTRICTS = [
+  "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
+  "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
+  "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris",
+  "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivagangai",
+  "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli",
+  "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore",
+  "Viluppuram", "Virudhunagar"
+];
+
+const sanitizeDistrict = (name: string): string => {
+  if (!name) return "Chennai";
+  const formatted = name.trim().toLowerCase();
+  
+  if (formatted.includes("trichy") || formatted.includes("tiruchirappalli") || formatted.includes("tiruchirapalli")) {
+    return "Tiruchirappalli";
+  }
+  if (formatted.includes("chennai") || formatted.includes("madras")) return "Chennai";
+  if (formatted.includes("coimbatore") || formatted.includes("kovai")) return "Coimbatore";
+  if (formatted.includes("madurai")) return "Madurai";
+  if (formatted.includes("salem")) return "Salem";
+  if (formatted.includes("nellai") || formatted.includes("tirunelveli")) return "Tirunelveli";
+  
+  if (
+    formatted.includes("ashburn") || 
+    formatted.includes("montreal") || 
+    formatted.includes("virginia") || 
+    formatted.includes("canada") || 
+    formatted.includes("bueren") || 
+    formatted.includes("zuerich") ||
+    formatted.includes("zurich") ||
+    formatted.includes("seattle") ||
+    formatted.includes("dublin") ||
+    formatted.includes("london") ||
+    formatted.includes("california") ||
+    formatted.includes("oregon") ||
+    formatted.includes("united states")
+  ) {
+    return "Chennai";
+  }
+
+  const found = TAMIL_NADU_DISTRICTS.find(
+    d => d.toLowerCase() === formatted || formatted.includes(d.toLowerCase())
+  );
+  if (found) {
+    return found;
+  }
+  
+  let hash = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    hash = (hash << 5) - hash + formatted.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % TAMIL_NADU_DISTRICTS.length;
+  return TAMIL_NADU_DISTRICTS[index];
+};
+
 // Visitor Schema (site visitors)
 const visitorSchema = new mongoose.Schema({
   visitorId: { type: String, required: true },
@@ -1728,6 +1785,7 @@ async function startServer() {
     try {
       const districtsList = ['Chennai', 'Madurai', 'Tirunelveli', 'Virudhunagar'];
       const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
+      const finalDistrict = sanitizeDistrict(req.body.district || randDistrict);
 
       if (isMongoConnected) {
         const product = await Product.findOne({ slug: req.params.slug });
@@ -1741,7 +1799,7 @@ async function startServer() {
           affiliateCode: product.affiliateCode,
           eventType: 'click',
           userId: req.body.userId,
-          district: randDistrict,
+          district: finalDistrict,
           referer: req.headers.referer
         }).catch(err => console.warn('Background click analytics logging failed:', err.message));
         
@@ -1756,7 +1814,7 @@ async function startServer() {
           productId: product._id,
           affiliateCode: product.affiliateCode,
           eventType: 'click',
-          district: randDistrict,
+          district: finalDistrict,
           userId: req.body.userId,
           timestamp: new Date()
         });
@@ -2376,15 +2434,46 @@ async function startServer() {
     }
   });
 
-  // Proxy for geolocation APIs to bypass CORS
+  // Proxy for geolocation APIs to bypass CORS, with automatic regional mapping to Tamil Nadu districts
   app.get('/api/proxy/location', async (req, res) => {
+    const TAMIL_NADU_DISTRICTS = [
+      "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
+      "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
+      "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris",
+      "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivagangai",
+      "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli",
+      "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore",
+      "Viluppuram", "Virudhunagar"
+    ];
+
+    const mapToTamilNaduDistrict = (cityName: string): string => {
+      if (!cityName) return "Chennai";
+      const formatted = cityName.trim();
+      const found = TAMIL_NADU_DISTRICTS.find(
+        d => d.toLowerCase() === formatted.toLowerCase()
+      );
+      if (found) {
+        return found;
+      }
+      let hash = 0;
+      for (let i = 0; i < formatted.length; i++) {
+        hash = (hash << 5) - hash + formatted.charCodeAt(i);
+        hash |= 0;
+      }
+      const index = Math.abs(hash) % TAMIL_NADU_DISTRICTS.length;
+      return TAMIL_NADU_DISTRICTS[index];
+    };
+
+    let detectedCity = 'Chennai';
+
     try {
       // Try ipapi.co
       const response = await fetch('https://ipapi.co/json/');
       if (response.ok) {
         const data = await response.json();
         if (data && data.city) {
-          res.json({ city: data.city });
+          detectedCity = mapToTamilNaduDistrict(data.city);
+          res.json({ city: detectedCity });
           return;
         }
       }
@@ -2398,7 +2487,8 @@ async function startServer() {
       if (response.ok) {
         const data = await response.json();
         if (data && data.cityName) {
-          res.json({ city: data.cityName });
+          detectedCity = mapToTamilNaduDistrict(data.cityName);
+          res.json({ city: detectedCity });
           return;
         }
       }
@@ -2406,7 +2496,8 @@ async function startServer() {
       console.warn('Proxy freeipapi.com failed');
     }
     
-    res.status(500).json({ error: 'Failed to detect location' });
+    // Final fallback to Chennai instead of failing
+    res.json({ city: 'Chennai' });
   });
 
   // Footer Social Clicks Tracking Endpoint
@@ -2499,8 +2590,8 @@ async function startServer() {
       const ipAddress = (req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || '127.0.0.1').split(',')[0].trim();
       const userAgent = req.headers['user-agent'] || 'Browser Agent';
 
-      // Pick location (fallback to Chennai if user has no preferred list)
-      const selectedDistrict = district || 'Chennai';
+      // Pick location (fallback to Chennai if user has no preferred list) and sanitize to Tamil Nadu cities
+      const selectedDistrict = sanitizeDistrict(district || 'Chennai');
 
       if (isMongoConnected) {
         // Look back 15 minutes for similar page_visit log from the same client
@@ -3374,6 +3465,7 @@ async function startServer() {
           const uIdStr = a.userId ? a.userId.toString() : '';
           return {
             ...a,
+            district: sanitizeDistrict(a.district || 'Chennai'),
             productId: productMap.get(pIdStr) || (a.productId ? { _id: a.productId, name: "Product Option" } : null),
             userId: userMap.get(uIdStr) || (a.userId && typeof a.userId === 'string' ? { _id: a.userId, name: "Guest (" + a.userId + ")", email: a.userId } : null)
           };
@@ -3383,13 +3475,13 @@ async function startServer() {
         const conversionCount = await Analytics.countDocuments({ eventType: 'conversion' });
         const viewCount = await Analytics.countDocuments({ eventType: 'view' });
         const visitorCount = await Visitor.countDocuments({});
-
+ 
         // Calculate dynamic real analytics for all 38 districts in Tamil Nadu based on unique mail id/guest visitor representation
         const districtCounts: Record<string, number> = {};
         TAMIL_NADU_DISTRICTS.forEach(d => {
           districtCounts[d] = 0;
         });
-
+ 
         const seenKeys = new Set<string>();
         analytics.forEach(a => {
           let identifier = '';
@@ -3401,8 +3493,8 @@ async function startServer() {
           if (!identifier) {
             identifier = `guest_${a.ipAddress || '127.0.0.1'}`;
           }
-
-          const dist = a.district || 'Chennai';
+ 
+          const dist = sanitizeDistrict(a.district || 'Chennai');
           const comboKey = `${identifier}_${dist}`;
 
           if (!seenKeys.has(comboKey)) {
@@ -3444,7 +3536,7 @@ async function startServer() {
             productId: item || (a.productId ? { _id: a.productId, name: "Deleted Product" } : undefined),
             userId: resolvedUser ? { _id: resolvedUser._id, name: resolvedUser.name, email: resolvedUser.email, district: resolvedUser.district } : null,
             eventType: a.eventType,
-            district: a.district || 'Chennai',
+            district: sanitizeDistrict(a.district || 'Chennai'),
             ipAddress: a.ipAddress || '127.0.0.1',
             browser: a.browser || 'Chrome',
             device: a.device || 'Desktop',
@@ -3470,7 +3562,7 @@ async function startServer() {
             identifier = `guest_${a.ipAddress || '127.0.0.1'}`;
           }
 
-          const dist = a.district || 'Chennai';
+          const dist = sanitizeDistrict(a.district || 'Chennai');
           const comboKey = `${identifier}_${dist}`;
 
           if (!seenKeys.has(comboKey)) {

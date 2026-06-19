@@ -46,9 +46,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
               </svg>
             </div>
             
-            <h1 className="text-xl font-semibold tracking-tight mb-2">Something went wrong</h1>
+            <h1 className="text-xl font-semibold tracking-tight mb-2">Notice: Something didn't load quite right</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
-              We encountered an unexpected error. Try retrying the current view loading or refreshing the page.
+              We encountered a temporary issue while loading this section. Try clicking the primary retry button below or reloading your browser.
             </p>
 
             {this.state.error && (

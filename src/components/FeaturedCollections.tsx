@@ -490,8 +490,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
       } ${horizontalOnLarge ? 'md:flex-row' : ''}`}
     >
       {/* Background radial gradient bloom lighting accents */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700" />
-      <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-36 h-36 bg-gradient-to-tr from-cyan-500/5 to-indigo-500/5 rounded-full blur-2xl" />
+      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-gradient-to-br from-slate-500/5 to-slate-400/5 dark:from-slate-800/10 dark:to-slate-900/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700" />
 
       {/* Product Image Stage Container */}
       <div
@@ -500,7 +499,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
         }`}
       >
         {/* Floating Category Indicator Badge */}
-        <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md shadow-sm border border-slate-200/60 dark:bg-[#060a16]/95 dark:border-slate-800">
+        <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md shadow-sm border border-slate-200/60 dark:bg-slate-900/95 dark:border-slate-800">
           {collection.icon || <Sparkles className="h-3.5 w-3.5 text-indigo-500" />}
           <span className="text-[10px] font-black tracking-wider uppercase text-slate-800 dark:text-slate-200">
             {collection.name} Spotlights

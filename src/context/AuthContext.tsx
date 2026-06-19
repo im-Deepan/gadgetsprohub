@@ -3,6 +3,7 @@ import { User } from '../types';
 import { auth, googleProvider, isFirebaseMock } from '../firebase';
 import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
+import { mapErrorToFriendly } from '../utils/errorMapper';
 
 interface AuthContextType {
   user: User | null;
@@ -173,7 +174,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return await fallbackBackendLogin(email, password);
       }
     } catch (err: any) {
-      return { success: false, error: err.message || 'Server connection error.' };
+      const friendly = mapErrorToFriendly(err, 'authenticate user credentials');
+      return { success: false, error: friendly.message };
     }
   };
 
@@ -251,7 +253,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Registration failed.' };
+      const friendly = mapErrorToFriendly(err, 'create your user account');
+      return { success: false, error: friendly.message };
     }
   };
 
@@ -310,13 +313,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     } catch (err: any) {
       console.warn("Google credentials retrieval error:", err);
-      let errMsg = err.message || 'Google Auth aborted/failed.';
+      let errMsg = err.message || 'Google Sign-In process could not be completed.';
       if (err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup-closed-by-user') || err.message?.includes('closed by user')) {
-        errMsg = 'Google sign-in was closed before completion. Please try again. (If you are on Render, make sure to add your site URL to Firebase Authorized Domains)';
+        errMsg = 'The sign-in window was closed before completion. Please try again and keep the login pop-up active.';
       } else if (err.code === 'auth/cancelled-popup-request' || err.message?.includes('cancelled-popup-request')) {
-        errMsg = 'Google sign-in popup opened multiple times, previous attempt cancelled. Please try again.';
+        errMsg = 'Authenticating window request was overlap-cancelled. Please try again.';
       } else if (err.code === 'auth/user-cancelled' || err.message?.includes('user-cancelled')) {
-        errMsg = 'Google sign-in was cancelled. Please try again.';
+        errMsg = 'Google sign-in authentication was cancelled.';
+      } else {
+        const friendly = mapErrorToFriendly(err, 'sign in with Google');
+        errMsg = friendly.message;
       }
       return { success: false, error: errMsg };
     }

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Product } from '../types';
 import { safeSetItem } from '../utils/localStorage';
+import { mapErrorToFriendly } from '../utils/errorMapper';
 import { 
   User, Heart, ExternalLink, ShieldCheck, Mail, LogOut, Sparkle, Tag, Trash2,
   ShoppingBag, Truck, Calendar, DollarSign, CheckCircle, Box, AlertCircle, MapPin
@@ -87,14 +88,17 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
       if (res.ok) {
         safeSetItem('aff_preferred_city', selectDistrict);
         await refreshProfile();
+        showToast('Your profile and geographical district preferences have been successfully updated.', 'success');
         setSaveSuccessMessage('Preferences updated successfully!');
         setTimeout(() => setSaveSuccessMessage(''), 4000);
       } else {
         const errData = await res.json();
-        console.warn('Profile save failure:', errData.error);
+        const friendly = mapErrorToFriendly(errData?.error || 'Failed to update preferences', 'update profile preferences');
+        showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (err) {
-      console.warn('Profile save network issues:', err);
+      const friendly = mapErrorToFriendly(err, 'update profile preferences');
+      showToast(friendly.message, friendly.type, 4000, friendly.category);
     } finally {
       setIsSavingProfile(false);
     }

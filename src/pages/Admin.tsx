@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Heart, MailOpen, MailCheck, Coins, Eye, MousePointe
 import { useDeviceType } from '../hooks/useDeviceType';
 import { TabErrorView } from '../components/admin/TabErrorView';
 import { getDistrictEmoji } from '../utils/emoji';
+import { mapErrorToFriendly } from '../utils/errorMapper';
 
 import { AlertDialog } from '../components/admin/AlertDialog';
 import { ConfirmDialog } from '../components/admin/ConfirmDialog';
@@ -99,10 +100,29 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   };
 
   const triggerAlert = (title: string, message: string) => {
+    let finalTitle = title;
+    let finalMessage = message;
+    
+    // Check if title or message indicates an error
+    const isError = title.toLowerCase().includes('fail') || 
+                    title.toLowerCase().includes('error') || 
+                    message.toLowerCase().includes('fail') ||
+                    message.toLowerCase().includes('error') ||
+                    message.toLowerCase().includes('rejected') || 
+                    message.toLowerCase().includes('invalid');
+                    
+    if (isError) {
+      const friendly = mapErrorToFriendly(message);
+      finalMessage = friendly.message;
+      if (title === 'Error' || title === 'Action Failed' || title === 'Submission Failed' || title === 'Submission Error') {
+        finalTitle = friendly.category || 'System Status';
+      }
+    }
+
     setAlertDialog({
       isOpen: true,
-      title,
-      message
+      title: finalTitle,
+      message: finalMessage
     });
   };
   

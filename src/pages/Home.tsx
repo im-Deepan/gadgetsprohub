@@ -399,7 +399,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             className="mt-8 text-4xl font-black tracking-tighter text-slate-900 sm:text-6xl lg:text-7xl dark:text-white leading-[1.1]"
           >
             Discover the Best <br className="hidden sm:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:bg-gradient-to-r dark:from-slate-100 dark:to-slate-350">
               Products Before You Buy
             </span>
           </motion.h1>
@@ -422,7 +422,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             ref={searchContainerRef}
           >
             <form onSubmit={handleHomeSearchSubmit} className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-slate-800 dark:to-slate-705 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none">
                   <Search className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
@@ -571,9 +571,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           <div className="h-6 w-48 bg-slate-200/50 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-3xl animate-pulse"></div>
-            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-3xl animate-pulse hidden md:block"></div>
-            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-3xl animate-pulse hidden lg:block"></div>
+            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-3xl animate-pulse"></div>
+            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-3xl animate-pulse hidden md:block"></div>
+            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-3xl animate-pulse hidden lg:block"></div>
           </div>
         </div>
       }>
@@ -710,9 +710,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           <div className="h-6 w-52 bg-slate-200/50 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
           <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-2xl animate-pulse"></div>
-            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-2xl animate-pulse"></div>
-            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-[#0c1224] dark:to-[#080d19] rounded-2xl animate-pulse hidden lg:block"></div>
+            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-2xl animate-pulse"></div>
+            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-2xl animate-pulse"></div>
+            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-2xl animate-pulse hidden lg:block"></div>
           </div>
         </div>
       }>

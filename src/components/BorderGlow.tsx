@@ -16,13 +16,10 @@ interface BorderGlowProps {
 }
 
 const AMBIENT_COLORS = [
-  { glow: '99, 102, 241', colors: ['#c084fc', '#6366f1', '#38bdf8'] }, // Indigo/Purple
-  { glow: '236, 72, 153', colors: ['#f472b6', '#ec4899', '#fca5a5'] }, // Pink/Rose
-  { glow: '20, 184, 166', colors: ['#2dd4bf', '#14b8a6', '#93c5fd'] }, // Teal/Blue
-  { glow: '168, 85, 247', colors: ['#c084fc', '#a855f7', '#f472b6'] }, // Purple/Pink
-  { glow: '6, 182, 212', colors: ['#67e8f9', '#06b6d4', '#38bdf8'] },  // Cyan/Blue
-  { glow: '249, 115, 22', colors: ['#fdba74', '#f97316', '#fca5a5'] },  // Orange/Amber
-  { glow: '16, 185, 129', colors: ['#34d399', '#10b981', '#a7f3d0'] }   // Emerald/Green
+  { glow: '148, 163, 184', colors: ['#cbd5e1', '#94a3b8', '#64748b'] }, // Slate Silver
+  { glow: '161, 161, 170', colors: ['#e4e4e7', '#a1a1aa', '#71717a'] }, // Zinc Slate
+  { glow: '120, 113, 108', colors: ['#e7e5e4', '#78716c', '#57534e'] }, // Stone Earth
+  { glow: '148, 163, 184', colors: ['#94a3b8', '#475569', '#334155'] }  // Steel Blue Deep
 ];
 
 export const BorderGlow: React.FC<BorderGlowProps> = ({

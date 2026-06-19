@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, ArrowRight, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../context/ToastContext';
+import { mapErrorToFriendly } from '../utils/errorMapper';
 
 interface NewsletterSubscribeProps {
   className?: string;
@@ -47,17 +48,18 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
       if (res.ok) {
         setSubscribed(true);
         setEmail('');
-        showToast("Successfully subscribed to the newsletter!", "success");
+        showToast("You have successfully registered for the newsletter!", "success", 4000, "User Action");
       } else {
         const errMsg = data.error || 'Unable to subscribe at this moment. Please try again.';
-        setErrorText(errMsg);
-        showToast(errMsg, "error");
+        const friendly = mapErrorToFriendly(errMsg, "subscribe to newsletter");
+        setErrorText(friendly.message);
+        showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (err) {
       console.error('Subscription system error:', err);
-      const connectionError = 'A connection error occurred. Please verify your internet and try again.';
-      setErrorText(connectionError);
-      showToast(connectionError, "error");
+      const friendly = mapErrorToFriendly(err, "subscribe to newsletter");
+      setErrorText(friendly.message);
+      showToast(friendly.message, friendly.type, 4000, friendly.category);
     } finally {
       setLoading(false);
     }
@@ -220,7 +222,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
                 You're Subscribed! 🎉
               </h3>
               <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                Thank you for subscribing to GadgetsProHub emails. We have saved your subscription to the database. Expect awesome deals and gadget recommendations directly in your inbox soon.
+                Thank you! Your subscription is successfully active. Look forward to premium editorial reviews, curated drops, and exclusive updates in your inbox soon.
               </p>
             </div>
             <button
