@@ -11,6 +11,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import mongoSanitize from 'express-mongo-sanitize';
 import { createServer as createViteServer } from 'vite';
 import { seedOrders, seedCategories, seedProducts, seedBlogs, seedUsers, seedMessages, LocalUserType } from './seeddata';
 import {
@@ -77,6 +78,10 @@ const userSchema = new mongoose.Schema({
     }
   ],
   district: { type: String, default: 'Chennai' },
+  isVerified: { type: Boolean, default: false },
+  verificationToken: { type: String, default: null },
+  pendingEmail: { type: String, default: null },
+  pendingEmailToken: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -92,7 +97,7 @@ userSchema.pre('save', async function () {
 });
 
 const User = mongoose.model('User', userSchema);
-import { comparePasswords, hashHelper, isAdminEmail, getStorageEmail } from './src/server/utils';
+import { comparePasswords, hashHelper, isAdminEmail, getStorageEmail, validateAndCheckRealEmail } from './src/server/utils';
 
 // Category Schema
 const categorySchema = new mongoose.Schema({
@@ -1236,6 +1241,9 @@ async function startServer() {
   app.use(cors());
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(mongoSanitize({
+    allowDots: false
+  }));
 
   // General API call rate limiter (Dos protection)
   const generalLimiter = rateLimit({
@@ -1509,11 +1517,21 @@ async function startServer() {
   app.post('/api/auth/register', validateRegister, async (req, res): Promise<any> => {
     try {
       const { email, password, name } = req.body;
+      const validationResult = await validateAndCheckRealEmail(email);
+      if (!validationResult.isValid) {
+        return res.status(400).json({ error: validationResult.error || 'Invalid email address.' });
+      }
       const storageEmail = getStorageEmail(email);
       if (!storageEmail) {
         return res.status(400).json({ error: 'Invalid email address structure' });
       }
       const initialRole = isAdminEmail(storageEmail) ? 'admin' : 'user';
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
+      const rawHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+      const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
+      const verificationUrl = `${proto}://${host}/api/auth/verify?token=${verificationToken}`;
+
       if (isMongoConnected) {
         // Pre-check for duplicate account registration in MongoDB
         const existingUser = await User.findOne({ email: storageEmail });
@@ -1521,14 +1539,19 @@ async function startServer() {
           return res.status(400).json({ error: 'You already have an account registered with this email address. Please login instead.' });
         }
         
-        const user = new User({ email: storageEmail, password, name, role: initialRole });
+        const user = new User({ 
+          email: storageEmail, 
+          password, 
+          name, 
+          role: initialRole,
+          isVerified: false,
+          verificationToken
+        });
         try {
           await user.save();
         } catch (saveError: any) {
           return res.status(400).json({ error: 'Failed to create user account: ' + saveError.message });
         }
-        const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
-        return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
       } else {
         const existingUser = localUsers.find(u => u.email === storageEmail);
         if (existingUser) return res.status(400).json({ error: 'You already have an account registered with this email address. Please login instead.' });
@@ -1543,13 +1566,60 @@ async function startServer() {
           wishlist: [] as string[],
           recentlyViewed: [] as any[],
           district: 'Chennai',
-          createdAt: new Date()
+          createdAt: new Date(),
+          isVerified: false,
+          verificationToken
         };
         localUsers.push(newUser);
         saveLocalUsers();
-        const token = jwt.sign({ userId: newUser._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
-        return res.json({ token, user: { id: newUser._id, email: newUser.email, name: newUser.name, role: newUser.role, district: newUser.district } });
       }
+
+      // Send Verification Email
+      const transporter = getMailTransport();
+      let emailSent = false;
+      let smtpErrorMsg = '';
+      if (transporter) {
+        try {
+          const sender = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'no-reply@gadgetsprohub.com';
+          await transporter.sendMail({
+            from: `"GadgetsProHub Verification" <${sender}>`,
+            to: storageEmail,
+            subject: "Verify Your Email Address - GadgetsProHub",
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                <h2 style="color: #4f46e5; text-align: center; margin-bottom: 24px;">Welcome to GadgetsProHub!</h2>
+                <p style="font-size: 14px; color: #334155;">Hello ${name || 'User'},</p>
+                <p style="font-size: 14px; color: #334155; line-height: 1.6;">Thank you for registering an account on our affiliate platform. Please verify your email address to complete your registration and secure your profile.</p>
+                <div style="text-align: center; margin: 32px 0;">
+                  <a href="${verificationUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">Verify Email Address</a>
+                </div>
+                <p style="font-size: 12px; color: #64748b; line-height: 1.5;">If the button above does not work, please copy and paste the following link into your web browser:</p>
+                <p style="font-size: 11px; color: #3b82f6; word-break: break-all; background-color: #f8fafc; padding: 10px; border-radius: 6px;">${verificationUrl}</p>
+                <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: center;">
+                  <p style="margin: 0;">This is an automated system email notification.</p>
+                </div>
+              </div>
+            `
+          });
+          emailSent = true;
+          console.log(`Verification email successfully dispatched to ${storageEmail}`);
+        } catch (err: any) {
+          smtpErrorMsg = err.message;
+          console.log("SMTP notification: Verification link is simulated because the server SMTP credentials require a Google App Password.");
+        }
+      }
+
+      if (!emailSent) {
+        console.log("📨 [SIMULATED EMAIL] Verification Link:", verificationUrl);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Your account is registered! A verification link has been sent to your email. Please click the link to activate your account and log in.',
+        verificationUrlSimulated: emailSent ? undefined : verificationUrl,
+        smtpError: smtpErrorMsg || undefined
+      });
+
     } catch (error: any) {
       let friendlyError = error.message;
       if (error.code === 11000 || error.message?.includes('duplicate key') || error.message?.includes('E11000')) {
@@ -1560,6 +1630,130 @@ async function startServer() {
         }
       }
       res.status(400).json({ error: friendlyError });
+    }
+  });
+
+  app.get('/api/auth/verify', async (req, res): Promise<any> => {
+    try {
+      const { token } = req.query;
+      if (!token || typeof token !== 'string') {
+        return res.status(400).send(`
+          <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+            <h2 style="color: #ef4444;">Invalid Verification Link</h2>
+            <p style="color: #64748b;">The verification token is missing or invalid.</p>
+            <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+          </div>
+        `);
+      }
+
+      if (isMongoConnected) {
+        const user = await User.findOne({ verificationToken: token });
+        if (!user) {
+          return res.status(400).send(`
+            <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+              <h2 style="color: #ef4444;">Verification Link Expired</h2>
+              <p style="color: #64748b;">This verification link is invalid or has already been used.</p>
+              <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+            </div>
+          `);
+        }
+
+        user.isVerified = true;
+        user.verificationToken = null;
+        await user.save();
+
+        const jwtToken = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        return res.redirect(`/?verifiedToken=${jwtToken}`);
+      } else {
+        const user = localUsers.find(u => u.verificationToken === token);
+        if (!user) {
+          return res.status(400).send(`
+            <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+              <h2 style="color: #ef4444;">Verification Link Expired</h2>
+              <p style="color: #64748b;">This verification link is invalid or has already been used.</p>
+              <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+            </div>
+          `);
+        }
+
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        saveLocalUsers();
+
+        const jwtToken = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        return res.redirect(`/?verifiedToken=${jwtToken}`);
+      }
+    } catch (error: any) {
+      res.status(500).send(`
+        <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+          <h2 style="color: #ef4444;">Verification Error</h2>
+          <p style="color: #64748b;">${error.message || 'An error occurred during verification.'}</p>
+          <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+        </div>
+      `);
+    }
+  });
+
+  app.get('/api/auth/verify-new-email', async (req, res): Promise<any> => {
+    try {
+      const { token } = req.query;
+      if (!token || typeof token !== 'string') {
+        return res.status(400).send(`
+          <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+            <h2 style="color: #ef4444;">Invalid Verification Link</h2>
+            <p style="color: #64748b;">The email verification token is missing or invalid.</p>
+            <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+          </div>
+        `);
+      }
+
+      if (isMongoConnected) {
+        const user = await User.findOne({ pendingEmailToken: token });
+        if (!user) {
+          return res.status(400).send(`
+            <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+              <h2 style="color: #ef4444;">Verification Link Expired</h2>
+              <p style="color: #64748b;">This verification link is invalid or has already been used.</p>
+              <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+            </div>
+          `);
+        }
+
+        user.email = user.pendingEmail;
+        user.pendingEmail = null;
+        user.pendingEmailToken = null;
+        await user.save();
+
+        const jwtToken = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        return res.redirect(`/?verifiedToken=${jwtToken}&emailUpdated=true`);
+      } else {
+        const user = localUsers.find(u => u.pendingEmailToken === token);
+        if (!user) {
+          return res.status(400).send(`
+            <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+              <h2 style="color: #ef4444;">Verification Link Expired</h2>
+              <p style="color: #64748b;">This verification link is invalid or has already been used.</p>
+              <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+            </div>
+          `);
+        }
+
+        user.email = user.pendingEmail;
+        user.pendingEmail = undefined;
+        user.pendingEmailToken = undefined;
+        saveLocalUsers();
+
+        const jwtToken = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        return res.redirect(`/?verifiedToken=${jwtToken}&emailUpdated=true`);
+      }
+    } catch (error: any) {
+      res.status(500).send(`
+        <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+          <h2 style="color: #ef4444;">Verification Error</h2>
+          <p style="color: #64748b;">${error.message || 'An error occurred during verification.'}</p>
+          <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+        </div>
+      `);
     }
   });
 
@@ -1574,6 +1768,21 @@ async function startServer() {
         const user = await User.findOne({ email: storageEmail });
         if (!user) {
           return res.status(401).json({ error: 'This email is not registered. Please sign up first.' });
+        }
+        if (user.isVerified === false) {
+          if (!user.verificationToken) {
+            user.verificationToken = crypto.randomBytes(32).toString('hex');
+            await user.save().catch(e => console.warn(e));
+          }
+          const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
+          const rawHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+          const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
+          const verificationUrl = `${proto}://${host}/api/auth/verify?token=${user.verificationToken}`;
+          return res.status(401).json({ 
+            error: 'Your email is not verified yet. Please check your inbox for the verification link to activate your account.',
+            isUnverified: true,
+            verificationUrlSimulated: verificationUrl
+          });
         }
         if (!user.password) {
           return res.status(401).json({ error: 'This account was created via Google Sign-In. Please sign in with Google.' });
@@ -1592,6 +1801,21 @@ async function startServer() {
         const user = localUsers.find(u => u.email === storageEmail);
         if (!user) {
           return res.status(401).json({ error: 'This email is not registered. Please sign up first.' });
+        }
+        if (user.isVerified === false) {
+          if (!user.verificationToken) {
+            user.verificationToken = crypto.randomBytes(32).toString('hex');
+            saveLocalUsers();
+          }
+          const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
+          const rawHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+          const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
+          const verificationUrl = `${proto}://${host}/api/auth/verify?token=${user.verificationToken}`;
+          return res.status(401).json({ 
+            error: 'Your email is not verified yet. Please check your inbox for the verification link to activate your account.',
+            isUnverified: true,
+            verificationUrlSimulated: verificationUrl
+          });
         }
         if (!user.password) {
           return res.status(401).json({ error: 'This account was created via Google Sign-In. Please sign in with Google.' });
@@ -1623,7 +1847,7 @@ async function startServer() {
       if (isMongoConnected) {
         let user = await User.findOne({ email: storageEmail });
         if (!user) {
-          user = new User({ email: storageEmail, name, googleId, profileImage, role: initialRole });
+          user = new User({ email: storageEmail, name, googleId, profileImage, role: initialRole, isVerified: true });
           try {
             await user.save();
           } catch (err: any) {
@@ -1647,7 +1871,8 @@ async function startServer() {
             wishlist: [] as any[],
             recentlyViewed: [] as any[],
             district: 'Chennai',
-            createdAt: new Date()
+            createdAt: new Date(),
+            isVerified: true
           };
           localUsers.push(user);
           saveLocalUsers();
@@ -2733,6 +2958,156 @@ async function startServer() {
       }
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // POST initiate email address update
+  app.post('/api/user/update-email', authenticate, async (req, res): Promise<any> => {
+    try {
+      const uId = (req as any).userId;
+      const { newEmail } = req.body;
+      
+      if (!newEmail || typeof newEmail !== 'string') {
+        return res.status(400).json({ error: 'A valid new email address is required' });
+      }
+      const validationResult = await validateAndCheckRealEmail(newEmail);
+      if (!validationResult.isValid) {
+        return res.status(400).json({ error: validationResult.error || 'Invalid email address.' });
+      }
+      const storageEmail = getStorageEmail(newEmail);
+      if (!storageEmail) {
+        return res.status(400).json({ error: 'Invalid email address structure' });
+      }
+
+      if (isMongoConnected) {
+        const currentUser = await User.findById(uId);
+        if (!currentUser) return res.status(404).json({ error: 'User profile not found' });
+
+        if (currentUser.email === storageEmail) {
+          return res.status(400).json({ error: 'This is already your current email address.' });
+        }
+
+        // Check if other user is using this email
+        const userExists = await User.findOne({ email: storageEmail });
+        if (userExists) {
+          return res.status(400).json({ error: 'This email address is already registered to another account.' });
+        }
+
+        const pendingEmailToken = crypto.randomBytes(32).toString('hex');
+        currentUser.pendingEmail = storageEmail;
+        currentUser.pendingEmailToken = pendingEmailToken;
+        await currentUser.save();
+
+        const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
+        const rawHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+        const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
+        const verificationUrl = `${proto}://${host}/api/auth/verify-new-email?token=${pendingEmailToken}`;
+
+        // Send Email to the new address
+        const transporter = getMailTransport();
+        let emailSent = false;
+        let smtpErrorMsg = '';
+        if (transporter) {
+          try {
+            const sender = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'no-reply@gadgetsprohub.com';
+            await transporter.sendMail({
+              from: `"GadgetsProHub Verification" <${sender}>`,
+              to: storageEmail,
+              subject: "Confirm Your New Email Address - GadgetsProHub",
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                  <h2 style="color: #4f46e5; text-align: center; margin-bottom: 24px;">Confirm Your Email Update</h2>
+                  <p style="font-size: 14px; color: #334155;">Hello ${currentUser.name || 'User'},</p>
+                  <p style="font-size: 14px; color: #334155; line-height: 1.6;">We received a request to update the email address for your GadgetsProHub account to <strong>${storageEmail}</strong>. Please confirm this update by verifying your new email address.</p>
+                  <div style="text-align: center; margin: 32px 0;">
+                    <a href="${verificationUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">Confirm Email Address Update</a>
+                  </div>
+                  <p style="font-size: 12px; color: #64748b; line-height: 1.5;">If the button above does not work, copy and paste the link below into your browser:</p>
+                  <p style="font-size: 11px; color: #3b82f6; word-break: break-all; background-color: #f8fafc; padding: 10px; border-radius: 6px;">${verificationUrl}</p>
+                  <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: center;">
+                    <p style="margin: 0;">If you did not request this email update, you can safely ignore this notification. Your current email remains secure.</p>
+                  </div>
+                </div>
+              `
+            });
+            emailSent = true;
+          } catch (err: any) {
+            smtpErrorMsg = err.message;
+          }
+        }
+
+        return res.json({
+          success: true,
+          message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
+          verificationUrlSimulated: verificationUrl,
+          smtpError: smtpErrorMsg
+        });
+      } else {
+        const currentUser = localUsers.find(u => u._id === uId);
+        if (!currentUser) return res.status(404).json({ error: 'User profile not found' });
+
+        if (currentUser.email === storageEmail) {
+          return res.status(400).json({ error: 'This is already your current email address.' });
+        }
+
+        // Check duplicate
+        const userExists = localUsers.find(u => u.email === storageEmail);
+        if (userExists) {
+          return res.status(400).json({ error: 'This email address is already registered to another account.' });
+        }
+
+        const pendingEmailToken = crypto.randomBytes(32).toString('hex');
+        currentUser.pendingEmail = storageEmail;
+        currentUser.pendingEmailToken = pendingEmailToken;
+        saveLocalUsers();
+
+        const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
+        const rawHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+        const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
+        const verificationUrl = `${proto}://${host}/api/auth/verify-new-email?token=${pendingEmailToken}`;
+
+        // Send Email
+        const transporter = getMailTransport();
+        let emailSent = false;
+        let smtpErrorMsg = '';
+        if (transporter) {
+          try {
+            const sender = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'no-reply@gadgetsprohub.com';
+            await transporter.sendMail({
+              from: `"GadgetsProHub Verification" <${sender}>`,
+              to: storageEmail,
+              subject: "Confirm Your New Email Address - GadgetsProHub",
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                  <h2 style="color: #4f46e5; text-align: center; margin-bottom: 24px;">Confirm Your Email Update</h2>
+                  <p style="font-size: 14px; color: #334155;">Hello ${currentUser.name || 'User'},</p>
+                  <p style="font-size: 14px; color: #334155; line-height: 1.6;">We received a request to update the email address for your GadgetsProHub account to <strong>${storageEmail}</strong>. Please confirm this update by verifying your new email address.</p>
+                  <div style="text-align: center; margin: 32px 0;">
+                    <a href="${verificationUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">Confirm Email Address Update</a>
+                  </div>
+                  <p style="font-size: 12px; color: #64748b; line-height: 1.5;">If the button above does not work, copy and paste the link below into your browser:</p>
+                  <p style="font-size: 11px; color: #3b82f6; word-break: break-all; background-color: #f8fafc; padding: 10px; border-radius: 6px;">${verificationUrl}</p>
+                  <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: center;">
+                    <p style="margin: 0;">If you did not request this email update, you can safely ignore this notification. Your current email remains secure.</p>
+                  </div>
+                </div>
+              `
+            });
+            emailSent = true;
+          } catch (err: any) {
+            smtpErrorMsg = err.message;
+          }
+        }
+
+        return res.json({
+          success: true,
+          message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
+          verificationUrlSimulated: verificationUrl,
+          smtpError: smtpErrorMsg
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

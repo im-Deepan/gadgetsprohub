@@ -8,6 +8,10 @@ export interface LocalUserType {
   recentlyViewed: any[];
   district?: string;
   createdAt: Date;
+  isVerified?: boolean;
+  verificationToken?: string;
+  pendingEmail?: string;
+  pendingEmailToken?: string;
 }
 
 export const seedOrders = [
@@ -797,7 +801,7 @@ export const seedProducts = [
       "wireless",
       "earbud"
     ],
-    "trending": true,
+    "trending": false,
     "featured": true,
     "clicks": 252,
     "conversions": 43,
@@ -906,7 +910,7 @@ export const seedProducts = [
       "coffee",
       "maker"
     ],
-    "trending": true,
+    "trending": false,
     "featured": true,
     "clicks": 165,
     "conversions": 31,
@@ -961,7 +965,7 @@ export const seedProducts = [
       "dumbbell",
       "weights"
     ],
-    "trending": true,
+    "trending": false,
     "featured": true,
     "clicks": 288,
     "conversions": 52,
@@ -1124,7 +1128,7 @@ export const seedProducts = [
       "gaming",
       "furniture"
     ],
-    "trending": true,
+    "trending": false,
     "featured": false,
     "clicks": 108,
     "conversions": 19,

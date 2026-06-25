@@ -4,14 +4,15 @@ import { auth, googleProvider, isFirebaseMock } from '../firebase';
 import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
+import { useToast } from './ToastContext';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; message?: string }>;
-  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; verificationUrlSimulated?: string }>;
+  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; message?: string; verificationUrlSimulated?: string; smtpError?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string; email?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -37,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const { showToast } = useToast();
 
   const refreshProfile = React.useCallback(async () => {
     if (!token) {
@@ -58,7 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.role,
           profileImage: data.profileImage,
           district: data.district || 'Chennai',
-          wishlist: data.wishlist?.map((p: any) => p._id || p) || []
+          wishlist: data.wishlist?.map((p: any) => p._id || p) || [],
+          isVerified: data.isVerified ?? true,
+          pendingEmail: data.pendingEmail
         });
         setWishlist(data.wishlist?.map((p: any) => p._id || p) || []);
       } else if (res.status === 401 || res.status === 403) {
@@ -77,6 +81,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   }, [token]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verifiedToken = params.get('verifiedToken');
+    const emailUpdated = params.get('emailUpdated');
+    if (verifiedToken) {
+      safeSetItem('aff_token', verifiedToken);
+      setToken(verifiedToken);
+      if (emailUpdated === 'true') {
+        showToast('Your new email address has been successfully verified and updated on your account record!', 'success', 6000, 'User Action');
+      } else {
+        showToast('Your email has been successfully verified! You have been logged in automatically.', 'success', 5000, 'User Action');
+      }
+      
+      // Clean up URL query parameters
+      params.delete('verifiedToken');
+      params.delete('emailUpdated');
+      const newQuery = params.toString();
+      const newPath = window.location.pathname + (newQuery ? `?${newQuery}` : '');
+      window.history.replaceState({}, document.title, newPath);
+    }
+  }, [showToast]);
 
   useEffect(() => {
     refreshProfile();
@@ -100,7 +126,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!res.ok) {
-          return { success: false, error: data.error || 'Authentication failure.' };
+          return { 
+            success: false, 
+            error: data.error || 'Authentication failure.',
+            verificationUrlSimulated: data.verificationUrlSimulated
+          };
         }
         
         safeSetItem('aff_token', data.token);
@@ -109,7 +139,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: data.user.id,
           email: data.user.email,
           name: data.user.name,
-          role: data.user.role
+          role: data.user.role,
+          isVerified: true
         });
         return { success: true };
       } finally {
@@ -118,65 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string) => {
-    try {
-      if (!isFirebaseMock) {
-        try {
-          const cred = await signInWithEmailAndPassword(auth, email, password);
-          if (!cred.user.emailVerified) {
-             await sendEmailVerification(cred.user);
-             await auth.signOut();
-             return { success: false, error: 'Please verify your email to continue. A new verification link has been sent to your inbox.' };
-          }
-          
-          // They verified their email with Firebase. Now inform the backend using the google endpoint,
-          // which issues our backend JWT.
-          const res = await fetch('/api/auth/google', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: cred.user.email, name: cred.user.displayName || email.split('@')[0] })
-          });
-          
-          let data: any = {};
-          try {
-            const text = await res.text();
-            data = JSON.parse(text);
-          } catch(e) {
-            data = { error: 'The server returned an unexpected response. Please try again.' };
-          }
-          
-          if (!res.ok) {
-             return { success: false, error: data.error || 'Server registration refusal.' };
-          }
-          
-          safeSetItem('aff_token', data.token);
-          setToken(data.token);
-          setUser({
-            id: data.user.id,
-            email: data.user.email,
-            name: data.user.name,
-            role: data.user.role
-          });
-          return { success: true };
-          
-        } catch (fbErr: any) {
-             // If account doesn't exist in Firebase or wrong password, try backend directly
-             if (fbErr.code === 'auth/invalid-credential' || fbErr.code === 'auth/user-not-found' || fbErr.code === 'auth/wrong-password') {
-                 // Try legacy backend auth if user doesn't exist in Firebase or if it's generic error
-                 return await fallbackBackendLogin(email, password);
-             } else if (fbErr.code === 'auth/operation-not-allowed') {
-                 // Email/password provider disabled in Firebase, use backend
-                 return await fallbackBackendLogin(email, password);
-             } else {
-                 return { success: false, error: fbErr.message };
-             }
-        }
-      } else {
-        return await fallbackBackendLogin(email, password);
-      }
-    } catch (err: any) {
-      const friendly = mapErrorToFriendly(err, 'authenticate user credentials');
-      return { success: false, error: friendly.message };
-    }
+    return await fallbackBackendLogin(email, password);
   };
 
   const register = async (email: string, password: string, name: string) => {
@@ -184,9 +157,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!isFirebaseMock) {
         try {
           const cred = await createUserWithEmailAndPassword(auth, email, password);
-          await sendEmailVerification(cred.user);
           
-          // Register in backend as well, but do not set the token yet
+          // Register in backend as well, which will send our custom verification link
           const res = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -202,7 +174,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
 
           if (!res.ok) {
-            // Delete created user from firebase auth as registration failed on the backend
             try {
               await cred.user.delete();
             } catch (delErr) {
@@ -212,12 +183,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           
           await auth.signOut();
-          return { success: true, message: 'Registration successful! A verification link has been sent to your email. Please verify before signing in.' };
+          return {
+            success: true,
+            message: data.message || 'Registration successful! A verification link has been sent to your email. Please verify before signing in.',
+            verificationUrlSimulated: data.verificationUrlSimulated,
+            smtpError: data.smtpError
+          };
         } catch (fbErr: any) {
           if (fbErr.code === 'auth/email-already-in-use') {
             return { success: false, error: 'Email already in use. Please sign in.' };
           } else if (fbErr.code === 'auth/operation-not-allowed') {
-            // Fallback to backend registration if Firebase auth is disabled
             console.warn('Firebase auth operation-not-allowed, falling back to backend register.');
           } else {
             return { success: false, error: fbErr.message };
@@ -243,15 +218,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: data.error || 'Registration failed.' };
       }
       
-      safeSetItem('aff_token', data.token);
-      setToken(data.token);
-      setUser({
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.name,
-        role: data.user.role
-      });
-      return { success: true };
+      return {
+        success: true,
+        message: data.message || 'Registration successful! A verification link has been sent to your email. Please verify before signing in.',
+        verificationUrlSimulated: data.verificationUrlSimulated,
+        smtpError: data.smtpError
+      };
     } catch (err: any) {
       const friendly = mapErrorToFriendly(err, 'create your user account');
       return { success: false, error: friendly.message };
@@ -262,12 +234,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       let email = '';
       let name = '';
+      let googleId = '';
       
       if (!isFirebaseMock) {
         const result = await signInWithPopup(auth, googleProvider);
         const googleUser = result.user;
         email = googleUser.email || '';
         name = googleUser.displayName || googleUser.email?.split('@')[0] || 'Google Explorer';
+        googleId = googleUser.uid;
       } else {
         const enterEmail = window.prompt(
           "Development Simulated Google Sign-In:\nEnter your Gmail ID to login with Google:",
@@ -278,6 +252,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         email = enterEmail;
         name = enterEmail.split('@')[0].toUpperCase();
+        googleId = 'simulated_' + email.split('@')[0];
       }
 
       if (!email) {
@@ -287,7 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name })
+        body: JSON.stringify({ email, name, googleId })
       });
       
       let data: any = {};
@@ -308,9 +283,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: data.user.id,
         email: data.user.email,
         name: data.user.name,
-        role: data.user.role
+        role: data.user.role,
+        isVerified: true
       });
-      return { success: true };
+      return { success: true, email: data.user.email };
     } catch (err: any) {
       console.warn("Google credentials retrieval error:", err);
       let errMsg = err.message || 'Google Sign-In process could not be completed.';

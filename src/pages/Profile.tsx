@@ -6,7 +6,8 @@ import { safeSetItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { 
   User, Heart, ExternalLink, ShieldCheck, Mail, LogOut, Sparkle, Tag, Trash2,
-  ShoppingBag, Truck, Calendar, DollarSign, CheckCircle, Box, AlertCircle, MapPin
+  ShoppingBag, Truck, Calendar, DollarSign, CheckCircle, Box, AlertCircle, MapPin,
+  Clock, ArrowRight, RefreshCw
 } from 'lucide-react';
 
 const TAMIL_NADU_DISTRICTS = [
@@ -60,6 +61,12 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState('');
 
+  // Email update states
+  const [newEmail, setNewEmail] = useState('');
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [emailUpdateStatus, setEmailUpdateStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [simulatedEmailUrl, setSimulatedEmailUrl] = useState('');
+
   // Sync state if user loads dynamically
   useEffect(() => {
     if (user) {
@@ -67,6 +74,46 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
       setSelectDistrict(user.district || 'Chennai');
     }
   }, [user]);
+
+  const handleUpdateEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setIsUpdatingEmail(true);
+    setEmailUpdateStatus(null);
+    setSimulatedEmailUrl('');
+    try {
+      const res = await fetch('/api/user/update-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newEmail })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmailUpdateStatus({
+          type: 'success',
+          message: data.message || 'A verification link has been sent to your new email address.'
+        });
+        showToast(data.message || 'Verification link sent!', 'success');
+        if (data.verificationUrlSimulated) {
+          setSimulatedEmailUrl(data.verificationUrlSimulated);
+        }
+        setNewEmail('');
+      } else {
+        const friendly = mapErrorToFriendly(data?.error || 'Failed to request email update', 'request email update');
+        setEmailUpdateStatus({ type: 'error', message: friendly.message });
+        showToast(friendly.message, 'error');
+      }
+    } catch (err) {
+      const friendly = mapErrorToFriendly(err, 'request email update');
+      setEmailUpdateStatus({ type: 'error', message: friendly.message });
+      showToast(friendly.message, 'error');
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,6 +232,33 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 <ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
                 <span>Role: <span className="font-bold underline capitalize">{user?.role || 'User'}</span></span>
               </div>
+              <div className="border-t border-slate-100/50 pt-2.5 mt-2.5 dark:border-slate-800/50 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Account Status</span>
+                  {user?.pendingEmail ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-extrabold text-indigo-700 border border-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-950/40 animate-pulse">
+                      <Clock className="h-3 w-3 text-indigo-500 animate-spin-slow" />
+                      Update in Progress
+                    </span>
+                  ) : user?.isVerified ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-700 border border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-950/40">
+                      <CheckCircle className="h-3 w-3 text-emerald-500" />
+                      Verified
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-extrabold text-amber-700 border border-amber-100 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-950/40 animate-pulse">
+                      <AlertCircle className="h-3 w-3 text-amber-500" />
+                      Email Pending
+                    </span>
+                  )}
+                </div>
+                {user?.pendingEmail && (
+                  <div className="text-[10px] leading-relaxed text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-950 p-2 rounded-lg border border-slate-100 dark:border-slate-800 mt-1">
+                    <span className="font-semibold text-slate-600 dark:text-slate-400">Verifying Change:</span>
+                    <span className="truncate block font-mono text-[9px] text-indigo-600 dark:text-indigo-400 mt-0.5">{user.pendingEmail}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <button
@@ -251,6 +325,158 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 py-2.5 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isSavingProfile ? 'Saving Changes...' : 'Save Preferences'}
+              </button>
+            </form>
+          </div>
+
+          {/* 1c. UPDATE EMAIL ADDRESS FLOW */}
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900/40 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5 justify-between">
+              <span className="flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-indigo-500" />
+                Email Settings & Status
+              </span>
+            </h3>
+
+            {/* COLOR-CODED BADGES STATE TRACKER */}
+            <div className="bg-slate-50/50 dark:bg-slate-950/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800/80 space-y-2.5">
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Security Lifecycle State</span>
+              
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                {/* 1. Verified State Badge */}
+                <div className={`p-1.5 rounded-lg border text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
+                  user?.isVerified && !user?.pendingEmail
+                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900/50 dark:text-emerald-400 shadow-xs'
+                    : 'bg-slate-50/20 border-slate-100 text-slate-400 dark:bg-slate-900/10 dark:border-slate-800/40 dark:text-slate-600'
+                }`}>
+                  <CheckCircle className={`h-3.5 w-3.5 ${user?.isVerified && !user?.pendingEmail ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-700'}`} />
+                  <span>Verified</span>
+                </div>
+
+                {/* 2. Email Pending State Badge */}
+                <div className={`p-1.5 rounded-lg border text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
+                  !user?.isVerified && !user?.pendingEmail
+                    ? 'bg-amber-50/70 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-900/50 dark:text-amber-400 shadow-xs animate-pulse'
+                    : 'bg-slate-50/20 border-slate-100 text-slate-400 dark:bg-slate-900/10 dark:border-slate-800/40 dark:text-slate-600'
+                }`}>
+                  <AlertCircle className={`h-3.5 w-3.5 ${!user?.isVerified && !user?.pendingEmail ? 'text-amber-500' : 'text-slate-300 dark:text-slate-700'}`} />
+                  <span>Email Pending</span>
+                </div>
+
+                {/* 3. Update in Progress State Badge */}
+                <div className={`p-1.5 rounded-lg border text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
+                  user?.pendingEmail
+                    ? 'bg-indigo-50/70 border-indigo-200 text-indigo-800 dark:bg-indigo-950/20 dark:border-indigo-900/50 dark:text-indigo-400 shadow-xs animate-pulse'
+                    : 'bg-slate-50/20 border-slate-100 text-slate-400 dark:bg-slate-900/10 dark:border-slate-800/40 dark:text-slate-600'
+                }`}>
+                  <Clock className={`h-3.5 w-3.5 ${user?.pendingEmail ? 'text-indigo-500 animate-spin-slow' : 'text-slate-300 dark:text-slate-700'}`} />
+                  <span>In Progress</span>
+                </div>
+              </div>
+
+              {/* USER UNDERSTANDABLE ALERT BOX */}
+              <div className="mt-2 text-[10.5px] leading-relaxed">
+                {user?.pendingEmail ? (
+                  <div className="bg-indigo-50/40 text-indigo-900 border border-indigo-100/50 rounded-lg p-2.5 dark:bg-indigo-950/10 dark:text-indigo-300 dark:border-indigo-950/30 space-y-1">
+                    <div className="font-extrabold flex items-center gap-1 text-indigo-700 dark:text-indigo-400">
+                      <Clock className="h-3.5 w-3.5 animate-spin-slow" />
+                      <span>Email Change Pending Verification</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-400 text-[10px] leading-normal">
+                      We sent a confirmation link to <strong className="font-bold underline text-indigo-600 dark:text-indigo-400">{user.pendingEmail}</strong>. 
+                      To protect your security, your current email (<span className="font-mono text-[9px]">{user.email}</span>) remains active and fully secure. Once you click the link, your profile will update automatically!
+                    </p>
+                  </div>
+                ) : user?.isVerified ? (
+                  <div className="bg-emerald-50/30 text-emerald-900 border border-emerald-100/30 rounded-lg p-2.5 dark:bg-emerald-950/10 dark:text-emerald-300 dark:border-emerald-950/30 space-y-1">
+                    <div className="font-extrabold flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      <span>Account Fully Secured & Verified</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-400 text-[10px] leading-normal">
+                      Your current email <strong className="font-bold">{user.email}</strong> is verified. You can update your email address below if you'd like to transfer your account record to a new address.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50/40 text-amber-900 border border-amber-100/50 rounded-lg p-2.5 dark:bg-amber-950/10 dark:text-amber-300 dark:border-amber-950/30 space-y-1">
+                    <div className="font-extrabold flex items-center gap-1 text-amber-700 dark:text-amber-400">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      <span>Primary Email Verification Pending</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-400 text-[10px] leading-normal">
+                      Please verify your email address <strong className="font-bold">{user?.email}</strong>. Once verified, you will have access to save bookmarked products, write reviews, and unlock regional support desk services.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <form onSubmit={handleUpdateEmail} className="space-y-3.5 text-left pt-1">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                  Change Email Address
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    required
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="Enter new email address..."
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-8 pr-3 py-2 text-xs text-slate-800 outline-hidden focus:border-indigo-500 focus:bg-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-900"
+                  />
+                  <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                </div>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 leading-normal">
+                  Your new email will receive a confirmation link. The update completes once verified.
+                </p>
+              </div>
+
+              {emailUpdateStatus && (
+                <div className={`rounded-lg px-3 py-2.5 text-[11px] font-bold ${
+                  emailUpdateStatus.type === 'success' 
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-950/40' 
+                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100/50 dark:border-rose-950/40'
+                }`}>
+                  {emailUpdateStatus.message}
+                </div>
+              )}
+
+              {simulatedEmailUrl && (
+                <div className="rounded-xl bg-indigo-50/20 p-3 border border-indigo-100/40 dark:bg-indigo-950/20 dark:border-indigo-950/40 space-y-2">
+                  <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                    <span>✉️</span>
+                    <span>Simulated Inbox (Development Mode)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
+                    You can click the verification button below directly to simulate receiving the verification link sent to your new inbox:
+                  </p>
+                  <a
+                    href={simulatedEmailUrl}
+                    className="inline-flex w-full justify-center items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white py-2 text-[10px] font-extrabold text-center transition-all shadow-xs"
+                  >
+                    <RefreshCw className="h-3 w-3 animate-spin-slow" />
+                    Verify and Update Email Right Now
+                  </a>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isUpdatingEmail}
+                className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 py-2.5 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                {isUpdatingEmail ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    Sending Verification Link...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                    Initiate Email Update
+                  </>
+                )}
               </button>
             </form>
           </div>

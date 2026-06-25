@@ -81,11 +81,10 @@ export const validateGoogleAuth = [
     .isLength({ max: 128 })
     .withMessage('Name must be under 128 characters'),
   body('googleId')
+    .optional()
     .isString()
     .withMessage('Google ID must be a string')
-    .trim()
-    .isLength({ min: 1 })
-    .withMessage('Google ID cannot be empty'),
+    .trim(),
   body('profileImage')
     .optional()
     .isString()

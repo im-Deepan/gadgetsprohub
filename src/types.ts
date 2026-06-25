@@ -86,6 +86,8 @@ export interface User {
   profileImage?: string;
   wishlist?: string[];
   district?: string; // Users pre-preferred or auto-detected geographical district/city
+  isVerified?: boolean;
+  pendingEmail?: string;
 }
 
 export interface Message {
