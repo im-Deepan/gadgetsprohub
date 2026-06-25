@@ -13,6 +13,26 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import { createServer as createViteServer } from 'vite';
 import { seedOrders, seedCategories, seedProducts, seedBlogs, seedUsers, seedMessages, LocalUserType } from './seeddata';
+import {
+  validateRegister,
+  validateLogin,
+  validateGoogleAuth,
+  validateProductClick,
+  validateProductReview,
+  validateWishlist,
+  validateOrderCreation,
+  validateOrderAdvance,
+  validateVisitorRegister,
+  validateContactMessage,
+  validateNewsletterSubscribe,
+  validateSocialClick,
+  validateFilterAnalytics,
+  validatePageViewAnalytics,
+  validateUserProfileUpdate,
+  validateAdminProduct,
+  validateAdminCategory,
+  validateAdminBlog
+} from './src/middleware/validation';
 
 dotenv.config();
 console.log("MONGODB_URI =", process.env.MONGODB_URI);
@@ -369,6 +389,79 @@ if (fs.existsSync(LOCAL_SUNDAY_LOGS_FILE)) {
   }
 }
 
+// ========== SECURITY LOGS SCHEMA & FALLBACK ==========
+const LOCAL_SECURITY_LOGS_FILE = path.join(process.cwd(), 'local_security_logs.json');
+
+const securityLogSchema = new mongoose.Schema({
+  action: { type: String, required: true },
+  adminId: { type: String, required: true },
+  adminEmail: { type: String, required: true },
+  targetId: { type: String },
+  details: { type: mongoose.Schema.Types.Mixed },
+  ipAddress: String,
+  userAgent: String,
+  timestamp: { type: Date, default: Date.now }
+});
+
+const SecurityLog = mongoose.model('SecurityLog', securityLogSchema);
+
+let localSecurityLogs: any[] = [];
+if (fs.existsSync(LOCAL_SECURITY_LOGS_FILE)) {
+  try {
+    localSecurityLogs = JSON.parse(fs.readFileSync(LOCAL_SECURITY_LOGS_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_security_logs.json fallback:", err.message);
+  }
+}
+
+const saveLocalSecurityLogs = () => {
+  try {
+    fs.writeFileSync(LOCAL_SECURITY_LOGS_FILE, JSON.stringify(localSecurityLogs, null, 2), 'utf8');
+  } catch (e: any) {
+    console.warn("Failed saving local security logs:", e.message);
+  }
+};
+
+const logSecurityAction = async (
+  req: express.Request,
+  action: string,
+  targetId: string | undefined,
+  details: any
+) => {
+  const adminId = (req as any).userId || 'system';
+  const adminEmail = (req as any).userEmail || 'unknown';
+  const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const userAgent = req.headers['user-agent'] || 'unknown';
+
+  const logEntry = {
+    action,
+    adminId: adminId.toString(),
+    adminEmail,
+    targetId,
+    details,
+    ipAddress: Array.isArray(ipAddress) ? ipAddress.join(', ') : String(ipAddress),
+    userAgent,
+    timestamp: new Date()
+  };
+
+  // 1. Save to local fallback
+  localSecurityLogs.unshift(logEntry);
+  if (localSecurityLogs.length > 2000) {
+    localSecurityLogs = localSecurityLogs.slice(0, 2000);
+  }
+  saveLocalSecurityLogs();
+
+  // 2. Save to MongoDB if connected
+  if (isMongoConnected) {
+    try {
+      const log = new SecurityLog(logEntry);
+      await log.save();
+    } catch (err: any) {
+      console.warn("Failed saving security log to MongoDB:", err.message);
+    }
+  }
+};
+
 // ========== FOOTER SOCIAL CLICKS PERSISTENCE ==========
 let socialClicks = { instagram: 0, linkedin: 0 };
 const SOCIAL_CLICKS_FILE = path.join(process.cwd(), 'social_clicks.json');
@@ -476,6 +569,7 @@ const adminOnly = (req: express.Request, res: express.Response, next: express.Ne
       User.findById(userId).then(user => {
         if (!user) return res.status(403).json({ error: 'Administrative privileges required' });
         
+        (req as any).userEmail = user.email;
         if (isAdminEmail(user.email)) {
           if (user.role !== 'admin') {
             user.role = 'admin';
@@ -496,6 +590,7 @@ const adminOnly = (req: express.Request, res: express.Response, next: express.Ne
       const u = localUsers.find(user => user._id === userId);
       if (!u) return res.status(403).json({ error: 'Administrative privileges required' });
       
+      (req as any).userEmail = u.email;
       if (isAdminEmail(u.email)) {
         u.role = 'admin';
         return next();
@@ -1411,16 +1506,9 @@ async function startServer() {
   });
 
   // Auth Routes
-  app.post('/api/auth/register', async (req, res): Promise<any> => {
+  app.post('/api/auth/register', validateRegister, async (req, res): Promise<any> => {
     try {
       const { email, password, name } = req.body;
-      if (typeof email !== 'string' || typeof password !== 'string') {
-        return res.status(400).json({ error: 'Invalid input data format supplied' });
-      }
-      if (!email.trim() || !password.trim()) {
-        return res.status(400).json({ error: 'Email and password metrics required' });
-      }
-      
       const storageEmail = getStorageEmail(email);
       if (!storageEmail) {
         return res.status(400).json({ error: 'Invalid email address structure' });
@@ -1475,12 +1563,9 @@ async function startServer() {
     }
   });
 
-  app.post('/api/auth/login', async (req, res): Promise<any> => {
+  app.post('/api/auth/login', validateLogin, async (req, res): Promise<any> => {
     try {
       const { email, password } = req.body;
-      if (typeof email !== 'string' || typeof password !== 'string') {
-        return res.status(400).json({ error: 'Invalid credentials format' });
-      }
       const storageEmail = getStorageEmail(email);
       if (!storageEmail) {
         return res.status(401).json({ error: 'Invalid credentials, please retry' });
@@ -1527,12 +1612,9 @@ async function startServer() {
     }
   });
 
-  app.post('/api/auth/google', async (req, res): Promise<any> => {
+  app.post('/api/auth/google', validateGoogleAuth, async (req, res): Promise<any> => {
     try {
       const { email, name, googleId, profileImage } = req.body;
-      if (typeof email !== 'string') {
-        return res.status(400).json({ error: 'Invalid email parameter' });
-      }
       const storageEmail = getStorageEmail(email);
       if (!storageEmail) {
         return res.status(400).json({ error: 'Invalid email configuration' });
@@ -1781,7 +1863,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/products/click/:slug', async (req, res): Promise<any> => {
+  app.post('/api/products/click/:slug', validateProductClick, async (req, res): Promise<any> => {
     try {
       const districtsList = ['Chennai', 'Madurai', 'Tirunelveli', 'Virudhunagar'];
       const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
@@ -1825,35 +1907,11 @@ async function startServer() {
     }
   });
 
-  app.post('/api/products/:id/reviews', authenticate, async (req, res): Promise<any> => {
+  app.post('/api/products/:id/reviews', authenticate, validateProductReview, async (req, res): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const { id } = req.params;
       const { rating, title, content } = req.body;
-
-      if (rating === undefined || title === undefined || content === undefined) {
-        return res.status(400).json({ error: 'All review parameters (rating, title, content) are required.' });
-      }
-
-      if (typeof title !== 'string' || typeof content !== 'string') {
-        return res.status(400).json({ error: 'All text parameters must be standard strings.' });
-      }
-
-      const trimmedTitle = title.trim();
-      const trimmedContent = content.trim();
-
-      if (!trimmedTitle || trimmedTitle.length > 128) {
-        return res.status(400).json({ error: 'Title must be between 1 and 128 characters.' });
-      }
-
-      if (!trimmedContent || trimmedContent.length > 2000) {
-        return res.status(400).json({ error: 'Content must be between 1 and 2000 characters.' });
-      }
-
-      const parsedRating = Number(rating);
-      if (isNaN(parsedRating) || parsedRating < 1 || parsedRating > 5) {
-        return res.status(400).json({ error: 'Rating must be a valid number between 1 and 5.' });
-      }
 
       if (isMongoConnected) {
         const product = await Product.findById(id);
@@ -1864,9 +1922,9 @@ async function startServer() {
 
         const newReview = {
           userId: uId,
-          rating: parsedRating,
-          title: trimmedTitle,
-          content: trimmedContent,
+          rating,
+          title,
+          content,
           helpful: 0,
           createdAt: new Date()
         };
@@ -1899,9 +1957,9 @@ async function startServer() {
             name,
             profileImage
           },
-          rating: parsedRating,
-          title: trimmedTitle,
-          content: trimmedContent,
+          rating,
+          title,
+          content,
           helpful: 0,
           createdAt: new Date().toISOString()
         };
@@ -2013,7 +2071,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/user/wishlist/:productId', authenticate, async (req, res): Promise<any> => {
+  app.post('/api/user/wishlist/:productId', authenticate, validateWishlist, async (req, res): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const pId = req.params.productId;
@@ -2077,13 +2135,10 @@ async function startServer() {
     }
   });
 
-  app.post('/api/user/orders', authenticate, async (req, res): Promise<any> => {
+  app.post('/api/user/orders', authenticate, validateOrderCreation, async (req, res): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const { items, totalAmount } = req.body;
-      if (!items || items.length === 0) {
-        return res.status(400).json({ error: 'No order items specified' });
-      }
 
       const trackingNumber = 'TRK' + Math.floor(100000000 + Math.random() * 900000000);
       const carrier = ['FedEx Ground', 'UPS Next Day Air', 'DHL Express', 'USPS Priority Mail'][Math.floor(Math.random() * 4)];
@@ -2126,7 +2181,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/user/orders/:orderId/advance', authenticate, async (req, res): Promise<any> => {
+  app.post('/api/user/orders/:orderId/advance', authenticate, validateOrderAdvance, async (req, res): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const { orderId } = req.params;
@@ -2230,12 +2285,9 @@ async function startServer() {
   });
 
   // Visitor tracking registration route
-  app.post('/api/visit', async (req, res): Promise<any> => {
+  app.post('/api/visit', validateVisitorRegister, async (req, res): Promise<any> => {
     try {
       const { visitorId } = req.body;
-      if (!visitorId || typeof visitorId !== 'string') {
-        return res.status(400).json({ error: 'visitorId is required and must be a valid string' });
-      }
 
       if (isMongoConnected) {
         let visitor = await Visitor.findOne({ visitorId });
@@ -2259,50 +2311,17 @@ async function startServer() {
   });
 
   // Contact Message Route
-  app.post('/api/contact', async (req, res): Promise<any> => {
+  app.post('/api/contact', validateContactMessage, async (req, res): Promise<any> => {
     try {
       const { name, email, phone, subject, message } = req.body;
 
-      // Type checks
-      if (typeof name !== 'string' || typeof email !== 'string' || typeof subject !== 'string' || typeof message !== 'string') {
-        return res.status(400).json({ error: 'All fields must be standard text strings' });
-      }
-
-      // Optional phone validation
-      if (phone !== undefined && typeof phone !== 'string') {
-        return res.status(400).json({ error: 'Phone number format is invalid' });
-      }
-
-      // Length validations
-      const trimmedName = name.trim();
-      const trimmedEmail = email.trim();
-      const trimmedSubject = subject.trim();
-      const trimmedMessage = message.trim();
-      const trimmedPhone = phone ? phone.trim() : '';
-
-      if (!trimmedName || trimmedName.length > 128) {
-        return res.status(400).json({ error: 'Name must be a non-empty string under 128 characters' });
-      }
-      if (!trimmedEmail || trimmedEmail.length > 128 || !trimmedEmail.includes('@')) {
-        return res.status(400).json({ error: 'A valid email under 128 characters is required' });
-      }
-      if (!trimmedSubject || trimmedSubject.length > 256) {
-        return res.status(400).json({ error: 'Subject must be a non-empty string under 256 characters' });
-      }
-      if (!trimmedMessage || trimmedMessage.length > 5000) {
-        return res.status(400).json({ error: 'Message must be a non-empty string under 5000 characters' });
-      }
-      if (trimmedPhone && trimmedPhone.length > 32) {
-        return res.status(400).json({ error: 'Phone number must be under 32 characters' });
-      }
-
       if (isMongoConnected) {
         const m = new Message({
-          name: trimmedName,
-          email: trimmedEmail,
-          phone: trimmedPhone || undefined,
-          subject: trimmedSubject,
-          message: trimmedMessage
+          name,
+          email,
+          phone: phone || undefined,
+          subject,
+          message
         });
         await m.save();
         await syncMessagesToSeedFile();
@@ -2310,11 +2329,11 @@ async function startServer() {
       } else {
         localMessages.unshift({
           _id: "m_f_" + Math.random().toString(36).substring(2, 9),
-          name: trimmedName,
-          email: trimmedEmail,
-          phone: trimmedPhone || undefined,
-          subject: trimmedSubject,
-          message: trimmedMessage,
+          name,
+          email,
+          phone: phone || undefined,
+          subject,
+          message,
           read: false,
           createdAt: new Date()
         } as any);
@@ -2327,38 +2346,25 @@ async function startServer() {
   });
 
   // Newsletter Subscription Route
-  app.post('/api/newsletter/subscribe', async (req, res): Promise<any> => {
+  app.post('/api/newsletter/subscribe', validateNewsletterSubscribe, async (req, res): Promise<any> => {
     try {
       const { email } = req.body;
-      if (typeof email !== 'string') {
-        return res.status(400).json({ error: 'Email must be a standard text string' });
-      }
-
-      const trimmedEmail = email.trim().toLowerCase();
-      if (!trimmedEmail || trimmedEmail.length > 128 || !trimmedEmail.includes('@')) {
-        return res.status(400).json({ error: 'A valid email under 128 characters is required' });
-      }
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-      if (!emailRegex.test(trimmedEmail)) {
-        return res.status(400).json({ error: 'Please enter a valid email address' });
-      }
 
       if (isMongoConnected) {
-        const existing = await Subscriber.findOne({ email: trimmedEmail });
+        const existing = await Subscriber.findOne({ email });
         if (existing) {
           return res.status(400).json({ error: 'This email is already subscribed to our newsletter' });
         }
-        const s = new Subscriber({ email: trimmedEmail });
+        const s = new Subscriber({ email });
         await s.save();
       } else {
-        const existing = localSubscribers.some(s => s.email === trimmedEmail);
+        const existing = localSubscribers.some(s => s.email === email);
         if (existing) {
           return res.status(400).json({ error: 'This email is already subscribed to our newsletter' });
         }
         localSubscribers.unshift({
           _id: "s_f_" + Math.random().toString(36).substring(2, 9),
-          email: trimmedEmail,
+          email,
           createdAt: new Date()
         });
         saveLocalSubscribers();
@@ -2501,7 +2507,7 @@ async function startServer() {
   });
 
   // Footer Social Clicks Tracking Endpoint
-  app.post('/api/analytics/social-click', async (req, res) => {
+  app.post('/api/analytics/social-click', validateSocialClick, async (req, res) => {
     try {
       const { platform } = req.body;
       if (platform === 'instagram' || platform === 'linkedin') {
@@ -2548,7 +2554,7 @@ async function startServer() {
   });
 
   // Filter/Search Analytics Logger Route
-  app.post('/api/analytics/filters', async (req, res) => {
+  app.post('/api/analytics/filters', validateFilterAnalytics, async (req, res) => {
     try {
       const { searchQuery, categoryId, categorySlug } = req.body;
       if (isMongoConnected) {
@@ -2569,7 +2575,7 @@ async function startServer() {
   });
 
   // Page Visit/Session Time Tracker Endpoint
-  app.post('/api/analytics/page-view', async (req, res) => {
+  app.post('/api/analytics/page-view', validatePageViewAnalytics, async (req, res) => {
     try {
       const { pageUrl, timeSpent, browser, device, district } = req.body;
       
@@ -2687,7 +2693,7 @@ async function startServer() {
   });
 
   // PUT update user profile details
-  app.put('/api/user/profile', authenticate, async (req, res): Promise<any> => {
+  app.put('/api/user/profile', authenticate, validateUserProfileUpdate, async (req, res): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const { name, district } = req.body;
@@ -2746,6 +2752,7 @@ async function startServer() {
           localAnalytics.length = 0;
           localVisitors.length = 0;
         }
+        await logSecurityAction(req, 'DATABASE_CLEARED', undefined, { clearOnly: true });
         return res.json({ success: true, message: "Products catalog and logs wiped clean!", products: [] });
       }
 
@@ -2869,6 +2876,7 @@ async function startServer() {
           await Visitor.insertMany(visitorDocs);
 
           const refetched = await Product.find().populate('category');
+          await logSecurityAction(req, 'DATABASE_SEEDED', undefined, { type: 'trending', seedImageOverride });
           return res.json({ success: true, message: "Database seeded with Trending Selections & Popular TN Districts!", products: refetched });
         } else {
           localProducts.length = 0;
@@ -2953,6 +2961,7 @@ async function startServer() {
             localVisitors.push("local_seeded_id_" + idx);
           }
 
+          await logSecurityAction(req, 'DATABASE_SEEDED', undefined, { type: 'trending_local', seedImageOverride });
           return res.json({ success: true, message: "In-memory database seeded with Trending Selections & Popular TN Districts!", products: localProducts });
         }
       }
@@ -2978,6 +2987,7 @@ async function startServer() {
         });
         await Product.insertMany(initialProds);
         const refetched = await Product.find().populate('category');
+        await logSecurityAction(req, 'DATABASE_RESEEDED', undefined, { type: 'standard', seedImageOverride });
         return res.json({ success: true, message: "Database successfully re-seeded with pristine entries!", products: refetched });
       } else {
         localProducts.length = 0;
@@ -2987,6 +2997,7 @@ async function startServer() {
           }
           return p;
         }));
+        await logSecurityAction(req, 'DATABASE_RESEEDED', undefined, { type: 'standard_local', seedImageOverride });
         return res.json({ success: true, message: "In-memory database successfully re-seeded!", products: localProducts });
       }
     } catch (error: any) {
@@ -3015,7 +3026,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/products', adminOnly, async (req, res): Promise<any> => {
+  app.post('/api/admin/products', adminOnly, validateAdminProduct, async (req, res): Promise<any> => {
     try {
       const payload = cleanUndefined(req.body);
       const proposedSlug = payload.slug || payload.name;
@@ -3033,6 +3044,7 @@ async function startServer() {
         const product = new Product({ ...payload, slug: finalSlug });
         await product.save();
         await syncProductsToSeedFile();
+        await logSecurityAction(req, 'PRODUCT_CREATED', product._id.toString(), { name: product.name, slug: finalSlug });
         res.json(product);
       } else {
         const newProduct = {
@@ -3048,6 +3060,7 @@ async function startServer() {
         };
         localProducts.unshift(newProduct);
         await syncProductsToSeedFile();
+        await logSecurityAction(req, 'PRODUCT_CREATED', newProduct._id, { name: newProduct.name, slug: finalSlug });
         res.json(newProduct);
       }
     } catch (error: any) {
@@ -3055,7 +3068,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/admin/products/:id', adminOnly, async (req, res): Promise<any> => {
+  app.put('/api/admin/products/:id', adminOnly, validateAdminProduct, async (req, res): Promise<any> => {
     try {
       const pId = req.params.id;
       const payload = cleanUndefined(req.body);
@@ -3076,6 +3089,7 @@ async function startServer() {
       if (isMongoConnected) {
         const product = await Product.findByIdAndUpdate(pId, payload, { new: true });
         await syncProductsToSeedFile();
+        await logSecurityAction(req, 'PRODUCT_UPDATED', pId, { name: product?.name, slug: product?.slug });
         return res.json(product);
       } else {
         const index = localProducts.findIndex(p => p._id === pId);
@@ -3087,6 +3101,7 @@ async function startServer() {
           updatedAt: new Date()
         };
         await syncProductsToSeedFile();
+        await logSecurityAction(req, 'PRODUCT_UPDATED', pId, { name: localProducts[index].name, slug: localProducts[index].slug });
         return res.json(localProducts[index]);
       }
     } catch (error: any) {
@@ -3098,18 +3113,25 @@ async function startServer() {
     try {
       const pId = req.params.id;
       if (isMongoConnected) {
+        let deletedProduct: any = null;
+        try {
+          deletedProduct = await Product.findById(pId);
+        } catch (e) {}
         if (mongoose.Types.ObjectId.isValid(pId)) {
           await Product.findByIdAndDelete(pId);
         } else {
           await Product.deleteOne({ _id: pId });
         }
         await syncProductsToSeedFile();
+        await logSecurityAction(req, 'PRODUCT_DELETED', pId, { name: deletedProduct?.name, slug: deletedProduct?.slug });
         return res.json({ success: true });
       } else {
         const index = localProducts.findIndex(p => p._id === pId || (p as any).id === pId);
         if (index === -1) return res.status(404).json({ error: 'Product not found' });
+        const deletedProduct = localProducts[index];
         localProducts.splice(index, 1);
         await syncProductsToSeedFile();
+        await logSecurityAction(req, 'PRODUCT_DELETED', pId, { name: deletedProduct.name, slug: deletedProduct.slug });
         return res.json({ success: true });
       }
     } catch (error: any) {
@@ -3118,7 +3140,7 @@ async function startServer() {
   });
 
   // Categories CRUD
-  app.post('/api/admin/categories', adminOnly, async (req, res) => {
+  app.post('/api/admin/categories', adminOnly, validateAdminCategory, async (req, res) => {
     try {
       const payload = req.body;
       const slug = payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -3127,6 +3149,7 @@ async function startServer() {
         const category = new Category({ ...payload, slug });
         await category.save();
         await syncCategoriesToSeedFile();
+        await logSecurityAction(req, 'CATEGORY_CREATED', category._id.toString(), { name: category.name, slug });
         res.json(category);
       } else {
         const newCat = {
@@ -3137,6 +3160,7 @@ async function startServer() {
         };
         localCategories.push(newCat);
         await syncCategoriesToSeedFile();
+        await logSecurityAction(req, 'CATEGORY_CREATED', newCat._id, { name: newCat.name, slug });
         res.json(newCat);
       }
     } catch (error: any) {
@@ -3144,12 +3168,13 @@ async function startServer() {
     }
   });
 
-  app.put('/api/admin/categories/:id', adminOnly, async (req, res): Promise<any> => {
+  app.put('/api/admin/categories/:id', adminOnly, validateAdminCategory, async (req, res): Promise<any> => {
     try {
       const catId = req.params.id;
       if (isMongoConnected) {
         const category = await Category.findByIdAndUpdate(catId, req.body, { new: true });
         await syncCategoriesToSeedFile();
+        await logSecurityAction(req, 'CATEGORY_UPDATED', catId, { name: category?.name, slug: category?.slug });
         return res.json(category);
       } else {
         const index = localCategories.findIndex(c => c._id === catId);
@@ -3159,6 +3184,7 @@ async function startServer() {
           ...req.body
         };
         await syncCategoriesToSeedFile();
+        await logSecurityAction(req, 'CATEGORY_UPDATED', catId, { name: localCategories[index].name, slug: localCategories[index].slug });
         return res.json(localCategories[index]);
       }
     } catch (error: any) {
@@ -3170,14 +3196,21 @@ async function startServer() {
     try {
       const catId = req.params.id;
       if (isMongoConnected) {
+        let deletedCat: any = null;
+        try {
+          deletedCat = await Category.findById(catId);
+        } catch (e) {}
         await Category.findByIdAndDelete(catId);
         await syncCategoriesToSeedFile();
+        await logSecurityAction(req, 'CATEGORY_DELETED', catId, { name: deletedCat?.name, slug: deletedCat?.slug });
         return res.json({ success: true });
       } else {
         const index = localCategories.findIndex(c => c._id === catId);
         if (index === -1) return res.status(404).json({ error: 'Category not found' });
+        const deletedCat = localCategories[index];
         localCategories.splice(index, 1);
         await syncCategoriesToSeedFile();
+        await logSecurityAction(req, 'CATEGORY_DELETED', catId, { name: deletedCat.name, slug: deletedCat.slug });
         return res.json({ success: true });
       }
     } catch (error: any) {
@@ -3186,7 +3219,7 @@ async function startServer() {
   });
 
   // Blogs CRUD
-  app.post('/api/admin/blogs', adminOnly, async (req, res): Promise<any> => {
+  app.post('/api/admin/blogs', adminOnly, validateAdminBlog, async (req, res): Promise<any> => {
     try {
       const payload = req.body;
       const proposedSlug = payload.slug || payload.title;
@@ -3204,6 +3237,7 @@ async function startServer() {
         const blog = new Blog({ ...payload, slug: finalSlug });
         await blog.save();
         await syncBlogsToSeedFile();
+        await logSecurityAction(req, 'BLOG_CREATED', blog._id.toString(), { title: blog.title, slug: finalSlug });
         res.json(blog);
       } else {
         const newBlog = {
@@ -3216,6 +3250,7 @@ async function startServer() {
         };
         localBlogs.unshift(newBlog);
         await syncBlogsToSeedFile();
+        await logSecurityAction(req, 'BLOG_CREATED', newBlog._id, { title: newBlog.title, slug: finalSlug });
         res.json(newBlog);
       }
     } catch (error: any) {
@@ -3223,7 +3258,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/admin/blogs/:id', adminOnly, async (req, res): Promise<any> => {
+  app.put('/api/admin/blogs/:id', adminOnly, validateAdminBlog, async (req, res): Promise<any> => {
     try {
       const bId = req.params.id;
       const payload = req.body;
@@ -3244,6 +3279,7 @@ async function startServer() {
       if (isMongoConnected) {
         const blog = await Blog.findByIdAndUpdate(bId, payload, { new: true });
         await syncBlogsToSeedFile();
+        await logSecurityAction(req, 'BLOG_UPDATED', bId, { title: blog?.title, slug: blog?.slug });
         return res.json(blog);
       } else {
         const index = localBlogs.findIndex(b => b._id === bId);
@@ -3254,6 +3290,7 @@ async function startServer() {
           updatedAt: new Date()
         };
         await syncBlogsToSeedFile();
+        await logSecurityAction(req, 'BLOG_UPDATED', bId, { title: localBlogs[index].title, slug: localBlogs[index].slug });
         return res.json(localBlogs[index]);
       }
     } catch (error: any) {
@@ -3265,14 +3302,21 @@ async function startServer() {
     try {
       const bId = req.params.id;
       if (isMongoConnected) {
+        let deletedBlog: any = null;
+        try {
+          deletedBlog = await Blog.findById(bId);
+        } catch (e) {}
         await Blog.findByIdAndDelete(bId);
         await syncBlogsToSeedFile();
+        await logSecurityAction(req, 'BLOG_DELETED', bId, { title: deletedBlog?.title, slug: deletedBlog?.slug });
         return res.json({ success: true });
       } else {
         const index = localBlogs.findIndex(b => b._id === bId);
         if (index === -1) return res.status(404).json({ error: 'Blog not found' });
+        const deletedBlog = localBlogs[index];
         localBlogs.splice(index, 1);
         await syncBlogsToSeedFile();
+        await logSecurityAction(req, 'BLOG_DELETED', bId, { title: deletedBlog.title, slug: deletedBlog.slug });
         return res.json({ success: true });
       }
     } catch (error: any) {
@@ -3362,6 +3406,7 @@ async function startServer() {
         return res.status(404).json({ error: 'Target user account not found.' });
       }
 
+      const oldRole = targetUser.role;
       if (isMongoConnected) {
         targetUser.role = role;
         targetUser.updatedAt = new Date();
@@ -3372,11 +3417,31 @@ async function startServer() {
         saveLocalUsers();
       }
 
+      await logSecurityAction(req, 'USER_ROLE_CHANGED', id, {
+        email: targetUser.email,
+        oldRole,
+        newRole: role
+      });
+
       return res.json({
         success: true,
         message: `Administrative access of "${targetUser.email}" has been successfully updated to "${role}".`,
         user: { _id: targetUser._id || targetUser.id, email: targetUser.email, role }
       });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin Security Logs / Audit Trail
+  app.get('/api/admin/security-logs', adminOnly, async (req, res) => {
+    try {
+      if (isMongoConnected) {
+        const logs = await SecurityLog.find().sort({ timestamp: -1 });
+        res.json(logs);
+      } else {
+        res.json(localSecurityLogs);
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

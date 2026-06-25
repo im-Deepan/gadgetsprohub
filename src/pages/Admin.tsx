@@ -20,7 +20,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const tabContainerRef = useRef<HTMLDivElement>(null);
   
   // Tab selector
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler' | 'users'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler' | 'users' | 'security-logs'>('products');
   const [messagesFilter, setMessagesFilter] = useState<'all' | 'unread'>('all');
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
@@ -28,6 +28,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [expandedVisitorId, setExpandedVisitorId] = useState<string | null>(null);
   const [logsPage, setLogsPage] = useState(1);
   const [productPage, setProductPage] = useState(1);
+  
+  // Security audit trail States
+  const [securityLogs, setSecurityLogs] = useState<any[]>([]);
+  const [securityLogsError, setSecurityLogsError] = useState<string | null>(null);
   
   // Sunday automation States
   const [sundayLogs, setSundayLogs] = useState<any[]>([]);
@@ -317,6 +321,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setTelemetryError(null);
     setSundayLogsError(null);
     setUsersError(null);
+    setSecurityLogsError(null);
 
     let pData: Product[] = [];
     let cData: Category[] = [];
@@ -448,6 +453,24 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       }
     } catch (err: any) {
       setSundayLogsError(err.message || 'Failed code connection for automated scheduler logs.');
+    }
+
+    // 8. Fetch Security Logs (Audit Trail)
+    try {
+      if (token) {
+        const secRes = await fetch('/api/admin/security-logs', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (secRes.ok) {
+          const secData = await secRes.json();
+          setSecurityLogs(secData || []);
+        } else {
+          const errData = await secRes.json().catch(() => ({}));
+          setSecurityLogsError(errData.error || `Failed to fetch Security Logs: status ${secRes.status}`);
+        }
+      }
+    } catch (err: any) {
+      setSecurityLogsError(err.message || 'Failed code connection for security logs.');
     }
 
     // Calculate aggregates safely with whichever metrics loaded successfully
@@ -1319,6 +1342,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'users' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/40'}`}
         >
           👥 No of Users ({users.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('security-logs')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'security-logs' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/40'}`}
+        >
+          🛡️ Audit Logs ({securityLogs.length})
         </button>
       </div>
 
@@ -2282,6 +2311,197 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             })}
                           </tbody>
                         </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
+          ) : activeTab === 'security-logs' ? (
+            securityLogsError ? (
+              <TabErrorView 
+                title="Security Logs Sourcing Error" 
+                message={securityLogsError} 
+                onRetry={loadAdminMetrics} 
+              />
+            ) : (() => {
+              const [selectedActionType, setSelectedActionType] = useState<string>('all');
+              const [searchQuery, setSearchQuery] = useState<string>('');
+              const [localLogsPage, setLocalLogsPage] = useState<number>(1);
+
+              const filteredLogs = securityLogs.filter(log => {
+                const matchesAction = selectedActionType === 'all' || log.action === selectedActionType;
+                const matchesSearch = 
+                  (log.actorEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (log.action || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (log.targetId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  JSON.stringify(log.details || {}).toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesAction && matchesSearch;
+              });
+
+              const LOGS_PER_PAGE = 15;
+              const totalPages = Math.ceil(filteredLogs.length / LOGS_PER_PAGE);
+              const currentPage = Math.min(localLogsPage, Math.max(1, totalPages));
+              const startIndex = (currentPage - 1) * LOGS_PER_PAGE;
+              const paginatedLogs = filteredLogs.slice(startIndex, startIndex + LOGS_PER_PAGE);
+
+              const actionTypes = Array.from(new Set(securityLogs.map(l => l.action)));
+
+              const getActionBadgeClass = (action: string) => {
+                if (action.endsWith('_DELETED') || action === 'DATABASE_CLEARED') {
+                  return 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/40 dark:text-rose-350 dark:border-rose-900/40';
+                }
+                if (action.endsWith('_CREATED') || action.endsWith('_SEEDED')) {
+                  return 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-350 dark:border-emerald-900/40';
+                }
+                if (action.endsWith('_UPDATED') || action.endsWith('_RESEEDED')) {
+                  return 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/40 dark:text-amber-350 dark:border-amber-900/40';
+                }
+                return 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-350 dark:border-indigo-900/40';
+              };
+
+              return (
+                <div className="space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-xs font-black uppercase text-indigo-600 tracking-wider">Security & Compliance Audit Trail</h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5 font-sans font-medium">Immutable trace log recording sensitive administrative actions and privilege changes.</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-1.5 dark:bg-slate-900 dark:border-slate-800">
+                        <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-400 uppercase">
+                          TOTAL AUDITED ACTIONS: {securityLogs.length}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Filters bar */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100 dark:bg-zinc-900/20 dark:border-slate-850">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Search Logs</label>
+                      <input 
+                        type="text"
+                        placeholder="Search actor, target, metadata..."
+                        value={searchQuery}
+                        onChange={(e) => { setSearchQuery(e.target.value); setLocalLogsPage(1); }}
+                        className="w-full text-xs bg-white dark:bg-zinc-900 border border-slate-200 dark:border-slate-850 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-350 focus:outline-hidden focus:border-indigo-500 font-sans"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Filter Action Type</label>
+                      <select
+                        value={selectedActionType}
+                        onChange={(e) => { setSelectedActionType(e.target.value); setLocalLogsPage(1); }}
+                        className="w-full text-xs bg-white dark:bg-zinc-900 border border-slate-200 dark:border-slate-850 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-350 focus:outline-hidden focus:border-indigo-500 font-sans"
+                      >
+                        <option value="all">All Audited Actions ({securityLogs.length})</option>
+                        {actionTypes.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-end justify-end">
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedActionType('all'); setSearchQuery(''); setLocalLogsPage(1); }}
+                        className="text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700 hover:underline dark:text-indigo-400 transition-all px-2 py-2"
+                      >
+                        Reset Filters
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Table area */}
+                  <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-xs dark:border-slate-800 dark:bg-zinc-900/40">
+                    {paginatedLogs.length === 0 ? (
+                      <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+                        <span className="text-3xl">🛡️</span>
+                        <div className="space-y-1">
+                          <h5 className="text-xs font-black uppercase text-slate-700 dark:text-slate-300">No Security Logs Found</h5>
+                          <p className="text-[11px] text-slate-400 font-medium max-w-sm">
+                            {securityLogs.length === 0 
+                              ? "No security events have been logged yet. Create, edit, delete products/categories/blogs or modify user roles to generate security entries." 
+                              : "No logs matched your active filters. Try loosening your search criteria."}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black uppercase text-slate-400 tracking-wider dark:border-slate-800 dark:bg-zinc-900/20">
+                              <th className="py-3 px-4 font-black">Timestamp</th>
+                              <th className="py-3 px-4 font-black">Actor (Admin Email)</th>
+                              <th className="py-3 px-4 font-black">Action Event</th>
+                              <th className="py-3 px-4 font-black">IP & Location</th>
+                              <th className="py-3 px-4 font-black">Target ID</th>
+                              <th className="py-3 px-4 font-black">Metadata / Details</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50 dark:divide-slate-850">
+                            {paginatedLogs.map((log, index) => {
+                              return (
+                                <tr key={log._id || log.id || index} className="text-xs hover:bg-slate-50/50 transition-colors dark:hover:bg-zinc-850/20">
+                                  <td className="py-3.5 px-4 font-mono text-[10px] text-slate-450 dark:text-slate-500">
+                                    {new Date(log.timestamp).toLocaleString()}
+                                  </td>
+                                  <td className="py-3.5 px-4 font-sans font-bold text-slate-800 dark:text-zinc-200">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[11px] bg-slate-100 text-slate-700 rounded px-1.5 py-0.5 dark:bg-slate-800 dark:text-slate-350 font-mono">
+                                        {log.actorEmail}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="py-3.5 px-4">
+                                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-mono font-black uppercase ${getActionBadgeClass(log.action)}`}>
+                                      {log.action}
+                                    </span>
+                                  </td>
+                                  <td className="py-3.5 px-4 font-mono text-[10px] text-slate-450 dark:text-slate-500">
+                                    <div>IP: {log.ipAddress || '127.0.0.1'}</div>
+                                    <div className="text-[9px] text-slate-400 dark:text-slate-550">UA: {(log.userAgent || '').substring(0, 20)}...</div>
+                                  </td>
+                                  <td className="py-3.5 px-4 font-mono text-[10px] text-slate-500">
+                                    {log.targetId || 'N/A'}
+                                  </td>
+                                  <td className="py-3.5 px-4">
+                                    <div className="text-[10px] bg-slate-50 p-2 rounded-lg border border-slate-100 dark:bg-zinc-900/50 dark:border-slate-800/80 font-mono text-slate-600 dark:text-slate-400 max-w-xs overflow-x-auto">
+                                      {log.details ? JSON.stringify(log.details) : 'None'}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Pagination footer */}
+                    {totalPages > 1 && (
+                      <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setLocalLogsPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:border-slate-850 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-zinc-850/40 disabled:opacity-50 cursor-pointer active:scale-95 transition-all"
+                          >
+                            Prev
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLocalLogsPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:border-slate-850 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-zinc-850/40 disabled:opacity-50 cursor-pointer active:scale-95 transition-all"
+                          >
+                            Next
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
