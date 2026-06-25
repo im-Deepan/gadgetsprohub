@@ -83,7 +83,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [visibleCount, setVisibleCount] = useState(6);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [recentViewed, setRecentViewed] = useState<any[]>([]);
+  const [recentViewed, setRecentViewed] = useState<Product[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [hasClickedFilter, setHasClickedFilter] = useState(false);
   const searchContainerRef = React.useRef<HTMLDivElement>(null);
@@ -101,7 +101,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         if (Array.isArray(parsed)) {
           // Deduplicate based on id & _id
           const seen = new Set<string>();
-          const uniques: any[] = [];
+          const uniques: Product[] = [];
           for (const item of parsed) {
             if (!item) continue;
             const itemId = String(item._id || item.id || '');
@@ -191,7 +191,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           return [];
         }
         if (current.length === 0) {
-          const selected: any[] = [];
+          const selected: Product[] = [];
           const seenBrands = new Set<string>();
           const seenIds = new Set<string>();
           for (const p of allProducts) {
@@ -211,7 +211,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 category: p.category,
                 description: p.description,
                 rating: p.rating
-              });
+              } as Product);
             }
           }
           if (selected.length < 5) {
@@ -231,7 +231,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                   category: p.category,
                   description: p.description,
                   rating: p.rating
-                });
+                } as Product);
               }
             }
           }
@@ -285,7 +285,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
   // Dynamically group products into collections/categories with their latest 4 product images
   const collectionsData = React.useMemo(() => {
-    const list: any[] = [];
+    const list: { category: Category, products: Product[], latestFour: Product[] }[] = [];
 
     // Filter standard categories based on activeCategory
     const filteredCats = activeCategory === 'all' 

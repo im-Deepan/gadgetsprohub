@@ -6,6 +6,7 @@ import { useDeviceType } from '../hooks/useDeviceType';
 import { TabErrorView } from '../components/admin/TabErrorView';
 import { getDistrictEmoji } from '../utils/emoji';
 import { mapErrorToFriendly } from '../utils/errorMapper';
+import { apiFetch } from '../utils/apiClient';
 
 import { AlertDialog } from '../components/admin/AlertDialog';
 import { ConfirmDialog } from '../components/admin/ConfirmDialog';
@@ -30,11 +31,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [productPage, setProductPage] = useState(1);
   
   // Security audit trail States
-  const [securityLogs, setSecurityLogs] = useState<any[]>([]);
+  const [securityLogs, setSecurityLogs] = useState<Array<{ _id?: string; date?: string; userId?: string; user?: { name?: string; email?: string }; action?: string; ipAddress?: string; location?: string; details?: string; timestamp?: string | Date }>>([]);
   const [securityLogsError, setSecurityLogsError] = useState<string | null>(null);
   
   // Sunday automation States
-  const [sundayLogs, setSundayLogs] = useState<any[]>([]);
+  const [sundayLogs, setSundayLogs] = useState<Array<{ _id?: string; sundayDate?: string; productsAdded?: Array<{ name?: string } | string>; status?: string }>>([]);
   const [sundayLogsError, setSundayLogsError] = useState<string | null>(null);
   const [simulatingSunday, setSimulatingSunday] = useState(false);
   
@@ -43,7 +44,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Tab-specific Error states for robust fault-isolation
@@ -134,7 +135,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [seedingInProgress, setSeedingInProgress] = useState(false);
   const [seedingTab, setSeedingTab] = useState<'basic' | 'trending' | 'preview'>('basic');
   const [customSeedImageUrl, setCustomSeedImageUrl] = useState<string>('');
-  const [analyticsData, setAnalyticsData] = useState<any[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<Array<{ _id?: string; date?: string; activeVisitors?: number; platform?: string; bounceRate?: string; path?: string; sessionDuration?: string; event?: string; timestamp?: string | Date; pageUrl?: string; productId?: { name?: string }; browser?: string; device?: string; ipAddress?: string; stayDuration?: number; userId?: { name?: string; email?: string }; eventType?: string; timeSpent?: number; district?: string }>>([]);
   const [refreshingTraffic, setRefreshingTraffic] = useState(false);
 
   // Stats Counters
@@ -243,7 +244,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       setSlugChecking(true);
       try {
         const excludeQuery = editingProduct ? `&excludeId=${editingProduct._id}` : '';
-        const res = await fetch(`/api/admin/check-slug?slug=${encodeURIComponent(proposed)}&type=product${excludeQuery}`, {
+        const res = await apiFetch(`/api/admin/check-slug?slug=${encodeURIComponent(proposed)}&type=product${excludeQuery}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -303,8 +304,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           const uData = await usersRes.json();
           setUsers(uData || []);
         }
-      } catch (err: any) {
-        console.warn("User list synchronization polling failed:", err.message);
+      } catch (err: unknown) {
+        const errorObj = err as { message?: string };
+        console.warn("User list synchronization polling failed:", errorObj.message);
       }
     }, 3000);
 
@@ -345,9 +347,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         console.error('Products fetch error:', errJson);
         setProductsError(errJson.error || `Failed to fetch Catalog: Status ${prodRes.status}`);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorObj = e as { message?: string };
       console.error('Products fetch exception:', e);
-      setProductsError(e.message || "Failed to connect to Catalog server.");
+      setProductsError(errorObj.message || "Failed to connect to Catalog server.");
     }
 
     // 2. Fetch Classification Categories
@@ -360,8 +363,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const errJson = await catRes.json().catch(() => ({}));
         setCategoriesError(errJson.error || `Failed to fetch Classifications: Status ${catRes.status}`);
       }
-    } catch (e: any) {
-      setCategoriesError(e.message || "Failed to connect to Classifications server.");
+    } catch (e: unknown) {
+      const errorObj = e as { message?: string };
+      setCategoriesError(errorObj.message || "Failed to connect to Classifications server.");
     }
 
     // 3. Fetch Blog Guide Manuals
@@ -375,8 +379,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const errJson = await blogRes.json().catch(() => ({}));
         setBlogsError(errJson.error || `Failed to fetch Manual Guides: Status ${blogRes.status}`);
       }
-    } catch (e: any) {
-      setBlogsError(e.message || "Failed to connect to Manual Guides server.");
+    } catch (e: unknown) {
+      const errorObj = e as { message?: string };
+      setBlogsError(errorObj.message || "Failed to connect to Manual Guides server.");
     }
 
     // 4. Fetch Message Inquiries
@@ -389,8 +394,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const errJson = await msgRes.json().catch(() => ({}));
         setMessagesError(errJson.error || `Failed to fetch Help Inquiries: Status ${msgRes.status}`);
       }
-    } catch (e: any) {
-      setMessagesError(e.message || "Failed to connect to Help Inquiries server.");
+    } catch (e: unknown) {
+      const errorObj = e as { message?: string };
+      setMessagesError(errorObj.message || "Failed to connect to Help Inquiries server.");
     }
 
     // 5. Fetch Traffic Logs Telemetry
@@ -413,8 +419,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const errJson = await analyticsRes.json().catch(() => ({}));
         setTelemetryError(errJson.error || `Failed to fetch Traffic logs: Status ${analyticsRes.status}`);
       }
-    } catch (e: any) {
-      setTelemetryError(e.message || "Failed to connect to Traffic Analytics server.");
+    } catch (e: unknown) {
+      const errorObj = e as { message?: string };
+      setTelemetryError(errorObj.message || "Failed to connect to Traffic Analytics server.");
     }
 
     // 6. Fetch User Accounts Sourcing
@@ -431,8 +438,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           setUsersError(errData.error || `Failed to fetch User Accounts: status ${usersRes.status}`);
         }
       }
-    } catch (e: any) {
-      setUsersError(e.message || "Failed to connect to User Accounts server.");
+    } catch (e: unknown) {
+      const errorObj = e as { message?: string };
+      setUsersError(errorObj.message || "Failed to connect to User Accounts server.");
     }
 
     // 6b. Fetch Active Pending Elevations/Demotions skipped (Direct flow enabled)
@@ -451,8 +459,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           setSundayLogsError(errData.error || `Failed to fetch Sunday Logs: status ${logsRes.status}`);
         }
       }
-    } catch (err: any) {
-      setSundayLogsError(err.message || 'Failed code connection for automated scheduler logs.');
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
+      setSundayLogsError(errorObj.message || 'Failed code connection for automated scheduler logs.');
     }
 
     // 8. Fetch Security Logs (Audit Trail)
@@ -469,8 +478,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           setSecurityLogsError(errData.error || `Failed to fetch Security Logs: status ${secRes.status}`);
         }
       }
-    } catch (err: any) {
-      setSecurityLogsError(err.message || 'Failed code connection for security logs.');
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
+      setSecurityLogsError(errorObj.message || 'Failed code connection for security logs.');
     }
 
     // Calculate aggregates safely with whichever metrics loaded successfully
@@ -498,7 +508,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setRefreshingTraffic(true);
     try {
       await loadAdminMetrics();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("Error reloading metrics:", err);
     } finally {
       setRefreshingTraffic(false);
@@ -506,7 +516,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   };
 
   const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'admin', adminPasswordValue: string) => {
-    if (userId === user?._id || userId === (user as any)?.id) {
+    if (userId === user?._id || userId === (user as { id?: string })?.id) {
       triggerAlert("Permission Denied", "You cannot demote or modify your own administrator role profile status.");
       return;
     }
@@ -534,8 +544,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const err = await res.json().catch(() => ({}));
         triggerAlert("Change Failed", err.error || "Failed to update member role privilege level.");
       }
-    } catch (err: any) {
-      triggerAlert("Change Failed", err.message || "Network communication error occurred.");
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
+      triggerAlert("Change Failed", errorObj.message || "Network communication error occurred.");
     } finally {
       setUpdatingUserRole(null);
     }
@@ -563,7 +574,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Action Failed", err.error || "Failed to restore default seed data.");
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Seeding error:", err);
           triggerAlert("Action Failed", "An error occurred while seeding: " + err.message);
         } finally {
@@ -596,7 +607,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Action Failed", err.error || "Failed to clear products catalog.");
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Clearing catalog error:", err);
           triggerAlert("Action Failed", "An error occurred while wiping: " + err.message);
         } finally {
@@ -629,7 +640,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Action Failed", err.error || "Failed to seed Trending Selections.");
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Seeding trending selections error:", err);
           triggerAlert("Action Failed", "An error occurred while seeding: " + err.message);
         } finally {
@@ -770,8 +781,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   const reErr = await reRes.json().catch(() => ({}));
                   triggerAlert("Submission Failed", reErr.error || "The server rejected the product submission.");
                 }
-              } catch (reErr: any) {
-                triggerAlert("Submission Error", "An error occurred during submission: " + reErr.message);
+              } catch (reErr: unknown) {
+                const errorObj = reErr as { message?: string };
+                triggerAlert("Submission Error", "An error occurred during submission: " + errorObj.message);
               }
             },
             { confirmText: "Use Suggested Suffix", cancelText: "Cancel" }
@@ -780,7 +792,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           triggerAlert("Submission Failed", err.error || "The server rejected the product submission. Please verify fields format.");
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("Product form submission error:", err);
       triggerAlert("Submission Error", "An error occurred during submission: " + err.message);
     }
@@ -863,7 +875,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Deletion Failed", err.error || "The server rejected the deletion request.");
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           console.warn("Product deletion failing:", e);
           triggerAlert("Network Error", e.message || "Failed to make deletion request to the database server.");
         }
@@ -909,7 +921,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const err = await res.json().catch(() => ({}));
         triggerAlert("Failed to Save Category", err.error || "The server rejected the category request.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Category adding/updating failed:', err);
       triggerAlert("Error", "An error occurred while saving the category: " + err.message);
     }
@@ -949,7 +961,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Deletion Failed", err.error || "The server rejected the category deletion request.");
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           console.warn("Category deletion failure:", e);
           triggerAlert("Network Error", e.message || "Failed to contact the backend server.");
         }
@@ -977,8 +989,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const errJson = await res.json().catch(() => ({}));
         triggerAlert("Simulation Blocked", errJson.error || "The server rejected the simulation trigger.");
       }
-    } catch (e: any) {
-      triggerAlert("Simulation Failure", e.message || "Failed to trigger Sunday scheduling routine.");
+    } catch (e: unknown) {
+      const errorObj = e as { message?: string };
+      triggerAlert("Simulation Failure", errorObj.message || "Failed to trigger Sunday scheduling routine.");
     } finally {
       setSimulatingSunday(false);
     }
@@ -2051,7 +2064,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {sundayLogs.map((log: any, idx: number) => (
+                            {sundayLogs.map((log, idx: number) => (
                               <tr key={log._id || log.sundayDate || `log-${idx}`} className="hover:bg-slate-50/20 dark:hover:bg-slate-800/20">
                                 <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-zinc-200">
                                   {log.sundayDate}
@@ -2071,7 +2084,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 <td className="py-3 px-4 max-w-[200px] truncate">
                                   <span className="text-slate-800 dark:text-slate-300 font-sans font-medium">
                                     {Array.isArray(log.productsAdded) 
-                                      ? log.productsAdded.map((p: any) => typeof p === 'object' ? p.name : p).join(', ')
+                                      ? log.productsAdded?.map((p) => typeof p === 'object' && p !== null ? (p as { name?: string }).name : String(p)).join(', ')
                                       : log.productsAdded || 'N/A'
                                     }
                                   </span>
@@ -2254,9 +2267,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {filteredUsers.map((usr: any, idx: number) => {
+                            {filteredUsers.map((usr: User, idx: number) => {
                               const usrId = usr._id || usr.id || `usr-${idx}`;
-                              const isSelf = usrId === user?._id || usrId === (user as any)?.id;
+                              const isSelf = usrId === user?._id || usrId === (user as { id?: string })?.id;
                               const isCurrentAdmin = usr.role === 'admin';
 
                               return (

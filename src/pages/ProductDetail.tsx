@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Product } from '../types';
+import { Product, Category } from '../types';
 import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, ShieldCheck, CheckCheck, MessageSquare, Plus, Check, X, BookmarkCheck, Edit, Sparkles, Box, CheckCircle, Video, Play, Copy, Share2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -32,7 +32,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const [showVideo, setShowVideo] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [showRedirectingModal, setShowRedirectingModal] = useState(false);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [allProductsSequence, setAllProductsSequence] = useState<Product[]>([]);
   
   // Direct Product Live Edit
@@ -84,9 +84,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         showToast("Product details shared successfully!", "success", 4000, "User Action");
         setShared(true);
         setTimeout(() => setShared(false), 2000);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errorObj = err as { name?: string };
         // If the user cancelled or aborted, don't show error
-        if (err.name !== 'AbortError') {
+        if (errorObj.name !== 'AbortError') {
           console.error("Error sharing:", err);
           fallbackShareToClipboard();
         }
@@ -148,7 +149,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     setOrderLoading(true);
     try {
       const orderItems = [{ product: product._id, quantity: 1, price: product.price }];
-      const orderRes = await fetch('/api/user/orders', {
+      const orderRes = await apiFetch('/api/user/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -193,7 +194,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         try {
           safeRemoveItem('aff_history_cleared');
           const stored = safeGetItem('aff_recent_viewed');
-          let recents: any[] = stored ? JSON.parse(stored) : [];
+          let recents: Product[] = stored ? JSON.parse(stored) : [];
           // Keep only simple info to avoid large sizes
           const productSummary = {
             _id: data._id,
@@ -207,7 +208,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             category: data.category,
             description: data.description,
             rating: data.rating
-          };
+          } as Product;
           recents = recents.filter(p => p._id !== data._id);
           recents.unshift(productSummary);
           recents = recents.slice(0, 10); // Keep last 10
@@ -240,8 +241,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           setLoading(false);
         }
       }
-    } catch (e: any) {
-      if (e.name !== 'AbortError') {
+    } catch (e: unknown) {
+      const errorObj = e as { name?: string };
+      if (errorObj.name !== 'AbortError') {
         console.warn("Error retrieving specifications catalog details:", e);
       }
       if (!signal?.aborted) {
@@ -307,7 +309,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         specifications: specificationsObj
       };
 
-      const res = await fetch(`/api/admin/products/${product._id}`, {
+      const res = await apiFetch(`/api/admin/products/${product._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -420,7 +422,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     try {
       const preferredCity = safeGetItem('aff_preferred_city') || 'Chennai';
       // Trigger API endpoint click tracking logging
-      await fetch(`/api/products/click/${product.slug}`, {
+      await apiFetch(`/api/products/click/${product.slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id, district: user?.district || preferredCity })
@@ -446,7 +448,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     setReviewSuccess(false);
 
     try {
-      const resp = await fetch(`/api/products/${product._id}/reviews`, {
+      const resp = await apiFetch(`/api/products/${product._id}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -471,7 +473,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       setReviewContent('');
       setReviewSuccess(true);
       showToast("Thank you! Your product review has been successfully registered.", "success", 4000, "User Action");
-    } catch (err: any) {
+    } catch (err: unknown) {
       const friendly = mapErrorToFriendly(err, "submit product review");
       setReviewError(friendly.message);
       showToast(friendly.message, friendly.type, 4000, friendly.category);

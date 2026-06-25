@@ -179,7 +179,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/user/profile', {
+      const res = await apiFetch('/api/user/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

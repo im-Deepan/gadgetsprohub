@@ -316,8 +316,9 @@ const AppContent: React.FC = () => {
         } else {
           console.log("Database connectivity verified on start.");
         }
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
+      } catch (err: unknown) {
+        const errorObj = err as { name?: string };
+        if (errorObj.name !== 'AbortError') {
           console.warn("Database connectivity check failed to execute:", err);
           showToast("Synchronized successfully in offline mode. Accessing local catalog backups.", "info", 4000, "Connectivity");
         }
@@ -541,8 +542,9 @@ const AppContent: React.FC = () => {
             }
             return;
           }
-        } catch (err: any) {
-          if (err.name !== 'AbortError') {
+        } catch (err: unknown) {
+          const errorObj = err as { name?: string };
+          if (errorObj.name !== 'AbortError') {
             console.warn("Could not retrieve custom dynamic meta details for product-detail view:", err);
           }
         }
@@ -569,8 +571,9 @@ const AppContent: React.FC = () => {
             }
             return;
           }
-        } catch (err: any) {
-          if (err.name !== 'AbortError') {
+        } catch (err: unknown) {
+          const errorObj = err as { name?: string };
+          if (errorObj.name !== 'AbortError') {
             console.warn("Could not retrieve custom dynamic meta details for blog-detail view:", err);
           }
         }

@@ -1275,7 +1275,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   onClick={() => {
                     if (!specModalProduct) return;
                     // Track affiliate clicks as well
-                    fetch(`/api/products/click/${specModalProduct.slug}`, {
+                    apiFetch(`/api/products/click/${specModalProduct.slug}`, {
                       method: 'POST',
                       headers: {'Content-Type': 'application/json'}
                     }).catch(() => {});

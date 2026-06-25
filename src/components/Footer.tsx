@@ -49,7 +49,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
   // Track social clicks helper
   const trackSocialClick = async (platform: 'instagram' | 'linkedin') => {
     try {
-      fetch('/api/analytics/social-click', {
+      apiFetch('/api/analytics/social-click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform })
@@ -66,7 +66,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
     setLoading(true);
     setErrorText('');
     try {
-      const res = await fetch('/api/newsletter/subscribe', {
+      const res = await apiFetch('/api/newsletter/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

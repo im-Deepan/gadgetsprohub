@@ -5,6 +5,7 @@ import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPass
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { useToast } from './ToastContext';
+import { apiFetch } from '../utils/apiClient';
 
 interface AuthContextType {
   user: User | null;
@@ -46,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     try {
-      const res = await fetch('/api/user/profile', {
+      const res = await apiFetch('/api/user/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -60,11 +61,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.role,
           profileImage: data.profileImage,
           district: data.district || 'Chennai',
-          wishlist: data.wishlist?.map((p: any) => p._id || p) || [],
+          wishlist: data.wishlist?.map((p: { _id?: string } | string) => typeof p === 'string' ? p : (p._id || p)) || [],
           isVerified: data.isVerified ?? true,
           pendingEmail: data.pendingEmail
         });
-        setWishlist(data.wishlist?.map((p: any) => p._id || p) || []);
+        setWishlist(data.wishlist?.map((p: { _id?: string } | string) => typeof p === 'string' ? p : (p._id || p)) || []);
       } else if (res.status === 401 || res.status === 403) {
         // Safe logout processing without ending loading prematurely
         safeRemoveItem('aff_token');
