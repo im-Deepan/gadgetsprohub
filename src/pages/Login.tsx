@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import { Lock, Mail, User, ShieldCheck, Heading, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { loginSchema, registerSchema } from '../utils/schemas';
+import { apiFetch } from '../utils/apiClient';
 
 interface LoginProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -150,6 +152,15 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     setAuthError('');
 
     if (activeTab === 'login') {
+      const validation = loginSchema.safeParse({ email, password });
+      if (!validation.success) {
+        const errorMsg = validation.error.issues[0]?.message || 'Please check your login details.';
+        setAuthError(errorMsg);
+        showToast(errorMsg, 'warning', 4000, "User Action");
+        setSubmitting(false);
+        return;
+      }
+
       const res = await login(email, password);
       if (!res.success) {
         const errorMsg = res.error || 'The credentials you entered are incorrect. Please verify and try again.';
@@ -162,7 +173,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         showToast('Successfully verified credentials. Welcome back to your affiliate portal!', 'success', 4000, "User Action");
         if (subscribeNewsletter) {
           try {
-            await fetch('/api/newsletter/subscribe', {
+            await apiFetch('/api/newsletter/subscribe', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email })
@@ -173,12 +184,15 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         }
       }
     } else {
-      if (!name) {
-        setAuthError('A profile name is required.');
-        showToast('Please check that a profile name has been provided.', 'warning', 4000, "User Action");
+      const validation = registerSchema.safeParse({ email, password, name });
+      if (!validation.success) {
+        const errorMsg = validation.error.issues[0]?.message || 'Please check your registration details.';
+        setAuthError(errorMsg);
+        showToast(errorMsg, 'warning', 4000, "User Action");
         setSubmitting(false);
         return;
       }
+
       const res = await register(email, password, name);
       if (!res.success) {
         const errorMsg = res.error || 'The system was unable to complete your registration. Please check inputs and try again.';
@@ -196,7 +210,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         }
         if (subscribeNewsletter) {
           try {
-            await fetch('/api/newsletter/subscribe', {
+            await apiFetch('/api/newsletter/subscribe', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email })

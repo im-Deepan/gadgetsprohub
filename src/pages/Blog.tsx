@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '../utils/apiClient';
 import { Blog } from '../types';
 import { Search, Compass, BookOpen, Clock, ChevronRight } from 'lucide-react';
 import { AdSenseBanner } from '../components/AdSenseBanner';
@@ -22,33 +24,26 @@ const BlogCardSkeleton = () => (
 );
 
 export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
-  const [blogs, setBlogs] = useState<Blog[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedSub, setSelectedSub] = useState('');
 
-  const fetchBlogsList = async () => {
-    setLoading(true);
-    try {
+  const { data: blogsData, isLoading: queryLoading, isFetching: queryFetching } = useQuery({
+    queryKey: ['blogs', search, selectedSub],
+    queryFn: async ({ signal }) => {
       const q = new URLSearchParams();
       if (search) q.append('search', search);
       if (selectedSub) q.append('category', selectedSub);
       
-      const res = await fetch(`/api/blogs?${q.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setBlogs(data?.blogs || []);
-      }
-    } catch (e) {
-      console.warn("Failing to synchronize blog posts database list:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const res = await apiFetch(`/api/blogs?${q.toString()}`, { signal });
+      if (!res.ok) throw new Error('Failed to fetch blogs');
+      const data = await res.json();
+      return data?.blogs || [];
+    },
+    placeholderData: (previousData) => previousData
+  });
 
-  useEffect(() => {
-    fetchBlogsList();
-  }, [search, selectedSub]);
+  const blogs = blogsData || [];
+  const loading = queryLoading || queryFetching;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 transition-colors duration-300">

@@ -14,6 +14,7 @@ import { ReviewForm } from '../components/product/ReviewForm';
 import { getCategoryId, getCategoryName } from '../utils/category';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
+import { apiFetch } from '../utils/apiClient';
 
 interface ProductDetailProps {
   productSlug: string;
@@ -177,12 +178,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   };
 
   // Sourcing product stats
-  const loadProductStats = async () => {
+  const loadProductStats = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/products/${productSlug}`);
+      const res = await apiFetch(`/api/products/${productSlug}`, { signal });
       if (res.ok) {
         const data = await res.json();
+        if (signal?.aborted) return;
         setProduct(data);
         setActiveImageIdx(0);
         setShowVideo(false);
@@ -219,23 +221,32 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         
         // Fetch related products in the background so it doesn't block loading
         const catId = getCategoryId(data.category);
-        fetch(`/api/products?category=${catId}&limit=4`)
+        apiFetch(`/api/products?category=${catId}&limit=4`, { signal })
           .then(async (relRes) => {
             if (relRes.ok) {
               const relData = await relRes.json();
+              if (signal?.aborted) return;
               const filtered = (relData.products || []).filter((p: Product) => p._id !== data._id);
               setRelatedProducts(filtered);
             }
           })
           .catch(err => {
-            console.warn("Background fetch of related specifications failed:", err);
+            if (err.name !== 'AbortError') {
+              console.warn("Background fetch of related specifications failed:", err);
+            }
           });
       } else {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
+      }
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        console.warn("Error retrieving specifications catalog details:", e);
+      }
+      if (!signal?.aborted) {
         setLoading(false);
       }
-    } catch (e) {
-      console.warn("Error retrieving specifications catalog details:", e);
-      setLoading(false);
     }
   };
 
@@ -340,27 +351,47 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   }, [product]);
 
   useEffect(() => {
+    const controller = new AbortController();
     if (productSlug) {
-      loadProductStats();
+      loadProductStats(controller.signal);
     }
+    return () => {
+      controller.abort();
+    };
   }, [productSlug]);
 
   useEffect(() => {
-    fetch('/api/categories')
+    const controller = new AbortController();
+    apiFetch('/api/categories', { signal: controller.signal })
       .then(res => { if (res.ok) return res.json(); })
-      .then(data => { if (data) setCategories(data); })
-      .catch(err => console.warn("Could not fetch categories list in details:", err));
+      .then(data => { if (data && !controller.signal.aborted) setCategories(data); })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.warn("Could not fetch categories list in details:", err);
+        }
+      });
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
-    fetch('/api/products?limit=100')
+    const controller = new AbortController();
+    apiFetch('/api/products?limit=100', { signal: controller.signal })
       .then(res => { if (res.ok) return res.json(); })
       .then(data => {
-        if (data && data.products) {
+        if (data && data.products && !controller.signal.aborted) {
           setAllProductsSequence(data.products);
         }
       })
-      .catch(err => console.warn("Could not load products sequence in details:", err));
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.warn("Could not load products sequence in details:", err);
+        }
+      });
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   // Click tracker and external routing proxy

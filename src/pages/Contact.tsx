@@ -3,6 +3,8 @@ import { Mail, Phone, MapPin, Send, MessageSquareText, ShieldAlert, ShieldCheck,
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, isFirebaseMock, OperationType, handleFirestoreError } from '../firebase';
 import { mapErrorToFriendly } from '../utils/errorMapper';
+import { contactSchema } from '../utils/schemas';
+import { apiFetch } from '../utils/apiClient';
 
 export const Contact: React.FC = () => {
   // States
@@ -28,48 +30,33 @@ export const Contact: React.FC = () => {
     setErrorMsg('');
     setSuccess(false);
 
-    if (!name.trim() || name.trim().length < 2) {
-      const msg = 'Please enter your full name.';
-      setErrorMsg(msg);
-      setErrorMessage(msg);
+    // Run type-safe Zod validation
+    const result = contactSchema.safeParse({
+      name,
+      email,
+      phone: phone || undefined,
+      subject: subject || undefined,
+      message
+    });
+
+    if (!result.success) {
+      // Extract the first error message
+      const firstError = result.error.issues[0]?.message || 'Invalid form input.';
+      setErrorMsg(firstError);
+      setErrorMessage(firstError);
       setShowErrorModal(true);
       setSubmitting(false);
       return;
     }
 
-    if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
-      const msg = 'Please enter a valid email address.';
-      setErrorMsg(msg);
-      setErrorMessage(msg);
-      setShowErrorModal(true);
-      setSubmitting(false);
-      return;
-    }
-    
-    if (phone && phone.trim() !== '' && !/^\+?[0-9\s\-()\.]{7,20}$/.test(phone)) {
-      const msg = 'Please enter a valid phone number.';
-      setErrorMsg(msg);
-      setErrorMessage(msg);
-      setShowErrorModal(true);
-      setSubmitting(false);
-      return;
-    }
-
-    if (!message.trim() || message.trim().length < 10) {
-      const msg = 'Please enter a message with at least 10 characters.';
-      setErrorMsg(msg);
-      setErrorMessage(msg);
-      setShowErrorModal(true);
-      setSubmitting(false);
-      return;
-    }
+    const validatedData = result.data;
 
     try {
       // 1. Submit to main API server proxy (which handles MongoDB/Local state)
-      const res = await fetch('/api/contact', {
+      const res = await apiFetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, subject, message })
+        body: JSON.stringify(validatedData)
       });
       const data = await res.json();
       

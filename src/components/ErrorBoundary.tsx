@@ -24,6 +24,21 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Uncaught error caught by ErrorBoundary:', error, errorInfo);
+    
+    // Mock error reporting service logging
+    const detailedPayload = {
+      timestamp: new Date().toISOString(),
+      errorName: error.name || 'UnknownError',
+      errorMessage: error.message || 'No error message available',
+      stackTrace: error.stack || 'No stack trace available',
+      componentStack: errorInfo.componentStack || 'No component stack available',
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+    };
+    
+    console.group('=== MOCK ERROR REPORTING SERVICE ===');
+    console.warn('[LOGGED TO CLOUD SENTRY/MONITORING]', detailedPayload);
+    console.groupEnd();
   }
 
   handleRetry = () => {
@@ -48,7 +63,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             
             <h1 className="text-xl font-semibold tracking-tight mb-2">Notice: Something didn't load quite right</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
-              We encountered a temporary issue while loading this section. Try clicking the primary retry button below or reloading your browser.
+              We encountered a temporary issue while loading this section. Try clicking the 'Try Again' button below or reloading your browser.
             </p>
 
             {this.state.error && (
@@ -66,7 +81,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 mr-2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                 </svg>
-                Retry Loading View
+                Try Again
               </button>
               
               <div className="flex gap-2.5">

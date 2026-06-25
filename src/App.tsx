@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { QueryClient, QueryClientProvider, useIsFetching, useIsMutating } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider, useToast } from './context/ToastContext';
@@ -275,6 +276,10 @@ const ViewLoader: React.FC = () => {
 const AppContent: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+
+  const isFetching = useIsFetching();
+  const isMutating = useIsMutating();
+  const isGlobalLoading = isFetching > 0 || isMutating > 0;
 
   useEffect(() => {
     const handleOffline = () => {
@@ -702,6 +707,12 @@ const AppContent: React.FC = () => {
   return (
     <div className={`min-h-screen flex flex-col text-slate-800 dark:text-slate-100 transition-colors duration-300 ${activeView === 'login' ? 'bg-slate-50 dark:bg-black' : 'bg-slate-50 dark:bg-black'}`}>
       
+      {isGlobalLoading && (
+        <div className="fixed top-0 left-0 right-0 h-[3px] bg-slate-200/50 dark:bg-slate-800/50 z-[9999] overflow-hidden">
+          <div className="h-full bg-indigo-600 dark:bg-indigo-400 w-1/3 rounded-full animate-loading-bar" />
+        </div>
+      )}
+
       {/* Structural Header Navigation */}
       <Navbar currentView={activeView} onNavigate={navigateToView} onPreload={preloadView} />
 
@@ -732,16 +743,28 @@ const AppContent: React.FC = () => {
   );
 };
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes caching
+    },
+  },
+});
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '../utils/apiClient';
 import { Product, Category } from '../types';
 import { Search, Heart, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Grid, List, Star, X, CheckCheck, ShieldCheck, ShoppingBag, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -54,11 +56,8 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   const { wishlist, toggleWishlist, isAuthenticated } = useAuth();
   
   // States
-  const [products, setProducts] = useState<Product[]>([]);
   const [specModalProduct, setSpecModalProduct] = useState<Product | null>(null);
   const [loadingSpec, setLoadingSpec] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [viewStyle, setViewStyle] = useState<'grid' | 'list'>('grid');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   
@@ -97,6 +96,59 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   });
   
   const hasActiveFilters = Boolean(search || selectedCategory || minPrice || maxPrice || minRating);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Categories loading via TanStack Query
+  const { data: categoriesData = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: async ({ signal }) => {
+      const res = await apiFetch('/api/categories', { signal });
+      if (!res.ok) throw new Error('Failed to load categories');
+      return res.json();
+    }
+  });
+  const categories = categoriesData;
+
+  // Products loading via TanStack Query
+  const { data: productsData, isLoading: productsLoading, isFetching: productsFetching } = useQuery({
+    queryKey: ['products', debouncedSearch, selectedCategory, selectedSubcategory, minPrice, maxPrice, minRating, sortField, currentPage],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.append('search', debouncedSearch);
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
+      if (minPrice) params.append('minPrice', minPrice);
+      if (maxPrice) params.append('maxPrice', maxPrice);
+      if (minRating) params.append('rating', minRating);
+      if (sortField) params.append('sort', sortField);
+      
+      params.append('page', String(currentPage));
+      params.append('limit', '200');
+
+      const res = await apiFetch(`/api/products?${params.toString()}`, { signal });
+      if (!res.ok) throw new Error('Failed to load products');
+      return res.json();
+    },
+    placeholderData: (previousData) => previousData
+  });
+
+  const products = productsData?.products || [];
+  const totalPages = productsData?.pages || 1;
+  const totalItems = productsData?.total || 0;
+  const loading = productsLoading || productsFetching;
+
+  // ESC key to close specs modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && specModalProduct) {
+        setSpecModalProduct(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [specModalProduct]);
 
   // Debounce search
   useEffect(() => {
@@ -183,10 +235,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     return groups;
   }, [products, categories]);
   
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+
 
   // Similar products states for when search is active
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
@@ -231,6 +280,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
   // Parse initial filters from incoming routing params
   useEffect(() => {
+    const controller = new AbortController();
     if (initialFilter) {
       if (initialFilter.startsWith('category-')) {
         const cat = initialFilter.replace('category-', '');
@@ -257,7 +307,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         const slug = initialFilter.replace('spec-', '');
         setLoadingSpec(true);
         // Clear previous overlays, set loading state, and fetch individual product details
-        fetch(`/api/products/${slug}`)
+        apiFetch(`/api/products/${slug}`, { signal: controller.signal })
           .then(res => {
             if (res.ok) return res.json();
             throw new Error('Product not found');
@@ -268,10 +318,14 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             }
           })
           .catch(err => {
-            console.warn('Failed to load product spec:', err);
+            if (err.name !== 'AbortError') {
+              console.warn('Failed to load product spec:', err);
+            }
           })
           .finally(() => {
-            setLoadingSpec(false);
+            if (!controller.signal.aborted) {
+              setLoadingSpec(false);
+            }
           });
       }
     } else {
@@ -284,17 +338,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       setMinRating('');
       setCurrentPage(1);
     }
-  }, [initialFilter]);
 
-  // Load categories
-  useEffect(() => {
-    fetch('/api/categories')
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setCategories(data);
-      })
-      .catch(e => console.warn('Categories retrieval fail:', e));
-  }, []);
+    return () => {
+      controller.abort();
+    };
+  }, [initialFilter]);
 
   // Similar Products Fetcher logic for Search matching
   const fetchSimilarProducts = async (pageVal: number, initialReset: boolean = false, activeProducts: Product[] = []) => {
@@ -331,7 +379,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       params.append('page', String(pageVal));
       params.append('limit', '12');
 
-      const res = await fetch(`/api/products?${params.toString()}`);
+      const res = await apiFetch(`/api/products?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         const incoming = data.products || [];
@@ -374,63 +422,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   };
 
   useEffect(() => {
-    const controller = new AbortController();
-    
-    const fetchProductsList = async (pageToFetch: number) => {
-      setLoading(true);
-      if (pageToFetch === 1) {
-        setProducts([]);
-      }
-      try {
-        const params = new URLSearchParams();
-        if (debouncedSearch) params.append('search', debouncedSearch);
-        if (selectedCategory) params.append('category', selectedCategory);
-        if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
-        if (minPrice) params.append('minPrice', minPrice);
-        if (maxPrice) params.append('maxPrice', maxPrice);
-        if (minRating) params.append('rating', minRating);
-        if (sortField) params.append('sort', sortField);
-        
-        const limitVal = '200';
-        params.append('page', String(pageToFetch));
-        params.append('limit', limitVal);
-
-        const res = await fetch(`/api/products?${params.toString()}`, { signal: controller.signal });
-        if (res.ok) {
-          const data = await res.json();
-          const incomingProducts = data.products || [];
-          if (pageToFetch === 1) {
-            setProducts(incomingProducts);
-            if (debouncedSearch) {
-              fetchSimilarProducts(1, true, incomingProducts);
-            }
-          } else {
-            setProducts(prev => {
-              const existingIds = new Set(prev.map(p => p._id));
-              const uniqueIncoming = incomingProducts.filter((p: any) => !existingIds.has(p._id));
-              return [...prev, ...uniqueIncoming];
-            });
-          }
-          setTotalPages(data.pages || 1);
-          setTotalItems(data.total || 0);
-        }
-      } catch (e: any) {
-        if (e.name !== 'AbortError') {
-          console.warn("Failing to connect to product API catalog:", e);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchProductsList(currentPage);
-    
-    return () => {
-      controller.abort();
-    };
-  }, [debouncedSearch, selectedCategory, selectedSubcategory, minPrice, maxPrice, minRating, sortField, currentPage]);
+    if (debouncedSearch && products.length > 0) {
+      fetchSimilarProducts(1, true, products);
+    }
+  }, [debouncedSearch, products]);
 
 
 
@@ -1087,6 +1082,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               exit={{ scale: 0.95, y: 15 }}
               className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="spec-modal-title"
             >
               {/* Header */}
               <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-950/20">
@@ -1097,7 +1095,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     </span>
                     <span className="text-[9px] font-mono text-slate-400 font-bold uppercase tracking-wider">{specModalProduct.sku || 'SKU-SPEC'}</span>
                   </div>
-                  <h3 className="text-base font-black text-slate-900 dark:text-white leading-snug">
+                  <h3 id="spec-modal-title" className="text-base font-black text-slate-900 dark:text-white leading-snug">
                     {specModalProduct.name}
                   </h3>
                 </div>

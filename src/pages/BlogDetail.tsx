@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '../utils/apiClient';
 import { Blog } from '../types';
 import { ArrowLeft, Clock, Eye, Share2, Sparkle, Tag } from 'lucide-react';
 import { Helmet } from '../components/Helmet';
@@ -11,29 +13,21 @@ interface BlogDetailProps {
 }
 
 export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) => {
-  const [blog, setBlog] = useState<Blog | null>(null);
-  const [loading, setLoading] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  useEffect(() => {
-    const fetchBlogDetail = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/blogs/${blogSlug}`);
-        if (res.ok) {
-          const data = await res.json();
-          setBlog(data);
-        }
-      } catch (e) {
-        console.warn("Failing of specifications editorial sourcing details:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (blogSlug) {
-      fetchBlogDetail();
-    }
-  }, [blogSlug]);
+  const { data: blog = null, isLoading: queryLoading, isFetching: queryFetching } = useQuery<Blog | null>({
+    queryKey: ['blog', blogSlug],
+    queryFn: async ({ signal }) => {
+      if (!blogSlug) return null;
+      const res = await apiFetch(`/api/blogs/${blogSlug}`, { signal });
+      if (!res.ok) throw new Error('Blog not found');
+      return res.json();
+    },
+    enabled: !!blogSlug,
+    placeholderData: (previousData) => previousData
+  });
+
+  const loading = queryLoading || queryFetching;
 
   const handleShareClick = () => {
     navigator.clipboard.writeText(window.location.href);

@@ -5,6 +5,7 @@ import { Search, Heart, User, LogOut, Menu, X, Inbox, LayoutDashboard, Gift, Sun
 import { Category, Product, Blog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../context/ThemeContext';
+import { apiFetch } from '../utils/apiClient';
 
 interface NavbarProps {
   currentView: string;
@@ -213,14 +214,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
   }, []);
 
   useEffect(() => {
-    fetch('/api/categories')
+    const controller = new AbortController();
+    apiFetch('/api/categories', { signal: controller.signal })
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && !controller.signal.aborted) {
           setCategories(data);
         }
       })
-      .catch(err => console.warn('Navbar categorizing check failing:', err));
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.warn('Navbar categorizing check failing:', err);
+        }
+      });
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,19 +240,27 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
   useEffect(() => {
     const trimmed = searchQuery.trim();
     if (trimmed.length > 1) {
+      const controller = new AbortController();
       const timer = setTimeout(async () => {
         try {
-          const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`);
+          const res = await apiFetch(`/api/search?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal });
           if (res.ok) {
             const data = await res.json();
-            setSearchResults(data);
-            setShowResults(true);
+            if (!controller.signal.aborted) {
+              setSearchResults(data);
+              setShowResults(true);
+            }
           }
-        } catch (err) {
-          console.error('Navbar query fail:', err);
+        } catch (err: any) {
+          if (err.name !== 'AbortError') {
+            console.error('Navbar query fail:', err);
+          }
         }
       }, 300); // 300ms debounce input typing rate
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        controller.abort();
+      };
     } else {
       setShowResults(false);
     }

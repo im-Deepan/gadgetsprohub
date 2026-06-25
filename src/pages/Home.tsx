@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '../utils/apiClient';
 import { Product, Category } from '../types';
 import { 
   Search, Star, Heart, Flame, ShieldCheck, Trophy, Sparkles, 
@@ -41,10 +43,42 @@ const ProductCardSkeleton = () => (
 
 export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   const { wishlist, toggleWishlist, isAuthenticated } = useAuth();
-  const [trending, setTrending] = useState<Product[]>([]);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // 1. Trending Queries via TanStack Query
+  const { data: trendingData = [] } = useQuery<Product[]>({
+    queryKey: ['trending'],
+    queryFn: async ({ signal }) => {
+      const res = await apiFetch('/api/trending', { signal });
+      if (!res.ok) throw new Error('Failed to load trending products');
+      return res.json();
+    }
+  });
+  const trending = trendingData;
+
+  // 2. Categories Queries via TanStack Query
+  const { data: categoriesData = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: async ({ signal }) => {
+      const res = await apiFetch('/api/categories', { signal });
+      if (!res.ok) throw new Error('Failed to load categories');
+      return res.json();
+    }
+  });
+  const categories = categoriesData;
+
+  // 3. Products Queries via TanStack Query
+  const { data: homeProductsData } = useQuery({
+    queryKey: ['homeProducts'],
+    queryFn: async ({ signal }) => {
+      const res = await apiFetch('/api/products?limit=100', { signal });
+      if (!res.ok) throw new Error('Failed to load products');
+      return res.json();
+    }
+  });
+  const allProducts = homeProductsData?.products || [];
+
+  const loading = !homeProductsData || categories.length === 0;
+
   const [homeSearch, setHomeSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [visibleCount, setVisibleCount] = useState(6);
@@ -135,7 +169,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     if (homeSearch.trim() !== '' || activeCategory !== 'all') {
       const handler = setTimeout(() => {
         const selectedCat = categories.find(c => c._id === activeCategory);
-        fetch('/api/analytics/filters', {
+        apiFetch('/api/analytics/filters', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -150,90 +184,63 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   }, [homeSearch, activeCategory, categories]);
 
   useEffect(() => {
-    const loadHomeData = async () => {
-      try {
-        const [trendRes, catRes, prodRes] = await Promise.all([
-          fetch('/api/trending'),
-          fetch('/api/categories'),
-          fetch('/api/products?limit=100')
-        ]);
-        
-        if (trendRes.ok) {
-          const tData = await trendRes.json();
-          setTrending(tData || []);
+    if (allProducts.length > 0) {
+      setRecentViewed(current => {
+        const cleared = safeGetItem('aff_history_cleared') === 'true';
+        if (cleared) {
+          return [];
         }
-        if (catRes.ok) {
-          const cData = await catRes.json();
-          setCategories(cData || []);
-        }
-        if (prodRes.ok) {
-          const pData = await prodRes.json();
-          const pList = pData.products || [];
-          setAllProducts(pList);
-          
-          setRecentViewed(current => {
-            const cleared = safeGetItem('aff_history_cleared') === 'true';
-            if (cleared) {
-              return [];
+        if (current.length === 0) {
+          const selected: any[] = [];
+          const seenBrands = new Set<string>();
+          const seenIds = new Set<string>();
+          for (const p of allProducts) {
+            const pId = String(p._id || p.id || '');
+            if (!seenBrands.has(p.brand || '') && p.brand && pId && !seenIds.has(pId) && selected.length < 5) {
+              seenBrands.add(p.brand);
+              seenIds.add(pId);
+              selected.push({
+                _id: p._id,
+                name: p.name,
+                slug: p.slug,
+                price: p.price,
+                originalPrice: p.originalPrice,
+                discount: p.discount,
+                images: p.images,
+                brand: p.brand,
+                category: p.category,
+                description: p.description,
+                rating: p.rating
+              });
             }
-            if (current.length === 0 && pList.length > 0) {
-              const selected: any[] = [];
-              const seenBrands = new Set<string>();
-              const seenIds = new Set<string>();
-              for (const p of pList) {
-                const pId = String(p._id || p.id || '');
-                if (!seenBrands.has(p.brand || '') && p.brand && pId && !seenIds.has(pId) && selected.length < 5) {
-                  seenBrands.add(p.brand);
-                  seenIds.add(pId);
-                  selected.push({
-                    _id: p._id,
-                    name: p.name,
-                    slug: p.slug,
-                    price: p.price,
-                    originalPrice: p.originalPrice,
-                    discount: p.discount,
-                    images: p.images,
-                    brand: p.brand,
-                    category: p.category,
-                    description: p.description,
-                    rating: p.rating
-                  });
-                }
+          }
+          if (selected.length < 5) {
+            for (const p of allProducts) {
+              const pId = String(p._id || p.id || '');
+              if (pId && !seenIds.has(pId) && selected.length < 5) {
+                seenIds.add(pId);
+                selected.push({
+                  _id: p._id,
+                  name: p.name,
+                  slug: p.slug,
+                  price: p.price,
+                  originalPrice: p.originalPrice,
+                  discount: p.discount,
+                  images: p.images,
+                  brand: p.brand,
+                  category: p.category,
+                  description: p.description,
+                  rating: p.rating
+                });
               }
-              if (selected.length < 5) {
-                for (const p of pList) {
-                  const pId = String(p._id || p.id || '');
-                  if (pId && !seenIds.has(pId) && selected.length < 5) {
-                    seenIds.add(pId);
-                    selected.push({
-                      _id: p._id,
-                      name: p.name,
-                      slug: p.slug,
-                      price: p.price,
-                      originalPrice: p.originalPrice,
-                      discount: p.discount,
-                      images: p.images,
-                      brand: p.brand,
-                      category: p.category,
-                      description: p.description,
-                      rating: p.rating
-                    });
-                  }
-                }
-              }
-              return selected;
             }
-            return current;
-          });
+          }
+          return selected;
         }
-      } catch (err) {
-        console.warn('Failing to assemble home aggregates data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadHomeData();
-  }, []);
+        return current;
+      });
+    }
+  }, [allProducts]);
 
   // Filter products in real-time based on the hero search query and active category filter
   const filteredProducts = React.useMemo(() => {

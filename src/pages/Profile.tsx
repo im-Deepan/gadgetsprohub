@@ -4,6 +4,8 @@ import { useToast } from '../context/ToastContext';
 import { Product } from '../types';
 import { safeSetItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
+import { apiFetch } from '../utils/apiClient';
+import { profileSchema, emailChangeSchema } from '../utils/schemas';
 import { 
   User, Heart, ExternalLink, ShieldCheck, Mail, LogOut, Sparkle, Tag, Trash2,
   ShoppingBag, Truck, Calendar, DollarSign, CheckCircle, Box, AlertCircle, MapPin,
@@ -78,17 +80,29 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
   const handleUpdateEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
+
+    // 1. Zod client-side form validation
+    const parsed = emailChangeSchema.safeParse({ newEmail });
+    if (!parsed.success) {
+      const errMsg = parsed.error.issues[0]?.message || 'Invalid email format';
+      setEmailUpdateStatus({ type: 'error', message: errMsg });
+      showToast(errMsg, 'error');
+      return;
+    }
+
+    const trimmedEmail = newEmail.trim();
     setIsUpdatingEmail(true);
     setEmailUpdateStatus(null);
     setSimulatedEmailUrl('');
     try {
-      const res = await fetch('/api/user/update-email', {
+      // Use apiFetch for automated cancellation and transient retrying
+      const res = await apiFetch('/api/user/update-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ newEmail })
+        body: JSON.stringify({ newEmail: trimmedEmail })
       });
       const data = await res.json();
       if (res.ok) {
@@ -118,10 +132,20 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
+
+    // Validate with Zod profileSchema
+    const parsed = profileSchema.safeParse({ name: editName, district: selectDistrict });
+    if (!parsed.success) {
+      const errMsg = parsed.error.issues[0]?.message || 'Invalid profile choices';
+      showToast(errMsg, 'error');
+      return;
+    }
+
     setIsSavingProfile(true);
     setSaveSuccessMessage('');
     try {
-      const res = await fetch('/api/user/profile', {
+      // Use apiFetch for automated cancellation and transient retrying
+      const res = await apiFetch('/api/user/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -280,12 +304,14 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             
             <form onSubmit={handleSaveProfile} className="space-y-3.5 text-left">
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                <label htmlFor="profile-full-name" className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                   Full Name
                 </label>
                 <input
                   type="text"
                   required
+                  id="profile-full-name"
+                  aria-label="Full Name"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Explorer Name"
@@ -294,10 +320,12 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                <label htmlFor="profile-district" className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                   Primary Location / District
                 </label>
                 <select
+                  id="profile-district"
+                  aria-label="Primary Location or District Selection"
                   value={selectDistrict}
                   onChange={(e) => setSelectDistrict(e.target.value)}
                   className="w-full rounded-lg border border-slate-202 bg-white dark:border-slate-800 dark:bg-slate-950 px-3 py-2 text-xs text-slate-808 dark:text-slate-100 outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 focus:bg-white dark:focus:border-indigo-400 dark:focus:bg-slate-900 transition-all font-semibold"
@@ -413,13 +441,15 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             
             <form onSubmit={handleUpdateEmail} className="space-y-3.5 text-left pt-1">
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                <label htmlFor="new-profile-email" className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                   Change Email Address
                 </label>
                 <div className="relative">
                   <input
                     type="email"
                     required
+                    id="new-profile-email"
+                    aria-label="New Email Address"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="Enter new email address..."

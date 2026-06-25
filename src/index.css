@@ -54,6 +54,15 @@ html, body, #root {
   100% { background-position: 50% 0%; }
 }
 
+@keyframes global-loading-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+.animate-loading-bar {
+  animation: global-loading-bar 1.5s infinite linear;
+}
+
 .animate-gradient-longitudinal-ltr {
   background-size: 300% 100%;
   animation: gradient-ltr 8s linear infinite;

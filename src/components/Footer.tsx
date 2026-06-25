@@ -3,6 +3,7 @@ import { Mail, Instagram, Linkedin, Send, BadgeAlert, ShieldCheck, AlertTriangle
 import { useToast } from '../context/ToastContext';
 import { NewsletterSubscribe } from './NewsletterSubscribe';
 import { mapErrorToFriendly } from '../utils/errorMapper';
+import { apiFetch } from '../utils/apiClient';
 
 interface FooterProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -23,17 +24,25 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
 
   // Load real categories dynamically
   React.useEffect(() => {
-    fetch('/api/categories')
+    const controller = new AbortController();
+    apiFetch('/api/categories', { signal: controller.signal })
        .then(res => {
          if (res.ok) return res.json();
          throw new Error("fail");
        })
        .then(data => {
-         if (data && Array.isArray(data)) {
+         if (data && Array.isArray(data) && !controller.signal.aborted) {
            setCategories(data);
          }
        })
-       .catch(e => console.warn("Failed to fetch footer categories:", e));
+       .catch(e => {
+         if (e.name !== 'AbortError') {
+           console.warn("Failed to fetch footer categories:", e);
+         }
+       });
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   // Track social clicks helper
