@@ -3,6 +3,7 @@ import { Mail, ArrowRight, Sparkles, CheckCircle2, AlertCircle } from 'lucide-re
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../context/ToastContext';
 import { mapErrorToFriendly } from '../utils/errorMapper';
+import { apiFetch } from '../utils/apiClient';
 
 interface NewsletterSubscribeProps {
   className?: string;
@@ -38,7 +39,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/newsletter/subscribe', {
+      const res = await apiFetch('/api/newsletter/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: trimmedEmail })
@@ -56,7 +57,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
         showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (err) {
-      console.error('Subscription system error:', err);
+      
       const friendly = mapErrorToFriendly(err, "subscribe to newsletter");
       setErrorText(friendly.message);
       showToast(friendly.message, friendly.type, 4000, friendly.category);

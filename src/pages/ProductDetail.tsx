@@ -88,7 +88,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         const errorObj = err as { name?: string };
         // If the user cancelled or aborted, don't show error
         if (errorObj.name !== 'AbortError') {
-          console.error("Error sharing:", err);
+          
           fallbackShareToClipboard();
         }
       }
@@ -105,7 +105,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         setTimeout(() => setShared(false), 2000);
       })
       .catch((err) => {
-        console.error("Failed to copy parent link:", err);
+        
         showToast("Unable to copy product link to your clipboard. Please check browser permissions.", "error", 4000, "User Action");
       });
   };
@@ -124,7 +124,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         validatedUrl = parsed.toString();
       }
     } catch (err) {
-      console.warn("Invalid affiliate link format:", err);
+      
     }
 
     if (!validatedUrl) {
@@ -139,7 +139,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         setTimeout(() => setCopied(false), 2000);
       })
       .catch((err) => {
-        console.error("Failed to copy link:", err);
+        
         showToast("Unable to copy reference link. Please try copying manually.", "error", 4000, "User Action");
       });
   };
@@ -170,7 +170,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (e) {
-      console.warn("Could not submit simulated order:", e);
+      
       const friendly = mapErrorToFriendly(e, "submit your purchase reference");
       showToast(friendly.message, friendly.type, 4000, friendly.category);
     } finally {
@@ -214,7 +214,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           recents = recents.slice(0, 10); // Keep last 10
           safeSetItem('aff_recent_viewed', JSON.stringify(recents));
         } catch (err) {
-          console.warn('Failed to save recent product:', err);
+          
         }
 
         // Disable global loading state instantly so the user can interact/view the spec sheets right away!
@@ -233,7 +233,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           })
           .catch(err => {
             if (err.name !== 'AbortError') {
-              console.warn("Background fetch of related specifications failed:", err);
+              
             }
           });
       } else {
@@ -244,7 +244,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     } catch (e: unknown) {
       const errorObj = e as { name?: string };
       if (errorObj.name !== 'AbortError') {
-        console.warn("Error retrieving specifications catalog details:", e);
+        
       }
       if (!signal?.aborted) {
         setLoading(false);
@@ -333,7 +333,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (err) {
-      console.warn("Product live save error:", err);
+      
       const friendly = mapErrorToFriendly(err, "update product parameters");
       showToast(friendly.message, friendly.type, 4000, friendly.category);
     } finally {
@@ -369,7 +369,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       .then(data => { if (data && !controller.signal.aborted) setCategories(data); })
       .catch(err => {
         if (err.name !== 'AbortError') {
-          console.warn("Could not fetch categories list in details:", err);
+          
         }
       });
     return () => {
@@ -388,7 +388,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       })
       .catch(err => {
         if (err.name !== 'AbortError') {
-          console.warn("Could not load products sequence in details:", err);
+          
         }
       });
     return () => {
@@ -411,7 +411,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         validatedUrl = parsed.toString();
       }
     } catch (err) {
-      console.warn("Invalid affiliate link format:", err);
+      
     }
 
     if (!validatedUrl) {
@@ -428,7 +428,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         body: JSON.stringify({ userId: user?.id, district: user?.district || preferredCity })
       });
     } catch (e) {
-      console.warn('Click tracking API logging fail:', e);
+      
     }
 
     // Trigger visual overlay popup and open link

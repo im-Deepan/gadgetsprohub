@@ -319,7 +319,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           })
           .catch(err => {
             if (err.name !== 'AbortError') {
-              console.warn('Failed to load product spec:', err);
+              
             }
           })
           .finally(() => {
@@ -407,7 +407,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         setSimilarEndReached(true);
       }
     } catch (err) {
-      console.warn("Failing to load similar products:", err);
+      
       setHasMoreSimilar(false);
       setSimilarEndReached(true);
     } finally {

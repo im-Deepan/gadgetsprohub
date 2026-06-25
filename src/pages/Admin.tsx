@@ -260,7 +260,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           }
         }
       } catch (err) {
-        console.warn("Error auto-checking slug validity:", err);
+        
       } finally {
         setSlugChecking(false);
       }
@@ -296,7 +296,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
     const pollInterval = setInterval(async () => {
       try {
-        const usersRes = await fetch('/api/admin/users', {
+        const usersRes = await apiFetch('/api/admin/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -306,7 +306,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         }
       } catch (err: unknown) {
         const errorObj = err as { message?: string };
-        console.warn("User list synchronization polling failed:", errorObj.message);
+        
       }
     }, 3000);
 
@@ -335,21 +335,21 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
     // 1. Fetch Catalog Specs
     try {
-      console.log('Fetching products...');
+      
       const prodRes = await fetch('/api/products?limit=100');
       if (prodRes.ok) {
         const d = await prodRes.json();
         pData = d.products || [];
         setProducts(pData);
-        console.log('Products fetched:', pData.length);
+        
       } else {
         const errJson = await prodRes.json().catch(() => ({}));
-        console.error('Products fetch error:', errJson);
+        
         setProductsError(errJson.error || `Failed to fetch Catalog: Status ${prodRes.status}`);
       }
     } catch (e: unknown) {
       const errorObj = e as { message?: string };
-      console.error('Products fetch exception:', e);
+      
       setProductsError(errorObj.message || "Failed to connect to Catalog server.");
     }
 
@@ -498,7 +498,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         totalVisitors: visitors || Math.round(clicks * 0.9) + 1
       });
     } catch (aggErr) {
-      console.warn("Aggregate calculation fallback warning:", aggErr);
+      
     } finally {
       setLoading(false);
     }
@@ -509,7 +509,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     try {
       await loadAdminMetrics();
     } catch (err: unknown) {
-      console.warn("Error reloading metrics:", err);
+      
     } finally {
       setRefreshingTraffic(false);
     }
@@ -575,7 +575,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             triggerAlert("Action Failed", err.error || "Failed to restore default seed data.");
           }
         } catch (err: unknown) {
-          console.warn("Seeding error:", err);
+          
           triggerAlert("Action Failed", "An error occurred while seeding: " + err.message);
         } finally {
           setSeedingInProgress(false);
@@ -608,7 +608,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             triggerAlert("Action Failed", err.error || "Failed to clear products catalog.");
           }
         } catch (err: unknown) {
-          console.warn("Clearing catalog error:", err);
+          
           triggerAlert("Action Failed", "An error occurred while wiping: " + err.message);
         } finally {
           setSeedingInProgress(false);
@@ -641,7 +641,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             triggerAlert("Action Failed", err.error || "Failed to seed Trending Selections.");
           }
         } catch (err: unknown) {
-          console.warn("Seeding trending selections error:", err);
+          
           triggerAlert("Action Failed", "An error occurred while seeding: " + err.message);
         } finally {
           setSeedingInProgress(false);
@@ -671,7 +671,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         setStats(prev => ({ ...prev, unreadMessages: Math.max(prev.unreadMessages - 1, 0) }));
       }
     } catch (e) {
-      console.warn("Message update failed:", e);
+      
     }
   };
 
@@ -793,7 +793,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         }
       }
     } catch (err: unknown) {
-      console.warn("Product form submission error:", err);
+      
       triggerAlert("Submission Error", "An error occurred during submission: " + err.message);
     }
   };
@@ -876,7 +876,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             triggerAlert("Deletion Failed", err.error || "The server rejected the deletion request.");
           }
         } catch (e: unknown) {
-          console.warn("Product deletion failing:", e);
+          
           triggerAlert("Network Error", e.message || "Failed to make deletion request to the database server.");
         }
       },
@@ -922,7 +922,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         triggerAlert("Failed to Save Category", err.error || "The server rejected the category request.");
       }
     } catch (err: unknown) {
-      console.warn('Category adding/updating failed:', err);
+      
       triggerAlert("Error", "An error occurred while saving the category: " + err.message);
     }
   };
@@ -962,7 +962,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             triggerAlert("Deletion Failed", err.error || "The server rejected the category deletion request.");
           }
         } catch (e: unknown) {
-          console.warn("Category deletion failure:", e);
+          
           triggerAlert("Network Error", e.message || "Failed to contact the backend server.");
         }
       },

@@ -114,7 +114,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         }
       }
     } catch (e) {
-      console.warn('Failed to load recent local data:', e);
+      
     }
   }, []);
 
@@ -142,7 +142,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         safeSetItem('aff_recent_searches', JSON.stringify(updated));
         setRecentSearches(updated);
       } catch (err) {
-        console.warn('Failed to save search:', err);
+        
       }
     }
   };
@@ -160,7 +160,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     try {
       safeRemoveItem('aff_recent_searches');
     } catch (err) {
-      console.warn('Failed to clear recent searches:', err);
+      
     }
   };
 
@@ -177,7 +177,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             categoryId: activeCategory !== 'all' ? activeCategory : undefined,
             categorySlug: selectedCat ? selectedCat.slug : undefined
           })
-        }).catch(err => console.warn('Filter interaction logging error:', err));
+        }).catch(() => {});
       }, 700);
       return () => clearTimeout(handler);
     }

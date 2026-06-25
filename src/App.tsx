@@ -12,6 +12,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { motion, AnimatePresence } from 'motion/react';
 import { safeSetItem, safeGetItem } from './utils/localStorage';
 import { DEFAULT_VIEW_METADATA, updateDocumentMetadata } from './utils/metaManager';
+import { apiFetch } from './utils/apiClient';
 
 const TAMIL_NADU_CITIES = [
   "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
@@ -124,16 +125,16 @@ export const logVisit = (timeSpentSeconds: number, currentPath: string, viewCity
       headers['Authorization'] = `Bearer ${tokenVal}`;
     }
 
-    fetch('/api/analytics/page-view', {
+    apiFetch('/api/analytics/page-view', {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
       keepalive: true
     }).catch((err) => {
-      console.warn("Analytics telemetry request could not be completed:", err);
+      
     });
   } catch (err) {
-    console.warn("Telemetry reporting failure:", err);
+    
   }
 };
 
@@ -207,7 +208,7 @@ export const preloadView = (view: AppView) => {
         break;
     }
   } catch (err) {
-    console.warn("Dynamic view preloading failed:", err);
+    
   }
 };
 
@@ -308,18 +309,18 @@ const AppContent: React.FC = () => {
     const controller = new AbortController();
     const checkDbHealth = async () => {
       try {
-        const response = await fetch('/api/health-check', { signal: controller.signal });
+        const response = await apiFetch('/api/health-check', { signal: controller.signal });
         if (!response.ok) {
           const detail = await response.json().catch(() => ({}));
-          console.warn("Database connectivity issue on start:", detail);
+          
           showToast("Reconnecting to the primary data system. Working securely with local cache.", "warning", 5000, "Connectivity");
         } else {
-          console.log("Database connectivity verified on start.");
+          
         }
       } catch (err: unknown) {
         const errorObj = err as { name?: string };
         if (errorObj.name !== 'AbortError') {
-          console.warn("Database connectivity check failed to execute:", err);
+          
           showToast("Synchronized successfully in offline mode. Accessing local catalog backups.", "info", 4000, "Connectivity");
         }
       }
@@ -336,7 +337,7 @@ const AppContent: React.FC = () => {
     
     let visitorId = safeGetItem('affiliate_visitor_id');
     if (!visitorId) {
-      visitorId = 'vis_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      visitorId = 'vis_' + window.crypto.randomUUID().replace(/-/g, '');
       safeSetItem('affiliate_visitor_id', visitorId);
     }
     
@@ -347,7 +348,7 @@ const AppContent: React.FC = () => {
         signal: controller.signal
       }).catch(err => {
         if (err.name !== 'AbortError') {
-          console.warn('Visitor logging call failed:', err);
+          
         }
       });
 
@@ -374,7 +375,7 @@ const AppContent: React.FC = () => {
           console.log(`Google AdSense script lazily loaded with Client ID: ${publisherId}`);
         }
       } catch (err) {
-        console.warn('Google AdSense script lazy load injection failed:', err);
+        
       }
     };
 
@@ -414,7 +415,7 @@ const AppContent: React.FC = () => {
       }
       return 'home';
     } catch (err) {
-      console.warn("Simple router active view parsing failed, falling back safely:", err);
+      
       return 'home';
     }
   });
@@ -432,7 +433,7 @@ const AppContent: React.FC = () => {
       }
       return null;
     } catch (err) {
-      console.warn("Simple router slug parsing failed, falling back safely:", err);
+      
       return null;
     }
   });
@@ -468,7 +469,7 @@ const AppContent: React.FC = () => {
               const mappedCity = mapToTamilNaduCity(city);
               safeSetItem('aff_preferred_city', mappedCity);
               setDetectedCity(mappedCity);
-              console.log(`[Auto Location] Detected and mapped location: ${mappedCity} (original: ${city})`);
+              
               return;
             }
           }
@@ -476,7 +477,7 @@ const AppContent: React.FC = () => {
       } catch (err: unknown) {
         const e = err as { name?: string };
         if (e.name !== 'AbortError') {
-          console.warn('[Auto Location] Proxy failed:', err);
+          
         }
       }
     };
@@ -545,7 +546,7 @@ const AppContent: React.FC = () => {
         } catch (err: unknown) {
           const errorObj = err as { name?: string };
           if (errorObj.name !== 'AbortError') {
-            console.warn("Could not retrieve custom dynamic meta details for product-detail view:", err);
+            
           }
         }
       }
@@ -574,7 +575,7 @@ const AppContent: React.FC = () => {
         } catch (err: unknown) {
           const errorObj = err as { name?: string };
           if (errorObj.name !== 'AbortError') {
-            console.warn("Could not retrieve custom dynamic meta details for blog-detail view:", err);
+            
           }
         }
       }
@@ -629,10 +630,10 @@ const AppContent: React.FC = () => {
       // Store state in history to retrieve on back/forward
       window.history.pushState({ view, slug: slug || null }, '', url.toString());
     } catch (e) {
-      console.warn("Could not sync window history:", e);
+      
     }
 
-    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Synchronize app state with browser history (back/forward buttons) preserving React state dependency rules
@@ -667,7 +668,7 @@ const AppContent: React.FC = () => {
         setActiveView(view);
         setSelectedSlug(slug);
       }
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     window.addEventListener('popstate', handlePopState);

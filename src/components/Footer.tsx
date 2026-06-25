@@ -38,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
        })
        .catch(e => {
          if (e.name !== 'AbortError') {
-           console.warn("Failed to fetch footer categories:", e);
+           
          }
        });
     return () => {
@@ -55,7 +55,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
         body: JSON.stringify({ platform })
       });
     } catch (err) {
-      console.warn("Failed to track social click:", err);
+      
     }
   };
 
@@ -85,7 +85,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
         showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (e) {
-      console.warn("Newsletter submission error:", e);
+      
       const friendly = mapErrorToFriendly(e, "subscribe to newsletter");
       setErrorText(friendly.message);
       setShowErrorModal(true);

@@ -87,7 +87,7 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
       // Retry for transient 5xx server errors
       if (response.status >= 500 && response.status <= 599 && attempt < maxRetries) {
         const delay = backoffDelay * Math.pow(2, attempt); // Exponential backoff: 500ms -> 1000ms -> 2000ms
-        console.warn(`Transient API error (${response.status}) on ${url}. Retrying attempt ${attempt + 1} of ${maxRetries} in ${delay}ms...`);
+        
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeFetchWithRetry(attempt + 1);
       }
@@ -106,7 +106,7 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
       // Retry for network failures/offline states
       if (attempt < maxRetries) {
         const delay = backoffDelay * Math.pow(2, attempt);
-        console.warn(`Network failure on ${url}. Retrying attempt ${attempt + 1} of ${maxRetries} in ${delay}ms... Error: ${errorObj.message}`);
+        
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeFetchWithRetry(attempt + 1);
       }
@@ -125,7 +125,7 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
       });
       activeRequests.set(requestKey, existingPromise);
     } else {
-      console.log(`Deduplicating duplicate concurrent request for: ${url}`);
+      
     }
     return existingPromise;
   }

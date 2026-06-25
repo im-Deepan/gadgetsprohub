@@ -37,7 +37,11 @@ export const BorderGlow: React.FC<BorderGlowProps> = ({
   const [opacity, setOpacity] = useState(0);
 
   // Initialize a random color configuration state on mount to ensure dynamic visual variation across multiple card instances
-  const [randomColorCfg] = useState(() => AMBIENT_COLORS[Math.floor(Math.random() * AMBIENT_COLORS.length)]);
+  const [randomColorCfg] = useState(() => {
+    const randomArray = new Uint32Array(1);
+    window.crypto.getRandomValues(randomArray);
+    return AMBIENT_COLORS[randomArray[0] % AMBIENT_COLORS.length];
+  });
 
   const finalGlowColor = glowColor !== undefined ? glowColor : randomColorCfg.glow;
   const finalColors = colors !== undefined ? colors : randomColorCfg.colors;

@@ -34,7 +34,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
               try {
                 adsbygoogle.push({});
               } catch (e) {
-                console.warn('AdSense push error:', e);
+                
               }
             } else if (attempts < maxAttempts) {
               attempts++;
@@ -47,7 +47,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         return () => clearTimeout(timer);
       }
     } catch (e) {
-      console.warn('Google AdSense render fallback triggered:', e);
+      
     }
   }, [publisherId]);
 

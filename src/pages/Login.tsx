@@ -179,7 +179,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
               body: JSON.stringify({ email })
             });
           } catch (err) {
-            console.warn('Silent newsletter subscription error during login:', err);
+            
           }
         }
       }
@@ -216,7 +216,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
               body: JSON.stringify({ email })
             });
           } catch (err) {
-            console.warn('Silent newsletter subscription error during registration:', err);
+            
           }
         }
       }
@@ -242,7 +242,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
             body: JSON.stringify({ email: res.email })
           });
         } catch (err: unknown) {
-          console.warn('Silent newsletter subscription error during Google Sign-In:', err);
+          
         }
       }
     }

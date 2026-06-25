@@ -48,7 +48,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     duration = 4000,
     category?: Toast['category'] | string
   ) => {
-    const id = Math.random().toString(36).substring(2, 9);
+    const id = window.crypto.randomUUID();
     
     // Auto-detect and map categories intelligently if not explicitly mapped or legacy
     let mappedCategory: Toast['category'] = 'System Status';

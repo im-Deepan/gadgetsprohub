@@ -23,7 +23,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Uncaught error caught by ErrorBoundary:', error, errorInfo);
+    
     
     // Mock error reporting service logging
     const detailedPayload = {
@@ -36,9 +36,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
       userAgent: navigator.userAgent,
     };
     
-    console.group('=== MOCK ERROR REPORTING SERVICE ===');
-    console.warn('[LOGGED TO CLOUD SENTRY/MONITORING]', detailedPayload);
-    console.groupEnd();
+    
+    
+    
   }
 
   handleRetry = () => {

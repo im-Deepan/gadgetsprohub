@@ -74,10 +74,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setWishlist([]);
       } else {
         // For other errors, don't clear session automatically
-        console.warn(`Profile refresh failed with status: ${res.status}`);
+        
       }
     } catch (error) {
-      console.warn("Profile fetching failed:", error);
+      
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fallbackBackendLogin = async (email: string, password: string) => {
       setLoading(true);
       try {
-        const res = await fetch('/api/auth/login', {
+        const res = await apiFetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
               await cred.user.delete();
             } catch (delErr) {
-              console.warn("Failed to delete Firebase user after backend registry error:", delErr);
+              
             }
             return { success: false, error: (data.error as string) || 'Backend registration failed.' };
           }
@@ -196,7 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (e.code === 'auth/email-already-in-use') {
             return { success: false, error: 'Email already in use. Please sign in.' };
           } else if (e.code === 'auth/operation-not-allowed') {
-            console.warn('Firebase auth operation-not-allowed, falling back to backend register.');
+            
           } else {
             return { success: false, error: e.message || String(fbErr) };
           }
@@ -293,7 +293,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return { success: true, email: userData.email as string };
     } catch (err: unknown) {
-      console.warn("Google credentials retrieval error:", err);
+      
       const e = err as { code?: string, message?: string };
       let errMsg = e.message || 'Google Sign-In process could not be completed.';
       if (e.code === 'auth/popup-closed-by-user' || e.message?.includes('popup-closed-by-user') || e.message?.includes('closed by user')) {
@@ -340,7 +340,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setWishlist(previousWishlist);
       }
     } catch (e) {
-      console.warn("Failed to toggle wishlist item network error:", e);
+      
       // Rollback on network error
       setWishlist(previousWishlist);
     }
