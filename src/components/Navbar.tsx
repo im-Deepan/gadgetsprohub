@@ -53,29 +53,34 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
   useEffect(() => {
     lastScrollYRef.current = window.scrollY;
     
-    const handleScroll = () => {
-      if (showMobileMenuRef.current) {
-        setIsVisible(true);
-        return;
-      }
-      const currentScrollY = window.scrollY;
-      const prevScrollY = lastScrollYRef.current;
-      const diff = currentScrollY - prevScrollY;
-      
-      if (Math.abs(diff) < 1) return;
+    let ticking = false;
 
-      if (currentScrollY <= 15) {
-        // At the absolute top -> always show
-        setIsVisible(true);
-      } else if (diff > 1 && currentScrollY > 70) {
-        // Scrolling down even slightly (or sliding up) -> hide navbar
-        setIsVisible(false);
-      } else if (diff < -1) {
-        // Scrolling up even slightly (or sliding down) -> reveal navbar instantly
-        setIsVisible(true);
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (showMobileMenuRef.current) {
+            setIsVisible(true);
+            ticking = false;
+            return;
+          }
+          const currentScrollY = window.scrollY;
+          const prevScrollY = lastScrollYRef.current;
+          const diff = currentScrollY - prevScrollY;
+          
+          if (Math.abs(diff) >= 1) {
+            if (currentScrollY <= 15) {
+              setIsVisible(prev => prev ? prev : true);
+            } else if (diff > 1 && currentScrollY > 70) {
+              setIsVisible(prev => !prev ? prev : false);
+            } else if (diff < -1) {
+              setIsVisible(prev => prev ? prev : true);
+            }
+            lastScrollYRef.current = currentScrollY;
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
-      
-      lastScrollYRef.current = currentScrollY;
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -251,8 +256,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               setShowResults(true);
             }
           }
-        } catch (err: any) {
-          if (err.name !== 'AbortError') {
+        } catch (err: unknown) {
+          const e = err as { name?: string };
+          if (e.name !== 'AbortError') {
             console.error('Navbar query fail:', err);
           }
         }
@@ -360,7 +366,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               {showCategoryDropdown && categories.length > 0 && (
                 <div className="absolute top-full left-0 mt-0 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900 z-50 animate-in fade-in slide-in-from-top-2">
                   <div className="flex flex-col gap-1">
-                    {categories.map((cat: any) => (
+                    {categories.map((cat: Category) => (
                       <button
                         key={cat._id}
                         onClick={() => {

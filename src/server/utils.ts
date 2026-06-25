@@ -43,7 +43,7 @@ export const isAdminEmail = (email: string | undefined): boolean => {
   return allAdmins.includes(normalized);
 };
 
-export const getStorageEmail = (email: any): string | undefined => {
+export const getStorageEmail = (email: unknown): string | undefined => {
   if (typeof email !== 'string') return undefined;
   const trimmed = email.toLowerCase().trim();
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -123,9 +123,10 @@ export async function validateAndCheckRealEmail(email: string): Promise<{ isVali
         error: `The domain "${domain}" is not configured to receive email (missing MX records).` 
       };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorObj = err as { code?: string };
     // If MX lookup failed, check if we can resolve the domain as fallback to avoid blocking real domains
-    if (err.code === 'ENOTFOUND' || err.code === 'EREFUSED') {
+    if (errorObj.code === 'ENOTFOUND' || errorObj.code === 'EREFUSED') {
       return { 
         isValid: false, 
         error: `The domain "${domain}" does not exist or could not be found. Please check your spelling.` 
@@ -134,8 +135,9 @@ export async function validateAndCheckRealEmail(email: string): Promise<{ isVali
     
     try {
       await resolveAny(normalizedDomain);
-    } catch (fallbackErr: any) {
-      if (fallbackErr.code === 'ENOTFOUND' || fallbackErr.code === 'EREFUSED') {
+    } catch (fallbackErr: unknown) {
+      const fallbackErrorObj = fallbackErr as { code?: string };
+      if (fallbackErrorObj.code === 'ENOTFOUND' || fallbackErrorObj.code === 'EREFUSED') {
         return { 
           isValid: false, 
           error: `The domain "${domain}" could not be resolved. Please enter a real, active email address.` 

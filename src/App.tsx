@@ -138,9 +138,13 @@ export const logVisit = (timeSpentSeconds: number, currentPath: string, viewCity
 };
 
 // Helper to support manual preloading on lazy-loaded routes
-const dynamicLoadWithPreload = (factory: () => Promise<any>) => {
-  const Component = lazy(factory);
-  (Component as any).preload = factory;
+type PreloadableComponent<T extends React.ComponentType<unknown>> = React.LazyExoticComponent<T> & {
+  preload?: () => Promise<{ default: T }>;
+};
+
+const dynamicLoadWithPreload = <T extends React.ComponentType<unknown>>(factory: () => Promise<{ default: T }>): PreloadableComponent<T> => {
+  const Component = lazy(factory) as PreloadableComponent<T>;
+  Component.preload = factory;
   return Component;
 };
 
@@ -163,43 +167,43 @@ export const preloadView = (view: AppView) => {
   try {
     switch (view) {
       case 'home':
-        (Home as any).preload?.();
+        Home.preload?.();
         break;
       case 'products':
-        (ProductList as any).preload?.();
+        ProductList.preload?.();
         break;
       case 'product-detail':
-        (ProductDetail as any).preload?.();
+        ProductDetail.preload?.();
         break;
       case 'blogs':
-        (BlogList as any).preload?.();
+        BlogList.preload?.();
         break;
       case 'blog-detail':
-        (BlogDetail as any).preload?.();
+        BlogDetail.preload?.();
         break;
       case 'contact':
-        (Contact as any).preload?.();
+        Contact.preload?.();
         break;
       case 'login':
-        (Login as any).preload?.();
+        Login.preload?.();
         break;
       case 'profile':
-        (Profile as any).preload?.();
+        Profile.preload?.();
         break;
       case 'admin':
-        (Admin as any).preload?.();
+        Admin.preload?.();
         break;
       case 'privacy-policy':
-        (PrivacyPolicy as any).preload?.();
+        PrivacyPolicy.preload?.();
         break;
       case 'about-us':
-        (AboutUs as any).preload?.();
+        AboutUs.preload?.();
         break;
       case 'terms-conditions':
-        (TermsConditions as any).preload?.();
+        TermsConditions.preload?.();
         break;
       case 'disclaimer':
-        (Disclaimer as any).preload?.();
+        Disclaimer.preload?.();
         break;
     }
   } catch (err) {
@@ -301,9 +305,10 @@ const AppContent: React.FC = () => {
 
   // Gracefully verify connection to MongoDB Atlas from App initialization
   useEffect(() => {
+    const controller = new AbortController();
     const checkDbHealth = async () => {
       try {
-        const response = await fetch('/api/health-check');
+        const response = await fetch('/api/health-check', { signal: controller.signal });
         if (!response.ok) {
           const detail = await response.json().catch(() => ({}));
           console.warn("Database connectivity issue on start:", detail);
@@ -311,12 +316,17 @@ const AppContent: React.FC = () => {
         } else {
           console.log("Database connectivity verified on start.");
         }
-      } catch (err) {
-        console.warn("Database connectivity check failed to execute:", err);
-        showToast("Synchronized successfully in offline mode. Accessing local catalog backups.", "info", 4000, "Connectivity");
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.warn("Database connectivity check failed to execute:", err);
+          showToast("Synchronized successfully in offline mode. Accessing local catalog backups.", "info", 4000, "Connectivity");
+        }
       }
     };
     checkDbHealth();
+    return () => {
+      controller.abort();
+    };
   }, [showToast]);
 
   // Visitor logging under a controlled mount hook utilizing an AbortController signal
@@ -352,7 +362,7 @@ const AppContent: React.FC = () => {
       window.removeEventListener('mousemove', loadAdSense);
 
       try {
-        const publisherId = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-5970826882216712';
+        const publisherId = import.meta.env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-5970826882216712';
         const existingScript = document.querySelector(`script[src*="pagead2.googlesyndication.com"]`);
         if (!existingScript) {
           const script = document.createElement('script');
@@ -462,8 +472,9 @@ const AppContent: React.FC = () => {
             }
           }
         }
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
+      } catch (err: unknown) {
+        const e = err as { name?: string };
+        if (e.name !== 'AbortError') {
           console.warn('[Auto Location] Proxy failed:', err);
         }
       }
@@ -504,61 +515,70 @@ const AppContent: React.FC = () => {
 
   // Dynamic metadata update effect
   useEffect(() => {
+    const controller = new AbortController();
     let active = true;
 
     const applyMetadata = async () => {
       // 1. If it's a product detail, inspect dynamic details from db API
       if (activeView === 'product-detail' && selectedSlug) {
         try {
-          const res = await fetch(`/api/products/${selectedSlug}`);
+          const res = await fetch(`/api/products/${selectedSlug}`, { signal: controller.signal });
           if (res.ok && active) {
             const product = await res.json();
             const categoryName = typeof product.category === 'object' ? product.category.name : (product.category || 'Tech');
             const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
             const dynamicUrl = `${dynamicOrigin}/product-detail/${selectedSlug}`;
 
-            updateDocumentMetadata({
-              title: `${product.name} - Specifications, Price & Review | gadgetsprohub`,
-              description: product.description || `Read detailed reviews, current prices, and core physical specifications of the ${product.name} at gadgetsprohub.`,
-              keywords: `${product.name}, ${product.brand || ''}, ${categoryName}, technical specs, gadget comparison`,
-              ogType: 'product',
-              ogUrl: dynamicUrl,
-              ogImage: product.images?.[0] || '/favicon.png'
-            });
+            if (active && !controller.signal.aborted) {
+              updateDocumentMetadata({
+                title: `${product.name} - Specifications, Price & Review | gadgetsprohub`,
+                description: product.description || `Read detailed reviews, current prices, and core physical specifications of the ${product.name} at gadgetsprohub.`,
+                keywords: `${product.name}, ${product.brand || ''}, ${categoryName}, technical specs, gadget comparison`,
+                ogType: 'product',
+                ogUrl: dynamicUrl,
+                ogImage: product.images?.[0] || '/favicon.png'
+              });
+            }
             return;
           }
-        } catch (err) {
-          console.warn("Could not retrieve custom dynamic meta details for product-detail view:", err);
+        } catch (err: any) {
+          if (err.name !== 'AbortError') {
+            console.warn("Could not retrieve custom dynamic meta details for product-detail view:", err);
+          }
         }
       }
 
       // 2. If it's a blog detail, inspect dynamic details from blogs API
       if (activeView === 'blog-detail' && selectedSlug) {
         try {
-          const res = await fetch(`/api/blogs/${selectedSlug}`);
+          const res = await fetch(`/api/blogs/${selectedSlug}`, { signal: controller.signal });
           if (res.ok && active) {
             const blog = await res.json();
             const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
             const dynamicUrl = `${dynamicOrigin}/blog-detail/${selectedSlug}`;
 
-            updateDocumentMetadata({
-              title: `${blog.title} | Technical Editorial Insights`,
-              description: blog.excerpt || blog.content?.substring(0, 160) || `Read our latest expert tech perspective and expert specs analysis on gadgetsprohub.`,
-              keywords: `${blog.title}, expert guides, editorial blog, specs breakdown`,
-              ogType: 'article',
-              ogUrl: dynamicUrl,
-              ogImage: blog.imageUrl || blog.featured_image || '/favicon.png'
-            });
+            if (active && !controller.signal.aborted) {
+              updateDocumentMetadata({
+                title: `${blog.title} | Technical Editorial Insights`,
+                description: blog.excerpt || blog.content?.substring(0, 160) || `Read our latest expert tech perspective and expert specs analysis on gadgetsprohub.`,
+                keywords: `${blog.title}, expert guides, editorial blog, specs breakdown`,
+                ogType: 'article',
+                ogUrl: dynamicUrl,
+                ogImage: blog.imageUrl || blog.featured_image || '/favicon.png'
+              });
+            }
             return;
           }
-        } catch (err) {
-          console.warn("Could not retrieve custom dynamic meta details for blog-detail view:", err);
+        } catch (err: any) {
+          if (err.name !== 'AbortError') {
+            console.warn("Could not retrieve custom dynamic meta details for blog-detail view:", err);
+          }
         }
       }
 
       // 3. Fallback/Standard static metadata updates
       const staticMeta = DEFAULT_VIEW_METADATA[activeView];
-      if (staticMeta) {
+      if (staticMeta && active && !controller.signal.aborted) {
         const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
         const dynamicUrl = selectedSlug 
           ? `${dynamicOrigin}/${activeView}/${selectedSlug}` 
@@ -575,6 +595,7 @@ const AppContent: React.FC = () => {
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, [activeView, selectedSlug]);
 

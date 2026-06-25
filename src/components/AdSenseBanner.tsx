@@ -15,7 +15,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   style = { display: 'block' },
   className = '',
 }) => {
-  const adElement = useRef<any>(null);
+  const adElement = useRef<HTMLModElement>(null);
 
   const publisherId = typeof import.meta.env !== 'undefined' ? import.meta.env.VITE_ADSENSE_CLIENT_ID || '' : '';
 
@@ -30,7 +30,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         const checkVisibility = () => {
           if (adElement.current && !adElement.current.getAttribute('data-adsbygoogle-status')) {
             if (adElement.current.offsetWidth > 0) {
-              const adsbygoogle = (window as any).adsbygoogle || [];
+              const adsbygoogle = (window as unknown as { adsbygoogle: unknown[] }).adsbygoogle || [];
               try {
                 adsbygoogle.push({});
               } catch (e) {

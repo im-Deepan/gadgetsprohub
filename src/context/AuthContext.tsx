@@ -117,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           body: JSON.stringify({ email, password })
         });
         
-        let data: any = {};
+        let data: Record<string, unknown> = {};
         try {
           const text = await res.text();
           data = JSON.parse(text);
@@ -128,18 +128,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!res.ok) {
           return { 
             success: false, 
-            error: data.error || 'Authentication failure.',
-            verificationUrlSimulated: data.verificationUrlSimulated
+            error: (data.error as string) || 'Authentication failure.',
+            verificationUrlSimulated: data.verificationUrlSimulated as string | undefined
           };
         }
         
-        safeSetItem('aff_token', data.token);
-        setToken(data.token);
+        safeSetItem('aff_token', data.token as string);
+        setToken(data.token as string);
+        const userData = data.user as Record<string, unknown>;
         setUser({
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.name,
-          role: data.user.role,
+          id: userData.id as string,
+          email: userData.email as string,
+          name: userData.name as string,
+          role: userData.role as 'user' | 'admin',
           isVerified: true
         });
         return { success: true };
@@ -165,7 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             body: JSON.stringify({ email, password, name })
           });
           
-          let data: any = {};
+          let data: Record<string, unknown> = {};
           try {
             const text = await res.text();
             data = JSON.parse(text);
@@ -179,23 +180,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } catch (delErr) {
               console.warn("Failed to delete Firebase user after backend registry error:", delErr);
             }
-            return { success: false, error: data.error || 'Backend registration failed.' };
+            return { success: false, error: (data.error as string) || 'Backend registration failed.' };
           }
           
           await auth.signOut();
           return {
             success: true,
-            message: data.message || 'Registration successful! A verification link has been sent to your email. Please verify before signing in.',
-            verificationUrlSimulated: data.verificationUrlSimulated,
-            smtpError: data.smtpError
+            message: (data.message as string) || 'Registration successful! A verification link has been sent to your email. Please verify before signing in.',
+            verificationUrlSimulated: data.verificationUrlSimulated as string | undefined,
+            smtpError: data.smtpError as string | undefined
           };
-        } catch (fbErr: any) {
-          if (fbErr.code === 'auth/email-already-in-use') {
+        } catch (fbErr: unknown) {
+          const e = fbErr as { code?: string, message?: string };
+          if (e.code === 'auth/email-already-in-use') {
             return { success: false, error: 'Email already in use. Please sign in.' };
-          } else if (fbErr.code === 'auth/operation-not-allowed') {
+          } else if (e.code === 'auth/operation-not-allowed') {
             console.warn('Firebase auth operation-not-allowed, falling back to backend register.');
           } else {
-            return { success: false, error: fbErr.message };
+            return { success: false, error: e.message || String(fbErr) };
           }
         }
       }
@@ -206,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ email, password, name })
       });
       
-      let data: any = {};
+      let data: Record<string, unknown> = {};
       try {
         const text = await res.text();
         data = JSON.parse(text);
@@ -215,17 +217,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!res.ok) {
-        return { success: false, error: data.error || 'Registration failed.' };
+        return { success: false, error: (data.error as string) || 'Registration failed.' };
       }
       
       return {
         success: true,
-        message: data.message || 'Registration successful! A verification link has been sent to your email. Please verify before signing in.',
-        verificationUrlSimulated: data.verificationUrlSimulated,
-        smtpError: data.smtpError
+        message: (data.message as string) || 'Registration successful! A verification link has been sent to your email. Please verify before signing in.',
+        verificationUrlSimulated: data.verificationUrlSimulated as string | undefined,
+        smtpError: data.smtpError as string | undefined
       };
-    } catch (err: any) {
-      const friendly = mapErrorToFriendly(err, 'create your user account');
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      const friendly = mapErrorToFriendly(e, 'create your user account');
       return { success: false, error: friendly.message };
     }
   };
@@ -265,7 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ email, name, googleId })
       });
       
-      let data: any = {};
+      let data: Record<string, unknown> = {};
       try {
         const text = await res.text();
         data = JSON.parse(text);
@@ -274,27 +277,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (!res.ok) {
-        return { success: false, error: data.error || 'Server registration refusal.' };
+        return { success: false, error: (data.error as string) || 'Server registration refusal.' };
       }
 
-      safeSetItem('aff_token', data.token);
-      setToken(data.token);
+      safeSetItem('aff_token', data.token as string);
+      setToken(data.token as string);
+      const userData = data.user as Record<string, unknown>;
       setUser({
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.name,
-        role: data.user.role,
+        id: userData.id as string,
+        email: userData.email as string,
+        name: userData.name as string,
+        role: userData.role as 'user' | 'admin',
         isVerified: true
       });
-      return { success: true, email: data.user.email };
-    } catch (err: any) {
+      return { success: true, email: userData.email as string };
+    } catch (err: unknown) {
       console.warn("Google credentials retrieval error:", err);
-      let errMsg = err.message || 'Google Sign-In process could not be completed.';
-      if (err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup-closed-by-user') || err.message?.includes('closed by user')) {
+      const e = err as { code?: string, message?: string };
+      let errMsg = e.message || 'Google Sign-In process could not be completed.';
+      if (e.code === 'auth/popup-closed-by-user' || e.message?.includes('popup-closed-by-user') || e.message?.includes('closed by user')) {
         errMsg = 'The sign-in window was closed before completion. Please try again and keep the login pop-up active.';
-      } else if (err.code === 'auth/cancelled-popup-request' || err.message?.includes('cancelled-popup-request')) {
+      } else if (e.code === 'auth/cancelled-popup-request' || e.message?.includes('cancelled-popup-request')) {
         errMsg = 'Authenticating window request was overlap-cancelled. Please try again.';
-      } else if (err.code === 'auth/user-cancelled' || err.message?.includes('user-cancelled')) {
+      } else if (e.code === 'auth/user-cancelled' || e.message?.includes('user-cancelled')) {
         errMsg = 'Google sign-in authentication was cancelled.';
       } else {
         const friendly = mapErrorToFriendly(err, 'sign in with Google');

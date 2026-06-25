@@ -254,12 +254,12 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
     active: {
       opacity: 1,
       x: 0,
-      transition: { duration: 0.35, ease: 'easeOut' as any }
+      transition: { duration: 0.35, ease: 'easeOut' as const }
     },
     exit: (dir: 'left' | 'right') => ({
       opacity: 0,
       x: dir === 'right' ? -40 : 40,
-      transition: { duration: 0.25, ease: 'easeIn' as any }
+      transition: { duration: 0.25, ease: 'easeIn' as const }
     })
   };
 
@@ -469,13 +469,13 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
       opacity: 1,
       x: 0,
       scale: 1,
-      transition: { duration: 0.45, ease: 'easeOut' as any }
+      transition: { duration: 0.45, ease: 'easeOut' as const }
     },
     exit: (dir: 'left' | 'right') => ({
       opacity: 0,
       x: dir === 'right' ? -60 : 60,
       scale: 0.95,
-      transition: { duration: 0.35, ease: 'easeIn' as any }
+      transition: { duration: 0.35, ease: 'easeIn' as const }
     })
   };
 

@@ -9,15 +9,17 @@ export interface FriendlyError {
   type: 'error' | 'warning' | 'info';
 }
 
-export const mapErrorToFriendly = (error: any, contextDescription?: string): FriendlyError => {
+export const mapErrorToFriendly = (error: unknown, contextDescription?: string): FriendlyError => {
   // Extract error message string
   let rawMessage = '';
   if (typeof error === 'string') {
     rawMessage = error;
-  } else if (error && error.message) {
+  } else if (error instanceof Error) {
     rawMessage = error.message;
-  } else if (error && typeof error.toString === 'function') {
-    rawMessage = error.toString();
+  } else if (error && typeof (error as Record<string, unknown>).message === 'string') {
+    rawMessage = (error as Record<string, unknown>).message as string;
+  } else if (error !== null && error !== undefined) {
+    rawMessage = String(error);
   }
 
   const msg = rawMessage.toLowerCase();

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
-import { Lock, Mail, User, ShieldCheck, Heading, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, User, ShieldCheck, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { loginSchema, registerSchema } from '../utils/schemas';
 import { apiFetch } from '../utils/apiClient';
 
@@ -236,12 +236,12 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
       showToast('Successfully authenticated through secure Google Sign-In services!', 'success', 4000, "User Action");
       if (subscribeNewsletter && res.email) {
         try {
-          await fetch('/api/newsletter/subscribe', {
+          await apiFetch('/api/newsletter/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: res.email })
           });
-        } catch (err) {
+        } catch (err: unknown) {
           console.warn('Silent newsletter subscription error during Google Sign-In:', err);
         }
       }

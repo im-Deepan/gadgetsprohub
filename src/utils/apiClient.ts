@@ -93,23 +93,25 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
       }
 
       return response;
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearTimeout(id);
+      
+      const errorObj = err instanceof Error ? err : new Error(String(err));
 
       // Don't retry if the request was intentionally aborted
-      if (err.name === 'AbortError') {
-        throw err;
+      if (errorObj.name === 'AbortError') {
+        throw errorObj;
       }
 
       // Retry for network failures/offline states
       if (attempt < maxRetries) {
         const delay = backoffDelay * Math.pow(2, attempt);
-        console.warn(`Network failure on ${url}. Retrying attempt ${attempt + 1} of ${maxRetries} in ${delay}ms... Error: ${err.message}`);
+        console.warn(`Network failure on ${url}. Retrying attempt ${attempt + 1} of ${maxRetries} in ${delay}ms... Error: ${errorObj.message}`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeFetchWithRetry(attempt + 1);
       }
 
-      throw err;
+      throw errorObj;
     }
   };
 

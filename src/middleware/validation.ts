@@ -5,12 +5,13 @@ import { Request, Response, NextFunction } from 'express';
  * Middleware to handle express-validator validation results.
  * Formats errors to match the frontend expected format { error: string }
  */
-export const handleValidationErrors = (req: Request, res: Response, next: NextFunction): any => {
+export const handleValidationErrors = (req: Request, res: Response, next: NextFunction): void => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const firstError = errors.array()[0];
     const fieldMsg = firstError.type === 'field' ? ` for field '${firstError.path}'` : '';
-    return res.status(400).json({ error: `${firstError.msg}${fieldMsg}` });
+    res.status(400).json({ error: `${firstError.msg}${fieldMsg}` });
+    return;
   }
   next();
 };

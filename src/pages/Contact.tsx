@@ -75,7 +75,7 @@ export const Contact: React.FC = () => {
         const messageDocRef = doc(collection(db, 'messages'));
         const messageId = messageDocRef.id;
         
-        const payload: any = {
+        const payload: Record<string, unknown> = {
           name: name.trim(),
           email: email.trim().toLowerCase(),
           subject: subject.trim(),
@@ -93,8 +93,9 @@ export const Contact: React.FC = () => {
             console.log('Successfully recorded contact message in live Firestore database:', messageId);
             setSuccessDetail('Your communication inquiry has been submitted successfully. A specialized research analyst has been assigned to your query and will contact you via email within 24 business hours.');
           })
-          .catch((fErr: any) => {
-            console.warn('Optional Firestore background logging failed:', fErr.message || fErr);
+          .catch((fErr: unknown) => {
+            const errMsg = fErr instanceof Error ? fErr.message : String(fErr);
+            console.warn('Optional Firestore background logging failed:', errMsg);
             setSuccessDetail('Your communication response has been processed successfully. A specialized research analyst has been assigned to your query and will email you back shortly.');
           });
       } else {
@@ -108,8 +109,9 @@ export const Contact: React.FC = () => {
       setPhone('');
       setSubject('');
       setMessage('');
-    } catch (err: any) {
-      const friendly = mapErrorToFriendly(err, 'submit your contact request');
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      const friendly = mapErrorToFriendly(e, 'submit your contact request');
       setErrorMsg(friendly.message);
       setErrorMessage(friendly.message);
       setShowErrorModal(true);

@@ -386,7 +386,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         
         // Filter out products already present in active matching products
         const mainIds = new Set(currentProds.map(p => p._id));
-        const filteredIncoming = incoming.filter((p: any) => !mainIds.has(p._id));
+        const filteredIncoming = incoming.filter((p: Product) => !mainIds.has(p._id));
         
         if (filteredIncoming.length === 0) {
           setHasMoreSimilar(false);
@@ -394,7 +394,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         } else {
           setSimilarProducts(prev => {
             const existingIds = new Set(prev.map(p => p._id));
-            const uniqueIncoming = filteredIncoming.filter((p: any) => !existingIds.has(p._id));
+            const uniqueIncoming = filteredIncoming.filter((p: Product) => !existingIds.has(p._id));
             if (initialReset) return uniqueIncoming;
             return [...prev, ...uniqueIncoming];
           });

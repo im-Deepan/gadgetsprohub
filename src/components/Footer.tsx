@@ -4,6 +4,7 @@ import { useToast } from '../context/ToastContext';
 import { NewsletterSubscribe } from './NewsletterSubscribe';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { apiFetch } from '../utils/apiClient';
+import { Category } from '../types';
 
 interface FooterProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -15,7 +16,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   // States for diagnostic feed alert overlays
   const [showSuccessModal, setShowSuccessModal] = useState(false);
