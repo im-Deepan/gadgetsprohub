@@ -172,14 +172,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     return products.map(p => {
       const clickEvents = analyticsData.filter(a => {
         if (a.eventType !== 'click') return false;
-        const aProdId = (a.productId as any)?._id || a.productId;
-        const targetId = typeof aProdId === 'object' ? (aProdId as any)._id : aProdId;
+        const aProdId = (a.productId as { _id?: string })?._id || a.productId;
+        const targetId = typeof aProdId === 'object' ? (aProdId as { _id?: string })._id : aProdId;
         return targetId?.toString() === p._id.toString();
       });
       const convEvents = analyticsData.filter(a => {
         if (a.eventType !== 'conversion') return false;
-        const aProdId = (a.productId as any)?._id || a.productId;
-        const targetId = typeof aProdId === 'object' ? (aProdId as any)._id : aProdId;
+        const aProdId = (a.productId as { _id?: string })?._id || a.productId;
+        const targetId = typeof aProdId === 'object' ? (aProdId as { _id?: string })._id : aProdId;
         return targetId?.toString() === p._id.toString();
       });
 
@@ -617,8 +617,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Action Failed", err.error || "Failed to restore default seed data.");
           }
-        } catch (err: any) {
-          triggerAlert("Action Failed", "An error occurred while seeding: " + err.message);
+        } catch (err: unknown) {
+          triggerAlert("Action Failed", "An error occurred while seeding: " + (err instanceof Error ? err.message : String(err)));
         } finally {
           setSeedingInProgress(false);
         }
@@ -649,8 +649,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Action Failed", err.error || "Failed to clear products catalog.");
           }
-        } catch (err: any) {
-          triggerAlert("Action Failed", "An error occurred while wiping: " + err.message);
+        } catch (err: unknown) {
+          triggerAlert("Action Failed", "An error occurred while wiping: " + (err instanceof Error ? err.message : String(err)));
         } finally {
           setSeedingInProgress(false);
         }
@@ -681,8 +681,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Action Failed", err.error || "Failed to seed Trending Selections.");
           }
-        } catch (err: any) {
-          triggerAlert("Action Failed", "An error occurred while seeding: " + err.message);
+        } catch (err: unknown) {
+          triggerAlert("Action Failed", "An error occurred while seeding: " + (err instanceof Error ? err.message : String(err)));
         } finally {
           setSeedingInProgress(false);
         }
@@ -845,8 +845,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           triggerAlert("Submission Failed", err.error || "The server rejected the product submission. Please verify fields format.");
         }
       }
-    } catch (err: any) {
-      triggerAlert("Submission Error", "An error occurred during submission: " + err.message);
+    } catch (err: unknown) {
+      triggerAlert("Submission Error", "An error occurred during submission: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
@@ -972,8 +972,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const err = await res.json().catch(() => ({}));
         triggerAlert("Failed to Save Category", err.error || "The server rejected the category request.");
       }
-    } catch (err: any) {
-      triggerAlert("Error", "An error occurred while saving the category: " + err.message);
+    } catch (err: unknown) {
+      triggerAlert("Error", "An error occurred while saving the category: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
@@ -1433,7 +1433,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             </div>
             <div className="p-4 space-y-4">
               {[...Array(5)].map((_, idx) => (
-                <div key={idx} className="flex gap-4 items-center justify-between">
+                <div key={`admin-prod-skeleton-${idx}`} className="flex gap-4 items-center justify-between">
                   <div className="flex gap-3 items-center flex-grow">
                     <div className="h-10 w-10 bg-slate-100 dark:bg-slate-700 rounded-lg shrink-0"></div>
                     <div className="space-y-1.5 flex-grow">
@@ -1462,6 +1462,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               const currentProductPage = Math.min(productPage, totalProductPages);
               const startIndex = (currentProductPage - 1) * 10;
               const paginatedProducts = resolvedProducts.slice(startIndex, startIndex + 10);
+              const catMap = new Map<string, string>();
+              categories.forEach(c => catMap.set(String(c._id), c.name));
 
               return (
                 <div className="space-y-4">
@@ -1488,9 +1490,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 if (typeof p.category === 'object' && p.category) {
                                   if (p.category.name) return p.category.name;
                                   const catId = p.category._id || '';
-                                  return categories.find(c => String(c._id) === String(catId))?.name || 'Curated Line';
+                                  return catMap.get(String(catId)) || 'Curated Line';
                                 }
-                                return categories.find(c => String(c._id) === String(p.category))?.name || 'Curated Line';
+                                return catMap.get(String(p.category)) || 'Curated Line';
                               })()}
                             </span>
                           </div>
@@ -1548,9 +1550,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                     if (typeof p.category === 'object' && p.category) {
                                       if (p.category.name) return p.category.name;
                                       const catId = p.category._id || '';
-                                      return categories.find(c => String(c._id) === String(catId))?.name || 'Curated Line';
+                                      return catMap.get(String(catId)) || 'Curated Line';
                                     }
-                                    return categories.find(c => String(c._id) === String(p.category))?.name || 'Curated Line';
+                                    return catMap.get(String(p.category)) || 'Curated Line';
                                   })()}
                                 </td>
                                 <td className="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-100">₹{p.price}</td>
@@ -3295,9 +3297,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
                       >
                         <option value="">-- No Subcategory --</option>
-                        {(categories.find(c => String(c._id) === String(prodForm.category || categories?.[0]?._id || ''))?.subcategories || []).map(sub => (
-                          <option key={sub} value={sub} className="dark:bg-slate-800 dark:text-slate-50">{sub}</option>
-                        ))}
+                        {(() => {
+                          const activeCatId = prodForm.category || categories?.[0]?._id || '';
+                          const activeCat = categories.find(c => String(c._id) === String(activeCatId));
+                          return (activeCat?.subcategories || []).map(sub => (
+                            <option key={sub} value={sub} className="dark:bg-slate-800 dark:text-slate-50">{sub}</option>
+                          ));
+                        })()}
                       </select>
                     </div>
                   </div>

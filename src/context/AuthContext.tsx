@@ -354,7 +354,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     loginWithGoogle,
     logout,
-    isAuthenticated: !!token,
+    isAuthenticated: Boolean(token),
     isAdmin: user?.role === 'admin',
     wishlist,
     toggleWishlist,

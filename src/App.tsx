@@ -352,8 +352,8 @@ const AppContent: React.FC = () => {
         if (!res.ok) {
           console.warn(`Analytics visit tracking failed with status ${res.status}`);
         }
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== 'AbortError') {
           console.error("Failed to track visitor visit analytics:", err);
         }
       }

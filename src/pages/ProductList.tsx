@@ -95,7 +95,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     return true;
   });
   
-  const hasActiveFilters = !!(search || selectedCategory || minPrice || maxPrice || minRating);
+  const hasActiveFilters = Boolean(search || selectedCategory || minPrice || maxPrice || minRating);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -721,7 +721,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               {loading && products.length === 0 ? (
             <div className={`grid gap-6 ${viewStyle === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
               {[...Array(8)].map((_, i) => (
-                <ProductCardSkeleton key={i} />
+                <ProductCardSkeleton key={`skeleton-prod-${i}`} />
               ))}
             </div>
           ) : products.length === 0 ? (
@@ -737,7 +737,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               {(Object.entries(classifiedSectionGroups) as [string, Product[]][]).map(([sectionName, sectionProds]) => {
                 if (sectionProds.length === 0) return null;
                 const emoji = getCategoryEmoji(sectionName);
-                const isExpanded = !!expandedSections[sectionName];
+                const isExpanded = Boolean(expandedSections[sectionName]);
                 const visibleProds = isExpanded ? sectionProds : sectionProds.slice(0, 12);
                 const hasMoreThan12 = sectionProds.length > 12;
 
@@ -919,7 +919,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       <div className="flex flex-wrap gap-1.5">
                         {recentSearches.map((query, index) => (
                           <div
-                            key={index}
+                            key={`search-pill-${query}-${index}`}
                             onClick={() => { setSearch(query); setCurrentPage(1); }}
                             className="group flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-50 border border-slate-50 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-200 hover:text-indigo-500 dark:hover:text-indigo-300 cursor-pointer transition-all"
                           >
@@ -1038,7 +1038,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                         <div className="flex items-center gap-1.5">
                           <div className={`flex gap-0.5 ${minRating === String(stars) ? 'text-amber-200' : 'text-amber-300'}`}>
                             {Array.from({ length: 5 }).map((_, i) => (
-                              <Star key={i} className={`h-3 w-3 ${i < stars ? 'fill-current' : 'text-slate-100'}`} />
+                              <Star key={`star-${stars}-${i}`} className={`h-3 w-3 ${i < stars ? 'fill-current' : 'text-slate-100'}`} />
                             ))}
                           </div>
                           <span>{stars}.0+ Stars</span>
@@ -1217,7 +1217,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300">Highlighted Advantages</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       {specModalProduct.features.map((feat, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-slate-600 dark:text-slate-200">
+                        <div key={`feature-${idx}`} className="flex items-center gap-2 text-slate-600 dark:text-slate-200">
                           <CheckCheck className="h-4 w-4 text-emerald-400 shrink-0" />
                           <span>{feat}</span>
                         </div>
@@ -1235,7 +1235,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                         <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-300 block mb-2">✓ Pros</span>
                         <ul className="space-y-1 text-xs">
                           {specModalProduct.pros.slice(0, 4).map((p, i) => (
-                            <li key={i} className="text-slate-500 dark:text-slate-200 flex items-start gap-1">
+                            <li key={`pro-${i}`} className="text-slate-500 dark:text-slate-200 flex items-start gap-1">
                               <span className="text-emerald-405">●</span>
                               <span>{p}</span>
                             </li>
@@ -1250,7 +1250,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                         <span className="text-[10px] uppercase font-bold text-rose-600 dark:text-rose-300 block mb-2">✗ Cons</span>
                         <ul className="space-y-1 text-xs">
                           {specModalProduct.cons.slice(0, 4).map((c, i) => (
-                            <li key={i} className="text-slate-500 dark:text-slate-200 flex items-start gap-1">
+                            <li key={`con-${i}`} className="text-slate-500 dark:text-slate-200 flex items-start gap-1">
                               <span className="text-rose-405">■</span>
                               <span>{c}</span>
                             </li>

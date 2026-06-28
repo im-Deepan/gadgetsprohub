@@ -23,20 +23,12 @@ interface ProductDetailProps {
 }
 
 const sanitizeText = (text: string): string => {
-  return (text || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-    .replace(/`/g, '&#x60;')
-    .slice(0, 500); // Cap length to prevent DOM bloat
+  return (text || '').slice(0, 500); // Cap length to prevent DOM bloat
 };
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNavigate }) => {
   const { wishlist, toggleWishlist, isAuthenticated, user, token } = useAuth();
-  const isAdmin = !!(user && (user.id || user._id) && token && user.role === 'admin');
+  const isAdmin = Boolean(user && (user.id || user._id) && token && user.role === 'admin');
   const { showToast } = useToast();
   
   // States
@@ -235,7 +227,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           if (stored) {
             try {
               const parsed = JSON.parse(stored);
-              recents = Array.isArray(parsed) ? parsed.filter((p: any) => p && typeof p === 'object' && p._id) : [];
+              recents = Array.isArray(parsed) ? parsed.filter((p: { _id?: string }) => p && typeof p === 'object' && p._id) : [];
             } catch (e) {
               recents = [];
             }

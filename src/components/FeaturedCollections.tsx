@@ -561,9 +561,9 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
         {/* Slideshow Indicator Dots */}
         {products.length > 1 && (
           <div className="absolute bottom-3 flex gap-1 z-20">
-            {products.slice(0, 8).map((_, idx) => (
+            {products.slice(0, 8).map((p, idx) => (
               <span
-                key={idx}
+                key={p._id || idx}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   idx === productIndex % products.length 
                     ? 'w-4 bg-indigo-500 dark:bg-indigo-300' 

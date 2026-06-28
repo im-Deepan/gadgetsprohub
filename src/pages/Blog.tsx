@@ -137,7 +137,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:px-4">
           {[...Array(6)].map((_, i) => (
-            <BlogCardSkeleton key={i} />
+            <BlogCardSkeleton key={`blog-skeleton-${i}`} />
           ))}
         </div>
       ) : blogs.length === 0 ? (

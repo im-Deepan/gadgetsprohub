@@ -104,7 +104,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       }
       const viewedStored = safeGetItem('aff_recent_viewed');
       if (viewedStored) {
-        let parsed: any[] = [];
+        let parsed: Product[] = [];
         try {
           parsed = JSON.parse(viewedStored);
         } catch (e) {
@@ -275,7 +275,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       if (activeCategory === 'all') {
         return matchesSearch;
       } else if (activeCategory === 'trending') {
-        return matchesSearch && !!prod.trending;
+        return matchesSearch && Boolean(prod.trending);
       } else {
         const prodCatId = getCategoryId(prod.category);
         return matchesSearch && String(prodCatId) === String(activeCategory);
@@ -513,7 +513,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 <div className="space-y-1">
                   {recentSearches.map((query, index) => (
                     <div
-                      key={index}
+                      key={`recent-search-${query}-${index}`}
                       onClick={() => {
                         setHomeSearch(query);
                         saveSearchToLocal(query);
@@ -638,7 +638,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-800 p-5 animate-pulse space-y-4">
+              <div key={`skeleton-trend-${i}`} className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-800 p-5 animate-pulse space-y-4">
                 <div className="h-6 w-1/3 bg-slate-50 rounded"></div>
                 <div className="grid grid-cols-2 gap-2">
                   {[...Array(4)].map((_, j) => (
@@ -781,7 +781,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         {loading ? (
           <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 animate-in fade-in duration-300">
             {[...Array(6)].map((_, i) => (
-              <ProductCardSkeleton key={i} />
+              <ProductCardSkeleton key={`skeleton-prod-${i}`} />
             ))}
           </div>
         ) : latestProductsToShow.length === 0 ? (

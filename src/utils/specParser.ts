@@ -11,13 +11,15 @@ export const parseSpecificationsString = (specsStr: string): Record<string, stri
     if (key && valueParts.length > 0) {
       try {
         obj[decodeURIComponent(key.trim())] = decodeURIComponent(valueParts.join('=').trim());
-      } catch {
+      } catch (e) {
+        console.warn('Decode error', e);
         obj[key.trim()] = valueParts.join('=').trim();
       }
     } else if (key && key.trim()) {
       try {
         obj[decodeURIComponent(key.trim())] = 'Yes';
-      } catch {
+      } catch (e) {
+        console.warn('Decode error', e);
         obj[key.trim()] = 'Yes';
       }
     }

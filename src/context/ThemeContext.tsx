@@ -26,7 +26,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (saved !== null) {
       try {
         resolvedIsDark = JSON.parse(saved);
-      } catch {
+      } catch (e) {
+        console.warn('Theme parse error', e);
         resolvedIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
     } else {

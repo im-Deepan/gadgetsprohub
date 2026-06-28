@@ -23,7 +23,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       if (!res.ok) throw new Error('Blog not found');
       return res.json();
     },
-    enabled: !!blogSlug,
+    enabled: Boolean(blogSlug),
     placeholderData: (previousData) => previousData
   });
 

@@ -106,14 +106,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
         case '/':
           e.preventDefault();
           setIsVisible(true); // make sure navigation bar slides back in
-          const t1 = setTimeout(() => {
+          setTimeout(() => {
             if (showMobileMenu && mobileSearchInputRef.current) {
               mobileSearchInputRef.current.focus();
             } else if (searchInputRef.current) {
               searchInputRef.current.focus();
             }
           }, 50);
-          clearTimeout(t1); // mock cleanup to pass naive checks
           showToast("Search field focused via keyboard shortcut.", "info", 4000, "User Action");
           break;
         case 'h':

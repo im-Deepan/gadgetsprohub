@@ -527,7 +527,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="group flex flex-col rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-700 overflow-hidden">
+                  <div key={`bookmark-skeleton-${i}`} className="group flex flex-col rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-700 overflow-hidden">
                     <div className="h-32 bg-slate-50 dark:bg-slate-800/50 shrink-0"></div>
                     <div className="p-4 flex flex-col flex-grow space-y-2.5">
                       <div className="h-3 w-1/3 bg-slate-50 dark:bg-slate-800/50 rounded"></div>
