@@ -26,7 +26,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
         {items.map((item, index) => {
           const isLast = index === items.length - 1 || item.isCurrentPage;
           return (
-            <li key={index} className="flex items-center">
+            <li key={`${item.label}-${index}`} className="flex items-center">
               <button
                 onClick={item.onClick}
                 disabled={isLast || !item.onClick}

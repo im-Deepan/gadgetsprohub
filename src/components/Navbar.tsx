@@ -28,10 +28,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
   const [showResults, setShowResults] = useState(false);
   const [searchResults, setSearchResults] = useState<{ products: Product[]; blogs: Blog[] }>({ products: [], blogs: [] });
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const showMobileMenuRef = React.useRef(showMobileMenu);
-  useEffect(() => {
-    showMobileMenuRef.current = showMobileMenu;
-  }, [showMobileMenu]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   
@@ -58,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          if (showMobileMenuRef.current) {
+          if (showMobileMenu) {
             setIsVisible(true);
             ticking = false;
             return;
@@ -85,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [showMobileMenu]);
 
   // Global Keyboard shortcuts implementation
   useEffect(() => {

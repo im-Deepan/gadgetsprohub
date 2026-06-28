@@ -306,7 +306,7 @@ export const ImageLightbox: React.FC = () => {
               <div className="flex items-center gap-1.5 overflow-x-auto max-w-[100px] sm:max-w-[300px] py-1 px-1 scrollbar-hide">
                 {lightboxData.images.map((img, i) => (
                   <button
-                    key={i}
+                    key={`lightbox-thumb-${img}-${i}`}
                     onClick={() => jumpToImage(i)}
                     className={`relative h-10 w-10 shrink-0 rounded-lg overflow-hidden border transition-all duration-200 cursor-pointer ${
                       i === lightboxData.currentIndex

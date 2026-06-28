@@ -15,14 +15,28 @@ import { getCategoryId, getCategoryName } from '../utils/category';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { apiFetch } from '../utils/apiClient';
+import { parseSpecificationsString } from '../utils/specParser';
 
 interface ProductDetailProps {
   productSlug: string;
   onNavigate: (view: string, slug?: string) => void;
 }
 
+const sanitizeText = (text: string): string => {
+  return (text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .replace(/`/g, '&#x60;')
+    .slice(0, 500); // Cap length to prevent DOM bloat
+};
+
 export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNavigate }) => {
   const { wishlist, toggleWishlist, isAuthenticated, user, token } = useAuth();
+  const isAdmin = !!(user && (user.id || user._id) && token && user.role === 'admin');
   const { showToast } = useToast();
   
   // States
@@ -60,6 +74,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const [reviewContent, setReviewContent] = useState('');
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [reviewError, setReviewError] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   // Past Orders simulation logger
   const [orderLoading, setOrderLoading] = useState(false);
@@ -182,7 +197,29 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const loadProductStats = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
+      // Lazy load sequence if not yet loaded
+      if (allProductsSequence.length === 0) {
+        apiFetch('/api/products?limit=100', { signal })
+          .then(async (seqRes) => {
+            if (signal?.aborted) return;
+            if (seqRes.ok) {
+              const seqData = await seqRes.json();
+              if (signal?.aborted) return;
+              if (seqData) {
+                const plist = Array.isArray(seqData) ? seqData : (seqData.products || []);
+                setAllProductsSequence(plist);
+              }
+            }
+          })
+          .catch(err => {
+            if (err?.name !== 'AbortError') {
+              console.error('[ProductDetail]', err);
+            }
+          });
+      }
+
       const res = await apiFetch(`/api/products/${productSlug}`, { signal });
+      if (signal?.aborted) return;
       if (res.ok) {
         const data = await res.json();
         if (signal?.aborted) return;
@@ -194,7 +231,18 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         try {
           safeRemoveItem('aff_history_cleared');
           const stored = safeGetItem('aff_recent_viewed');
-          let recents: Product[] = stored ? JSON.parse(stored) : [];
+          let recents: Product[] = [];
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              recents = Array.isArray(parsed) ? parsed.filter((p: any) => p && typeof p === 'object' && p._id) : [];
+            } catch (e) {
+              recents = [];
+            }
+          }
+          if (!Array.isArray(recents)) {
+            recents = [];
+          }
           // Keep only simple info to avoid large sizes
           const productSummary = {
             _id: data._id,
@@ -218,12 +266,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         }
 
         // Disable global loading state instantly so the user can interact/view the spec sheets right away!
+        if (signal?.aborted) return;
         setLoading(false);
         
         // Fetch related products in the background so it doesn't block loading
         const catId = getCategoryId(data.category);
-        apiFetch(`/api/products?category=${catId}&limit=4`, { signal })
+        apiFetch(`/api/products?category=${encodeURIComponent(catId)}&limit=4`, { signal })
           .then(async (relRes) => {
+            if (signal?.aborted) return;
             if (relRes.ok) {
               const relData = await relRes.json();
               if (signal?.aborted) return;
@@ -268,6 +318,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         cons: product.cons?.join(', ') || '',
         videoUrl: product.videoUrl || '',
         specifications: Object.entries(product.specifications || {})
+          .filter(([_, v]) => v != null)
           .map(([k, v]) => `${k}=${v}`)
           .join('; ')
       });
@@ -277,28 +328,38 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const handleAdminEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product || !token) return;
+
+    const parsedPrice = parseFloat(adminEditForm.price);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      showToast("A valid positive price is required.", "error");
+      return;
+    }
+
+    if (adminEditForm.originalPrice) {
+      const parsedOrigPrice = parseFloat(adminEditForm.originalPrice);
+      if (isNaN(parsedOrigPrice) || parsedOrigPrice < 0) {
+        showToast("Original price cannot be negative.", "error");
+        return;
+      }
+    }
+
     setIsSavingAdminEdit(true);
     setAdminEditSuccess(false);
 
     try {
-      const specificationsObj: Record<string, string> = {};
-      if (adminEditForm.specifications) {
-        adminEditForm.specifications.split(';').forEach((pStr: string) => {
-          if (!pStr.trim()) return;
-          const parts = pStr.split('=');
-          if (parts.length >= 2) {
-            specificationsObj[parts[0].trim()] = parts.slice(1).join('=').trim();
-          } else if (parts.length === 1) {
-            specificationsObj[parts[0].trim()] = 'Yes';
-          }
-        });
-      }
+      const specificationsObj = parseSpecificationsString(adminEditForm.specifications);
+
+      const parsePrice = (val: string): number | undefined => {
+        if (!val || val.trim() === '') return undefined;
+        const num = parseFloat(val);
+        return isNaN(num) || num < 0 ? undefined : num;
+      };
 
       const payload = {
         name: adminEditForm.name,
-        price: Number(adminEditForm.price) || 0,
-        originalPrice: adminEditForm.originalPrice ? Number(adminEditForm.originalPrice) : undefined,
-        discount: adminEditForm.discount ? Number(adminEditForm.discount) : undefined,
+        price: parsePrice(adminEditForm.price) ?? 0,
+        originalPrice: parsePrice(adminEditForm.originalPrice),
+        discount: parsePrice(adminEditForm.discount),
         affiliateLink: adminEditForm.affiliateLink,
         description: adminEditForm.description,
         longDescription: adminEditForm.longDescription,
@@ -333,7 +394,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         showToast(friendly.message, friendly.type, 4000, friendly.category);
       }
     } catch (err) {
-      
+      console.error('Admin edit failed:', err);
       const friendly = mapErrorToFriendly(err, "update product parameters");
       showToast(friendly.message, friendly.type, 4000, friendly.category);
     } finally {
@@ -382,13 +443,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     apiFetch('/api/products?limit=100', { signal: controller.signal })
       .then(res => { if (res.ok) return res.json(); })
       .then(data => {
-        if (data && data.products && !controller.signal.aborted) {
-          setAllProductsSequence(data.products);
+        if (data && !controller.signal.aborted) {
+          const plist = Array.isArray(data) ? data : (data.products || []);
+          setAllProductsSequence(plist);
         }
       })
       .catch(err => {
         if (err.name !== 'AbortError') {
-          
+          console.error('[ProductDetail Sequence Fetch]', err);
         }
       });
     return () => {
@@ -442,10 +504,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   // Submit dynamic review posting
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product || !token) return;
+    if (!product || !token || reviewLoading) return;
     
     setReviewError('');
     setReviewSuccess(false);
+    setReviewLoading(true);
 
     try {
       const resp = await apiFetch(`/api/products/${product._id}/reviews`, {
@@ -477,6 +540,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       const friendly = mapErrorToFriendly(err, "submit product review");
       setReviewError(friendly.message);
       showToast(friendly.message, friendly.type, 4000, friendly.category);
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -495,7 +560,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             <div className="h-[430px] rounded-2xl bg-slate-100 dark:bg-slate-700"></div>
             <div className="flex gap-3 overflow-x-auto py-1">
               {[...Array(4)].map((_, idx) => (
-                <div key={idx} className="w-20 h-16 rounded-xl bg-slate-100 dark:bg-slate-700 shrink-0"></div>
+                <div key={`detail-img-skeleton-${idx}`} className="w-20 h-16 rounded-xl bg-slate-100 dark:bg-slate-700 shrink-0"></div>
               ))}
             </div>
           </div>
@@ -520,7 +585,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               <div className="h-4 w-1/3 bg-slate-100 dark:bg-slate-700 rounded"></div>
               <div className="grid grid-cols-2 gap-4">
                 {[...Array(6)].map((_, idx) => (
-                  <div key={idx} className="space-y-1 bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-xl border border-slate-50 dark:border-slate-700">
+                  <div key={`detail-spec-skeleton-${idx}`} className="space-y-1 bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-xl border border-slate-50 dark:border-slate-700">
                     <div className="h-3 w-1/2 bg-slate-100 dark:bg-slate-700 rounded"></div>
                     <div className="h-4 w-3/4 bg-slate-100 dark:bg-slate-700 rounded"></div>
                   </div>
@@ -624,7 +689,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto max-h-[430px] md:w-20 w-full shrink-0 pr-1 scrollbar-none py-1">
                   {product.images.map((img, idx) => (
                     <button
-                      key={idx}
+                      key={`gallery-thumb-${idx}-${img}`}
                       type="button"
                       aria-label={`View thumbnail ${idx + 1}`}
                       onClick={() => {
@@ -761,7 +826,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         {/* Right Side: Product Details */}
         <div className="space-y-6">
           {/* Admin Live Product details modifier action panel */}
-          {user && (user.id || user._id) && token && (user.role === 'admin') && (
+          {isAdmin && (
             <AdminProductEditPanel
               isAdminEditVisible={isAdminEditVisible}
               setIsAdminEditVisible={setIsAdminEditVisible}
@@ -838,7 +903,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-0.5 text-amber-300">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className={`h-4 w-4 ${i < Math.round(product.rating || 4.5) ? 'fill-amber-300 animate-pulse' : 'text-slate-100'}`} />
+                  <Star key={`star-rating-main-${i}`} className={`h-4 w-4 ${i < Math.min(5, Math.max(0, Math.floor(product.rating || 4.5))) ? 'fill-amber-300 animate-pulse' : 'text-slate-100'}`} />
                 ))}
               </div>
               <span className="text-xs font-bold text-slate-700 dark:text-slate-50 font-mono">{product.rating || '4.5'}</span>
@@ -930,7 +995,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Highlighted Advantages</h4>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {product.features.map((feat, idx) => (
-                  <li key={idx} className="flex items-center gap-2.5 text-slate-600 dark:text-slate-200">
+                  <li key={`feature-${idx}-${feat.substring(0, 15)}`} className="flex items-center gap-2.5 text-slate-600 dark:text-slate-200">
                     <CheckCheck className="h-4 w-4 text-indigo-400 shrink-0" />
                     <span>{feat}</span>
                   </li>
@@ -955,7 +1020,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             {product.pros && product.pros.length > 0 ? (
               <ul className="space-y-2 text-xs">
                 {product.pros.map((p, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-emerald-700 dark:text-emerald-200">
+                  <li key={`pro-${idx}-${p.substring(0, 15)}`} className="flex items-start gap-2 text-emerald-700 dark:text-emerald-200">
                     <span className="text-emerald-300 text-xs shrink-0 mt-0.5">●</span>
                     <span className="leading-relaxed">{p}</span>
                   </li>
@@ -975,7 +1040,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             {product.cons && product.cons.length > 0 ? (
               <ul className="space-y-2 text-xs">
                 {product.cons.map((c, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-rose-700 dark:text-rose-200">
+                  <li key={`con-${idx}-${c.substring(0, 15)}`} className="flex items-start gap-2 text-rose-700 dark:text-rose-200">
                     <span className="text-rose-300 text-xs shrink-0 mt-0.5">■</span>
                     <span className="leading-relaxed">{c}</span>
                   </li>
@@ -1025,7 +1090,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             <p className="text-3xl font-black font-mono text-slate-800 dark:text-white">{product.rating || '4.5'}</p>
             <div className="flex justify-center text-amber-300">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className={`h-5 w-5 ${i < Math.round(product.rating || 4.5) ? 'fill-amber-300' : 'text-slate-100'}`} />
+                <Star key={`stat-star-${i}`} className={`h-5 w-5 ${i < Math.min(5, Math.max(0, Math.floor(product.rating || 4.5))) ? 'fill-amber-300' : 'text-slate-100'}`} />
               ))}
             </div>
             {(!product.reviews || product.reviews.length === 0) ? (
@@ -1040,6 +1105,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             isAuthenticated={isAuthenticated}
             reviewSuccess={reviewSuccess}
             reviewError={reviewError}
+            reviewLoading={reviewLoading}
             reviewRating={reviewRating}
             setReviewRating={setReviewRating}
             reviewTitle={reviewTitle}
@@ -1059,7 +1125,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             <div className="space-y-4">
               {product.reviews.map((rev, idx) => (
                 <div
-                  key={idx}
+                  key={`member-opinion-${idx}-${rev.createdAt || idx}`}
                   className="rounded-2xl border border-slate-50 bg-slate-50/20 p-4 space-y-2 dark:border-slate-700 dark:bg-slate-800/10"
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -1075,13 +1141,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
                     <div className="flex items-center gap-0.5 text-amber-300 shrink-0">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={`h-3 w-3 ${i < rev.rating ? 'fill-amber-300' : 'text-slate-50'}`} />
+                        <Star key={`opinion-star-${idx}-${i}`} className={`h-3 w-3 ${i < Math.min(5, Math.max(0, Math.floor(rev.rating || 5))) ? 'fill-amber-300' : 'text-slate-50'}`} />
                       ))}
                     </div>
                   </div>
 
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-50">{rev.title ? rev.title.replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''}</p>
-                  <p className="text-[11px] text-slate-500 leading-relaxed dark:text-slate-300 italic">"{rev.content ? rev.content.replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''}"</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-50">{rev.title ? sanitizeText(rev.title) : ''}</p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed dark:text-slate-300 italic">"{rev.content ? sanitizeText(rev.content) : ''}"</p>
                 </div>
               ))}
             </div>

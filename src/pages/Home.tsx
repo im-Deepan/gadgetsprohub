@@ -93,11 +93,23 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     try {
       const stored = safeGetItem('aff_recent_searches');
       if (stored) {
-        setRecentSearches(JSON.parse(stored));
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setRecentSearches(parsed);
+          }
+        } catch (e) {
+          setRecentSearches([]);
+        }
       }
       const viewedStored = safeGetItem('aff_recent_viewed');
       if (viewedStored) {
-        const parsed = JSON.parse(viewedStored);
+        let parsed: any[] = [];
+        try {
+          parsed = JSON.parse(viewedStored);
+        } catch (e) {
+          parsed = [];
+        }
         if (Array.isArray(parsed)) {
           // Deduplicate based on id & _id
           const seen = new Set<string>();
@@ -136,7 +148,15 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     if (trimmed.length > 1) {
       try {
         const stored = safeGetItem('aff_recent_searches');
-        let current: string[] = stored ? JSON.parse(stored) : [];
+        let current: string[] = [];
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            current = Array.isArray(parsed) ? parsed : [];
+          } catch (e) {
+            current = [];
+          }
+        }
         const filtered = current.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
         const updated = [trimmed, ...filtered].slice(0, 5);
         safeSetItem('aff_recent_searches', JSON.stringify(updated));
@@ -177,7 +197,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             categoryId: activeCategory !== 'all' ? activeCategory : undefined,
             categorySlug: selectedCat ? selectedCat.slug : undefined
           })
-        }).catch(() => {});
+        }).catch(err => {
+          console.error('[Home filters tracking]', err);
+        });
       }, 700);
       return () => clearTimeout(handler);
     }
@@ -268,16 +290,23 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
   // General products are filtered products
   const generalProducts = React.useMemo(() => {
-    return homeSearch 
-      ? filteredProducts 
-      : filteredProducts.filter(prod => !trendingToShow.some(t => String(t._id || t.id || '') === String(prod._id || prod.id || '')));
+    if (homeSearch) return filteredProducts;
+    
+    const trendingIds = new Set(trendingToShow.map(t => String(t._id || t.id || '')));
+    return filteredProducts.filter(prod => !trendingIds.has(String(prod._id || prod.id || '')));
   }, [filteredProducts, homeSearch, trendingToShow]);
 
   // Sort filtered products by latest added/updated
   const latestProductsToShow = React.useMemo(() => {
+    const parsedTimes = new Map<string, number>();
+    filteredProducts.forEach(p => {
+      const time = p.createdAt ? new Date(p.createdAt).getTime() : 0;
+      parsedTimes.set(p._id, time);
+    });
+
     return [...filteredProducts].sort((a, b) => {
-      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const aTime = parsedTimes.get(a._id) ?? 0;
+      const bTime = parsedTimes.get(b._id) ?? 0;
       if (bTime !== aTime) return bTime - aTime;
       return String(b._id).localeCompare(String(a._id));
     });
@@ -309,9 +338,20 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       }
 
       // Sort standard categories by latest added/updated
+      const timestamps = new Map<string, number>();
       const sorted = [...catProducts].sort((a, b) => {
-        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        let aTime = timestamps.get(a._id);
+        if (aTime === undefined) {
+          aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          if (isNaN(aTime)) aTime = 0;
+          timestamps.set(a._id, aTime);
+        }
+        let bTime = timestamps.get(b._id);
+        if (bTime === undefined) {
+          bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          if (isNaN(bTime)) bTime = 0;
+          timestamps.set(b._id, bTime);
+        }
         if (bTime !== aTime) return bTime - aTime;
         return String(b._id).localeCompare(String(a._id));
       });
@@ -598,7 +638,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-855 p-5 animate-pulse space-y-4">
+              <div key={i} className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-800 p-5 animate-pulse space-y-4">
                 <div className="h-6 w-1/3 bg-slate-50 rounded"></div>
                 <div className="grid grid-cols-2 gap-2">
                   {[...Array(4)].map((_, j) => (
@@ -643,7 +683,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                   {latestFour.map(prod => (
                     <div className="group" key={prod._id}>
                       <BorderGlow
-                        className="relative aspect-square bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100/50 dark:border-slate-855/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-400/40 dark:hover:border-slate-600 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
+                        className="relative aspect-square bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100/50 dark:border-slate-800/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-400/40 dark:hover:border-slate-600 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
                         borderRadius={16}
                       >
                       <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>

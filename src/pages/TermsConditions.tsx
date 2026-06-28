@@ -12,7 +12,7 @@ export const TermsConditions: React.FC = () => {
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white sm:text-4xl font-sans">
           Terms & Conditions
         </h1>
-        <p className="text-xs font-mono text-indigo-640 dark:text-indigo-300 uppercase tracking-widest font-semibold">
+        <p className="text-xs font-mono text-indigo-600 dark:text-indigo-300 uppercase tracking-widest font-semibold">
           Affiliate Platform Usage Rules
         </p>
         <p className="max-w-xl mx-auto text-xs text-slate-400 dark:text-slate-300 leading-relaxed">

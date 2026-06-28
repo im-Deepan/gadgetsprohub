@@ -147,7 +147,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
             {blog.category || 'Tech'}
           </span>
           <span className="text-[10px] font-semibold text-slate-300 font-mono">
-            {blog.createdAt && !isNaN(new Date(blog.createdAt).getTime()) ? new Date(blog.createdAt).toLocaleDateString() : 'Active Review'}
+            {blog.createdAt && new Date(blog.createdAt) instanceof Date && !isNaN(new Date(blog.createdAt).getTime()) ? new Date(blog.createdAt).toLocaleDateString() : 'Active Review'}
           </span>
         </div>
 
@@ -190,7 +190,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
 
         {/* Dynamic formatting for paragraphs split by spaces to make it beautiful */}
         {(typeof blog.content === 'string' ? blog.content : '').split('\n\n').filter(Boolean).map((paragraph, index) => (
-          <p key={index} className="leading-relaxed whitespace-pre-line text-slate-500 dark:text-slate-200">
+          <p key={`p-${index}-${paragraph.substring(0, 15)}`} className="leading-relaxed whitespace-pre-line text-slate-500 dark:text-slate-200">
             {paragraph}
           </p>
         ))}

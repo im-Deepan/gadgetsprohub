@@ -26,8 +26,12 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         let attempts = 0;
         const maxAttempts = 30;
 
+        let innerTimer: ReturnType<typeof setTimeout> | null = null;
+        let isUnmounted = false;
+
         // Wait until element has width before pushing
         const checkVisibility = () => {
+          if (isUnmounted) return;
           if (adElement.current && !adElement.current.getAttribute('data-adsbygoogle-status')) {
             if (adElement.current.offsetWidth > 0) {
               const adsbygoogle = (window as unknown as { adsbygoogle: unknown[] }).adsbygoogle || [];
@@ -38,13 +42,17 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
               }
             } else if (attempts < maxAttempts) {
               attempts++;
-              setTimeout(checkVisibility, 200);
+              innerTimer = setTimeout(checkVisibility, 200);
             }
           }
         };
 
         const timer = setTimeout(checkVisibility, 300);
-        return () => clearTimeout(timer);
+        return () => {
+          isUnmounted = true;
+          clearTimeout(timer);
+          if (innerTimer) clearTimeout(innerTimer);
+        };
       }
     } catch (e) {
       

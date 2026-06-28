@@ -27,10 +27,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
   React.useEffect(() => {
     const controller = new AbortController();
     apiFetch('/api/categories', { signal: controller.signal })
-       .then(res => {
-         if (res.ok) return res.json();
-         throw new Error("fail");
-       })
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        })
        .then(data => {
          if (data && Array.isArray(data) && !controller.signal.aborted) {
            setCategories(data);
@@ -38,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
        })
        .catch(e => {
          if (e.name !== 'AbortError') {
-           
+           console.error('[Footer categories fetch]', e);
          }
        });
     return () => {

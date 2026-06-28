@@ -29,12 +29,15 @@ export const GlareHover: React.FC<GlareHoverProps> = ({
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (playOnce && hasPlayed) return;
     
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
-    setPosition({ x, y });
+    const node = containerRef.current;
+    if (node) {
+      const rect = node.getBoundingClientRect();
+      if (rect && rect.width > 0 && rect.height > 0) {
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        setPosition({ x, y });
+      }
+    }
   };
 
   const handleMouseEnter = () => setIsHovered(true);

@@ -69,6 +69,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
                 type="number"
                 step="0.01"
                 min="0"
+                max="999999"
                 className="w-full text-xs p-2 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800"
                 value={adminEditForm.price}
                 onChange={e => setAdminEditForm({ ...adminEditForm, price: e.target.value })}
@@ -81,6 +82,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
                 type="number"
                 step="0.01"
                 min="0"
+                max="999999"
                 className="w-full text-xs p-2 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800"
                 value={adminEditForm.originalPrice}
                 onChange={e => setAdminEditForm({ ...adminEditForm, originalPrice: e.target.value })}
@@ -137,10 +139,12 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
             <label className="block text-[10px] font-bold uppercase text-slate-300 mb-1">Deep specification details (Text/Markdown)</label>
             <textarea
               rows={3}
+              maxLength={500}
               className="w-full text-xs p-2 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 font-sans"
               value={adminEditForm.longDescription}
-              onChange={e => setAdminEditForm({ ...adminEditForm, longDescription: e.target.value })}
+              onChange={e => setAdminEditForm({ ...adminEditForm, longDescription: e.target.value.slice(0, 500) })}
             />
+            <p className="text-[10px] text-slate-300 text-right mt-0.5 font-mono">{(adminEditForm.longDescription || '').length}/500</p>
           </div>
 
           <div>

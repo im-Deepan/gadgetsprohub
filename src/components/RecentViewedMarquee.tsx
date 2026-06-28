@@ -125,7 +125,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
                 </AnimatePresence>
 
                 {/* Rating overlay badge at top right */}
-                {prod.rating && (
+                {typeof prod.rating === 'number' && (
                   <div className="absolute top-2 right-2 bg-slate-800/80 backdrop-blur-md text-white font-extrabold font-mono text-[9px] px-1.5 py-0.5 rounded shadow-sm z-10 dark:bg-slate-800/90">
                     ★ {prod.rating.toFixed(1)}
                   </div>

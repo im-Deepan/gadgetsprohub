@@ -61,11 +61,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.role,
           profileImage: data.profileImage,
           district: data.district || 'Chennai',
-          wishlist: data.wishlist?.map((p: { _id?: string } | string) => typeof p === 'string' ? p : (p._id || p)) || [],
+          wishlist: (data.wishlist ?? []).map((p: any) => typeof p === 'string' ? p : (p?._id ?? '')).filter(Boolean),
           isVerified: data.isVerified ?? true,
           pendingEmail: data.pendingEmail
         });
-        setWishlist(data.wishlist?.map((p: { _id?: string } | string) => typeof p === 'string' ? p : (p._id || p)) || []);
+        setWishlist((data.wishlist ?? []).map((p: any) => typeof p === 'string' ? p : (p?._id ?? '')).filter(Boolean));
       } else if (res.status === 401 || res.status === 403) {
         // Safe logout processing without ending loading prematurely
         safeRemoveItem('aff_token');

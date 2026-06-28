@@ -52,7 +52,7 @@ export const ProductPageSkeleton: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(8)].map((_, i) => (
-              <ProductCardSkeleton key={i} />
+              <ProductCardSkeleton key={`prod-skeleton-${i}`} />
             ))}
           </div>
         </div>
@@ -82,7 +82,7 @@ export const BlogPageSkeleton: React.FC = () => {
       {/* Grid Area */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:px-4">
         {[...Array(6)].map((_, i) => (
-          <BlogCardSkeleton key={i} />
+          <BlogCardSkeleton key={`blog-skeleton-${i}`} />
         ))}
       </div>
     </div>

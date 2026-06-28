@@ -5,6 +5,7 @@ interface ReviewFormProps {
   isAuthenticated: boolean;
   reviewSuccess: boolean;
   reviewError: string;
+  reviewLoading?: boolean;
   reviewRating: number;
   setReviewRating: (rating: number) => void;
   reviewTitle: string;
@@ -19,6 +20,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   isAuthenticated,
   reviewSuccess,
   reviewError,
+  reviewLoading,
   reviewRating,
   setReviewRating,
   reviewTitle,
@@ -87,9 +89,10 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-slate-800 hover:bg-indigo-500 text-white font-bold py-2.5 text-xs tracking-wider transition-colors cursor-pointer active:scale-97"
+            disabled={reviewLoading}
+            className={`w-full rounded-xl bg-slate-800 text-white font-bold py-2.5 text-xs tracking-wider transition-colors cursor-pointer active:scale-97 ${reviewLoading ? 'opacity-50 pointer-events-none' : 'hover:bg-indigo-500'}`}
           >
-            Post Feedback
+            {reviewLoading ? 'Posting...' : 'Post Feedback'}
           </button>
         </form>
       ) : (

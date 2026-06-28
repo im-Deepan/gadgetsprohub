@@ -47,8 +47,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (onConfirm) onConfirm();
+            onClick={async () => {
+              if (onConfirm) {
+                try {
+                  await Promise.resolve(onConfirm());
+                } catch (e) {
+                  console.error('[ConfirmDialog Error]', e);
+                }
+              }
               onCancel();
             }}
             className={`rounded-lg py-2 px-3.5 text-xs font-bold text-white transition-all shadow-sm active:scale-95 cursor-pointer ${

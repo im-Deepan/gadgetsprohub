@@ -95,7 +95,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     return true;
   });
   
-  const hasActiveFilters = Boolean(search || selectedCategory || minPrice || maxPrice || minRating);
+  const hasActiveFilters = !!(search || selectedCategory || minPrice || maxPrice || minRating);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -247,7 +247,15 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   // Recent Searches using localStorage
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     const stored = safeGetItem('aff_recent_searches');
-    return stored ? JSON.parse(stored) : [];
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
   });
 
   // Save search query to recent searches with debounced effect
@@ -1278,7 +1286,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     apiFetch(`/api/products/click/${specModalProduct.slug}`, {
                       method: 'POST',
                       headers: {'Content-Type': 'application/json'}
-                    }).catch(() => {});
+                    }).catch((err) => {
+                      console.error('[ProductList click tracker]', err);
+                    });
                     if (specModalProduct.affiliateLink) {
                       window.open(specModalProduct.affiliateLink, '_blank', 'noreferrer,noopener');
                     }

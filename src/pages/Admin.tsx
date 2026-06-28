@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Product, Category, Blog, Message } from '../types';
+import { Product, Category, Blog, Message, User } from '../types';
 import { Plus, Edit, Trash2, Heart, MailOpen, MailCheck, Coins, Eye, MousePointerClick, ShieldCheck, Mail, CheckCircle, RefreshCcw, Database, TrendingUp, Globe, Sparkles, AlertTriangle, Users, ChevronDown, ChevronUp, Image, Instagram, Linkedin, Lock, Clock } from 'lucide-react';
 import { useDeviceType } from '../hooks/useDeviceType';
 import { TabErrorView } from '../components/admin/TabErrorView';
 import { getDistrictEmoji } from '../utils/emoji';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { apiFetch } from '../utils/apiClient';
+import { parseSpecificationsString } from '../utils/specParser';
+import { generateSlug } from '../utils/slug';
 
 import { AlertDialog } from '../components/admin/AlertDialog';
 import { ConfirmDialog } from '../components/admin/ConfirmDialog';
@@ -31,11 +33,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [productPage, setProductPage] = useState(1);
   
   // Security audit trail States
-  const [securityLogs, setSecurityLogs] = useState<Array<{ _id?: string; date?: string; userId?: string; user?: { name?: string; email?: string }; action?: string; ipAddress?: string; location?: string; details?: string; timestamp?: string | Date }>>([]);
+  const [securityLogs, setSecurityLogs] = useState<Array<{ _id?: string; date?: string; userId?: string; user?: { name?: string; email?: string }; action?: string; ipAddress?: string; location?: string; details?: string; timestamp?: string | Date; actorEmail?: string; targetId?: string; userAgent?: string; id?: string }>>([]);
   const [securityLogsError, setSecurityLogsError] = useState<string | null>(null);
   
   // Sunday automation States
-  const [sundayLogs, setSundayLogs] = useState<Array<{ _id?: string; sundayDate?: string; productsAdded?: Array<{ name?: string } | string>; status?: string }>>([]);
+  const [sundayLogs, setSundayLogs] = useState<Array<{ _id?: string; sundayDate?: string; productsAdded?: Array<{ name?: string } | string>; status?: string; runType?: string; emailSent?: boolean }>>([]);
   const [sundayLogsError, setSundayLogsError] = useState<string | null>(null);
   const [simulatingSunday, setSimulatingSunday] = useState(false);
   
@@ -170,19 +172,20 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     return products.map(p => {
       const clickEvents = analyticsData.filter(a => {
         if (a.eventType !== 'click') return false;
-        const aProdId = a.productId?._id || a.productId;
-        const targetId = typeof aProdId === 'object' ? aProdId._id : aProdId;
+        const aProdId = (a.productId as any)?._id || a.productId;
+        const targetId = typeof aProdId === 'object' ? (aProdId as any)._id : aProdId;
         return targetId?.toString() === p._id.toString();
       });
       const convEvents = analyticsData.filter(a => {
         if (a.eventType !== 'conversion') return false;
-        const aProdId = a.productId?._id || a.productId;
-        const targetId = typeof aProdId === 'object' ? aProdId._id : aProdId;
+        const aProdId = (a.productId as any)?._id || a.productId;
+        const targetId = typeof aProdId === 'object' ? (aProdId as any)._id : aProdId;
         return targetId?.toString() === p._id.toString();
       });
 
-      const dynamicClicks = clickEvents.length || p.clicks || 0;
-      const dynamicConversions = convEvents.length || p.conversions || 0;
+      const hasAnalytics = analyticsData.length > 0;
+      const dynamicClicks = hasAnalytics ? clickEvents.length : (p.clicks || 0);
+      const dynamicConversions = hasAnalytics ? convEvents.length : (p.conversions || 0);
 
       return {
         ...p,
@@ -233,7 +236,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       return;
     }
 
-    const proposed = rawVal.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    const proposed = generateSlug(rawVal);
     if (!proposed || proposed === 'noise-cancelling-pro-anc') {
       setSlugCheckError('');
       setSuggestedSlug('');
@@ -313,8 +316,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     return () => clearInterval(pollInterval);
   }, [token, activeTab]);
 
-  const loadAdminMetrics = async () => {
+  const loadAdminMetrics = async (signal?: AbortSignal) => {
     setLoading(true);
+    if (signal?.aborted) return;
+    
     // Reset all tab errors
     setProductsError(null);
     setCategoriesError(null);
@@ -335,75 +340,95 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
     // 1. Fetch Catalog Specs
     try {
-      
-      const prodRes = await fetch('/api/products?limit=100');
-      if (prodRes.ok) {
-        const d = await prodRes.json();
+      const res = await apiFetch('/api/products?limit=100', { signal });
+      if (signal?.aborted) return;
+      if (res.ok) {
+        const d = await res.json();
+        if (signal?.aborted) return;
         pData = d.products || [];
         setProducts(pData);
-        
       } else {
-        const errJson = await prodRes.json().catch(() => ({}));
-        
-        setProductsError(errJson.error || `Failed to fetch Catalog: Status ${prodRes.status}`);
+        const errJson = await res.json().catch(() => ({}));
+        if (signal?.aborted) return;
+        setProductsError(errJson.error || `Failed to fetch Catalog: Status ${res.status}`);
       }
     } catch (e: unknown) {
+      if (signal?.aborted) return;
       const errorObj = e as { message?: string };
-      
       setProductsError(errorObj.message || "Failed to connect to Catalog server.");
     }
 
     // 2. Fetch Classification Categories
     try {
-      const catRes = await fetch('/api/categories');
-      if (catRes.ok) {
-        cData = await catRes.json();
+      const res = await apiFetch('/api/categories', { signal });
+      if (signal?.aborted) return;
+      if (res.ok) {
+        cData = await res.json();
+        if (signal?.aborted) return;
         setCategories(cData);
       } else {
-        const errJson = await catRes.json().catch(() => ({}));
-        setCategoriesError(errJson.error || `Failed to fetch Classifications: Status ${catRes.status}`);
+        const errJson = await res.json().catch(() => ({}));
+        if (signal?.aborted) return;
+        setCategoriesError(errJson.error || `Failed to fetch Classifications: Status ${res.status}`);
       }
     } catch (e: unknown) {
+      if (signal?.aborted) return;
       const errorObj = e as { message?: string };
       setCategoriesError(errorObj.message || "Failed to connect to Classifications server.");
     }
 
     // 3. Fetch Blog Guide Manuals
     try {
-      const blogRes = await fetch('/api/blogs');
-      if (blogRes.ok) {
-        const d = await blogRes.json();
+      const res = await apiFetch('/api/blogs', { signal });
+      if (signal?.aborted) return;
+      if (res.ok) {
+        const d = await res.json();
+        if (signal?.aborted) return;
         bData = d.blogs || [];
         setBlogs(bData);
       } else {
-        const errJson = await blogRes.json().catch(() => ({}));
-        setBlogsError(errJson.error || `Failed to fetch Manual Guides: Status ${blogRes.status}`);
+        const errJson = await res.json().catch(() => ({}));
+        if (signal?.aborted) return;
+        setBlogsError(errJson.error || `Failed to fetch Manual Guides: Status ${res.status}`);
       }
     } catch (e: unknown) {
+      if (signal?.aborted) return;
       const errorObj = e as { message?: string };
       setBlogsError(errorObj.message || "Failed to connect to Manual Guides server.");
     }
 
     // 4. Fetch Message Inquiries
     try {
-      const msgRes = await fetch('/api/admin/messages', { headers: { 'Authorization': `Bearer ${token}` } });
+      const msgRes = await fetch('/api/admin/messages', { 
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal
+      });
+      if (signal?.aborted) return;
       if (msgRes.ok) {
         mData = await msgRes.json();
+        if (signal?.aborted) return;
         setMessages(mData);
       } else {
         const errJson = await msgRes.json().catch(() => ({}));
+        if (signal?.aborted) return;
         setMessagesError(errJson.error || `Failed to fetch Help Inquiries: Status ${msgRes.status}`);
       }
     } catch (e: unknown) {
+      if (signal?.aborted) return;
       const errorObj = e as { message?: string };
       setMessagesError(errorObj.message || "Failed to connect to Help Inquiries server.");
     }
 
     // 5. Fetch Traffic Logs Telemetry
     try {
-      const analyticsRes = await fetch('/api/admin/analytics', { headers: { 'Authorization': `Bearer ${token}` } });
+      const analyticsRes = await fetch('/api/admin/analytics', { 
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal
+      });
+      if (signal?.aborted) return;
       if (analyticsRes.ok) {
         const aData = await analyticsRes.json();
+        if (signal?.aborted) return;
         setAnalyticsData(aData.analytics || []);
         visitors = aData.summary?.visitors || 0;
         telemetryClicks = aData.summary?.clicks || 0;
@@ -417,9 +442,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         }));
       } else {
         const errJson = await analyticsRes.json().catch(() => ({}));
+        if (signal?.aborted) return;
         setTelemetryError(errJson.error || `Failed to fetch Traffic logs: Status ${analyticsRes.status}`);
       }
     } catch (e: unknown) {
+      if (signal?.aborted) return;
       const errorObj = e as { message?: string };
       setTelemetryError(errorObj.message || "Failed to connect to Traffic Analytics server.");
     }
@@ -428,38 +455,46 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     try {
       if (token) {
         const usersRes = await fetch('/api/admin/users', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          signal
         });
+        if (signal?.aborted) return;
         if (usersRes.ok) {
           const uData = await usersRes.json();
+          if (signal?.aborted) return;
           setUsers(uData || []);
         } else {
           const errData = await usersRes.json().catch(() => ({}));
+          if (signal?.aborted) return;
           setUsersError(errData.error || `Failed to fetch User Accounts: status ${usersRes.status}`);
         }
       }
     } catch (e: unknown) {
+      if (signal?.aborted) return;
       const errorObj = e as { message?: string };
       setUsersError(errorObj.message || "Failed to connect to User Accounts server.");
     }
-
-    // 6b. Fetch Active Pending Elevations/Demotions skipped (Direct flow enabled)
 
     // 7. Fetch Sunday Automation Logs
     try {
       if (token) {
         const logsRes = await fetch('/api/admin/sunday-logs', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          signal
         });
+        if (signal?.aborted) return;
         if (logsRes.ok) {
           const logsData = await logsRes.json();
+          if (signal?.aborted) return;
           setSundayLogs(logsData);
         } else {
           const errData = await logsRes.json().catch(() => ({}));
+          if (signal?.aborted) return;
           setSundayLogsError(errData.error || `Failed to fetch Sunday Logs: status ${logsRes.status}`);
         }
       }
     } catch (err: unknown) {
+      if (signal?.aborted) return;
       const errorObj = err as { message?: string };
       setSundayLogsError(errorObj.message || 'Failed code connection for automated scheduler logs.');
     }
@@ -468,17 +503,22 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     try {
       if (token) {
         const secRes = await fetch('/api/admin/security-logs', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          signal
         });
+        if (signal?.aborted) return;
         if (secRes.ok) {
           const secData = await secRes.json();
+          if (signal?.aborted) return;
           setSecurityLogs(secData || []);
         } else {
           const errData = await secRes.json().catch(() => ({}));
+          if (signal?.aborted) return;
           setSecurityLogsError(errData.error || `Failed to fetch Security Logs: status ${secRes.status}`);
         }
       }
     } catch (err: unknown) {
+      if (signal?.aborted) return;
       const errorObj = err as { message?: string };
       setSecurityLogsError(errorObj.message || 'Failed code connection for security logs.');
     }
@@ -490,6 +530,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       const estimated = Number((clicks * 0.08 + conversions * 4.5).toFixed(2));
       const unreads = mData.filter(m => !m.read).length;
 
+      if (signal?.aborted) return;
       setStats({
         totalClicks: clicks,
         totalConversions: conversions,
@@ -500,7 +541,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     } catch (aggErr) {
       
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
@@ -574,8 +617,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Action Failed", err.error || "Failed to restore default seed data.");
           }
-        } catch (err: unknown) {
-          
+        } catch (err: any) {
           triggerAlert("Action Failed", "An error occurred while seeding: " + err.message);
         } finally {
           setSeedingInProgress(false);
@@ -607,8 +649,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Action Failed", err.error || "Failed to clear products catalog.");
           }
-        } catch (err: unknown) {
-          
+        } catch (err: any) {
           triggerAlert("Action Failed", "An error occurred while wiping: " + err.message);
         } finally {
           setSeedingInProgress(false);
@@ -640,8 +681,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Action Failed", err.error || "Failed to seed Trending Selections.");
           }
-        } catch (err: unknown) {
-          
+        } catch (err: any) {
           triggerAlert("Action Failed", "An error occurred while seeding: " + err.message);
         } finally {
           setSeedingInProgress(false);
@@ -652,9 +692,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   };
 
   useEffect(() => {
+    const controller = new AbortController();
     if (token) {
-      loadAdminMetrics();
+      loadAdminMetrics(controller.signal);
     }
+    return () => {
+      controller.abort();
+    };
   }, [token, activeTab]);
 
   // Handle Mark Message read
@@ -677,23 +721,26 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
   // Helper specification mapping builders
   const parseSpecs = (specsStr: string) => {
-    const obj: Record<string, string> = {};
-    if (!specsStr) return obj;
-    specsStr.split(';').forEach(p => {
-      if (!p.trim()) return;
-      const parts = p.split('=');
-      if (parts.length >= 2) {
-        obj[parts[0].trim()] = parts.slice(1).join('=').trim();
-      } else if (parts.length === 1) {
-        obj[parts[0].trim()] = 'Yes';
-      }
-    });
-    return obj;
+    return parseSpecificationsString(specsStr);
   };
 
   // Create or Edit Product POST proxy handler
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const parsedPrice = parseFloat(prodForm.price);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      triggerAlert("Validation Error", "A valid positive price is required.");
+      return;
+    }
+
+    if (prodForm.originalPrice) {
+      const parsedOrigPrice = parseFloat(prodForm.originalPrice);
+      if (isNaN(parsedOrigPrice) || parsedOrigPrice < 0) {
+        triggerAlert("Validation Error", "Original price cannot be negative.");
+        return;
+      }
+    }
     
     // Construct specifications map
     const specificationsObj = parseSpecs(prodForm.specKeyVal);
@@ -709,15 +756,21 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       imagesList.push('https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500');
     }
     
-    const slugCalculated = prodForm.slug || prodForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    const slugCalculated = generateSlug(prodForm.slug || prodForm.name);
+
+    const parsePrice = (val: string): number | undefined => {
+      if (!val || val.trim() === '') return undefined;
+      const num = parseFloat(val);
+      return isNaN(num) || num < 0 ? undefined : num;
+    };
 
     const payload = {
       name: prodForm.name,
       slug: slugCalculated,
       brand: prodForm.brand,
-      price: Number(prodForm.price) || 0,
-      originalPrice: Number(prodForm.originalPrice) || undefined,
-      discount: Number(prodForm.discount) || undefined,
+      price: parsePrice(prodForm.price) ?? 0,
+      originalPrice: parsePrice(prodForm.originalPrice),
+      discount: parsePrice(prodForm.discount),
       category: prodForm.category || categories?.[0]?._id || '',
       subcategory: prodForm.subcategory || undefined,
       description: prodForm.description,
@@ -792,8 +845,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           triggerAlert("Submission Failed", err.error || "The server rejected the product submission. Please verify fields format.");
         }
       }
-    } catch (err: unknown) {
-      
+    } catch (err: any) {
       triggerAlert("Submission Error", "An error occurred during submission: " + err.message);
     }
   };
@@ -875,8 +927,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Deletion Failed", err.error || "The server rejected the deletion request.");
           }
-        } catch (e: unknown) {
-          
+        } catch (e: any) {
           triggerAlert("Network Error", e.message || "Failed to make deletion request to the database server.");
         }
       },
@@ -901,7 +952,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         },
         body: JSON.stringify({
           name: catName,
-          slug: catSlug || catName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+          slug: generateSlug(catSlug || catName),
           icon: catIcon || '📦',
           description: 'Custom added curator category',
           subcategories: catSubcategories.split(',').map(sub => sub.trim()).filter(Boolean)
@@ -921,8 +972,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const err = await res.json().catch(() => ({}));
         triggerAlert("Failed to Save Category", err.error || "The server rejected the category request.");
       }
-    } catch (err: unknown) {
-      
+    } catch (err: any) {
       triggerAlert("Error", "An error occurred while saving the category: " + err.message);
     }
   };
@@ -961,8 +1011,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Deletion Failed", err.error || "The server rejected the category deletion request.");
           }
-        } catch (e: unknown) {
-          
+        } catch (e: any) {
           triggerAlert("Network Error", e.message || "Failed to contact the backend server.");
         }
       },
@@ -1082,13 +1131,22 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                 {(() => {
                   const statsObj = (districtStats || {}) as Record<string, number>;
-                  const dtotal = Object.values(statsObj).reduce((acc: number, c: number) => acc + c, 0);
+                  const dtotal = Object.values(statsObj).reduce((acc: number, c) => acc + (typeof c === 'number' ? c : 0), 0);
                   const sortedDis = Object.entries(statsObj)
                     .map(([name, count]) => ({ name, count: count as number }))
                     .sort((a, b) => b.count - a.count);
                   
                   const topFour = sortedDis.slice(0, 4);
                   const remaining = sortedDis.slice(4);
+
+                  const { activeCount, inactiveCount } = remaining.reduce(
+                    (acc: { activeCount: number; inactiveCount: number }, r) => {
+                      if (r.count > 0) acc.activeCount++;
+                      else acc.inactiveCount++;
+                      return acc;
+                    },
+                    { activeCount: 0, inactiveCount: 0 }
+                  );
 
                   return (
                     <div className="col-span-2 space-y-3">
@@ -1097,7 +1155,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           const pct = dtotal === 0 ? 0 : Math.round((count / dtotal) * 100);
                           return (
                             <div key={name} className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl flex items-center justify-between border border-slate-50 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all shadow-2xs">
-                              <span className="flex items-center gap-1.5 font-sans font-bold text-slate-855 dark:text-slate-100">
+                              <span className="flex items-center gap-1.5 font-sans font-bold text-slate-800 dark:text-slate-100">
                                 {getDistrictEmoji(name)} {name}
                               </span>
                               <span className="font-semibold text-emerald-500 dark:text-emerald-300 font-mono">
@@ -1134,7 +1192,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         <span>
                           {showAllDistricts 
                             ? "Show Less" 
-                            : `See More (${remaining.filter(r => (r.count as number) > 0).length} active + ${remaining.filter(r => (r.count as number) === 0).length} other Tamil Nadu districts)`
+                            : `See More (${activeCount} active + ${inactiveCount} other Tamil Nadu districts)`
                           }
                         </span>
                         {showAllDistricts ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -1546,7 +1604,15 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         </button>
                         
                         <div className="flex gap-1">
-                          {Array.from({ length: totalProductPages }, (_, i) => i + 1).map(pageNumber => (
+                          {(() => {
+                            const range = [];
+                            const start = Math.max(1, currentProductPage - 2);
+                            const end = Math.min(totalProductPages, start + 4);
+                            for (let i = Math.max(1, end - 4); i <= end; i++) {
+                              if (i > 0) range.push(i);
+                            }
+                            return range;
+                          })().map(pageNumber => (
                             <button
                               key={pageNumber}
                               type="button"
@@ -3028,8 +3094,15 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               ‹ Prev
                             </button>
 
-                            {Array.from({ length: totalPages }, (_, i) => i + 1)
-                              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentLogsPage) <= 1)
+                            {(() => {
+                              const pages = new Set<number>();
+                              pages.add(1);
+                              pages.add(totalPages);
+                              for (let i = Math.max(1, currentLogsPage - 1); i <= Math.min(totalPages, currentLogsPage + 1); i++) {
+                                pages.add(i);
+                              }
+                              return Array.from(pages).sort((a, b) => a - b);
+                            })()
                               .map((p, index, arr) => {
                                 const showEllipsisBefore = index > 0 && p - arr[index - 1] > 1;
                                 const isCurrent = p === currentLogsPage;
@@ -3195,6 +3268,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         type="number"
                         required
                         min="0"
+                        max="999999"
                         step="0.01"
                         value={prodForm.price}
                         onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })}
@@ -3234,6 +3308,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <input
                         type="number"
                         min="0"
+                        max="999999"
                         step="0.01"
                         value={prodForm.originalPrice}
                         onChange={(e) => setProdForm({ ...prodForm, originalPrice: e.target.value })}
@@ -3358,10 +3433,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     <textarea
                       rows={3}
                       required
+                      maxLength={500}
                       value={prodForm.longDescription}
-                      onChange={(e) => setProdForm({ ...prodForm, longDescription: e.target.value })}
+                      onChange={(e) => setProdForm({ ...prodForm, longDescription: e.target.value.slice(0, 500) })}
                       className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
                     />
+                    <p className="text-[10px] text-slate-300 text-right mt-0.5 font-mono">{(prodForm.longDescription || '').length}/500</p>
                   </div>
 
                   <div className="flex items-center gap-6 py-2">

@@ -341,16 +341,25 @@ const AppContent: React.FC = () => {
       safeSetItem('affiliate_visitor_id', visitorId);
     }
     
-    fetch('/api/visit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visitorId }),
-        signal: controller.signal
-      }).catch(err => {
-        if (err.name !== 'AbortError') {
-          
+    const trackVisit = async () => {
+      try {
+        const res = await fetch('/api/visit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visitorId }),
+          signal: controller.signal
+        });
+        if (!res.ok) {
+          console.warn(`Analytics visit tracking failed with status ${res.status}`);
         }
-      });
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error("Failed to track visitor visit analytics:", err);
+        }
+      }
+    };
+
+    trackVisit();
 
     // Lazy load AdSense safely with strict double-trigger protection
     const loadAdSense = () => {
@@ -372,10 +381,9 @@ const AppContent: React.FC = () => {
           script.async = true;
           script.crossOrigin = 'anonymous';
           document.head.appendChild(script);
-          console.log(`Google AdSense script lazily loaded with Client ID: ${publisherId}`);
         }
       } catch (err) {
-        
+        console.error("Failed to load Google AdSense script:", err);
       }
     };
 

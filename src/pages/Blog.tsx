@@ -25,13 +25,21 @@ const BlogCardSkeleton = () => (
 
 export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedSub, setSelectedSub] = useState('');
 
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
+
   const { data: blogsData, isLoading: queryLoading, isFetching: queryFetching } = useQuery({
-    queryKey: ['blogs', search, selectedSub],
+    queryKey: ['blogs', debouncedSearch, selectedSub],
     queryFn: async ({ signal }) => {
       const q = new URLSearchParams();
-      if (search) q.append('search', search);
+      if (debouncedSearch) q.append('search', debouncedSearch);
       if (selectedSub) q.append('category', selectedSub);
       
       const res = await apiFetch(`/api/blogs?${q.toString()}`, { signal });
