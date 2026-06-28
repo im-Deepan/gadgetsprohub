@@ -37,40 +37,40 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 animate-pulse text-slate-800 dark:text-slate-100">
+      <div className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 animate-pulse text-slate-700 dark:text-slate-50">
         {/* Breadcrumb Skeleton */}
         <div className="flex mb-8">
-          <div className="h-9 w-40 bg-slate-200 dark:bg-slate-800 rounded-full"></div>
+          <div className="h-9 w-40 bg-slate-100 dark:bg-slate-700 rounded-full"></div>
         </div>
 
         {/* Big Banner Skeleton */}
-        <div className="h-64 sm:h-96 rounded-3xl bg-slate-200 dark:bg-slate-800 shrink-0 mb-8"></div>
+        <div className="h-64 sm:h-96 rounded-3xl bg-slate-100 dark:bg-slate-700 shrink-0 mb-8"></div>
 
         {/* Meta details Skeleton */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
-          <div className="h-5 w-32 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+          <div className="h-5 w-24 bg-slate-100 dark:bg-slate-700 rounded-lg"></div>
+          <div className="h-5 w-32 bg-slate-100 dark:bg-slate-700 rounded-lg"></div>
         </div>
 
         {/* Main Title lines Skeleton */}
         <div className="space-y-3.5 mb-8">
-          <div className="h-9 w-5/6 bg-slate-200 dark:bg-slate-800 rounded"></div>
-          <div className="h-9 w-2/3 bg-slate-200 dark:bg-slate-800 rounded"></div>
+          <div className="h-9 w-5/6 bg-slate-100 dark:bg-slate-700 rounded"></div>
+          <div className="h-9 w-2/3 bg-slate-100 dark:bg-slate-700 rounded"></div>
         </div>
 
         {/* Content paragraphs Skeletons */}
-        <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-slate-800">
+        <div className="space-y-6 pt-8 border-t border-slate-50 dark:border-slate-700">
           <div className="space-y-2.5">
-            <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded"></div>
-            <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded"></div>
-            <div className="h-4 w-4/5 bg-slate-200 dark:bg-slate-800 rounded"></div>
+            <div className="h-4 w-full bg-slate-100 dark:bg-slate-700 rounded"></div>
+            <div className="h-4 w-full bg-slate-100 dark:bg-slate-700 rounded"></div>
+            <div className="h-4 w-4/5 bg-slate-100 dark:bg-slate-700 rounded"></div>
           </div>
 
           <div className="space-y-2.5">
-            <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded"></div>
-            <div className="h-4 w-5/6 bg-slate-200 dark:bg-slate-800 rounded"></div>
-            <div className="h-4 w-11/12 bg-slate-200 dark:bg-slate-800 rounded"></div>
-            <div className="h-4 w-1/2 bg-slate-200 dark:bg-slate-800 rounded"></div>
+            <div className="h-4 w-full bg-slate-100 dark:bg-slate-700 rounded"></div>
+            <div className="h-4 w-5/6 bg-slate-100 dark:bg-slate-700 rounded"></div>
+            <div className="h-4 w-11/12 bg-slate-100 dark:bg-slate-700 rounded"></div>
+            <div className="h-4 w-1/2 bg-slate-100 dark:bg-slate-700 rounded"></div>
           </div>
         </div>
       </div>
@@ -81,11 +81,11 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
     return (
       <div className="mx-auto max-w-xl text-center py-20 px-4">
         <span className="text-4xl">📚</span>
-        <h2 className="text-sm font-bold text-slate-800 mt-4">Manual Not Sourced</h2>
-        <p className="text-xs text-slate-400 mt-1">We are unable to extract the specified curation guides. Try choosing other topics.</p>
+        <h2 className="text-sm font-bold text-slate-700 mt-4">Manual Not Sourced</h2>
+        <p className="text-xs text-slate-300 mt-1">We are unable to extract the specified curation guides. Try choosing other topics.</p>
         <button
           onClick={() => onNavigate('blogs')}
-          className="mt-6 rounded-full bg-slate-950 text-white px-5 py-2.5 text-xs font-semibold hover:bg-indigo-600 cursor-pointer"
+          className="mt-6 rounded-full bg-slate-950 text-white px-5 py-2.5 text-xs font-semibold hover:bg-indigo-500 cursor-pointer"
         >
           Check manuals board
         </button>
@@ -132,7 +132,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
 
         <button
           onClick={handleShareClick}
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer"
+          className="flex items-center gap-2 rounded-full border border-slate-100 bg-white px-3.5 py-2 text-[10px] font-bold text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 cursor-pointer"
           aria-label="Share this guide"
         >
           <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -143,25 +143,25 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       {/* Hero Banner Area */}
       <div className="space-y-4 mb-8">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-600 font-mono bg-indigo-50 px-2.5 py-1 rounded-sm dark:bg-indigo-950/40 dark:text-indigo-400">
+          <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-500 font-mono bg-indigo-50 px-2.5 py-1 rounded-sm dark:bg-indigo-950/40 dark:text-indigo-300">
             {blog.category || 'Tech'}
           </span>
-          <span className="text-[10px] font-semibold text-slate-400 font-mono">
+          <span className="text-[10px] font-semibold text-slate-300 font-mono">
             {blog.createdAt && !isNaN(new Date(blog.createdAt).getTime()) ? new Date(blog.createdAt).toLocaleDateString() : 'Active Review'}
           </span>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-sans tracking-tight text-slate-900 leading-snug dark:text-white">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-sans tracking-tight text-slate-800 leading-snug dark:text-white">
           {blog.title}
         </h1>
 
         {/* Metadata info */}
-        <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1.5 border-b pb-4 border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-300 pt-1.5 border-b pb-4 border-slate-50 dark:border-slate-700">
           <div className="flex items-center gap-1.5">
-            <span className="h-5 w-5 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px] uppercase font-bold">
+            <span className="h-5 w-5 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[9px] uppercase font-bold">
               {blog.author?.[0] || 'A'}
             </span>
-            <span className="font-semibold text-slate-800 dark:text-slate-200">{blog.author || 'Admin Curator'}</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-100">{blog.author || 'Admin Curator'}</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1">
@@ -172,7 +172,7 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       </div>
 
       {/* Featured Graphic banner */}
-      <div className="w-full h-[200px] sm:h-[360px] rounded-3xl overflow-hidden mb-10 shrink-0 select-none border border-slate-100 dark:border-slate-800">
+      <div className="w-full h-[200px] sm:h-[360px] rounded-3xl overflow-hidden mb-10 shrink-0 select-none border border-slate-50 dark:border-slate-700">
         <img
           src={blog.featured_image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200'}
           alt={blog.title}
@@ -183,14 +183,14 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       </div>
 
       {/* Detailed Editorial Content Layout */}
-      <div className="prose max-w-none text-slate-800 dark:text-slate-300 text-xs sm:text-sm leading-relaxed space-y-6">
-        <p className="text-sm font-bold border-l-2 border-indigo-600 pl-4 py-1 text-slate-600 dark:text-slate-200 bg-slate-50/50 p-3 rounded-r-xl dark:bg-slate-900/10 italic">
+      <div className="prose max-w-none text-slate-700 dark:text-slate-200 text-xs sm:text-sm leading-relaxed space-y-6">
+        <p className="text-sm font-bold border-l-2 border-indigo-500 pl-4 py-1 text-slate-500 dark:text-slate-100 bg-slate-50/50 p-3 rounded-r-xl dark:bg-slate-800/10 italic">
           "{blog.excerpt || 'Find our editorial parameters for complete comparison specs matrices.'}"
         </p>
 
         {/* Dynamic formatting for paragraphs split by spaces to make it beautiful */}
         {(typeof blog.content === 'string' ? blog.content : '').split('\n\n').filter(Boolean).map((paragraph, index) => (
-          <p key={index} className="leading-relaxed whitespace-pre-line text-slate-600 dark:text-slate-300">
+          <p key={index} className="leading-relaxed whitespace-pre-line text-slate-500 dark:text-slate-200">
             {paragraph}
           </p>
         ))}
@@ -198,10 +198,10 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
 
       {/* Associated Meta tags */}
       {Array.isArray(blog.tags) && blog.tags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 pt-10 border-t border-slate-100 dark:border-slate-800 mt-12">
-          <Tag className="h-4 w-4 text-slate-400 flex shrink-0" />
+        <div className="flex flex-wrap items-center gap-2 pt-10 border-t border-slate-50 dark:border-slate-700 mt-12">
+          <Tag className="h-4 w-4 text-slate-300 flex shrink-0" />
           {blog.tags.map(t => (
-            <span key={t} className="rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 border border-slate-100 px-2.5 py-1 text-[10px] text-slate-500 font-mono font-semibold uppercase dark:border-slate-800 dark:text-slate-400">
+            <span key={t} className="rounded-lg bg-slate-50 hover:bg-slate-50 dark:bg-slate-800 border border-slate-50 px-2.5 py-1 text-[10px] text-slate-400 font-mono font-semibold uppercase dark:border-slate-700 dark:text-slate-300">
               #{t}
             </span>
           ))}
@@ -209,15 +209,15 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       )}
 
       {/* Bottom return banner */}
-      <div className="rounded-2xl bg-indigo-50/30 p-6 text-center border border-indigo-100/30 mt-16 dark:bg-slate-900/30 dark:border-slate-800 space-y-4">
-        <Sparkle className="h-6 w-6 text-indigo-500 mx-auto animate-pulse" />
-        <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">Ready to check the catalog specifications?</h3>
-        <p className="text-[11px] text-slate-500 max-w-sm mx-auto dark:text-slate-400">
+      <div className="rounded-2xl bg-indigo-50/30 p-6 text-center border border-indigo-50/30 mt-16 dark:bg-slate-800/30 dark:border-slate-700 space-y-4">
+        <Sparkle className="h-6 w-6 text-indigo-400 mx-auto animate-pulse" />
+        <h3 className="text-xs font-bold text-slate-700 dark:text-white uppercase tracking-wider">Ready to check the catalog specifications?</h3>
+        <p className="text-[11px] text-slate-400 max-w-sm mx-auto dark:text-slate-300">
           Our buying manuals coordinate directly with the dynamic review index. Compare headphone EQ responses or sneakers sole durability directly.
         </p>
         <button
           onClick={() => onNavigate('products')}
-          className="rounded-full bg-indigo-600 text-white font-bold text-xs px-5 py-2.5 shadow-md active:scale-95 hover:bg-indigo-700 cursor-pointer"
+          className="rounded-full bg-indigo-500 text-white font-bold text-xs px-5 py-2.5 shadow-md active:scale-95 hover:bg-indigo-600 cursor-pointer"
         >
           Check showcase catalog
         </button>

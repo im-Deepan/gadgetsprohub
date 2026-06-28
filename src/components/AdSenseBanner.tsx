@@ -61,8 +61,8 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   };
 
   return (
-    <div id={`adsense-panel-${slot}`} className={`my-6 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-900/30 p-4 border border-dashed border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center transition-all duration-300 ${className}`}>
-      <span className="text-[9px] font-mono tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-2">
+    <div id={`adsense-panel-${slot}`} className={`my-6 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-800/30 p-4 border border-dashed border-slate-100 dark:border-slate-700/80 flex flex-col items-center justify-center transition-all duration-300 ${className}`}>
+      <span className="text-[9px] font-mono tracking-widest text-slate-300 dark:text-slate-400 uppercase mb-2">
         Sponsor Advertisement
       </span>
       
@@ -79,18 +79,18 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
           />
         </div>
       ) : (
-        <div className="w-full h-24 bg-slate-100/50 dark:bg-slate-950/20 rounded-xl flex flex-col items-center justify-center p-4 border border-dotted border-slate-300 dark:border-slate-800">
-          <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 font-mono">
+        <div className="w-full h-24 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl flex flex-col items-center justify-center p-4 border border-dotted border-slate-200 dark:border-slate-700">
+          <span className="text-[11px] font-extrabold text-slate-400 dark:text-slate-300 font-mono">
             Interactive Ad Slot Sandbox
           </span>
-          <span className="text-[9px] text-slate-400 dark:text-slate-600 font-mono mt-1 text-center max-w-md">
+          <span className="text-[9px] text-slate-300 dark:text-slate-500 font-mono mt-1 text-center max-w-md">
             Please configure the environment variable VITE_ADSENSE_CLIENT_ID in your workspace settings to authorize and stream ads here.
           </span>
         </div>
       )}
 
       {/* Subtle indicator showing that context ad slot holds active listeners */}
-      <span className="text-[8px] font-mono text-slate-400 dark:text-slate-500 mt-2 cursor-default select-none">
+      <span className="text-[8px] font-mono text-slate-300 dark:text-slate-400 mt-2 cursor-default select-none">
         AdSense Client: {publisherId || 'Local Sandbox Mode (Unconfigured)'} | Slot Ref: {slot}
       </span>
     </div>

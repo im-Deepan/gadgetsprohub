@@ -245,33 +245,33 @@ const ViewLoader: React.FC = () => {
       className="w-full min-h-[60vh] flex flex-col items-center justify-center py-20 px-4 font-sans select-none"
     >
       <div className="relative flex items-center justify-center mb-6">
-        <div className="h-16 w-16 rounded-full border-4 border-slate-100 dark:border-slate-800/80 border-t-indigo-600 animate-spin"></div>
-        <div className="absolute h-16 w-16 rounded-full border border-dashed border-indigo-500/20 animate-ping"></div>
-        <div className="absolute text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
+        <div className="h-16 w-16 rounded-full border-4 border-slate-50 dark:border-slate-700/80 border-t-indigo-500 animate-spin"></div>
+        <div className="absolute h-16 w-16 rounded-full border border-dashed border-indigo-400/20 animate-ping"></div>
+        <div className="absolute text-[10px] font-mono font-bold text-indigo-500 dark:text-indigo-300">
           {progress}%
         </div>
       </div>
       
       <div className="text-center max-w-sm w-full mb-4 px-2">
-        <div className="text-[10px] font-bold text-indigo-500 tracking-wider uppercase mb-1">
+        <div className="text-[10px] font-bold text-indigo-400 tracking-wider uppercase mb-1">
           Step {currentStep} of 4 • Loading Assets
         </div>
-        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 tracking-wide block leading-relaxed min-h-[32px]">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-200 tracking-wide block leading-relaxed min-h-[32px]">
           {statusMessage}
         </span>
       </div>
 
       {/* Elegant glowing progress bar container */}
-      <div className="w-64 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-3 relative shadow-inner">
+      <div className="w-64 h-1.5 bg-slate-50 dark:bg-slate-700 rounded-full overflow-hidden mb-3 relative shadow-inner">
         <motion.div 
-          className="h-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 rounded-full"
+          className="h-full bg-gradient-to-r from-indigo-400 via-indigo-500 to-indigo-600 rounded-full"
           initial={{ width: "15%" }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.7, ease: [0.25, 1, 0.5, 1] }}
         />
       </div>
 
-      <span className="text-[10px] font-bold text-slate-400/70 dark:text-slate-500/70 uppercase tracking-[0.25em] animate-pulse">
+      <span className="text-[10px] font-bold text-slate-300/70 dark:text-slate-400/70 uppercase tracking-[0.25em] animate-pulse">
         Optimizing experience
       </span>
     </motion.div>
@@ -722,7 +722,7 @@ const AppContent: React.FC = () => {
         return (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <h2 className="text-2xl font-bold mb-4">Page Not Found</h2>
-            <button onClick={() => navigateToView('home')} className="bg-indigo-600 text-white px-6 py-2 rounded-lg">Return Home</button>
+            <button onClick={() => navigateToView('home')} className="bg-indigo-500 text-white px-6 py-2 rounded-lg">Return Home</button>
           </div>
         );
       }
@@ -730,11 +730,11 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col text-slate-800 dark:text-slate-100 transition-colors duration-300 ${activeView === 'login' ? 'bg-slate-50 dark:bg-black' : 'bg-slate-50 dark:bg-black'}`}>
+    <div className={`min-h-screen flex flex-col text-slate-700 dark:text-slate-50 transition-colors duration-300 ${activeView === 'login' ? 'bg-slate-50 dark:bg-black' : 'bg-slate-50 dark:bg-black'}`}>
       
       {isGlobalLoading && (
-        <div className="fixed top-0 left-0 right-0 h-[3px] bg-slate-200/50 dark:bg-slate-800/50 z-[9999] overflow-hidden">
-          <div className="h-full bg-indigo-600 dark:bg-indigo-400 w-1/3 rounded-full animate-loading-bar" />
+        <div className="fixed top-0 left-0 right-0 h-[3px] bg-slate-100/50 dark:bg-slate-700/50 z-[9999] overflow-hidden">
+          <div className="h-full bg-indigo-500 dark:bg-indigo-300 w-1/3 rounded-full animate-loading-bar" />
         </div>
       )}
 

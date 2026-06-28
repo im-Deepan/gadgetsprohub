@@ -249,7 +249,7 @@ export const ImageLightbox: React.FC = () => {
 
           {/* Interactive touch action helper tip badge */}
           <div className="absolute top-6 left-6 hidden sm:flex items-center gap-1.5 bg-white/10 border border-white/5 text-white/70 px-3 py-1.5 rounded-full text-[10px] uppercase font-bold tracking-wider select-none pointer-events-none">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping"></span>
+            <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-ping"></span>
             Pinch to Zoom • Tap-Drag to pan • Swipe vertical to dismiss
           </div>
 
@@ -274,7 +274,7 @@ export const ImageLightbox: React.FC = () => {
                 src={lightboxData.src}
                 alt={lightboxData.alt}
                 referrerPolicy="no-referrer"
-                className="max-w-full max-h-[58vh] md:max-h-[62vh] object-contain rounded-2xl shadow-3xl border border-white/10 bg-slate-900/60 pointer-events-auto touch-none"
+                className="max-w-full max-h-[58vh] md:max-h-[62vh] object-contain rounded-2xl shadow-3xl border border-white/10 bg-slate-800/60 pointer-events-auto touch-none"
                 style={{
                   transform: `translate3d(${translateX}px, ${translateY + dragY}px, 0) scale(${scale})`,
                   transition: scale === 1 && dragY === 0 ? 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease' : 'none'
@@ -303,14 +303,14 @@ export const ImageLightbox: React.FC = () => {
               )}
 
               {/* Scrollable Thumbnails list */}
-              <div className="flex items-center gap-1.5 overflow-x-auto max-w-[150px] sm:max-w-[300px] py-1 px-1 scrollbar-hide">
+              <div className="flex items-center gap-1.5 overflow-x-auto max-w-[100px] sm:max-w-[300px] py-1 px-1 scrollbar-hide">
                 {lightboxData.images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => jumpToImage(i)}
                     className={`relative h-10 w-10 shrink-0 rounded-lg overflow-hidden border transition-all duration-200 cursor-pointer ${
                       i === lightboxData.currentIndex
-                        ? 'border-indigo-500 scale-105 shadow-md ring-2 ring-indigo-500/30'
+                        ? 'border-indigo-400 scale-105 shadow-md ring-2 ring-indigo-400/30'
                         : 'border-white/10 opacity-55 hover:opacity-100 hover:scale-[1.02]'
                     }`}
                   >

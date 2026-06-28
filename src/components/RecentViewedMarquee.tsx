@@ -44,19 +44,19 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
       {/* Editorial Title Header */}
-      <div className="flex flex-col md:flex-row md:items-baseline justify-between mb-6 pb-3 border-b border-slate-200/60 dark:border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-baseline justify-between mb-6 pb-3 border-b border-slate-100/60 dark:border-slate-700">
         <div className="flex items-center gap-2">
-          <History className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white font-sans uppercase">
+          <History className="h-5 w-5 text-indigo-500 dark:text-indigo-300" />
+          <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white font-sans uppercase">
             Pick Where You Left
           </h2>
-          <span className="ml-2 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700 dark:bg-slate-900/80 dark:text-slate-300 font-mono uppercase tracking-wide">
+          <span className="ml-2 rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800/80 dark:text-slate-200 font-mono uppercase tracking-wide">
             History Roll
           </span>
         </div>
         <button
           onClick={onClear}
-          className="text-xs font-bold text-slate-400 hover:text-rose-500 transition-colors bg-transparent border-none cursor-pointer p-0 mt-1 md:mt-0"
+          className="text-xs font-bold text-slate-300 hover:text-rose-400 transition-colors bg-transparent border-none cursor-pointer p-0 mt-1 md:mt-0"
         >
           Clear history
         </button>
@@ -90,13 +90,13 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
           return (
             <div
               key={`slot-${slotIndex}`}
-              className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900 transition-all hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 aspect-square flex flex-col justify-between p-4 group cursor-pointer ${responsiveClass}`}
+              className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-800 transition-all hover:shadow-md hover:border-slate-200 dark:hover:border-slate-600 aspect-square flex flex-col justify-between p-4 group cursor-pointer ${responsiveClass}`}
               onClick={() => {
                 if (prod.slug) onNavigate('product-detail', prod.slug);
               }}
             >
               {/* Vertical Marquee Slide with AnimatePresence */}
-              <div className="relative w-full h-[62%] flex items-center justify-center overflow-hidden bg-slate-50/50 dark:bg-slate-950/45 rounded-xl border border-slate-100 dark:border-slate-900/60 p-2">
+              <div className="relative w-full h-[62%] flex items-center justify-center overflow-hidden bg-slate-50/50 dark:bg-slate-950/45 rounded-xl border border-slate-50 dark:border-slate-800/60 p-2">
                 <AnimatePresence mode="popLayout" initial={false}>
                   <motion.div
                     key={prod._id}
@@ -126,7 +126,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
 
                 {/* Rating overlay badge at top right */}
                 {prod.rating && (
-                  <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-md text-white font-extrabold font-mono text-[9px] px-1.5 py-0.5 rounded shadow-sm z-10 dark:bg-slate-900/90">
+                  <div className="absolute top-2 right-2 bg-slate-800/80 backdrop-blur-md text-white font-extrabold font-mono text-[9px] px-1.5 py-0.5 rounded shadow-sm z-10 dark:bg-slate-800/90">
                     ★ {prod.rating.toFixed(1)}
                   </div>
                 )}
@@ -150,10 +150,10 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
                     }}
                     className="w-full flex-grow flex flex-col justify-center"
                   >
-                    <span className="text-[9px] font-black tracking-wider uppercase font-mono text-indigo-600 dark:text-indigo-400 leading-none truncate">
+                    <span className="text-[9px] font-black tracking-wider uppercase font-mono text-indigo-500 dark:text-indigo-300 leading-none truncate">
                       {prod.brand || 'Elite Design'}
                     </span>
-                    <h3 className="text-xs font-extrabold text-slate-800 dark:text-slate-200 line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors tracking-tight leading-none mt-1">
+                    <h3 className="text-xs font-extrabold text-slate-700 dark:text-slate-100 line-clamp-1 group-hover:text-indigo-500 dark:group-hover:text-indigo-300 transition-colors tracking-tight leading-none mt-1">
                       {prod.name}
                     </h3>
                   </motion.div>
@@ -162,7 +162,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
 
               {/* Corner mini arrow indicating action on hover */}
               <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <ArrowRight className="h-3 w-3 text-indigo-600" />
+                <ArrowRight className="h-3 w-3 text-indigo-500" />
               </div>
             </div>
           );

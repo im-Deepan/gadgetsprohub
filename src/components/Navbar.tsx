@@ -302,7 +302,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
     <nav className="sticky top-0 z-50 w-full animate-fade-in">
       {/* Scrollable translated header panel */}
       <div 
-        className={`w-full border-b border-slate-200/50 bg-white/80 dark:border-slate-800/50 dark:bg-black/85 backdrop-blur-xl shadow-xs transition-transform duration-300 ease-in-out transform ${
+        className={`w-full border-b border-slate-100/50 bg-white/80 dark:border-slate-700/50 dark:bg-black/85 backdrop-blur-xl shadow-xs transition-transform duration-300 ease-in-out transform ${
           isVisible ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
@@ -316,7 +316,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 text-slate-700 dark:bg-slate-900/80 dark:text-slate-300 lg:hidden cursor-pointer overflow-hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 text-slate-600 dark:bg-slate-800/80 dark:text-slate-200 lg:hidden cursor-pointer overflow-hidden"
               aria-label="Toggle menu"
             >
               <AnimatePresence mode="wait">
@@ -338,7 +338,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 onClick={() => onNavigate('home')} 
                 className="flex items-center text-sm sm:text-lg font-bold tracking-tight cursor-pointer group"
               >
-                <span className={`from-pink-500 via-rose-500 via-amber-400 via-emerald-400 via-teal-500 via-indigo-500 via-purple-600 to-pink-500 bg-clip-text text-transparent font-black tracking-tight text-sm sm:text-xl transition-all group-hover:scale-[1.02] ${getGradientClass(colorFlowDir)}`}>
+                <span className={`from-pink-400 via-rose-400 via-amber-300 via-emerald-300 via-teal-400 via-indigo-400 via-purple-500 to-pink-400 bg-clip-text text-transparent font-black tracking-tight text-sm sm:text-xl transition-all group-hover:scale-[1.02] ${getGradientClass(colorFlowDir)}`}>
                   gadgetsprohub
                 </span>
               </button>
@@ -350,7 +350,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             <button 
               onClick={() => onNavigate('home')}
               onMouseEnter={() => onPreload?.('home')}
-              className={`transition-colors hover:text-indigo-600 cursor-pointer ${currentView === 'home' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
+              className={`transition-colors hover:text-indigo-500 cursor-pointer ${currentView === 'home' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
             >
               Home
             </button>
@@ -365,13 +365,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               <button 
                 onClick={() => onNavigate('products')}
                 onMouseEnter={() => onPreload?.('products')}
-                className={`transition-colors hover:text-indigo-600 cursor-pointer py-2 ${currentView === 'products' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
+                className={`transition-colors hover:text-indigo-500 cursor-pointer py-2 ${currentView === 'products' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
               >
                 Products
               </button>
               
               {showCategoryDropdown && categories.length > 0 && (
-                <div className="absolute top-full left-0 mt-0 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900 z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute top-full left-0 mt-0 w-48 rounded-xl border border-slate-100 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-800 z-50 animate-in fade-in slide-in-from-top-2">
                   <div className="flex flex-col gap-1">
                     {categories.map((cat: Category) => (
                       <button
@@ -381,7 +381,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                           if (cat.slug) onNavigate('products', `category-${cat.slug}`);
                         }}
                         onMouseEnter={() => onPreload?.('products')}
-                        className="w-full text-left rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-400 cursor-pointer"
+                        className="w-full text-left rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-indigo-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-indigo-300 cursor-pointer"
                       >
                         {cat.name}
                       </button>
@@ -394,14 +394,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             <button 
               onClick={() => onNavigate('blogs')}
               onMouseEnter={() => onPreload?.('blogs')}
-              className={`transition-colors hover:text-indigo-600 cursor-pointer ${currentView === 'blogs' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
+              className={`transition-colors hover:text-indigo-500 cursor-pointer ${currentView === 'blogs' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
             >
               Blog
             </button>
             <button 
               onClick={() => onNavigate('contact')}
               onMouseEnter={() => onPreload?.('contact')}
-              className={`transition-colors hover:text-indigo-600 cursor-pointer ${currentView === 'contact' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}
+              className={`transition-colors hover:text-indigo-500 cursor-pointer ${currentView === 'contact' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
             >
               Contact
             </button>
@@ -411,7 +411,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
           <div className="relative hidden md:flex flex-1 max-w-sm">
             <form onSubmit={handleSearchSubmit} className="w-full">
               <div className="relative flex items-center">
-                <Search className="absolute left-3.5 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3.5 h-4 w-4 text-slate-300" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -420,9 +420,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                   onChange={handleSearchChange}
                   onFocus={() => searchQuery.length > 1 && setShowResults(true)}
                   onBlur={() => setTimeout(() => setShowResults(false), 300)}
-                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 pl-10 pr-10 text-xs text-slate-900 outline-none transition-all placeholder:text-slate-500 focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950"
+                  className="w-full rounded-full border border-slate-100 bg-slate-50 py-1.5 pl-10 pr-10 text-xs text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:ring-1 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-950"
                 />
-                <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-[10px] font-mono text-slate-400 shadow-xs pointer-events-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-500 select-none">
+                <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-100 bg-slate-50 text-[10px] font-mono text-slate-300 shadow-xs pointer-events-none dark:border-slate-700 dark:bg-slate-700 dark:text-slate-400 select-none">
                   /
                 </div>
               </div>
@@ -430,22 +430,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
             {/* Live Search Popup Overlay */}
             {showResults && (searchResults.products.length > 0 || searchResults.blogs.length > 0) && (
-              <div className="absolute top-11 left-0 w-full rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-slate-800 dark:bg-slate-900 animate-in fade-in duration-200 max-h-[400px] overflow-y-auto">
+              <div className="absolute top-11 left-0 w-full rounded-2xl border border-slate-100 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-800 animate-in fade-in duration-200 max-h-[400px] overflow-y-auto">
                 {searchResults.products.length > 0 && (
                   <div className="mb-3">
-                    <h5 className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Products</h5>
+                    <h5 className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">Products</h5>
                     <div className="space-y-1">
                       {searchResults.products.slice(0, 10).map(p => (
                         <button
                           key={p._id}
                           onClick={() => handleResultClick('product-detail', p.slug)}
-                          className="w-full flex items-center justify-between text-left rounded-xl p-2 px-3 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer"
+                          className="w-full flex items-center justify-between text-left rounded-xl p-2 px-3 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-50 cursor-pointer"
                         >
                           <div className="truncate pr-4">
                             <p className="text-xs font-semibold truncate">{p.name}</p>
-                            <p className="text-[10px] text-slate-400 font-mono truncate">{p.brand || 'Store Selection'}</p>
+                            <p className="text-[10px] text-slate-300 font-mono truncate">{p.brand || 'Store Selection'}</p>
                           </div>
-                          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono shrink-0">₹{p.price}</span>
+                          <span className="text-xs font-bold text-indigo-500 dark:text-indigo-300 font-mono shrink-0">₹{p.price}</span>
                         </button>
                       ))}
                     </div>
@@ -453,16 +453,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 )}
                 {searchResults.blogs.length > 0 && (
                   <div>
-                    <h5 className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Blog Posts</h5>
+                    <h5 className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">Blog Posts</h5>
                     <div className="space-y-1">
                       {searchResults.blogs.map(b => (
                         <button
                           key={b._id}
                           onClick={() => handleResultClick('blog-detail', b.slug)}
-                          className="w-full flex items-center justify-between text-left rounded-xl p-2 px-3 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer"
+                          className="w-full flex items-center justify-between text-left rounded-xl p-2 px-3 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-50 cursor-pointer"
                         >
                           <p className="text-xs font-semibold truncate">{b.title}</p>
-                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 shrink-0 font-mono">{b.category}</span>
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-50 dark:bg-slate-700 text-slate-300 shrink-0 font-mono">{b.category}</span>
                         </button>
                       ))}
                     </div>
@@ -477,12 +477,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleTheme}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-all cursor-pointer hover:scale-105 active:scale-95"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer hover:scale-105 active:scale-95"
               title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
               aria-label="Toggle theme"
             >
               {isDark ? (
-                <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+                <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
               ) : (
                 <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-[#1b365d]" />
               )}
@@ -492,12 +492,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 onClick={() => onNavigate('profile')}
                 onMouseEnter={() => onPreload?.('profile')}
                 aria-label="Your bookmarks"
-                className="hidden sm:flex relative h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="hidden sm:flex relative h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-50 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 title="Your bookmarks"
               >
                 <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
                 {wishlist.length > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-rose-500 font-mono text-[8px] sm:text-[9px] font-bold text-white ring-2 ring-white dark:ring-slate-950">
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-rose-400 font-mono text-[8px] sm:text-[9px] font-bold text-white ring-2 ring-white dark:ring-slate-950">
                     {wishlist.length}
                   </span>
                 )}
@@ -513,7 +513,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                       onClick={() => onNavigate('admin')}
                       onMouseEnter={() => onPreload?.('admin')}
                       aria-label="Admin Dashboard"
-                      className={`flex h-8 w-8 sm:h-auto sm:w-auto items-center justify-center sm:gap-1.5 rounded-full sm:px-3 sm:py-1.5 text-xs font-semibold cursor-pointer border ${currentView === 'admin' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800'}`}
+                      className={`flex h-8 w-8 sm:h-auto sm:w-auto items-center justify-center sm:gap-1.5 rounded-full sm:px-3 sm:py-1.5 text-xs font-semibold cursor-pointer border ${currentView === 'admin' ? 'bg-indigo-50 border-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-700 dark:text-indigo-200' : 'bg-slate-50 hover:bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-700'}`}
                       title={isAdmin ? "Admin Dashboard" : undefined}
                     >
                       <LayoutDashboard className="h-4 w-4 sm:h-3.5 sm:w-3.5 animate-pulse" />
@@ -524,18 +524,18 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                   <button
                     onClick={() => onNavigate('profile')}
                     onMouseEnter={() => onPreload?.('profile')}
-                    className="flex h-8 w-8 sm:h-auto sm:w-auto items-center justify-center sm:gap-2 rounded-full border border-slate-100 bg-white sm:px-3 sm:py-1.5 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900 cursor-pointer"
+                    className="flex h-8 w-8 sm:h-auto sm:w-auto items-center justify-center sm:gap-2 rounded-full border border-slate-50 bg-white sm:px-3 sm:py-1.5 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800 cursor-pointer"
                   >
-                    <div className="h-5 w-5 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-[10px] uppercase shrink-0">
+                    <div className="h-5 w-5 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-[10px] uppercase shrink-0">
                       {user?.name?.[0] || 'U'}
                     </div>
-                    <span className="hidden sm:inline text-xs font-medium text-slate-700 dark:text-slate-300 max-w-[120px] truncate">{user?.name?.split('@')[0]?.split(' ')?.[0] || 'User'}</span>
+                    <span className="hidden sm:inline text-xs font-medium text-slate-600 dark:text-slate-200 max-w-[120px] truncate">{user?.name?.split('@')[0]?.split(' ')?.[0] || 'User'}</span>
                   </button>
 
                   <button
                     onClick={handleLogout}
                     aria-label="Sign Out"
-                    className="hidden sm:flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-rose-500 shadow-sm hover:bg-rose-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    className="hidden sm:flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-50 bg-white text-rose-400 shadow-sm hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                     title="Sign Out"
                   >
                     <LogOut className="h-4 w-4" />
@@ -545,7 +545,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 <button
                   onClick={() => onNavigate('login')}
                   onMouseEnter={() => onPreload?.('login')}
-                  className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-full bg-indigo-500 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-600 active:scale-95 transition-all cursor-pointer"
                 >
                   <User className="h-3.5 w-3.5" />
                   <span>Login</span>
@@ -567,7 +567,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
+              className="fixed inset-0 bg-slate-800/40 backdrop-blur-xs"
               onClick={() => setShowMobileMenu(false)}
             />
             
@@ -581,16 +581,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             >
               
               {/* Drawer Header Brand & Close controller */}
-              <div className="flex items-center justify-between border-b pb-4 dark:border-slate-800">
+              <div className="flex items-center justify-between border-b pb-4 dark:border-slate-700">
                 <div className="flex items-center">
-                  <span className={`from-pink-500 via-rose-500 via-amber-400 via-emerald-400 via-teal-500 via-indigo-500 via-purple-600 to-pink-500 bg-clip-text text-transparent font-black text-lg tracking-tight ${getGradientClass(colorFlowDir)}`}>
+                  <span className={`from-pink-400 via-rose-400 via-amber-300 via-emerald-300 via-teal-400 via-indigo-400 via-purple-500 to-pink-400 bg-clip-text text-transparent font-black text-lg tracking-tight ${getGradientClass(colorFlowDir)}`}>
                     gadgetsprohub
                   </span>
                 </div>
                 <button
                   onClick={() => setShowMobileMenu(false)}
                   aria-label="Close menu"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-350 cursor-pointer transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 text-slate-500 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors"
                   title="Close menu"
                 >
                   <X className="h-5 w-5" />
@@ -600,7 +600,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               {/* Mobile Search input wrapper */}
               <div className="relative">
                 <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-                  <Search className="absolute left-3.5 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3.5 h-4 w-4 text-slate-300" />
                   <input
                     ref={mobileSearchInputRef}
                     type="text"
@@ -609,19 +609,19 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                     onChange={handleSearchChange}
                     onFocus={() => searchQuery.length > 1 && setShowResults(true)}
                     onBlur={() => setTimeout(() => setShowResults(false), 300)}
-                    className="w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-10 pr-10 text-xs text-slate-950 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                    className="w-full rounded-full border border-slate-100 bg-slate-50 py-2 pl-10 pr-10 text-xs text-slate-950 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
-                  <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-[10px] font-mono text-slate-400 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-500 select-none">
+                  <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-100 bg-slate-50 text-[10px] font-mono text-slate-300 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-400 select-none">
                     /
                   </div>
                 </form>
 
                 {/* Mobile Search Live Popover Results */}
                 {showResults && searchQuery.trim().length > 1 && (searchResults.products.length > 0 || searchResults.blogs.length > 0) && (
-                  <div className="absolute top-11 left-0 z-[60] w-full rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-slate-800 dark:bg-slate-900 max-h-[220px] overflow-y-auto">
+                  <div className="absolute top-11 left-0 z-[60] w-full rounded-2xl border border-slate-100 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-800 max-h-[220px] overflow-y-auto">
                     {searchResults.products.length > 0 && (
                       <div className="mb-3">
-                        <h5 className="px-2 text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Products</h5>
+                        <h5 className="px-2 text-[9px] font-bold uppercase tracking-wider text-slate-300 mb-1">Products</h5>
                         <div className="space-y-1">
                           {searchResults.products.slice(0, 10).map(p => (
                             <button
@@ -630,10 +630,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                                 handleResultClick('product-detail', p.slug);
                                 setShowMobileMenu(false);
                               }}
-                              className="w-full flex items-center justify-between text-left rounded-xl p-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer"
+                              className="w-full flex items-center justify-between text-left rounded-xl p-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-50 cursor-pointer"
                             >
                               <p className="text-[11px] font-semibold truncate pr-2">{p.name}</p>
-                              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 shrink-0">₹{p.price}</span>
+                              <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-300 shrink-0">₹{p.price}</span>
                             </button>
                           ))}
                         </div>
@@ -641,7 +641,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                     )}
                     {searchResults.blogs.length > 0 && (
                       <div>
-                        <h5 className="px-2 text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Blog Posts</h5>
+                        <h5 className="px-2 text-[9px] font-bold uppercase tracking-wider text-slate-300 mb-1">Blog Posts</h5>
                         <div className="space-y-1">
                           {searchResults.blogs.map(b => (
                             <button
@@ -650,7 +650,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                                 handleResultClick('blog-detail', b.slug);
                                 setShowMobileMenu(false);
                               }}
-                              className="w-full text-left rounded-xl p-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer transition-colors"
+                              className="w-full text-left rounded-xl p-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-50 cursor-pointer transition-colors"
                             >
                               <p className="text-[11px] font-semibold truncate">{b.title}</p>
                             </button>
@@ -667,14 +667,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 <button 
                   onClick={() => { onNavigate('home'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('home')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'home' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'home' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   Home
                 </button>
                 <button 
                   onClick={() => { onNavigate('products'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('products')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'products' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'products' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   All Products
                 </button>
@@ -682,38 +682,38 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 <button 
                   onClick={() => { onNavigate('blogs'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('blogs')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'blogs' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'blogs' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   Blog Reviews
                 </button>
                 <button 
                   onClick={() => { onNavigate('contact'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('contact')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'contact' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'contact' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   Contact Us
                 </button>
 
                 <button 
                   onClick={() => { setShowShortcutsModal(true); setShowMobileMenu(false); }}
-                  className="flex items-center gap-2.5 text-left text-sm py-2 px-3 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-all"
+                  className="flex items-center gap-2.5 text-left text-sm py-2 px-3 rounded-lg text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-all"
                 >
-                  <Keyboard className="h-4 w-4 text-slate-500" />
+                  <Keyboard className="h-4 w-4 text-slate-400" />
                   <span className="flex-grow">Keyboard Shortcuts</span>
-                  <kbd className="px-1.5 py-0.5 text-[9px] font-mono text-slate-500 bg-slate-100 border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded">?</kbd>
+                  <kbd className="px-1.5 py-0.5 text-[9px] font-mono text-slate-400 bg-slate-50 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 rounded">?</kbd>
                 </button>
 
                 {isAuthenticated && (
-                  <div className="pt-2 mt-2 border-t dark:border-slate-800">
-                    <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Account</p>
+                  <div className="pt-2 mt-2 border-t dark:border-slate-700">
+                    <p className="px-3 text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">Your Account</p>
                     <button 
                       onClick={() => { onNavigate('profile'); setShowMobileMenu(false); }}
-                      className={`flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'profile' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                      className={`flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'profile' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                       <Heart className="h-4 w-4" />
                       <span>My Bookmarks</span>
                       {wishlist.length > 0 && (
-                        <span className="ml-auto bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold">
+                        <span className="ml-auto bg-rose-400 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold">
                           {wishlist.length}
                         </span>
                       )}
@@ -721,7 +721,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                     {isAdmin && (
                       <button 
                         onClick={() => { onNavigate('admin'); setShowMobileMenu(false); }}
-                        className={`flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'admin' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                        className={`flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'admin' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                       >
                         <LayoutDashboard className="h-4 w-4" />
                         <span>Admin Dashboard</span>
@@ -729,7 +729,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                     )}
                     <button 
                       onClick={() => { handleLogout(); setShowMobileMenu(false); }}
-                      className="flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer transition-colors"
+                      className="flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer transition-colors"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Sign Out</span>
@@ -739,8 +739,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               </div>
 
               {/* Mobile Footer brand marker */}
-              <div className="border-t pt-4 dark:border-slate-800 text-center">
-                <p className="text-[10px] text-slate-400 font-mono">gadgetsprohub Product Directory</p>
+              <div className="border-t pt-4 dark:border-slate-700 text-center">
+                <p className="text-[10px] text-slate-300 font-mono">gadgetsprohub Product Directory</p>
               </div>
             </motion.div>
           </div>
@@ -757,7 +757,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowShortcutsModal(false)}
-              className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs"
+              className="absolute inset-0 bg-slate-800/60 dark:bg-black/80 backdrop-blur-xs"
             />
             {/* Modal Body */}
             <motion.div
@@ -765,22 +765,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
               transition={{ type: 'spring', duration: 0.4 }}
-              className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100 z-10"
+              className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-950 text-slate-700 dark:text-slate-50 z-10"
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800/80">
+              <div className="flex items-center justify-between border-b border-slate-50 pb-4 dark:border-slate-700/80">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500 dark:bg-indigo-950/50 dark:text-indigo-300">
                     <Keyboard className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="text-sm sm:text-base font-bold tracking-tight">Keyboard Shortcuts Guide</h3>
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Boost your browsing speed & efficiency</p>
+                    <p className="text-[11px] text-slate-300 dark:text-slate-400 font-medium">Boost your browsing speed & efficiency</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowShortcutsModal(false)}
-                  className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                  className="rounded-full p-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-300 hover:text-slate-500 dark:hover:text-slate-200 transition-colors cursor-pointer"
                   aria-label="Close modal"
                 >
                   <X className="h-4 w-4" />
@@ -792,47 +792,47 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 <div className="grid grid-cols-2 gap-6">
                   {/* Left Column: Navigation Keys */}
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Navigation</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 dark:text-slate-400 mb-3">Navigation</p>
                     <div className="space-y-3.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-slate-600 dark:text-slate-300">Go to Home</span>
-                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">H</kbd>
+                        <span className="text-xs text-slate-500 dark:text-slate-200">Go to Home</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-800 bg-slate-50 border border-slate-100 rounded-md shadow-xs dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">H</kbd>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-slate-600 dark:text-slate-300">Go to Products</span>
-                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">P</kbd>
+                        <span className="text-xs text-slate-500 dark:text-slate-200">Go to Products</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-800 bg-slate-50 border border-slate-100 rounded-md shadow-xs dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">P</kbd>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-slate-600 dark:text-slate-300">Go to Blog</span>
-                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">B</kbd>
+                        <span className="text-xs text-slate-500 dark:text-slate-200">Go to Blog</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-800 bg-slate-50 border border-slate-100 rounded-md shadow-xs dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">B</kbd>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-slate-600 dark:text-slate-300">Go to Contact</span>
-                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">C</kbd>
+                        <span className="text-xs text-slate-500 dark:text-slate-200">Go to Contact</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-800 bg-slate-50 border border-slate-100 rounded-md shadow-xs dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">C</kbd>
                       </div>
                     </div>
                   </div>
 
                   {/* Right Column: Actions Keys */}
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Actions</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 dark:text-slate-400 mb-3">Actions</p>
                     <div className="space-y-3.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-slate-600 dark:text-slate-300">Focus Search</span>
-                        <kbd className="px-2.5 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">/</kbd>
+                        <span className="text-xs text-slate-500 dark:text-slate-200">Focus Search</span>
+                        <kbd className="px-2.5 py-1 text-xs font-bold font-mono text-slate-800 bg-slate-50 border border-slate-100 rounded-md shadow-xs dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">/</kbd>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-slate-600 dark:text-slate-300">Toggle Theme</span>
-                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">T</kbd>
+                        <span className="text-xs text-slate-500 dark:text-slate-200">Toggle Theme</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-800 bg-slate-50 border border-slate-100 rounded-md shadow-xs dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">T</kbd>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Bookmarks & History</span>
-                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">W</kbd>
+                        <span className="text-xs text-slate-500 dark:text-slate-200 font-medium">Bookmarks & History</span>
+                        <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-800 bg-slate-50 border border-slate-100 rounded-md shadow-xs dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">W</kbd>
                       </div>
                       {isAdmin && (
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs text-slate-600 dark:text-slate-300">Admin Console</span>
-                          <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-900 bg-slate-100 border border-slate-200 rounded-md shadow-xs dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800">A</kbd>
+                          <span className="text-xs text-slate-500 dark:text-slate-200">Admin Console</span>
+                          <kbd className="px-2 py-1 text-xs font-bold font-mono text-slate-800 bg-slate-50 border border-slate-100 rounded-md shadow-xs dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700">A</kbd>
                         </div>
                       )}
                     </div>
@@ -840,15 +840,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 </div>
 
                 {/* Footer Shortcuts */}
-                <div className="border-t border-slate-100 pt-4 flex items-center justify-between dark:border-slate-800/80">
-                  <div className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
-                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-slate-50 border border-slate-100 rounded dark:bg-slate-900 dark:border-slate-800">ESC</kbd>
+                <div className="border-t border-slate-50 pt-4 flex items-center justify-between dark:border-slate-700/80">
+                  <div className="flex items-center gap-1 text-[11px] text-slate-300 dark:text-slate-400">
+                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-slate-50 border border-slate-50 rounded dark:bg-slate-800 dark:border-slate-700">ESC</kbd>
                     <span>to close or blur inputs</span>
                   </div>
-                  <div className="flex items-center gap-1 text-[11px] text-indigo-500 dark:text-indigo-400 font-mono">
-                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-100 rounded text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900 dark:text-indigo-300">?</kbd>
+                  <div className="flex items-center gap-1 text-[11px] text-indigo-400 dark:text-indigo-300 font-mono">
+                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-50 rounded text-indigo-500 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-200">?</kbd>
                     <span>or</span>
-                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-100 rounded text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900 dark:text-indigo-300">K</kbd>
+                    <kbd className="px-1 py-0.5 text-[9px] font-bold font-mono bg-indigo-50 border border-indigo-50 rounded text-indigo-500 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-200">K</kbd>
                     <span>to toggle this guide</span>
                   </div>
                 </div>

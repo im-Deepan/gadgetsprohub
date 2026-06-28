@@ -43,7 +43,7 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
         description: 'Elite real-time selection of top-performing items.',
         slug: 'trending',
         products: trendingProducts,
-        icon: <Flame className="h-4 w-4 text-amber-500" />
+        icon: <Flame className="h-4 w-4 text-amber-400" />
       });
     }
 
@@ -56,16 +56,16 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
 
       if (catProducts.length > 0) {
         // Choose appropriate icon depending on category name
-        let icon = <Sparkles className="h-4 w-4 text-indigo-500 animate-pulse" />;
+        let icon = <Sparkles className="h-4 w-4 text-indigo-400 animate-pulse" />;
         const cleanName = cat.name.toLowerCase();
         if (cleanName.includes('smart') || cleanName.includes('phone')) {
-          icon = <Smartphone className="h-4 w-4 text-blue-500" />;
+          icon = <Smartphone className="h-4 w-4 text-blue-400" />;
         } else if (cleanName.includes('laptop') || cleanName.includes('computer')) {
-          icon = <Laptop className="h-4 w-4 text-emerald-500" />;
+          icon = <Laptop className="h-4 w-4 text-emerald-400" />;
         } else if (cleanName.includes('audio') || cleanName.includes('headphone') || cleanName.includes('speaker')) {
-          icon = <Headphones className="h-4 w-4 text-indigo-500" />;
+          icon = <Headphones className="h-4 w-4 text-indigo-400" />;
         } else if (cleanName.includes('wear') || cleanName.includes('watch')) {
-          icon = <Watch className="h-4 w-4 text-rose-500" />;
+          icon = <Watch className="h-4 w-4 text-rose-400" />;
         }
 
         list.push({
@@ -116,17 +116,17 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
       {/* Editorial Title Header */}
-      <div className="flex flex-col md:flex-row md:items-baseline justify-between mb-6 pb-3 border-b border-slate-200/60 dark:border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-baseline justify-between mb-6 pb-3 border-b border-slate-100/60 dark:border-slate-700">
         <div className="flex items-center gap-2">
-          <Grid className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white font-sans uppercase">
+          <Grid className="h-5 w-5 text-indigo-500 dark:text-indigo-300" />
+          <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white font-sans uppercase">
             Signature Spotlights
           </h2>
-          <span className="ml-2 rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-mono uppercase tracking-wide">
+          <span className="ml-2 rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-200 font-mono uppercase tracking-wide">
             Featured
           </span>
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 font-sans mt-1 md:mt-0">
+        <p className="text-xs text-slate-400 dark:text-slate-300 font-sans mt-1 md:mt-0">
           Auto-rotating highlights. Swipe or tap arrows to browse active specifications and collections.
         </p>
       </div>
@@ -269,7 +269,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-2.5 flex flex-col justify-between shadow-xs transition-transform active:scale-[0.99] w-full min-h-[295px] overflow-hidden group"
+      className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100/80 dark:border-slate-700 p-2.5 flex flex-col justify-between shadow-xs transition-transform active:scale-[0.99] w-full min-h-[295px] overflow-hidden group"
     >
       <div className="flex flex-col w-full">
         {/* Aspect square image stage */}
@@ -277,15 +277,15 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
           
           {/* Rating tag overlay inside image stage (as requested) */}
           {typeof currentProduct.rating === 'number' && currentProduct.rating > 0 && (
-            <div className="absolute top-1.5 left-1.5 bg-slate-900/70 backdrop-blur-md text-white font-black text-[9px] px-1.5 py-0.5 rounded-md z-15 select-none scale-90 origin-top-left">
+            <div className="absolute top-1.5 left-1.5 bg-slate-800/70 backdrop-blur-md text-white font-black text-[9px] px-1.5 py-0.5 rounded-md z-15 select-none scale-90 origin-top-left">
               ★ {currentProduct.rating.toFixed(1)}
             </div>
           )}
 
           {/* Collection tag category badge overlay inside image stage */}
-          <div className="absolute top-1.5 right-1.5 z-15 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/90 dark:bg-slate-900/90 shadow-xs border border-slate-200/60 dark:border-slate-800 scale-90 origin-top-right">
-            {collection.icon || <Sparkles className="h-3 w-3 text-indigo-500" />}
-            <span className="text-[8px] font-black tracking-wide uppercase text-slate-700 dark:text-slate-300">
+          <div className="absolute top-1.5 right-1.5 z-15 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/90 dark:bg-slate-800/90 shadow-xs border border-slate-100/60 dark:border-slate-700 scale-90 origin-top-right">
+            {collection.icon || <Sparkles className="h-3 w-3 text-indigo-400" />}
+            <span className="text-[8px] font-black tracking-wide uppercase text-slate-600 dark:text-slate-200">
               {collection.name}
             </span>
           </div>
@@ -318,7 +318,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
               <button
                 onClick={handlePrev}
                 type="button"
-                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all"
+                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-50 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all"
                 aria-label="Previous image"
               >
                 <ChevronLeft className="h-4 w-4 stroke-[2.5]" aria-hidden="true" />
@@ -326,7 +326,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
               <button
                 onClick={handleNext}
                 type="button"
-                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all"
+                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-50 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all"
                 aria-label="Next image"
               >
                 <ChevronRight className="h-4 w-4 stroke-[2.5]" aria-hidden="true" />
@@ -341,7 +341,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
               e.stopPropagation();
               handleCardClick();
             }}
-            className="absolute bottom-1.5 right-1.5 w-7.5 h-7.5 rounded-full bg-amber-400 active:scale-90 text-slate-950 flex items-center justify-center hover:bg-amber-300 transition-all font-bold shadow-md z-25 cursor-pointer border-none"
+            className="absolute bottom-1.5 right-1.5 w-7.5 h-7.5 rounded-full bg-amber-300 active:scale-90 text-slate-950 flex items-center justify-center hover:bg-amber-200 transition-all font-bold shadow-md z-25 cursor-pointer border-none"
             title="Read Technical Specifications"
           >
             <Plus className="h-4 w-4 stroke-[3]" />
@@ -350,7 +350,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
 
         {/* Product Title (1-2 lines height strictly in flow, no overlap) */}
         <div className="px-0.5">
-          <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-2 leading-tight tracking-tight min-h-[32px]">
+          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-100 line-clamp-2 leading-tight tracking-tight min-h-[32px]">
             {currentProduct.name}
           </h3>
         </div>
@@ -361,25 +361,25 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
         {/* Pricing line: Red/pink percentage discount and primary price, original price strikes */}
         <div className="flex items-center flex-wrap gap-1">
           {productDiscount > 0 && (
-            <span className="text-[9px] font-black text-white bg-rose-600 px-1 py-0.5 rounded leading-none">
+            <span className="text-[9px] font-black text-white bg-rose-500 px-1 py-0.5 rounded leading-none">
               -{productDiscount}%
             </span>
           )}
-          <span className="text-xs font-black text-slate-900 dark:text-white">
+          <span className="text-xs font-black text-slate-800 dark:text-white">
             ₹{currentProduct.price}
           </span>
           {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
-            <span className="text-[10px] text-slate-400 line-through dark:text-slate-600 font-medium">
+            <span className="text-[10px] text-slate-300 line-through dark:text-slate-500 font-medium">
               ₹{currentProduct.originalPrice}
             </span>
           )}
         </div>
 
         {/* Dynamic subtag deal line */}
-        <div className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 font-mono tracking-tight flex items-center gap-0.5">
+        <div className="text-[9px] font-bold text-indigo-500 dark:text-indigo-300 font-mono tracking-tight flex items-center gap-0.5">
           <span>Specs Verified</span>
-          <span className="text-slate-300 dark:text-slate-700">•</span>
-          <span className="text-amber-600 dark:text-amber-400">Deal Choice</span>
+          <span className="text-slate-200 dark:text-slate-600">•</span>
+          <span className="text-amber-500 dark:text-amber-300">Deal Choice</span>
         </div>
       </div>
     </div>
@@ -485,30 +485,30 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md dark:border-slate-800 dark:bg-slate-900 transition-all duration-300 hover:shadow-xl hover:border-slate-350 dark:hover:border-slate-700 cursor-pointer flex flex-col ${
+      className={`group relative overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-md dark:border-slate-700 dark:bg-slate-800 transition-all duration-300 hover:shadow-xl hover:border-slate-200 dark:hover:border-slate-600 cursor-pointer flex flex-col ${
         isWide ? 'h-[360px] md:h-[380px]' : 'h-[360px] md:h-[380px]'
       } ${horizontalOnLarge ? 'md:flex-row' : ''}`}
     >
       {/* Background radial gradient bloom lighting accents */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-gradient-to-br from-slate-500/5 to-slate-400/5 dark:from-slate-800/10 dark:to-slate-900/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700" />
+      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-gradient-to-br from-slate-400/5 to-slate-300/5 dark:from-slate-700/10 dark:to-slate-800/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700" />
 
       {/* Product Image Stage Container */}
       <div
-        className={`relative bg-slate-50/50 dark:bg-slate-950/45 border-b border-slate-100 dark:border-slate-900 group-hover:bg-slate-50/20 dark:group-hover:bg-slate-950/20 transition-colors shrink-0 flex items-center justify-center p-6 ${
+        className={`relative bg-slate-50/50 dark:bg-slate-950/45 border-b border-slate-50 dark:border-slate-800 group-hover:bg-slate-50/20 dark:group-hover:bg-slate-950/20 transition-colors shrink-0 flex items-center justify-center p-6 ${
           horizontalOnLarge ? 'w-full md:w-1/2 h-44 md:h-full border-b md:border-b-0 md:border-r' : 'h-48 sm:h-52 md:h-56'
         }`}
       >
         {/* Floating Category Indicator Badge */}
-        <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md shadow-sm border border-slate-200/60 dark:bg-slate-900/95 dark:border-slate-800">
-          {collection.icon || <Sparkles className="h-3.5 w-3.5 text-indigo-500" />}
-          <span className="text-[10px] font-black tracking-wider uppercase text-slate-800 dark:text-slate-200">
+        <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md shadow-sm border border-slate-100/60 dark:bg-slate-800/95 dark:border-slate-700">
+          {collection.icon || <Sparkles className="h-3.5 w-3.5 text-indigo-400" />}
+          <span className="text-[10px] font-black tracking-wider uppercase text-slate-700 dark:text-slate-100">
             {collection.name} Spotlights
           </span>
         </div>
 
         {/* Rating Badge */}
         {typeof currentProduct.rating === 'number' && currentProduct.rating > 0 && (
-          <div className="absolute top-4 right-4 z-20 bg-amber-500 text-white font-extrabold font-mono text-[10px] px-2 py-0.5 rounded-lg shadow-sm">
+          <div className="absolute top-4 right-4 z-20 bg-amber-400 text-white font-extrabold font-mono text-[10px] px-2 py-0.5 rounded-lg shadow-sm">
             ★ {currentProduct.rating.toFixed(1)}
           </div>
         )}
@@ -542,7 +542,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             <button
               onClick={handlePrev}
               type="button"
-              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-200/85 bg-white/95 text-slate-700 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-100/85 bg-white/95 text-slate-600 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-700 dark:bg-slate-800/95 dark:text-slate-100 dark:hover:bg-slate-700"
               aria-label="Previous image"
             >
               <ChevronLeft className="h-4.5 w-4.5" aria-hidden="true" />
@@ -550,7 +550,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             <button
               onClick={handleNext}
               type="button"
-              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-200/85 bg-white/95 text-slate-700 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-100/85 bg-white/95 text-slate-600 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-700 dark:bg-slate-800/95 dark:text-slate-100 dark:hover:bg-slate-700"
               aria-label="Next image"
             >
               <ChevronRight className="h-4.5 w-4.5" aria-hidden="true" />
@@ -566,8 +566,8 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
                 key={idx}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   idx === productIndex % products.length 
-                    ? 'w-4 bg-indigo-600 dark:bg-indigo-400' 
-                    : 'w-1.5 bg-slate-300 dark:bg-slate-700'
+                    ? 'w-4 bg-indigo-500 dark:bg-indigo-300' 
+                    : 'w-1.5 bg-slate-200 dark:bg-slate-600'
                 }`}
               />
             ))}
@@ -582,36 +582,36 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
         <div className="space-y-2">
           {/* Brand/Model details */}
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold uppercase font-mono tracking-wider text-indigo-600 dark:text-indigo-400">
+            <span className="text-[10px] font-extrabold uppercase font-mono tracking-wider text-indigo-500 dark:text-indigo-300">
               {currentProduct.brand || 'Elite Series'}
             </span>
             {productDiscount > 0 && (
-              <span className="text-[10px] font-black text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-400 px-1.5 py-0.5 rounded-md font-mono">
+              <span className="text-[10px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 px-1.5 py-0.5 rounded-md font-mono">
                 -{productDiscount}% OFF
               </span>
             )}
           </div>
 
-          <h3 className="text-sm sm:text-base font-extrabold text-slate-900 group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400 line-clamp-1 transition-colors leading-snug">
+          <h3 className="text-sm sm:text-base font-extrabold text-slate-800 group-hover:text-indigo-500 dark:text-white dark:group-hover:text-indigo-300 line-clamp-1 transition-colors leading-snug">
             {currentProduct.name}
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-slate-400 dark:text-slate-300 line-clamp-2 leading-relaxed">
             {currentProduct.description || 'Verified direct links, updated specs sheets, and expert product comparisons.'}
           </p>
         </div>
 
         {/* Lower Specs CTA (Price is integrated dynamically in spotlights) */}
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-4">
+        <div className="mt-4 pt-4 border-t border-slate-50 dark:border-slate-700/80 flex items-center justify-between gap-4">
           <div className="flex flex-col">
-            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase font-mono leading-none mb-1">
+            <span className="text-[9px] font-bold text-slate-300 dark:text-slate-400 uppercase font-mono leading-none mb-1">
               Spotlight Deal
             </span>
             <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black text-slate-900 dark:text-white">
+              <span className="text-sm font-black text-slate-800 dark:text-white">
                 ₹{currentProduct.price}
               </span>
               {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
-                <span className="text-[10px] text-slate-400 line-through dark:text-slate-600">
+                <span className="text-[10px] text-slate-300 line-through dark:text-slate-500">
                   ₹{currentProduct.originalPrice}
                 </span>
               )}
@@ -624,7 +624,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
               handleCardClick();
             }}
             type="button"
-            className="px-3.5 py-2 sm:px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 hover:scale-[1.02] active:scale-[0.98] transition-all text-xs font-bold leading-none flex items-center gap-1 border-none cursor-pointer"
+            className="px-3.5 py-2 sm:px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 hover:scale-[1.02] active:scale-[0.98] transition-all text-xs font-bold leading-none flex items-center gap-1 border-none cursor-pointer"
           >
             <span>Learn Specs</span>
             <ArrowRight className="h-3 w-3" />

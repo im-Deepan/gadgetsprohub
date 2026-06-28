@@ -19,15 +19,15 @@ interface ProductListProps {
 }
 
 const ProductCardSkeleton = () => (
-  <div className="group flex flex-col rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden animate-pulse">
-    <div className="h-48 bg-slate-200 dark:bg-slate-800 shrink-0"></div>
+  <div className="group flex flex-col rounded-2xl border border-slate-50 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden animate-pulse">
+    <div className="h-48 bg-slate-100 dark:bg-slate-700 shrink-0"></div>
     <div className="p-4 flex flex-col flex-grow space-y-3">
-      <div className="h-3 w-1/3 bg-slate-200 dark:bg-slate-800 rounded"></div>
-      <div className="h-5 w-full bg-slate-200 dark:bg-slate-800 rounded"></div>
-      <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded"></div>
-      <div className="mt-auto pt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
-        <div className="h-5 w-16 bg-slate-200 dark:bg-slate-800 rounded"></div>
-        <div className="h-7 w-20 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+      <div className="h-3 w-1/3 bg-slate-100 dark:bg-slate-700 rounded"></div>
+      <div className="h-5 w-full bg-slate-100 dark:bg-slate-700 rounded"></div>
+      <div className="h-4 w-full bg-slate-100 dark:bg-slate-700 rounded"></div>
+      <div className="mt-auto pt-3 border-t border-slate-50 dark:border-slate-700 flex items-center justify-between">
+        <div className="h-5 w-16 bg-slate-100 dark:bg-slate-700 rounded"></div>
+        <div className="h-7 w-20 bg-slate-100 dark:bg-slate-700 rounded-lg"></div>
       </div>
     </div>
   </div>
@@ -451,17 +451,17 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       className="group"
     >
       <BorderGlow
-        className={`flex rounded-2xl border border-slate-100/50 dark:border-slate-800/80 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 ${
+        className={`flex rounded-2xl border border-slate-50/50 dark:border-slate-700/80 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 ${
           viewStyle === 'grid'
-            ? 'flex-col hover:shadow-indigo-500/10 hover:shadow-2xl'
-            : 'flex-col sm:flex-row hover:shadow-indigo-500/10 hover:shadow-xl'
+            ? 'flex-col hover:shadow-indigo-400/10 hover:shadow-2xl'
+            : 'flex-col sm:flex-row hover:shadow-indigo-400/10 hover:shadow-xl'
         }`}
         borderRadius={16}
       >
         <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
         <div className={`flex w-full ${viewStyle === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'}`}>
           {/* Card Media Area */}
-          <div className={`bg-slate-100 dark:bg-slate-950 overflow-hidden relative shrink-0 transition-all duration-300 ${
+          <div className={`bg-slate-50 dark:bg-slate-950 overflow-hidden relative shrink-0 transition-all duration-300 ${
             viewStyle === 'grid'
               ? 'h-32 sm:h-48 w-full'
               : 'w-full sm:w-48 h-40'
@@ -470,11 +470,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           src={p.images?.[0] || 'https://images.unsplash.com/photo-1005740420928-5e560c06d30e?w=500'}
           alt={p.name}
           referrerPolicy="no-referrer"
-          className="h-full w-full object-contain p-2 bg-slate-100/50 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-500 cursor-pointer"
+          className="h-full w-full object-contain p-2 bg-slate-50/50 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-500 cursor-pointer"
         />
         
         {p.discount && p.discount > 0 && (
-          <span className="absolute top-2.5 left-2.5 bg-rose-500 rounded px-1.5 py-0.5 text-[8px] font-bold text-white font-mono uppercase tracking-wider shadow-sm">
+          <span className="absolute top-2.5 left-2.5 bg-rose-400 rounded px-1.5 py-0.5 text-[8px] font-bold text-white font-mono uppercase tracking-wider shadow-sm">
             -{p.discount}% OFF
           </span>
         )}
@@ -482,9 +482,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         {isAuthenticated && (
           <button
             onClick={(e) => { e.stopPropagation(); toggleWishlist(p._id); }}
-            className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm hover:text-rose-500 dark:bg-slate-900 dark:text-slate-300 cursor-pointer"
+            className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm hover:text-rose-400 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           >
-            <Heart className={`h-4 w-4 ${wishlist.includes(p._id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+            <Heart className={`h-4 w-4 ${wishlist.includes(p._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
           </button>
         )}
       </div>
@@ -492,31 +492,31 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       {/* Card Content Area */}
       <div className="p-4 flex flex-col flex-grow justify-between">
         <div>
-          <div className="flex items-center justify-between gap-1 text-[9px] font-bold text-slate-400">
+          <div className="flex items-center justify-between gap-1 text-[9px] font-bold text-slate-300">
             <span>
               {getCategoryName(p.category, categories)}
             </span>
             <span className="uppercase font-mono">{p.brand || 'Premium'}</span>
           </div>
 
-          <h3 className={`font-bold text-slate-800 leading-snug mt-2 line-clamp-1 group-hover:text-indigo-600 dark:text-white transition-colors-300 ${
+          <h3 className={`font-bold text-slate-700 leading-snug mt-2 line-clamp-1 group-hover:text-indigo-500 dark:text-white transition-colors-300 ${
             viewStyle === 'grid' ? 'text-[10px] sm:text-sm' : 'text-sm'
           }`}>
             {p.name}
           </h3>
           
-          <p className={`text-slate-500 line-clamp-2 mt-1.5 dark:text-slate-400 leading-normal ${
+          <p className={`text-slate-400 line-clamp-2 mt-1.5 dark:text-slate-300 leading-normal ${
             viewStyle === 'grid' ? 'text-[11px]' : 'text-xs'
           }`}>
             {p.description}
           </p>
         </div>
 
-        <div className="pt-3 mt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
+        <div className="pt-3 mt-3 border-t border-slate-50 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-baseline gap-1">
-            <span className="text-xs sm:text-sm font-black font-mono text-indigo-600 dark:text-indigo-400">₹{p.price}</span>
+            <span className="text-xs sm:text-sm font-black font-mono text-indigo-500 dark:text-indigo-300">₹{p.price}</span>
             {p.originalPrice && (
-              <span className="text-[10px] text-slate-400 line-through font-mono">₹{p.originalPrice}</span>
+              <span className="text-[10px] text-slate-300 line-through font-mono">₹{p.originalPrice}</span>
             )}
           </div>
 
@@ -524,13 +524,13 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             {viewStyle === 'list' && isAuthenticated && (
               <button
                 onClick={(e) => { e.stopPropagation(); toggleWishlist(p._id); }}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-100 text-slate-500 hover:text-rose-500 dark:border-slate-800 dark:bg-slate-900 cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-50 text-slate-400 hover:text-rose-400 dark:border-slate-700 dark:bg-slate-800 cursor-pointer"
               >
-                <Heart className={`h-4 w-4 ${wishlist.includes(p._id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                <Heart className={`h-4 w-4 ${wishlist.includes(p._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
               </button>
             )}
             <button
-              className="hidden md:block rounded-lg bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-[10px] font-bold text-indigo-700 py-1.5 px-2.5 cursor-pointer dark:bg-indigo-950/30 dark:border-indigo-900 dark:text-indigo-300 transition-colors"
+              className="hidden md:block rounded-lg bg-indigo-50 border border-indigo-50 hover:bg-indigo-50 text-[10px] font-bold text-indigo-600 py-1.5 px-2.5 cursor-pointer dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-200 transition-colors"
             >
               See Details
             </button>
@@ -587,7 +587,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 md:px-4">
         <div>
-          <h1 className="text-2xl font-black font-sans tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-black font-sans tracking-tight text-slate-800 dark:text-white">
             {selectedCategory === 'trending' 
               ? 'Top Recommendations & Trending Choices'
               : selectedCategory 
@@ -601,24 +601,24 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           {/* Custom Filter Minimizer Trigger */}
           <button
             onClick={() => setIsFilterOpen(true)}
-            className={`flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 ${
+            className={`flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${
               hasActiveFilters
-                ? 'border-indigo-600 bg-indigo-50/50 text-indigo-700 dark:border-indigo-500/50 dark:bg-indigo-950/25 dark:text-indigo-400 font-black'
-                : 'border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                ? 'border-indigo-500 bg-indigo-50/50 text-indigo-600 dark:border-indigo-400/50 dark:bg-indigo-950/25 dark:text-indigo-300 font-black'
+                : 'border-slate-100 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
             }`}
           >
-            <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
+            <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-300" />
             <span>Filters</span>
             {hasActiveFilters && (
-              <span className="flex h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+              <span className="flex h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />
             )}
           </button>
 
           {/* Layout Controls */}
-          <div className="flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 dark:border-slate-800 dark:bg-slate-900 shrink-0">
+          <div className="flex rounded-lg border border-slate-100 p-0.5 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 shrink-0">
             <button
               onClick={() => setViewStyle('grid')}
-              className={`p-1.5 px-2.5 rounded-md hover:text-indigo-600 transition-all cursor-pointer flex items-center gap-1.5 ${viewStyle === 'grid' ? 'bg-white shadow-xs text-indigo-600 dark:bg-slate-800' : 'text-slate-400'}`}
+              className={`p-1.5 px-2.5 rounded-md hover:text-indigo-500 transition-all cursor-pointer flex items-center gap-1.5 ${viewStyle === 'grid' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-300'}`}
               title="Grid show"
               aria-label="Grid view"
             >
@@ -627,7 +627,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             </button>
             <button
               onClick={() => setViewStyle('list')}
-              className={`p-1.5 px-2.5 rounded-md hover:text-indigo-600 transition-all cursor-pointer flex items-center gap-1.5 ${viewStyle === 'list' ? 'bg-white shadow-xs text-indigo-600 dark:bg-slate-800' : 'text-slate-400'}`}
+              className={`p-1.5 px-2.5 rounded-md hover:text-indigo-500 transition-all cursor-pointer flex items-center gap-1.5 ${viewStyle === 'list' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-300'}`}
               title="List show"
               aria-label="List view"
             >
@@ -638,11 +638,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
           {/* Sort Controller */}
           <div className="relative flex items-center shrink-0">
-            <ArrowUpDown className="absolute left-3.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            <ArrowUpDown className="absolute left-3.5 h-3.5 w-3.5 text-slate-300 pointer-events-none" />
             <select
               value={sortField}
               onChange={(e) => { setSortField(e.target.value); setCurrentPage(1); }}
-              className="rounded-lg border border-slate-200 bg-white py-1.5 pl-10 pr-4 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+              className="rounded-lg border border-slate-100 bg-white py-1.5 pl-10 pr-4 text-xs font-semibold text-slate-600 outline-none focus:border-indigo-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
               <option value="newest">Sort: Newest First</option>
               <option value="price-asc">Sort: Price Low-High</option>
@@ -661,16 +661,16 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           const activeSubcategories = activeCategoryObj?.subcategories || [];
           if (!selectedCategory || !activeCategoryObj || activeSubcategories.length === 0) return null;
           return (
-            <div className="mb-6 bg-slate-50 border border-slate-100/80 rounded-2xl p-4 dark:bg-zinc-900/30 dark:border-slate-800/80">
-              <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-dashed border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+            <div className="mb-6 bg-slate-50 border border-slate-50/80 rounded-2xl p-4 dark:bg-zinc-800/30 dark:border-slate-700/80">
+              <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-dashed border-slate-100 dark:border-slate-700">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300 dark:text-slate-400 flex items-center gap-1.5">
                   <span className="font-sans text-xs">📂</span> Filter by {activeCategoryObj.name} Subcategories
                 </span>
                 {selectedSubcategory && (
                   <button
                     type="button"
                     onClick={() => { setSelectedSubcategory(''); setCurrentPage(1); }}
-                    className="text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 cursor-pointer"
+                    className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-600 dark:text-indigo-300 cursor-pointer"
                   >
                     Clear Filter
                   </button>
@@ -683,8 +683,8 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   onClick={() => { setSelectedSubcategory(''); setCurrentPage(1); }}
                   className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 cursor-pointer ${
                     !selectedSubcategory
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10'
-                      : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-zinc-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800'
+                      ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/10'
+                      : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 dark:bg-zinc-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
                   All {activeCategoryObj.name}
@@ -696,8 +696,8 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     onClick={() => { setSelectedSubcategory(sub); setCurrentPage(1); }}
                     className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 cursor-pointer ${
                       selectedSubcategory === sub
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-zinc-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800'
+                        ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/10'
+                        : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 dark:bg-zinc-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     {sub}
@@ -717,10 +717,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               ))}
             </div>
           ) : products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-3xl p-12 min-h-[350px] text-center dark:border-slate-800">
+            <div className="flex flex-col items-center justify-center border border-dashed border-slate-100 rounded-3xl p-12 min-h-[350px] text-center dark:border-slate-700">
               <span className="text-4xl block">🔍</span>
-              <h3 className="text-sm font-bold text-slate-800 mt-4 dark:text-white">End of products</h3>
-              <p className="text-[11px] text-slate-400 mt-1 max-w-sm">No products matched the active filters.</p>
+              <h3 className="text-sm font-bold text-slate-700 mt-4 dark:text-white">End of products</h3>
+              <p className="text-[11px] text-slate-300 mt-1 max-w-sm">No products matched the active filters.</p>
             </div>
           ) : (
             
@@ -735,10 +735,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
                 return (
                   <div key={sectionName} className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2 pb-2.5 border-b border-slate-50 dark:border-slate-700">
                       <span className="text-xl">{emoji}</span>
-                      <h2 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-wider">{sectionName}</h2>
-                      <span className="text-[10px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full px-2.5 py-0.5" id={`section-badge-${sectionName.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <h2 className="text-base font-black text-slate-700 dark:text-white uppercase tracking-wider">{sectionName}</h2>
+                      <span className="text-[10px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500 dark:text-indigo-300 rounded-full px-2.5 py-0.5" id={`section-badge-${sectionName.toLowerCase().replace(/\s+/g, '-')}`}>
                         {sectionProds.length} {sectionProds.length === 1 ? 'item' : 'items'}
                       </span>
                     </div>
@@ -755,10 +755,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                         <button
                           type="button"
                           onClick={() => setExpandedSections(prev => ({ ...prev, [sectionName]: !isExpanded }))}
-                          className="px-5 py-2 rounded-full border border-indigo-100 hover:border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/55 text-indigo-700 dark:bg-indigo-950/20 dark:border-indigo-900/40 dark:text-indigo-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider flex items-center gap-2"
+                          className="px-5 py-2 rounded-full border border-indigo-50 hover:border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50/55 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-800/40 dark:text-indigo-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider flex items-center gap-2"
                         >
                           <span>{isExpanded ? 'See Less' : 'See More'}</span>
-                          <span className="bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                          <span className="bg-indigo-50 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-100 text-[10px] px-2 py-0.5 rounded-full font-bold">
                             +{sectionProds.length - 12} More
                           </span>
                         </button>
@@ -770,22 +770,22 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
               {/* SEE MORE & END OF PRODUCTS PAGINATION TRIGGERS */}
               {totalPages > 1 && (
-                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center min-h-[60px] pb-8">
+                <div className="mt-8 pt-6 border-t border-slate-50 dark:border-slate-700 flex flex-col items-center justify-center min-h-[60px] pb-8">
                   {loading ? (
-                    <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 animate-pulse">
-                      <span className="h-4 w-4 rounded-full border-2 border-indigo-600/40 border-t-indigo-600 animate-spin"></span>
+                    <div className="flex items-center gap-2 text-xs font-bold text-indigo-500 dark:text-indigo-300 animate-pulse">
+                      <span className="h-4 w-4 rounded-full border-2 border-indigo-500/40 border-t-indigo-500 animate-spin"></span>
                       <span>Loading more items...</span>
                     </div>
                   ) : currentPage < totalPages ? (
                     <button
                       type="button"
                       onClick={() => setCurrentPage(prev => prev + 1)}
-                      className="px-6 py-2.5 rounded-full border border-indigo-100 hover:border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/10 text-indigo-700 dark:bg-indigo-950/20 dark:border-indigo-900/40 dark:text-indigo-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider"
+                      className="px-6 py-2.5 rounded-full border border-indigo-50 hover:border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50/10 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-800/40 dark:text-indigo-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider"
                     >
                       See More
                     </button>
                   ) : (
-                    <p className="text-xs font-black uppercase text-indigo-600 tracking-widest bg-indigo-50 dark:bg-indigo-950/20 px-5 py-2.5 border border-indigo-100 dark:border-indigo-900/30 rounded-full font-mono">
+                    <p className="text-xs font-black uppercase text-indigo-500 tracking-widest bg-indigo-50 dark:bg-indigo-950/20 px-5 py-2.5 border border-indigo-50 dark:border-indigo-800/30 rounded-full font-mono">
                       End of products
                     </p>
                   )}
@@ -804,12 +804,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsFilterOpen(true)}
-        className="fixed bottom-20 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl hover:bg-slate-900 active:scale-95 transition-all cursor-pointer"
+        className="fixed bottom-20 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500 text-white shadow-xl hover:bg-slate-800 active:scale-95 transition-all cursor-pointer"
         title="Open Filter Matrix Parameters"
       >
         <SlidersHorizontal className="h-5 w-5" />
         {hasActiveFilters && (
-          <span className="absolute top-1 right-1 flex h-3 w-3 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white ring-2 ring-white dark:ring-slate-950 animate-bounce">
+          <span className="absolute top-1 right-1 flex h-3 w-3 items-center justify-center rounded-full bg-rose-400 text-[8px] font-bold text-white ring-2 ring-white dark:ring-slate-950 animate-bounce">
             !
           </span>
         )}
@@ -825,7 +825,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               aria-label="Close Filters" onClick={() => setIsFilterOpen(false)}
-              className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs cursor-pointer"
+              className="fixed inset-0 z-50 bg-slate-800/40 backdrop-blur-xs cursor-pointer"
             />
 
             {/* Sliding Drawer Container */}
@@ -834,26 +834,26 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 border-r border-slate-200 bg-white shadow-2xl flex flex-col dark:border-slate-800 dark:bg-slate-950"
+              className="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 border-r border-slate-100 bg-white shadow-2xl flex flex-col dark:border-slate-700 dark:bg-slate-950"
             >
               {/* Drawer Header */}
-              <div className="flex items-center justify-between border-b p-5 dark:border-slate-800">
-                <div className="flex items-center gap-2.5 font-bold text-slate-800 text-xs uppercase tracking-wider dark:text-slate-200">
-                  <SlidersHorizontal className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex items-center justify-between border-b p-5 dark:border-slate-700">
+                <div className="flex items-center gap-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider dark:text-slate-100">
+                  <SlidersHorizontal className="h-4 w-4 text-indigo-500 dark:text-indigo-300" />
                   Filter Matrix
                 </div>
                 <div className="flex items-center gap-4">
                   {hasActiveFilters && (
                     <button
                       onClick={handleResetFilters}
-                      className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 cursor-pointer"
+                      className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 dark:text-indigo-300 cursor-pointer"
                     >
                       Clear All
                     </button>
                   )}
                   <button
                     onClick={() => setIsFilterOpen(false)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-900 cursor-pointer transition-colors"
+                    className="p-1.5 rounded-lg text-slate-300 hover:bg-slate-50 hover:text-slate-500 dark:hover:bg-slate-800 cursor-pointer transition-colors"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -866,9 +866,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 {/* Search Keywords */}
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Search Keywords</h4>
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-300 dark:text-slate-400">Search Keywords</h4>
                     <div className="relative">
-                      <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                      <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-300" />
                       <input
                         type="text"
                         value={search}
@@ -883,12 +883,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                           setCurrentPage(1); 
                         }}
                         placeholder="Brand, feature, tags..."
-                        className="w-full text-xs rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-8 text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-white py-2 pl-9 pr-8 text-slate-800 outline-none focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       />
                       {search && (
                         <button
                           onClick={() => { setSearch(''); setCurrentPage(1); }}
-                          className="absolute right-2.5 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                          className="absolute right-2.5 top-2.5 p-0.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 cursor-pointer"
                           title="Clear input" aria-label="Clear input"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -900,10 +900,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   {recentSearches.length > 0 && (
                     <div className="space-y-2 pt-0.5">
                       <div className="flex items-center justify-between text-[10px] font-semibold">
-                        <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wider font-bold">Recent Searches</span>
+                        <span className="text-slate-300 dark:text-slate-400 uppercase tracking-wider font-bold">Recent Searches</span>
                         <button
                           onClick={handleClearAllRecentSearches}
-                          className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold text-[9px] uppercase tracking-wider cursor-pointer"
+                          className="text-indigo-500 dark:text-indigo-300 hover:underline font-bold text-[9px] uppercase tracking-wider cursor-pointer"
                         >
                           Clear All
                         </button>
@@ -913,12 +913,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                           <div
                             key={index}
                             onClick={() => { setSearch(query); setCurrentPage(1); }}
-                            className="group flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-50 border border-slate-100 hover:bg-slate-100 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer transition-all"
+                            className="group flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-50 border border-slate-50 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-200 hover:text-indigo-500 dark:hover:text-indigo-300 cursor-pointer transition-all"
                           >
                             <span className="truncate max-w-[120px]">{query}</span>
                             <button
                               onClick={(e) => handleRemoveRecentSearch(e, query)}
-                              className="text-slate-400 hover:text-rose-500 rounded-full transition-colors cursor-pointer"
+                              className="text-slate-300 hover:text-rose-400 rounded-full transition-colors cursor-pointer"
                               title="Remove search" aria-label="Remove search"
                             >
                               <X className="h-2.5 w-2.5" />
@@ -932,18 +932,18 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
                 {/* Categories */}
                 <div className="space-y-2.5">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Classifications Hierarchy</h4>
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-300 dark:text-slate-400">Classifications Hierarchy</h4>
                   <div className="flex flex-col gap-1.5 overflow-hidden">
                     <button
                       onClick={() => { setSelectedCategory(''); setSelectedSubcategory(''); setCurrentPage(1); }}
-                      className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${!selectedCategory ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
+                      className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${!selectedCategory ? 'bg-indigo-500 text-white font-bold shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
                     >
                       <span className="flex items-center gap-1.5">📁 All Classifications</span>
                       {!selectedCategory && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
                     </button>
                     <button
                       onClick={() => { setSearch(''); setSelectedCategory('trending'); setSelectedSubcategory(''); setCurrentPage(1); }}
-                      className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === 'trending' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
+                      className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === 'trending' ? 'bg-indigo-500 text-white font-bold shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
                     >
                       <span className="flex items-center gap-1.5">🔥 Trending Choices</span>
                       {selectedCategory === 'trending' && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
@@ -952,7 +952,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       <button
                         key={c._id}
                         onClick={() => { setSearch(''); setSelectedCategory(c._id); setSelectedSubcategory(''); setCurrentPage(1); }}
-                        className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${String(selectedCategory) === String(c._id) ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
+                        className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${String(selectedCategory) === String(c._id) ? 'bg-indigo-500 text-white font-bold shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
                       >
                         <span className="truncate flex items-center">
                           <span className="mr-2 text-sm">{c.icon || '📦'}</span>
@@ -966,7 +966,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
                 {/* Price limit Spectrum */}
                 <div className="space-y-3">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Pricing Limits (₹)</h4>
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-300 dark:text-slate-400">Pricing Limits (₹)</h4>
                   
                   {/* Preset Pricing buttons */}
                   <div className="grid grid-cols-3 gap-1.5">
@@ -987,8 +987,8 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                           }}
                           className={`py-2 px-1 text-[10px] font-bold rounded-lg border text-center transition-all cursor-pointer ${
                             isActive
-                              ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm font-bold'
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-350 dark:hover:bg-slate-800'
+                              ? 'bg-indigo-500 border-indigo-400 text-white shadow-sm font-bold'
+                              : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700'
                           }`}
                         >
                           Under ₹{limitValue}
@@ -998,39 +998,39 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   </div>
 
                   <div className="flex gap-2.5 items-center">
-                    <span className="text-xs text-slate-400 font-bold font-mono">₹</span>
+                    <span className="text-xs text-slate-300 font-bold font-mono">₹</span>
                     <input
                       type="number"
                       value={minPrice}
                       onChange={(e) => { setMinPrice(e.target.value); setCurrentPage(1); }}
                       placeholder="Min"
-                      className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2 text-center text-slate-900 outline-none font-mono focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                      className="w-full text-xs rounded-lg border border-slate-100 bg-white p-2 text-center text-slate-800 outline-none font-mono focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     />
-                    <span className="text-slate-300">-</span>
+                    <span className="text-slate-200">-</span>
                     <input
                       type="number"
                       value={maxPrice}
                       onChange={(e) => { setMaxPrice(e.target.value); setCurrentPage(1); }}
                       placeholder="Max"
-                      className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2 text-center text-slate-900 outline-none font-mono focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                      className="w-full text-xs rounded-lg border border-slate-100 bg-white p-2 text-center text-slate-800 outline-none font-mono focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     />
                   </div>
                 </div>
 
                 {/* Rating parameters */}
                 <div className="space-y-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Minimum User Rating</h4>
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-300 dark:text-slate-400">Minimum User Rating</h4>
                   <div className="flex flex-col gap-1 text-xs">
                     {[4, 3, 2].map((stars) => (
                       <button
                         key={stars}
                         onClick={() => { setMinRating(selected => selected === String(stars) ? '' : String(stars)); setCurrentPage(1); }}
-                        className={`flex items-center justify-between py-2 px-3 rounded-lg w-full text-left cursor-pointer transition-all duration-200 ${minRating === String(stars) ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'}`}
+                        className={`flex items-center justify-between py-2 px-3 rounded-lg w-full text-left cursor-pointer transition-all duration-200 ${minRating === String(stars) ? 'bg-indigo-500 text-white font-bold shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
                       >
                         <div className="flex items-center gap-1.5">
-                          <div className={`flex gap-0.5 ${minRating === String(stars) ? 'text-amber-300' : 'text-amber-400'}`}>
+                          <div className={`flex gap-0.5 ${minRating === String(stars) ? 'text-amber-200' : 'text-amber-300'}`}>
                             {Array.from({ length: 5 }).map((_, i) => (
-                              <Star key={i} className={`h-3 w-3 ${i < stars ? 'fill-current' : 'text-slate-200'}`} />
+                              <Star key={i} className={`h-3 w-3 ${i < stars ? 'fill-current' : 'text-slate-100'}`} />
                             ))}
                           </div>
                           <span>{stars}.0+ Stars</span>
@@ -1044,18 +1044,18 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               </div>
               
               {/* Reset/Apply bar at footer */}
-              <div className="border-t p-4 bg-slate-50 dark:border-slate-800 dark:bg-slate-900 flex gap-3">
+              <div className="border-t p-4 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 flex gap-3">
                 {hasActiveFilters && (
                   <button
                     onClick={handleResetFilters}
-                    className="flex-1 py-2 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                    className="flex-1 py-2 text-xs font-bold rounded-lg border border-slate-100 bg-white text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
                   >
                     Reset Limits
                   </button>
                 )}
                 <button
                   onClick={() => setIsFilterOpen(false)}
-                  className="flex-1 py-2 text-xs font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors cursor-pointer shadow-sm text-center"
+                  className="flex-1 py-2 text-xs font-bold rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 transition-colors cursor-pointer shadow-sm text-center"
                 >
                   Apply Filters
                 </button>
@@ -1080,28 +1080,28 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden"
+              className="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-50 dark:border-slate-700 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby="spec-modal-title"
             >
               {/* Header */}
-              <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-950/20">
+              <div className="p-5 border-b border-slate-50 dark:border-slate-700 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-950/20">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-indigo-600 bg-indigo-50 dark:bg-indigo-950/35 dark:text-indigo-400 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-indigo-500 bg-indigo-50 dark:bg-indigo-950/35 dark:text-indigo-300 px-2 py-0.5 rounded-full font-mono">
                       {specModalProduct.brand || 'Premium Brand'} Specs Sheet
                     </span>
-                    <span className="text-[9px] font-mono text-slate-400 font-bold uppercase tracking-wider">{specModalProduct.sku || 'SKU-SPEC'}</span>
+                    <span className="text-[9px] font-mono text-slate-300 font-bold uppercase tracking-wider">{specModalProduct.sku || 'SKU-SPEC'}</span>
                   </div>
-                  <h3 id="spec-modal-title" className="text-base font-black text-slate-900 dark:text-white leading-snug">
+                  <h3 id="spec-modal-title" className="text-base font-black text-slate-800 dark:text-white leading-snug">
                     {specModalProduct.name}
                   </h3>
                 </div>
                 <button
                   onClick={() => setSpecModalProduct(null)}
-                  className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-750 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-300 hover:text-slate-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
                   title="Close Specifications" aria-label="Close Specifications"
                 >
                   <X className="h-5 w-5" />
@@ -1113,7 +1113,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 {/* Intro & Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
                   {/* Photo area */}
-                  <div className="relative h-44 sm:h-52 bg-slate-50 dark:bg-slate-950/15 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 flex items-center justify-center overflow-hidden">
+                  <div className="relative h-44 sm:h-52 bg-slate-50 dark:bg-slate-950/15 rounded-2xl border border-slate-50 dark:border-slate-700 p-4 flex items-center justify-center overflow-hidden">
                     <img
                       src={specModalProduct.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=310'}
                       alt={specModalProduct.name}
@@ -1132,12 +1132,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     />
                     
                     {/* Floating Rating overlay */}
-                    <div className="absolute top-2.5 left-2.5 bg-amber-500 text-white font-extrabold font-mono text-[10px] rounded-lg px-2 py-0.5 flex items-center gap-0.5 shadow-sm z-10">
+                    <div className="absolute top-2.5 left-2.5 bg-amber-400 text-white font-extrabold font-mono text-[10px] rounded-lg px-2 py-0.5 flex items-center gap-0.5 shadow-sm z-10">
                       ★ {specModalProduct.rating || '4.8'}
                     </div>
 
                     {specModalProduct.discount && specModalProduct.discount > 0 && (
-                      <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white font-black font-mono text-[9px] rounded-lg px-2 py-0.5 uppercase tracking-wider">
+                      <div className="absolute top-2.5 right-2.5 bg-rose-400 text-white font-black font-mono text-[9px] rounded-lg px-2 py-0.5 uppercase tracking-wider">
                         -{specModalProduct.discount}% Off
                       </div>
                     )}
@@ -1146,25 +1146,25 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   {/* Summary card info */}
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Expert Review Brief</span>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans">
+                      <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Expert Review Brief</span>
+                      <p className="text-xs text-slate-500 dark:text-slate-300 leading-relaxed font-sans">
                         {specModalProduct.description || 'Check out complete pricing information and review parameters for this gadget choice.'}
                       </p>
                     </div>
 
-                    <div className="rounded-xl bg-slate-50 dark:bg-slate-950 p-3 border border-slate-100/60 dark:border-slate-800/60 flex items-center justify-between">
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-950 p-3 border border-slate-50/60 dark:border-slate-700/60 flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Deal price</span>
+                        <span className="text-[9px] text-slate-300 font-bold uppercase block">Deal price</span>
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-lg font-black text-slate-900 font-mono dark:text-white">₹{specModalProduct.price}</span>
+                          <span className="text-lg font-black text-slate-800 font-mono dark:text-white">₹{specModalProduct.price}</span>
                           {specModalProduct.originalPrice && (
-                            <span className="text-xs text-slate-400 line-through font-mono">₹{specModalProduct.originalPrice}</span>
+                            <span className="text-xs text-slate-300 line-through font-mono">₹{specModalProduct.originalPrice}</span>
                           )}
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-1.5 text-slate-500 font-bold dark:text-slate-400 text-xs font-mono">
-                        <ShieldCheck className="h-4 w-4 text-indigo-500" />
+                      <div className="flex items-center gap-1.5 text-slate-400 font-bold dark:text-slate-300 text-xs font-mono">
+                        <ShieldCheck className="h-4 w-4 text-indigo-400" />
                         <span>Verified Price</span>
                       </div>
                     </div>
@@ -1174,21 +1174,21 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 {/* Tabular Specifications Map */}
                 {specModalProduct.specifications && Object.keys(specModalProduct.specifications).length > 0 ? (
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Technical Specifications</h4>
-                    <div className="rounded-xl border border-slate-100 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-800">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300 dark:text-slate-400">Technical Specifications</h4>
+                    <div className="rounded-xl border border-slate-50 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-700">
                       <div className="overflow-x-auto w-full">
                         <table className="w-full text-left border-collapse text-xs min-w-[340px] sm:min-w-0">
-                          <thead className="bg-slate-50/50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
+                          <thead className="bg-slate-50/50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-700">
                             <tr>
-                              <th className="py-2.5 px-3 font-bold text-slate-500 uppercase text-[9px] tracking-wider">Parameter</th>
-                              <th className="py-2.5 px-3 font-bold text-slate-500 uppercase text-[9px] tracking-wider">Specification Metric</th>
+                              <th className="py-2.5 px-3 font-bold text-slate-400 uppercase text-[9px] tracking-wider">Parameter</th>
+                              <th className="py-2.5 px-3 font-bold text-slate-400 uppercase text-[9px] tracking-wider">Specification Metric</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                             {Object.entries(specModalProduct.specifications).map(([key, value]) => (
-                              <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors">
-                                <td className="py-2 px-3 font-semibold text-slate-800 dark:text-slate-200">{key}</td>
-                                <td className="py-2 px-3 text-slate-600 dark:text-slate-400 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
+                              <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/10 transition-colors">
+                                <td className="py-2 px-3 font-semibold text-slate-700 dark:text-slate-100">{key}</td>
+                                <td className="py-2 px-3 text-slate-500 dark:text-slate-300 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1198,19 +1198,19 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Technical Specifications</h4>
-                    <p className="text-xs text-slate-400 italic">No specific technical parameter metrics registered yet for this item category. See expert overview for highlight claims.</p>
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300">Technical Specifications</h4>
+                    <p className="text-xs text-slate-300 italic">No specific technical parameter metrics registered yet for this item category. See expert overview for highlight claims.</p>
                   </div>
                 )}
 
                 {/* Highlight Featured advantages */}
                 {specModalProduct.features && specModalProduct.features.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Highlighted Advantages</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300">Highlighted Advantages</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       {specModalProduct.features.map((feat, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                          <CheckCheck className="h-4 w-4 text-emerald-500 shrink-0" />
+                        <div key={idx} className="flex items-center gap-2 text-slate-600 dark:text-slate-200">
+                          <CheckCheck className="h-4 w-4 text-emerald-400 shrink-0" />
                           <span>{feat}</span>
                         </div>
                       ))}
@@ -1223,11 +1223,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Pros */}
                     {specModalProduct.pros && specModalProduct.pros.length > 0 && (
-                      <div className="rounded-xl border border-emerald-100 bg-emerald-50/10 p-4 dark:border-emerald-900/20">
-                        <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block mb-2">✓ Pros</span>
+                      <div className="rounded-xl border border-emerald-50 bg-emerald-50/10 p-4 dark:border-emerald-800/20">
+                        <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-300 block mb-2">✓ Pros</span>
                         <ul className="space-y-1 text-xs">
                           {specModalProduct.pros.slice(0, 4).map((p, i) => (
-                            <li key={i} className="text-slate-600 dark:text-slate-300 flex items-start gap-1">
+                            <li key={i} className="text-slate-500 dark:text-slate-200 flex items-start gap-1">
                               <span className="text-emerald-405">●</span>
                               <span>{p}</span>
                             </li>
@@ -1238,11 +1238,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     
                     {/* Cons */}
                     {specModalProduct.cons && specModalProduct.cons.length > 0 && (
-                      <div className="rounded-xl border border-rose-100 bg-rose-50/10 p-4 dark:border-rose-900/20">
-                        <span className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-400 block mb-2">✗ Cons</span>
+                      <div className="rounded-xl border border-rose-50 bg-rose-50/10 p-4 dark:border-rose-800/20">
+                        <span className="text-[10px] uppercase font-bold text-rose-600 dark:text-rose-300 block mb-2">✗ Cons</span>
                         <ul className="space-y-1 text-xs">
                           {specModalProduct.cons.slice(0, 4).map((c, i) => (
-                            <li key={i} className="text-slate-600 dark:text-slate-300 flex items-start gap-1">
+                            <li key={i} className="text-slate-500 dark:text-slate-200 flex items-start gap-1">
                               <span className="text-rose-405">■</span>
                               <span>{c}</span>
                             </li>
@@ -1255,7 +1255,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               </div>
 
               {/* Action Footer banner */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row gap-3">
+              <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-50 dark:border-slate-700/80 flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -1264,7 +1264,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     setSpecModalProduct(null);
                     onNavigate('product-detail', slug);
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-200 py-3 text-xs font-bold transition-all cursor-pointer shadow-3xs"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-100 dark:border-slate-700 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 dark:bg-slate-800 dark:text-slate-100 py-3 text-xs font-bold transition-all cursor-pointer shadow-3xs"
                 >
                   <Search size={14} />
                   <span>View Review & Full Details Page</span>
@@ -1283,7 +1283,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       window.open(specModalProduct.affiliateLink, '_blank', 'noreferrer,noopener');
                     }
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-xs font-bold transition-all cursor-pointer shadow-md"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white py-3 text-xs font-bold transition-all cursor-pointer shadow-md"
                 >
                   <ShoppingBag size={14} />
                   <span>Shop on Amazon</span>
@@ -1298,9 +1298,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       {/* Loading Specs sheet modal */}
       {loadingSpec && (
         <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55 flex items-center justify-center">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl flex items-center gap-3.5 shadow-xl border border-slate-100 dark:border-slate-800 animate-pulse">
-            <div className="h-5 w-5 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">Loading Specification Sheet...</span>
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl flex items-center gap-3.5 shadow-xl border border-slate-50 dark:border-slate-700 animate-pulse">
+            <div className="h-5 w-5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-100">Loading Specification Sheet...</span>
           </div>
         </div>
       )}

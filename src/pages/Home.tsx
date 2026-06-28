@@ -27,15 +27,15 @@ interface HomeProps {
 }
 
 const ProductCardSkeleton = () => (
-  <div className="group flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900 overflow-hidden animate-pulse">
-    <div className="h-32 sm:h-44 bg-slate-100 dark:bg-slate-900/50 shrink-0"></div>
+  <div className="group flex flex-col rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-800 overflow-hidden animate-pulse">
+    <div className="h-32 sm:h-44 bg-slate-50 dark:bg-slate-800/50 shrink-0"></div>
     <div className="p-3 sm:p-5 flex flex-col flex-grow space-y-2.5">
-      <div className="h-3.5 w-1/3 bg-slate-100 dark:bg-slate-900/50 rounded"></div>
-      <div className="h-5 w-full bg-slate-100 dark:bg-slate-900/50 rounded"></div>
-      <div className="h-4 w-3/4 bg-slate-100 dark:bg-slate-900/50 rounded"></div>
-      <div className="mt-auto pt-3 border-t border-slate-105 dark:border-slate-800/80 flex items-center justify-between">
-        <div className="h-5 w-16 bg-slate-100 dark:bg-slate-900/50 rounded"></div>
-        <div className="h-6 w-20 bg-slate-100 dark:bg-slate-900/50 rounded-lg"></div>
+      <div className="h-3.5 w-1/3 bg-slate-50 dark:bg-slate-800/50 rounded"></div>
+      <div className="h-5 w-full bg-slate-50 dark:bg-slate-800/50 rounded"></div>
+      <div className="h-4 w-3/4 bg-slate-50 dark:bg-slate-800/50 rounded"></div>
+      <div className="mt-auto pt-3 border-t border-slate-105 dark:border-slate-700/80 flex items-center justify-between">
+        <div className="h-5 w-16 bg-slate-50 dark:bg-slate-800/50 rounded"></div>
+        <div className="h-6 w-20 bg-slate-50 dark:bg-slate-800/50 rounded-lg"></div>
       </div>
     </div>
   </div>
@@ -336,7 +336,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="space-y-16 pb-20 bg-slate-50 dark:bg-black transition-colors duration-300 text-slate-900 dark:text-slate-100">
+    <div className="space-y-16 pb-20 bg-slate-50 dark:bg-black transition-colors duration-300 text-slate-800 dark:text-slate-50">
       <Helmet>
         <title>gadgetsprohub | Premium Electronics & Smart Gear Directory</title>
         <meta name="description" content="Discover trending, premium electronics and detailed specifications. Find honest reviews and the best deals on smartphones, laptops, audio gear, and wearables at gadgetsprohub." />
@@ -381,7 +381,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         />
       </div>
 
-      <section className="relative overflow-hidden py-24 sm:py-32 border-b border-slate-200/50 dark:border-slate-800/50 text-center flex flex-col justify-center items-center isolate">
+      <section className="relative overflow-hidden py-24 sm:py-32 border-b border-slate-100/50 dark:border-slate-700/50 text-center flex flex-col justify-center items-center isolate">
         {/* Decorative background gradients */}
         <div className="absolute inset-x-0 top-[-10rem] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[-20rem] dark:hidden">
           <div className="relative left-1/2 -z-10 aspect-[1155/678] w-[36.125rem] max-w-none -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-20 sm:left-[calc(50%-40rem)] sm:w-[72.1875rem]" style={{ clipPath: "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)" }}></div>
@@ -393,9 +393,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             initial={{ opacity: 0, y: -15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/80 backdrop-blur-md px-5 py-2 text-xs font-bold text-indigo-900 shadow-sm dark:bg-indigo-950/30 dark:border-indigo-800/50 dark:text-indigo-300"
+            className="inline-flex items-center gap-2 rounded-full border border-indigo-50 bg-indigo-50/80 backdrop-blur-md px-5 py-2 text-xs font-bold text-indigo-800 shadow-sm dark:bg-indigo-950/30 dark:border-indigo-700/50 dark:text-indigo-200"
           >
-            <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
+            <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
             <span className="tracking-wide uppercase">Carefully Checked Products & Direct Safe Links</span>
           </motion.div>
 
@@ -403,10 +403,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-            className="mt-8 text-4xl font-black tracking-tighter text-slate-900 sm:text-6xl lg:text-7xl dark:text-white leading-[1.1]"
+            className="mt-8 text-4xl font-black tracking-tighter text-slate-800 sm:text-6xl lg:text-7xl dark:text-white leading-[1.1]"
           >
             Discover the Best <br className="hidden sm:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:bg-gradient-to-r dark:from-slate-100 dark:to-slate-350">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500 dark:bg-gradient-to-r dark:from-slate-50 dark:to-slate-200">
               Products Before You Buy
             </span>
           </motion.h1>
@@ -415,7 +415,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
-            className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
+            className="mt-6 text-base sm:text-lg text-slate-500 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed"
           >
             Search thousands of curated gadgets, deep technical specifications, and verify reviews instantly.
           </motion.p>
@@ -429,10 +429,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             ref={searchContainerRef}
           >
             <form onSubmit={handleHomeSearchSubmit} className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-slate-800 dark:to-slate-705 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-400 to-purple-500 dark:from-slate-700 dark:to-slate-705 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none">
-                  <Search className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+                  <Search className="h-5 w-5 text-indigo-400 dark:text-indigo-300" />
                 </span>
                 <input
                   type="text"
@@ -440,13 +440,13 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                   onChange={(e) => setHomeSearch(e.target.value)}
                   onFocus={() => setShowDropdown(true)}
                   placeholder="Search products, brands, tech items..."
-                  className="w-full rounded-[1.75rem] border border-slate-200/50 bg-white/90 backdrop-blur-md py-4 pl-14 pr-16 text-base text-slate-900 shadow-xl outline-none transition-all placeholder:text-slate-500 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/50 dark:bg-slate-900/90 dark:text-white"
+                  className="w-full rounded-[1.75rem] border border-slate-100/50 bg-white/90 backdrop-blur-md py-4 pl-14 pr-16 text-base text-slate-800 shadow-xl outline-none transition-all placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/10 dark:border-slate-600/50 dark:bg-slate-800/90 dark:text-white"
                 />
                 {homeSearch && (
                   <button 
                     type="button"
                     aria-label="Clear search" onClick={() => setHomeSearch('')}
-                    className="absolute inset-y-0 right-4 flex items-center p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                    className="absolute inset-y-0 right-4 flex items-center p-2 rounded-full text-slate-300 hover:text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -456,16 +456,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 
             {/* Premium Interactive Recent Searches Dropdown */}
             {showDropdown && recentSearches.length > 0 && (
-              <div className="absolute z-50 left-0 right-0 mt-2 rounded-2xl border border-slate-250 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-900 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-slate-800/80">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
-                    <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+              <div className="absolute z-50 left-0 right-0 mt-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-800 text-left animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-50 dark:border-slate-700/80">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5 font-mono">
+                    <Clock className="h-3 w-3 text-slate-300 shrink-0" />
                     Recent Searches
                   </span>
                   <button
                     type="button"
                     onClick={handleClearAllRecentSearches}
-                    className="text-[10px] font-bold uppercase text-rose-500 hover:text-rose-600 transition-colors cursor-pointer border-none bg-transparent p-0"
+                    className="text-[10px] font-bold uppercase text-rose-400 hover:text-rose-500 transition-colors cursor-pointer border-none bg-transparent p-0"
                   >
                     Clear All
                   </button>
@@ -480,16 +480,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         setShowDropdown(false);
                         onNavigate('products', `search-${query}`);
                       }}
-                      className="group flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
+                      className="group flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors cursor-pointer"
                     >
                       <span className="flex items-center gap-2 truncate">
-                        <History className="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors shrink-0" />
+                        <History className="h-3.5 w-3.5 text-slate-300 group-hover:text-indigo-400 transition-colors shrink-0" />
                         <span className="truncate">{query}</span>
                       </span>
                       <button
                         type="button"
                         aria-label="Remove recent search" onClick={(e) => handleRemoveRecentSearch(e, query)}
-                        className="rounded-md p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-all cursor-pointer border-none bg-transparent"
+                        className="rounded-md p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-300 hover:text-slate-500 dark:text-slate-400 dark:hover:text-slate-200 transition-all cursor-pointer border-none bg-transparent"
                         title="Remove Search"
                       >
                         <X className="h-3.5 w-3.5 shrink-0" />
@@ -510,8 +510,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer ${
                 activeCategory === 'all'
-                  ? 'bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500 dark:border-indigo-400'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-300 dark:hover:border-slate-700'
+                  ? 'bg-indigo-500 text-white border-indigo-500 dark:bg-indigo-400 dark:border-indigo-300'
+                  : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600'
               }`}
             >
               All Collections
@@ -523,11 +523,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer flex items-center gap-1 ${
                 activeCategory === 'trending'
-                  ? 'bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500 dark:border-indigo-400'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-300 dark:hover:border-slate-700'
+                  ? 'bg-indigo-500 text-white border-indigo-500 dark:bg-indigo-400 dark:border-indigo-300'
+                  : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600'
               }`}
             >
-              <Flame className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+              <Flame className="h-3 w-3 text-slate-400 dark:text-slate-300" />
               <span>Trending Choices</span>
             </button>
             {categories.slice(0, 5).map(cat => (
@@ -539,8 +539,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 }}
                 className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer ${
                   activeCategory === cat._id
-                    ? 'bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500 dark:border-indigo-400'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-300 dark:hover:border-slate-700'
+                    ? 'bg-indigo-500 text-white border-indigo-500 dark:bg-indigo-400 dark:border-indigo-300'
+                    : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600'
                 }`}
               >
                 {cat.name}
@@ -576,21 +576,21 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       {/* 2. CURATED COLLECTIONS BOARD */}
       <LazySection placeholder={
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-          <div className="h-6 w-48 bg-slate-200/50 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
+          <div className="h-6 w-48 bg-slate-100/50 dark:bg-slate-700 rounded animate-pulse mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-3xl animate-pulse"></div>
-            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-3xl animate-pulse hidden md:block"></div>
-            <div className="h-72 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-3xl animate-pulse hidden lg:block"></div>
+            <div className="h-72 bg-gradient-to-br from-slate-50 to-slate-50 dark:from-slate-800/50 dark:to-slate-950/50 rounded-3xl animate-pulse"></div>
+            <div className="h-72 bg-gradient-to-br from-slate-50 to-slate-50 dark:from-slate-800/50 dark:to-slate-950/50 rounded-3xl animate-pulse hidden md:block"></div>
+            <div className="h-72 bg-gradient-to-br from-slate-50 to-slate-50 dark:from-slate-800/50 dark:to-slate-950/50 rounded-3xl animate-pulse hidden lg:block"></div>
           </div>
         </div>
       }>
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2 mb-8 border-b border-slate-200/60 pb-3 dark:border-slate-800">
-          <Trophy className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-          <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+        <div className="flex items-center gap-2 mb-8 border-b border-slate-100/60 pb-3 dark:border-slate-700">
+          <Trophy className="h-5 w-5 text-slate-500 dark:text-slate-300" />
+          <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-800 dark:text-white font-sans">
             Curated Collections
           </h2>
-          <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 dark:bg-slate-900/80 dark:text-slate-300 font-mono">
+          <span className="ml-2 rounded-full bg-slate-50 px-2 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-slate-800/80 dark:text-slate-200 font-mono">
             Latest Curation
           </span>
         </div>
@@ -598,23 +598,23 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-855 p-5 animate-pulse space-y-4">
-                <div className="h-6 w-1/3 bg-slate-100 rounded"></div>
+              <div key={i} className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-855 p-5 animate-pulse space-y-4">
+                <div className="h-6 w-1/3 bg-slate-50 rounded"></div>
                 <div className="grid grid-cols-2 gap-2">
                   {[...Array(4)].map((_, j) => (
                     <div key={j} className="aspect-square bg-slate-105/50 rounded-xl"></div>
                   ))}
                 </div>
-                <div className="h-10 w-full bg-slate-100 rounded-xl"></div>
+                <div className="h-10 w-full bg-slate-50 rounded-xl"></div>
               </div>
             ))}
           </div>
         ) : collectionsData.length === 0 ? (
-          <div className="text-center py-12 rounded-2xl border border-slate-200 dark:border-slate-800 p-8">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Sorry, no collections or products match your search/filters right now.</p>
+          <div className="text-center py-12 rounded-2xl border border-slate-100 dark:border-slate-700 p-8">
+            <p className="text-sm font-semibold text-slate-400 dark:text-slate-300">Sorry, no collections or products match your search/filters right now.</p>
             <button 
               onClick={() => { setHomeSearch(''); setActiveCategory('all'); }}
-              className="mt-3 text-xs font-bold text-slate-600 dark:text-slate-400 hover:underline cursor-pointer bg-transparent border-none"
+              className="mt-3 text-xs font-bold text-slate-500 dark:text-slate-300 hover:underline cursor-pointer bg-transparent border-none"
             >
               Reset filters
             </button>
@@ -624,26 +624,26 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             {collectionsData.map(({ category, latestFour }) => (
               <div 
                 key={category._id}
-                className="group flex flex-col bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-slate-400 dark:hover:border-slate-700 transition-all p-5 hover:translate-y-[-4px] duration-250 cursor-default"
+                className="group flex flex-col bg-white dark:bg-slate-800 rounded-3xl border border-slate-100/80 dark:border-slate-700 shadow-xs hover:border-slate-300 dark:hover:border-slate-600 transition-all p-5 hover:translate-y-[-4px] duration-250 cursor-default"
               >
                 {/* Collection Info Header */}
                 <div className="mb-4">
-                  <h3 className="text-md font-black text-slate-900 dark:text-white group-hover:text-slate-700 dark:group-hover:text-slate-350 transition-colors uppercase tracking-tight font-sans">
+                  <h3 className="text-md font-black text-slate-800 dark:text-white group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors uppercase tracking-tight font-sans">
                     {category.name}
                   </h3>
                   {category.description && (
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-1 mt-1 font-sans font-medium">
+                    <p className="text-[11px] text-slate-300 dark:text-slate-400 line-clamp-1 mt-1 font-sans font-medium">
                       {category.description}
                     </p>
                   )}
                 </div>
 
                 {/* Grid with exactly up to 4 latest images of the collection */}
-                <div className="grid grid-cols-2 gap-3 bg-slate-50/50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-100/60 dark:border-slate-900 min-h-[220px] items-center justify-center">
+                <div className="grid grid-cols-2 gap-3 bg-slate-50/50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-50/60 dark:border-slate-800 min-h-[220px] items-center justify-center">
                   {latestFour.map(prod => (
                     <div className="group" key={prod._id}>
                       <BorderGlow
-                        className="relative aspect-square bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-855/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-500/40 dark:hover:border-slate-700 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
+                        className="relative aspect-square bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100/50 dark:border-slate-855/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-400/40 dark:hover:border-slate-600 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
                         borderRadius={16}
                       >
                       <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
@@ -655,13 +655,13 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         title={`View ${prod.name}`}
                       >
                         {/* Rating Badge at the Top - Colorless style */}
-                        <div className="absolute top-1.5 left-1.5 bg-white/95 text-slate-900 dark:bg-slate-900/95 dark:text-white font-extrabold font-mono text-[8px] sm:text-[9.5px] rounded-md px-1.5 py-0.5 flex items-center gap-0.5 shadow-sm z-10 border border-slate-200 dark:border-slate-800">
+                        <div className="absolute top-1.5 left-1.5 bg-white/95 text-slate-800 dark:bg-slate-800/95 dark:text-white font-extrabold font-mono text-[8px] sm:text-[9.5px] rounded-md px-1.5 py-0.5 flex items-center gap-0.5 shadow-sm z-10 border border-slate-100 dark:border-slate-700">
                           ★ {prod.rating || '4.8'}
                         </div>
 
                         <div className="flex-grow flex items-center justify-center w-full min-h-0 pt-4">
                           <img loading="lazy" 
-                            src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=150'} 
+                            src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=100'} 
                             alt={prod.name}
                             referrerPolicy="no-referrer"
                             className="max-h-full max-w-full object-contain p-1 group-hover/item:scale-105 transition-transform duration-300"
@@ -683,7 +683,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                   {latestFour.length < 4 && [...Array(4 - latestFour.length)].map((_, i) => (
                     <div 
                       key={`empty-${i}`}
-                      className="aspect-square bg-slate-100/40 dark:bg-slate-900/10 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[10px] text-slate-300 dark:text-slate-700 font-mono"
+                      className="aspect-square bg-slate-50/40 dark:bg-slate-800/10 rounded-2xl border border-dashed border-slate-100 dark:border-slate-700 flex items-center justify-center text-[10px] text-slate-200 dark:text-slate-600 font-mono"
                     >
                       Empty
                     </div>
@@ -691,10 +691,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 </div>
 
                 {/* Clean "See More" link instead of descriptions or details (Colorless style) */}
-                <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <div className="mt-5 pt-3 border-t border-slate-50 dark:border-slate-700">
                   <button
                     onClick={() => onNavigate('products', `category-${category._id}`)}
-                    className="w-full text-center bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border-none"
+                    className="w-full text-center bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-200 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border-none"
                   >
                     <span>See More</span>
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -715,24 +715,24 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       {/* 3. COMPREHENSIVE PRODUCT CATALOG LISTING MATCHING USER INTENT */}
       <LazySection placeholder={
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-          <div className="h-6 w-52 bg-slate-200/50 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
+          <div className="h-6 w-52 bg-slate-100/50 dark:bg-slate-700 rounded animate-pulse mb-6"></div>
           <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-2xl animate-pulse"></div>
-            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-2xl animate-pulse"></div>
-            <div className="h-96 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/50 dark:to-slate-950/50 rounded-2xl animate-pulse hidden lg:block"></div>
+            <div className="h-96 bg-gradient-to-br from-slate-50 to-slate-50 dark:from-slate-800/50 dark:to-slate-950/50 rounded-2xl animate-pulse"></div>
+            <div className="h-96 bg-gradient-to-br from-slate-50 to-slate-50 dark:from-slate-800/50 dark:to-slate-950/50 rounded-2xl animate-pulse"></div>
+            <div className="h-96 bg-gradient-to-br from-slate-50 to-slate-50 dark:from-slate-800/50 dark:to-slate-950/50 rounded-2xl animate-pulse hidden lg:block"></div>
           </div>
         </div>
       }>
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-8 border-b border-slate-200/60 pb-3 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-8 border-b border-slate-100/60 pb-3 dark:border-slate-700">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+            <Sparkles className="h-5 w-5 text-indigo-500 dark:text-indigo-300" />
+            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-800 dark:text-white font-sans">
               All Available Products
             </h2>
           </div>
           {homeSearch && (
-            <span className="bg-amber-50 text-amber-800 text-[10px] font-bold rounded px-2 py-0.5 dark:bg-amber-950/40 dark:text-amber-300 font-mono">
+            <span className="bg-amber-50 text-amber-700 text-[10px] font-bold rounded px-2 py-0.5 dark:bg-amber-950/40 dark:text-amber-200 font-mono">
               Matched: {latestProductsToShow.length}
             </span>
           )}
@@ -745,11 +745,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             ))}
           </div>
         ) : latestProductsToShow.length === 0 ? (
-          <div className="text-center py-12 rounded-2xl border border-slate-200 dark:border-slate-800 p-8">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Sorry, no products match your search or filters at this time.</p>
+          <div className="text-center py-12 rounded-2xl border border-slate-100 dark:border-slate-700 p-8">
+            <p className="text-sm font-semibold text-slate-400 dark:text-slate-300">Sorry, no products match your search or filters at this time.</p>
             <button 
               onClick={() => { setHomeSearch(''); setActiveCategory('all'); }}
-              className="mt-3 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer bg-transparent border-none"
+              className="mt-3 text-xs font-bold text-indigo-500 dark:text-indigo-300 hover:underline cursor-pointer bg-transparent border-none"
             >
               Reset filters
             </button>
@@ -773,21 +773,21 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     className="group"
                   >
                     <BorderGlow
-                      className="flex flex-col rounded-2xl border border-slate-200/50 bg-white hover:border-indigo-500/40 dark:border-slate-800/80 dark:bg-slate-900 transition-all duration-200 overflow-hidden cursor-pointer shadow-xs"
+                      className="flex flex-col rounded-2xl border border-slate-100/50 bg-white hover:border-indigo-400/40 dark:border-slate-700/80 dark:bg-slate-800 transition-all duration-200 overflow-hidden cursor-pointer shadow-xs"
                       borderRadius={16}
                     >
                       <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
                       <div className="flex flex-col w-full h-full">
                     {/* Image Area with Badge & Top Actions */}
-                    <div className="relative h-32 sm:h-48 bg-slate-100 dark:bg-slate-900 overflow-hidden shrink-0 flex items-center justify-center p-2">
+                    <div className="relative h-32 sm:h-48 bg-slate-50 dark:bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center p-2">
                       <img
                         src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=310'}
                         alt={prod.name}
                         referrerPolicy="no-referrer"
-                        className="max-h-full max-w-full object-contain p-2 bg-slate-100/40 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-300"
+                        className="max-h-full max-w-full object-contain p-2 bg-slate-50/40 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-300"
                       />
                       {prod.discount && prod.discount > 0 && (
-                        <span className="absolute top-2 left-2 bg-rose-500 rounded px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold text-white uppercase tracking-wider font-mono shadow-xs">
+                        <span className="absolute top-2 left-2 bg-rose-400 rounded px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold text-white uppercase tracking-wider font-mono shadow-xs">
                           -{prod.discount}%
                         </span>
                       )}
@@ -795,15 +795,15 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                       {isAuthenticated && (
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleWishlist(prod._id); }}
-                          className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-xs hover:text-rose-500 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:text-rose-500 transition-colors cursor-pointer border-none"
+                          className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-slate-400 shadow-xs hover:text-rose-400 dark:bg-slate-800/90 dark:text-slate-200 dark:hover:text-rose-400 transition-colors cursor-pointer border-none"
                           title="Bookmark product" aria-label="Bookmark product"
                         >
-                          <Heart className={`h-3.5 w-3.5 ${wishlist.includes(prod._id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                          <Heart className={`h-3.5 w-3.5 ${wishlist.includes(prod._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
                         </button>
                       )}
 
                       <div
-                        className="absolute bottom-2 left-2 bg-amber-500 text-white font-extrabold font-mono text-[9px] rounded-lg px-2 py-1 flex items-center gap-1 shadow-md z-10 border-none select-none"
+                        className="absolute bottom-2 left-2 bg-amber-400 text-white font-extrabold font-mono text-[9px] rounded-lg px-2 py-1 flex items-center gap-1 shadow-md z-10 border-none select-none"
                         title="Rating"
                       >
                         ★ {prod.rating || '4.8'}
@@ -813,32 +813,32 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     {/* Product Metadata & Info */}
                     <div className="p-3 sm:p-4 flex flex-col flex-grow font-sans">
                       <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="text-[8px] sm:text-[9px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate max-w-[80px]">
+                        <span className="text-[8px] sm:text-[9px] font-mono font-bold text-slate-300 dark:text-slate-400 uppercase tracking-wider truncate max-w-[80px]">
                           {prod.brand || 'Premium'}
                         </span>
-                        <span className="text-[8.5px] px-1.5 py-0.2 bg-slate-50 border border-slate-100 rounded text-slate-500 dark:bg-slate-900/40 dark:border-slate-800 dark:text-slate-400 font-bold font-mono truncate max-w-[90px]">
+                        <span className="text-[8.5px] px-1.5 py-0.2 bg-slate-50 border border-slate-50 rounded text-slate-400 dark:bg-slate-800/40 dark:border-slate-700 dark:text-slate-300 font-bold font-mono truncate max-w-[90px]">
                           {getCategoryName(prod.category, categories)}
                         </span>
                       </div>
 
-                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-1 group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400 transition-colors leading-tight font-sans">
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-500 dark:text-white dark:group-hover:text-indigo-300 transition-colors leading-tight font-sans">
                         {prod.name}
                       </h3>
 
-                      <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal dark:text-slate-400 font-sans">
+                      <p className="text-[10px] sm:text-[11px] text-slate-400 line-clamp-2 mt-1 leading-normal dark:text-slate-300 font-sans">
                         {prod.description}
                       </p>
 
                       {/* Pricing Tag and Details Trigger */}
-                      <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80">
+                      <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-50 dark:border-slate-700/80">
                         <div className="flex items-baseline gap-1">
-                          <span className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">₹{prod.price}</span>
+                          <span className="text-xs sm:text-sm font-black text-indigo-500 dark:text-indigo-300 font-mono">₹{prod.price}</span>
                           {prod.originalPrice && (
-                            <span className="text-[9px] sm:text-[10px] text-slate-400 line-through font-mono translate-y-[-0.5px]">₹{prod.originalPrice}</span>
+                            <span className="text-[9px] sm:text-[10px] text-slate-300 line-through font-mono translate-y-[-0.5px]">₹{prod.originalPrice}</span>
                           )}
                         </div>
 
-                        <div className="rounded bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 py-1 px-2.5 text-[9px] sm:text-[10px] font-bold dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 cursor-pointer transition-colors border border-indigo-100/40 dark:border-indigo-900/30">
+                        <div className="rounded bg-indigo-50/80 hover:bg-indigo-50 text-indigo-600 py-1 px-2.5 text-[9px] sm:text-[10px] font-bold dark:bg-indigo-950/40 dark:text-indigo-200 dark:hover:bg-indigo-800/60 cursor-pointer transition-colors border border-indigo-50/40 dark:border-indigo-800/30">
                           Details
                         </div>
                       </div>
@@ -856,14 +856,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               {latestProductsToShow.length > visibleCount && (
                 <button
                   onClick={() => setVisibleCount(prev => prev + 6)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 hover:border-indigo-300 bg-white hover:bg-slate-50 text-indigo-700 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-900 dark:text-indigo-300 px-6 py-2.5 text-xs font-bold shadow-xs cursor-pointer transition-all border-solid"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-100 hover:border-indigo-200 bg-white hover:bg-slate-50 text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-800 dark:text-indigo-200 px-6 py-2.5 text-xs font-bold shadow-xs cursor-pointer transition-all border-solid"
                 >
                   Load More Products
                 </button>
               )}
               <button
                 onClick={() => onNavigate('products')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-none bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 text-xs font-bold shadow-sm hover:shadow-md cursor-pointer transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-none bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2.5 text-xs font-bold shadow-sm hover:shadow-md cursor-pointer transition-all"
               >
                 <span>See All Products</span>
                 <ArrowRight className="h-3.5 w-3.5" />

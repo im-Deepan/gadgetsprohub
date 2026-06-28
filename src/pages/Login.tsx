@@ -81,18 +81,18 @@ const LoginErrorDisplay: React.FC<{ error: string; onClear: () => void }> = ({ e
   const { title, description, suggestion } = translateAuthError(error);
 
   return (
-    <div id="login-error-card" className="relative overflow-hidden rounded-xl border border-rose-100 bg-rose-50/75 p-4 text-xs text-rose-950 transition-all dark:border-rose-950/40 dark:bg-rose-950/10 dark:text-rose-200">
+    <div id="login-error-card" className="relative overflow-hidden rounded-xl border border-rose-50 bg-rose-50/75 p-4 text-xs text-rose-950 transition-all dark:border-rose-950/40 dark:bg-rose-950/10 dark:text-rose-100">
       <div className="flex items-start gap-2.5">
-        <div className="mt-0.5 rounded-full bg-rose-100 p-1 text-rose-600 dark:bg-rose-950/80 dark:text-rose-400">
+        <div className="mt-0.5 rounded-full bg-rose-50 p-1 text-rose-500 dark:bg-rose-950/80 dark:text-rose-300">
           <svg className="h-3.5 w-3.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
         <div className="flex-1 space-y-1">
-          <h4 className="font-bold tracking-tight text-rose-900 dark:text-rose-300">{title}</h4>
-          <p className="text-[11px] leading-normal opacity-90 text-rose-800 dark:text-rose-400">{description}</p>
+          <h4 className="font-bold tracking-tight text-rose-800 dark:text-rose-200">{title}</h4>
+          <p className="text-[11px] leading-normal opacity-90 text-rose-700 dark:text-rose-300">{description}</p>
           {suggestion && (
-            <p className="text-[11px] font-semibold leading-normal mt-1 border-t border-rose-100/50 pt-1 text-indigo-700 dark:border-rose-950/30 dark:text-indigo-400">
+            <p className="text-[11px] font-semibold leading-normal mt-1 border-t border-rose-50/50 pt-1 text-indigo-600 dark:border-rose-950/30 dark:text-indigo-300">
               💡 <span className="font-bold">Tip:</span> {suggestion}
             </p>
           )}
@@ -100,7 +100,7 @@ const LoginErrorDisplay: React.FC<{ error: string; onClear: () => void }> = ({ e
         <button
           type="button"
           onClick={onClear}
-          className="absolute right-2 top-2 rounded-md p-1 text-rose-400 hover:bg-rose-100 hover:text-rose-700 dark:text-rose-500 dark:hover:bg-rose-950/50 dark:hover:text-rose-300 cursor-pointer"
+          className="absolute right-2 top-2 rounded-md p-1 text-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:hover:bg-rose-950/50 dark:hover:text-rose-200 cursor-pointer"
           title="Dismiss Error"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -262,70 +262,70 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
       {/* High Visibility Floating Back Button */}
       <button
         onClick={() => onNavigate('home')}
-        className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-700 hover:text-indigo-600 shadow-sm transition-all hover:bg-slate-50 cursor-pointer dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white"
+        className="flex items-center gap-2 rounded-full border border-slate-100 bg-white px-5 py-2 text-xs font-bold text-slate-600 hover:text-indigo-500 shadow-sm transition-all hover:bg-slate-50 cursor-pointer dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
         <span>Back to Store Home</span>
       </button>
 
-      <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-md dark:bg-slate-900 dark:border-slate-800 space-y-6">
+      <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-md dark:bg-slate-800 dark:border-slate-700 space-y-6">
         
         {/* Visual Brand Greeting */}
         <div className="text-center space-y-1.5 flex flex-col items-center">
-          <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-            <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 bg-clip-text text-transparent font-black">GADGETSPROHUB</span>
-            <span className="text-slate-400 dark:text-slate-500 font-bold">MEMBER PORTAL</span>
+          <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-300 flex items-center gap-1.5">
+            <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-amber-400 bg-clip-text text-transparent font-black">GADGETSPROHUB</span>
+            <span className="text-slate-300 dark:text-slate-400 font-bold">MEMBER PORTAL</span>
           </h2>
-          <h1 className="text-lg font-black text-slate-900 dark:text-white">
+          <h1 className="text-lg font-black text-slate-800 dark:text-white">
             {activeTab === 'login' ? 'Welcome Back, Explorer' : 'Create New Account'}
           </h1>
         </div>
 
         {/* Custom Toggle tabs */}
-        <div className="flex border-b border-slate-100 p-0.5 bg-slate-50 rounded-xl dark:border-slate-800 dark:bg-slate-950 shrink-0">
+        <div className="flex border-b border-slate-50 p-0.5 bg-slate-50 rounded-xl dark:border-slate-700 dark:bg-slate-950 shrink-0">
           <button
             onClick={() => { setActiveTab('login'); setAuthError(''); setRegisteredEmail(''); setSimulatedVerificationUrl(''); setSmtpError(''); }}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'login' ? 'bg-white shadow-xs text-indigo-600 dark:bg-slate-800' : 'text-slate-500'}`}
+            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'login' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-400'}`}
           >
             Access Sign In
           </button>
           <button
             onClick={() => { setActiveTab('register'); setAuthError(''); setRegisteredEmail(''); setSimulatedVerificationUrl(''); setSmtpError(''); }}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'register' ? 'bg-white shadow-xs text-indigo-600 dark:bg-slate-800' : 'text-slate-500'}`}
+            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'register' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-400'}`}
           >
             Register Account
           </button>
         </div>
 
         {registeredEmail ? (
-          <div id="registration-success-card" className="rounded-2xl border border-emerald-100 bg-emerald-50/75 p-4 text-xs text-emerald-950 dark:border-emerald-950/40 dark:bg-emerald-950/10 dark:text-emerald-200">
+          <div id="registration-success-card" className="rounded-2xl border border-emerald-50 bg-emerald-50/75 p-4 text-xs text-emerald-950 dark:border-emerald-950/40 dark:bg-emerald-950/10 dark:text-emerald-100">
             <div className="flex items-start gap-2.5">
-              <div className="mt-0.5 rounded-full bg-emerald-100 p-1 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-400">
+              <div className="mt-0.5 rounded-full bg-emerald-50 p-1 text-emerald-500 dark:bg-emerald-950/80 dark:text-emerald-300">
                 <svg className="h-3.5 w-3.5 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 19v-8.93a2 2 0 01.89-1.664l8-4a2 2 0 011.78 0l8 4A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-2.25-1.5a2 2 0 00-1.78 0L9 14.5" />
                 </svg>
               </div>
               <div className="flex-1 space-y-1">
-                <h4 className="font-bold tracking-tight text-emerald-900 dark:text-emerald-300">Verification Link Sent</h4>
-                <p className="text-[11px] leading-normal opacity-90 text-emerald-800 dark:text-emerald-400">
+                <h4 className="font-bold tracking-tight text-emerald-800 dark:text-emerald-200">Verification Link Sent</h4>
+                <p className="text-[11px] leading-normal opacity-90 text-emerald-700 dark:text-emerald-300">
                   We have sent a verification email to <span className="font-bold">{registeredEmail}</span>. Please click the link inside to verify your identity.
                 </p>
                 {smtpError && (
-                  <div className="mt-3 border-t border-amber-200/50 pt-2.5 space-y-1.5 dark:border-amber-950/20">
-                    <p className="text-[10px] font-bold text-amber-800 dark:text-amber-400">
+                  <div className="mt-3 border-t border-amber-100/50 pt-2.5 space-y-1.5 dark:border-amber-950/20">
+                    <p className="text-[10px] font-bold text-amber-700 dark:text-amber-300">
                       ⚠️ SMTP Configuration Warning:
                     </p>
-                    <p className="text-[10px] text-amber-800/90 dark:text-amber-400/90 leading-normal">
+                    <p className="text-[10px] text-amber-700/90 dark:text-amber-300/90 leading-normal">
                       The mail server failed to deliver the email because Gmail requires an <span className="font-bold">App Password</span> (Google 2-Step Verification is active).
                     </p>
                     <p className="text-[10px] opacity-80 leading-normal">
-                      To fix this, go to Google Account &rarr; Security &rarr; App passwords, generate a 16-character code, and use it as your <code className="font-mono bg-amber-100 dark:bg-amber-950/40 px-1 py-0.5 rounded">SMTP_PASS</code> instead.
+                      To fix this, go to Google Account &rarr; Security &rarr; App passwords, generate a 16-character code, and use it as your <code className="font-mono bg-amber-50 dark:bg-amber-950/40 px-1 py-0.5 rounded">SMTP_PASS</code> instead.
                     </p>
                   </div>
                 )}
                 {simulatedVerificationUrl && (
-                  <div className="mt-3 border-t border-emerald-100/50 pt-2.5 space-y-1.5 dark:border-emerald-950/30">
-                    <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-400">
+                  <div className="mt-3 border-t border-emerald-50/50 pt-2.5 space-y-1.5 dark:border-emerald-950/30">
+                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                       🛠️ Sandbox Environment Simulator:
                     </p>
                     <p className="text-[10px] opacity-80 leading-normal">
@@ -333,7 +333,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                     </p>
                     <a
                       href={simulatedVerificationUrl}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-500 transition-all focus:outline-none cursor-pointer mt-1"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-400 transition-all focus:outline-none cursor-pointer mt-1"
                     >
                       <ShieldCheck className="h-3 w-3" />
                       Verify & Auto-Sign-In Instantly
@@ -345,18 +345,18 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           </div>
         ) : (
           activeTab === 'login' && simulatedVerificationUrl && (
-            <div id="login-verification-bypass-card" className="rounded-2xl border border-emerald-100 bg-emerald-50/75 p-4 text-xs text-emerald-950 dark:border-emerald-950/40 dark:bg-emerald-950/10 dark:text-emerald-200">
+            <div id="login-verification-bypass-card" className="rounded-2xl border border-emerald-50 bg-emerald-50/75 p-4 text-xs text-emerald-950 dark:border-emerald-950/40 dark:bg-emerald-950/10 dark:text-emerald-100">
               <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 rounded-full bg-emerald-100 p-1 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-400">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <div className="mt-0.5 rounded-full bg-emerald-50 p-1 text-emerald-500 dark:bg-emerald-950/80 dark:text-emerald-300">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500 dark:text-emerald-300" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <h4 className="font-bold tracking-tight text-emerald-900 dark:text-emerald-300">Email Verification Required</h4>
-                  <p className="text-[11px] leading-normal opacity-90 text-emerald-800 dark:text-emerald-400">
+                  <h4 className="font-bold tracking-tight text-emerald-800 dark:text-emerald-200">Email Verification Required</h4>
+                  <p className="text-[11px] leading-normal opacity-90 text-emerald-700 dark:text-emerald-300">
                     The account for <span className="font-bold">{email}</span> is registered but needs email verification before logging in.
                   </p>
-                  <div className="mt-3 border-t border-emerald-100/50 pt-2.5 space-y-1.5 dark:border-emerald-950/30">
-                    <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-400">
+                  <div className="mt-3 border-t border-emerald-50/50 pt-2.5 space-y-1.5 dark:border-emerald-950/30">
+                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                       🛠️ Sandbox Environment Simulator:
                     </p>
                     <p className="text-[10px] opacity-80 leading-normal">
@@ -364,7 +364,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                     </p>
                     <a
                       href={simulatedVerificationUrl}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-500 transition-all focus:outline-none cursor-pointer mt-1"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-400 transition-all focus:outline-none cursor-pointer mt-1"
                     >
                       <ShieldCheck className="h-3 w-3" />
                       Verify & Log In Instantly
@@ -383,52 +383,52 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
 
           {activeTab === 'register' && (
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Full Name</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Full Name</label>
               <div className="relative">
-                <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
                 <input
                   type="text"
                   required
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                  className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                 />
               </div>
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Email Address</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
               <input
                 type="email"
                 required
                 placeholder="buyer@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Secure Password</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Secure Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
               <input
                 type={showPassword ? "text" : "password"}
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 pr-10 outline-none text-slate-950 focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 pr-10 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer"
+                className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 focus:outline-none cursor-pointer"
                 title={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -447,9 +447,9 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
               type="checkbox"
               checked={subscribeNewsletter}
               onChange={(e) => setSubscribeNewsletter(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded-md border-slate-200 text-indigo-600 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-950 cursor-pointer"
+              className="mt-0.5 h-4 w-4 rounded-md border-slate-100 text-indigo-500 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-950 cursor-pointer"
             />
-            <label htmlFor="newsletter-subscribe-login" className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal cursor-pointer font-medium">
+            <label htmlFor="newsletter-subscribe-login" className="text-[11px] text-slate-400 dark:text-slate-300 leading-normal cursor-pointer font-medium">
               Subscribe to our newsletter to receive the latest tech updates, gadget price drops, and exclusive member discounts.
             </label>
           </div>
@@ -457,23 +457,23 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 hover:shadow-xl text-white font-bold py-3 text-xs tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            className="w-full rounded-xl bg-indigo-500 hover:bg-indigo-600 hover:shadow-xl text-white font-bold py-3 text-xs tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
           >
             <span>{submitting ? 'Verifying account...' : activeTab === 'login' ? 'Sign In Now' : 'Create Member Account'}</span>
           </button>
         </form>
 
         <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
-          <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Authenticate with</span>
-          <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
+          <div className="flex-grow border-t border-slate-50 dark:border-slate-700"></div>
+          <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-wider text-slate-300">Authenticate with</span>
+          <div className="flex-grow border-t border-slate-50 dark:border-slate-700"></div>
         </div>
 
         <button
           type="button"
           onClick={handleGoogleSignIn}
           disabled={submitting}
-          className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900 py-3 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all cursor-pointer active:scale-95"
+          className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800 py-3 text-xs font-bold text-slate-600 dark:text-slate-200 transition-all cursor-pointer active:scale-95"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24">
             <path
@@ -486,7 +486,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
 
         {/* Registration Note */}
         <div className="text-center">
-          <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold">
+          <p className="text-[10px] text-slate-300 dark:text-slate-400 uppercase tracking-widest font-bold">
             Secure Member Authentication
           </p>
         </div>

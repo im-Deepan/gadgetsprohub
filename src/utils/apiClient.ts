@@ -35,7 +35,7 @@ function getRequestKey(url: string, options: ApiFetchOptions = {}): string {
  */
 export async function apiFetch(url: string, options: ApiFetchOptions = {}): Promise<Response> {
   const {
-    timeout = 15000,
+    timeout = 10000,
     maxRetries = 3,
     backoffDelay = 500,
     deduplicate = true,

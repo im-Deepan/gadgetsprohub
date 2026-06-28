@@ -86,18 +86,18 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
                 setEmail(e.target.value);
                 if (errorText) setErrorText('');
               }}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-xs font-medium text-slate-800 transition-all outline-none focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-900"
+              className="w-full rounded-xl border border-slate-100 bg-slate-50 py-2.5 pl-10 pr-4 text-xs font-medium text-slate-700 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-1 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-50 dark:focus:border-indigo-300 dark:focus:bg-slate-800"
               required
             />
-            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300 dark:text-slate-400" />
           </div>
           <button
             type="submit"
             disabled={loading || subscribed}
             className={`flex items-center justify-center rounded-xl px-4 py-2.5 text-xs font-bold text-white transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50 ${
               subscribed 
-                ? 'bg-emerald-500 hover:bg-emerald-600' 
-                : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-500/10'
+                ? 'bg-emerald-400 hover:bg-emerald-500' 
+                : 'bg-indigo-500 hover:bg-indigo-600 hover:shadow-md hover:shadow-indigo-400/10'
             }`}
           >
             {loading ? (
@@ -113,7 +113,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
           </button>
         </form>
         {errorText && (
-          <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-rose-500 dark:text-rose-400 animate-pulse">
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-rose-400 dark:text-rose-300 animate-pulse">
             <AlertCircle size={12} />
             <span>{errorText}</span>
           </p>
@@ -127,13 +127,13 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
       id="newsletter-subscribe-container" 
       className={`relative overflow-hidden transition-all duration-300 ${
         variant === 'card' 
-          ? 'rounded-3xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-150/40 dark:border-slate-800/80 dark:bg-slate-900/40 dark:shadow-none' 
-          : 'rounded-2xl bg-gradient-to-br from-indigo-50/40 to-slate-50/20 p-8 border border-indigo-100/30 dark:from-slate-950/20 dark:to-slate-900/10 dark:border-slate-800/40'
+          ? 'rounded-3xl border border-slate-50 bg-white p-6 shadow-xl shadow-slate-50/40 dark:border-slate-700/80 dark:bg-slate-800/40 dark:shadow-none' 
+          : 'rounded-2xl bg-gradient-to-br from-indigo-50/40 to-slate-50/20 p-8 border border-indigo-50/30 dark:from-slate-950/20 dark:to-slate-800/10 dark:border-slate-700/40'
       } ${className}`}
     >
       {/* Abstract decorative glowing gradient blobs */}
-      <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-purple-400/10 blur-3xl pointer-events-none" />
 
       <AnimatePresence mode="wait">
         {!subscribed ? (
@@ -146,14 +146,14 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
             className="flex flex-col md:flex-row items-center gap-6 justify-between relative z-10"
           >
             <div className="max-w-md space-y-2 text-center md:text-left">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-500 dark:bg-indigo-950/50 dark:text-indigo-300">
                 <Sparkles size={12} className="animate-spin-slow" />
                 <span>Exclusive Deals & Updates</span>
               </div>
-              <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+              <h3 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white sm:text-2xl">
                 Stay updated with premium specs
               </h3>
-              <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="text-sm leading-relaxed text-slate-400 dark:text-slate-300">
                 Subscribe to our newsletter and never miss special store deals, gadget price drops, and curated editorial product updates.
               </p>
             </div>
@@ -170,14 +170,14 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
                       setEmail(e.target.value);
                       if (errorText) setErrorText('');
                     }}
-                    className="w-full rounded-2xl border border-slate-200 bg-white/80 py-3.5 pl-11 pr-4 text-sm font-medium text-slate-850 transition-all outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100/60 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-900/30"
+                    className="w-full rounded-2xl border border-slate-100 bg-white/80 py-3.5 pl-11 pr-4 text-sm font-medium text-slate-700 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-50/60 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-indigo-300 dark:focus:ring-indigo-800/30"
                     required
                   />
-                  <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400/80 dark:text-slate-500" />
+                  <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-300/80 dark:text-slate-400" />
                 </div>
                 
                 {errorText && (
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-rose-500 dark:text-rose-400 px-1 animate-pulse">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-rose-400 dark:text-rose-300 px-1 animate-pulse">
                     <AlertCircle size={14} className="shrink-0" />
                     <span>{errorText}</span>
                   </p>
@@ -186,7 +186,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 hover:bg-indigo-600 dark:bg-white dark:hover:bg-indigo-550 dark:text-slate-950 dark:hover:text-white px-5 py-3.5 text-sm font-bold text-white transition-all shadow-md active:scale-98 disabled:pointer-events-none disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-800 hover:bg-indigo-500 dark:bg-white dark:hover:bg-indigo-500 dark:text-slate-950 dark:hover:text-white px-5 py-3.5 text-sm font-bold text-white transition-all shadow-md active:scale-98 disabled:pointer-events-none disabled:opacity-50"
                 >
                   {loading ? (
                     <>
@@ -215,20 +215,20 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
             variants={textContainer}
             className="flex flex-col items-center justify-center py-6 text-center max-w-lg mx-auto space-y-4 relative z-10"
           >
-            <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 p-3 text-emerald-500 dark:text-emerald-400 animate-scale-up">
+            <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 p-3 text-emerald-400 dark:text-emerald-300 animate-scale-up">
               <CheckCircle2 size={36} />
             </div>
             <div className="space-y-1">
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">
+              <h3 className="text-xl font-extrabold text-slate-800 dark:text-white">
                 You're Subscribed! 🎉
               </h3>
-              <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="text-sm leading-relaxed text-slate-400 dark:text-slate-300">
                 Thank you! Your subscription is successfully active. Look forward to premium editorial reviews, curated drops, and exclusive updates in your inbox soon.
               </p>
             </div>
             <button
               onClick={() => setSubscribed(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors"
+              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-indigo-500 dark:text-slate-300 dark:hover:text-indigo-300 transition-colors"
             >
               Subscribe another email
             </button>

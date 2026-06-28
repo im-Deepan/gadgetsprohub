@@ -10,7 +10,7 @@ interface LazySectionProps {
 export const LazySection: React.FC<LazySectionProps> = ({
   children,
   placeholder,
-  rootMargin = '150px',
+  rootMargin = '100px',
   threshold = 0.01,
 }) => {
   const [isIntersecting, setIsIntersecting] = useState(false);

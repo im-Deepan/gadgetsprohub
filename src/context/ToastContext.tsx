@@ -129,36 +129,36 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none font-sans">
         {toasts.map((toast) => {
           let categoryLabel: string = toast.category || 'System Status';
-          let bgColor = 'bg-slate-900 border-slate-800 text-white dark:bg-black dark:border-slate-900';
+          let bgColor = 'bg-slate-800 border-slate-700 text-white dark:bg-black dark:border-slate-800';
           let Icon = Info;
-          let iconColor = 'text-indigo-400';
-          let titleColor = 'text-indigo-300';
-          let textColor = 'text-indigo-200/90';
+          let iconColor = 'text-indigo-300';
+          let titleColor = 'text-indigo-200';
+          let textColor = 'text-indigo-100/90';
 
           if (toast.type === 'success') {
-            bgColor = 'bg-emerald-950/95 border-emerald-800/80 text-emerald-100 backdrop-blur-sm';
+            bgColor = 'bg-emerald-950/95 border-emerald-700/80 text-emerald-50 backdrop-blur-sm';
             Icon = CheckCircle;
-            iconColor = 'text-emerald-400';
-            titleColor = 'text-emerald-300';
-            textColor = 'text-emerald-200/90';
+            iconColor = 'text-emerald-300';
+            titleColor = 'text-emerald-200';
+            textColor = 'text-emerald-100/90';
           } else if (toast.type === 'error') {
-            bgColor = 'bg-rose-950/95 border-rose-800/80 text-rose-100 backdrop-blur-sm';
+            bgColor = 'bg-rose-950/95 border-rose-700/80 text-rose-50 backdrop-blur-sm';
             Icon = AlertCircle;
-            iconColor = 'text-rose-400';
-            titleColor = 'text-rose-300';
-            textColor = 'text-rose-200/90';
+            iconColor = 'text-rose-300';
+            titleColor = 'text-rose-200';
+            textColor = 'text-rose-100/90';
           } else if (toast.type === 'warning') {
-            bgColor = 'bg-amber-950/95 border-amber-800/80 text-amber-100 backdrop-blur-sm';
+            bgColor = 'bg-amber-950/95 border-amber-700/80 text-amber-50 backdrop-blur-sm';
             Icon = AlertTriangle;
-            iconColor = 'text-amber-400';
-            titleColor = 'text-amber-300';
-            textColor = 'text-amber-200/90';
+            iconColor = 'text-amber-300';
+            titleColor = 'text-amber-200';
+            textColor = 'text-amber-100/90';
           } else {
-            bgColor = 'bg-indigo-950/95 border-indigo-900/80 text-indigo-100 backdrop-blur-sm';
+            bgColor = 'bg-indigo-950/95 border-indigo-800/80 text-indigo-50 backdrop-blur-sm';
             Icon = Info;
-            iconColor = 'text-indigo-400';
-            titleColor = 'text-indigo-300';
-            textColor = 'text-indigo-200/90';
+            iconColor = 'text-indigo-300';
+            titleColor = 'text-indigo-200';
+            textColor = 'text-indigo-100/90';
           }
 
           return (
@@ -179,7 +179,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                aria-label="Close Notification" className="shrink-0 p-0.5 rounded-lg hover:bg-white/10 active:scale-95 text-slate-300 dark:text-slate-400 hover:text-white transition-all cursor-pointer"
+                aria-label="Close Notification" className="shrink-0 p-0.5 rounded-lg hover:bg-white/10 active:scale-95 text-slate-200 dark:text-slate-300 hover:text-white transition-all cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
