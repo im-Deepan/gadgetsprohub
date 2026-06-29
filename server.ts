@@ -157,7 +157,8 @@ const productSchema = new mongoose.Schema({
   seoDescription: String,
   seoKeywords: [String],
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  lastPriceCheck: { type: Date, default: null }
 });
 
 // Create text index for search in Mongo
