@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Sparkles, Flame, Laptop, Smartphone, Headphones, Watch, ArrowRight, Grid, Plus } from 'lucide-react';
 import { Product, Category } from '../types';
@@ -201,22 +201,25 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
   const products = collection.products || [];
   const currentProduct = products[productIndex % products.length];
 
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setDirection('right');
       setProductIndex((prev) => (prev + 1) % products.length);
     }, 4500);
-  };
+  }, [products.length]);
 
   useEffect(() => {
     if (products.length > 1) {
       resetTimer();
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
-  }, [collection, products.length]);
+  }, [products.length, resetTimer]);
 
   useEffect(() => {
     setProductIndex(0);
@@ -411,22 +414,25 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
   const currentProduct = products[productIndex % products.length];
 
   // Auto-rotate current product inside the collection card every 5 seconds
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setDirection('right');
       setProductIndex((prev) => (prev + 1) % products.length);
     }, 5000);
-  };
+  }, [products.length]);
 
   useEffect(() => {
     if (products.length > 1) {
       resetTimer();
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
-  }, [collection, products.length]);
+  }, [products.length, resetTimer]);
 
   // Reset product index to 0 whenever the collection changes so that we do not array-bound-error
   useEffect(() => {

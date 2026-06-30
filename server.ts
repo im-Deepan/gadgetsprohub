@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import path from 'path';
 import jwt from 'jsonwebtoken';
-import multer from 'multer';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import helmet from 'helmet';
@@ -1364,9 +1363,10 @@ async function startServer() {
 
   // Lightweight health-check endpoint verifying DB connectivity gracefully without hanging
   app.get('/api/health-check', async (req, res) => {
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Database ping timeout (2000ms achieved)')), 2000)
-    );
+    let timerId: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timerId = setTimeout(() => reject(new Error('Database ping timeout (2000ms achieved)')), 2000);
+    });
 
     try {
       if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
@@ -1374,6 +1374,7 @@ async function startServer() {
           mongoose.connection.db.admin().ping(),
           timeoutPromise
         ]);
+        if (timerId) clearTimeout(timerId);
         return res.json({
           status: 'healthy',
           database: 'connected',
@@ -1381,6 +1382,7 @@ async function startServer() {
           timestamp: new Date()
         });
       } else {
+        if (timerId) clearTimeout(timerId);
         const stateNames = ['disconnected', 'connected', 'connecting', 'disconnecting'];
         const state = mongoose.connection.readyState;
         const stateName = (state >= 0 && state < stateNames.length) ? stateNames[state] : 'unknown';
@@ -1393,6 +1395,7 @@ async function startServer() {
         });
       }
     } catch (err: any) {
+      if (timerId) clearTimeout(timerId);
       console.warn("Health check: DB connectivity check failed or timed out:", err.message);
       return res.status(503).json({
         status: 'unhealthy',
@@ -2051,6 +2054,39 @@ async function startServer() {
           .populate('reviews.userId', 'name profileImage');
         
         if (!product) return res.status(404).json({ error: 'Product catalog item not found' });
+        
+        // --- Real-time Price Update Trigger ---
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const lastCheck = product.lastPriceCheck ? new Date(product.lastPriceCheck).getTime() : 0;
+        
+        if (now - lastCheck > TWENTY_FOUR_HOURS && process.env.N8N_REALTIME_WEBHOOK_URL) {
+          try {
+            const n8nRes = await fetch(process.env.N8N_REALTIME_WEBHOOK_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.N8N_SECRET_TOKEN || ''}` },
+              body: JSON.stringify({ 
+                productId: product._id, 
+                affiliateLink: product.affiliateLink, 
+                slug: product.slug 
+              })
+            });
+            if (n8nRes.ok) {
+              const updatedData = await n8nRes.json();
+              if (updatedData && typeof updatedData.price === 'number') {
+                product.price = updatedData.price;
+                if (typeof updatedData.originalPrice === 'number') product.originalPrice = updatedData.originalPrice;
+                if (typeof updatedData.discount === 'number') product.discount = updatedData.discount;
+                if (typeof updatedData.inStock === 'boolean') product.inStock = updatedData.inStock;
+                product.lastPriceCheck = new Date();
+                await product.save();
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to fetch real-time price from n8n webhook:', error instanceof Error ? error.message : String(error));
+          }
+        }
+        // ---------------------------------------
         
         // Create live anonymous analytics node asynchronously in background without blocking
         Analytics.create({
@@ -3402,6 +3438,467 @@ async function startServer() {
     }
   });
 
+  // --- Telegram Admin Bot Integration ---
+  
+  interface TelegramState {
+    step: 'WAIT_NAME' | 'WAIT_CATEGORY' | 'WAIT_NEW_CATEGORY_NAME' | 'WAIT_SUBCATEGORY' | 'WAIT_BRAND' | 'WAIT_PRICE' | 'WAIT_ORIGINAL_PRICE' | 'WAIT_DISCOUNT' | 'WAIT_AFFILIATE_LINK' | 'WAIT_DESCRIPTION' | 'WAIT_IMAGE' | 'WAIT_CONFIRM';
+    data: {
+      name?: string;
+      category?: string;
+      subcategory?: string;
+      brand?: string;
+      price?: number;
+      originalPrice?: number;
+      discount?: number;
+      affiliateLink?: string;
+      description?: string;
+      images?: string[];
+    };
+  }
+
+  const telegramStates = new Map<number, TelegramState>();
+
+  function escapeHTML(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: any) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) return;
+    
+    const body: any = {
+      chat_id: chatId,
+      text: text,
+      parse_mode: 'HTML'
+    };
+    
+    if (replyMarkup) {
+      body.reply_markup = replyMarkup;
+    }
+    
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        console.error('[Telegram Bot] sendMessage failed:', await res.text());
+      }
+    } catch (err: any) {
+      console.error('[Telegram Bot] sendMessage error:', err.message);
+    }
+  }
+
+  async function answerTelegramCallbackQuery(callbackQueryId: string, text?: string) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) return;
+    try {
+      await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          callback_query_id: callbackQueryId,
+          text: text
+        })
+      });
+    } catch (err: any) {
+      console.error('[Telegram Bot] answerCallbackQuery error:', err.message);
+    }
+  }
+
+  app.post('/api/webhooks/telegram', async (req, res): Promise<any> => {
+    try {
+      const update = req.body;
+      if (!update) return res.sendStatus(200);
+
+      const message = update.message;
+      const callbackQuery = update.callback_query;
+
+      const chatId = message ? message.chat.id : (callbackQuery ? callbackQuery.message.chat.id : null);
+      if (!chatId) return res.sendStatus(200);
+
+      // Authenticate incoming user using ID or username
+      const sender = message ? message.from : (callbackQuery ? callbackQuery.from : null);
+      if (!sender) return res.sendStatus(200);
+
+      const allowedId = process.env.TELEGRAM_ALLOWED_USER_ID;
+      const allowedUsername = process.env.TELEGRAM_ALLOWED_USERNAME;
+
+      const isAllowedId = allowedId && String(sender.id) === String(allowedId);
+      const isAllowedUsername = allowedUsername && sender.username && String(sender.username).toLowerCase() === String(allowedUsername).toLowerCase();
+
+      if (!isAllowedId && !isAllowedUsername) {
+        await sendTelegramMessage(chatId, `⚠️ <b>Access Denied</b>\n\nThis is a private administrative bot. Your Telegram User ID is: <code>${sender.id}</code>${sender.username ? ` and username is: <code>@${sender.username}</code>` : ''}.\n\nPlease configure your <code>TELEGRAM_ALLOWED_USER_ID</code> or <code>TELEGRAM_ALLOWED_USERNAME</code> environment variables in your workspace settings to authorize yourself.`);
+        return res.sendStatus(200);
+      }
+
+      // Handle Callback Query
+      if (callbackQuery) {
+        const data = callbackQuery.data;
+        const callbackQueryId = callbackQuery.id;
+
+        await answerTelegramCallbackQuery(callbackQueryId);
+
+        if (data === 'add_product') {
+          telegramStates.set(chatId, { step: 'WAIT_NAME', data: {} });
+          await sendTelegramMessage(chatId, "📝 <b>Let's add a new product!</b>\n\n<b>Step 1:</b> Please type the <b>Product Name</b> (e.g., <i>Apple iPhone 15 Pro Max</i>):");
+        } 
+        else if (data.startsWith('cat_')) {
+          const state = telegramStates.get(chatId);
+          if (state && state.step === 'WAIT_CATEGORY') {
+            const catId = data.substring(4);
+            if (catId === 'new') {
+              state.step = 'WAIT_NEW_CATEGORY_NAME';
+              await sendTelegramMessage(chatId, "🆕 Please type the name of the <b>New Category</b> you want to create:");
+            } else {
+              state.data.category = catId;
+              state.step = 'WAIT_SUBCATEGORY';
+              await sendTelegramMessage(chatId, "✅ <b>Category selected!</b>\n\n<b>Step 3:</b> Please type the <b>Subcategory</b> name (or send /skip to leave blank):");
+            }
+          }
+        } 
+        else if (data === 'confirm_put') {
+          const state = telegramStates.get(chatId);
+          if (state && state.step === 'WAIT_CONFIRM') {
+            try {
+              if (isMongoConnected) {
+                const { finalSlug } = await resolveUniqueSlug(state.data.name || 'item', 'product');
+                
+                const product = new Product({
+                  name: state.data.name,
+                  slug: finalSlug,
+                  category: state.data.category,
+                  subcategory: state.data.subcategory,
+                  brand: state.data.brand,
+                  price: state.data.price,
+                  originalPrice: state.data.originalPrice,
+                  discount: state.data.discount,
+                  affiliateLink: state.data.affiliateLink,
+                  description: state.data.description,
+                  images: state.data.images || [],
+                  inStock: true,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                });
+
+                await product.save();
+                await syncProductsToSeedFile();
+
+                // N8N Webhook Integration - Trigger n8n on successful database save
+                if (process.env.N8N_REALTIME_WEBHOOK_URL) {
+                  try {
+                    await fetch(process.env.N8N_REALTIME_WEBHOOK_URL, {
+                      method: 'POST',
+                      headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${process.env.N8N_SECRET_TOKEN || ''}` 
+                      },
+                      body: JSON.stringify({
+                        event: 'product_created',
+                        productId: product._id,
+                        name: product.name,
+                        slug: product.slug,
+                        price: product.price,
+                        originalPrice: product.originalPrice,
+                        discount: product.discount,
+                        affiliateLink: product.affiliateLink,
+                        description: product.description,
+                        image: product.images?.[0] || '',
+                        source: 'telegram_bot'
+                      })
+                    });
+                    console.log(`[Telegram Bot] Successfully triggered N8N manual workflow webhook for: ${product.name}`);
+                  } catch (n8nErr: any) {
+                    console.error('[Telegram Bot] N8N Webhook trigger error:', n8nErr.message);
+                  }
+                }
+
+                await sendTelegramMessage(chatId, `🎉 <b>Successfully Published!</b>\n\nThe product <b>${escapeHTML(product.name)}</b> is now live on the website.\n\nType /start to add another product.`);
+              } else {
+                await sendTelegramMessage(chatId, "❌ <b>Error:</b> Database is not connected right now.");
+              }
+            } catch (err: any) {
+              await sendTelegramMessage(chatId, `❌ <b>Failed to save product:</b> ${escapeHTML(err.message)}`);
+            }
+            telegramStates.delete(chatId);
+          }
+        } 
+        else if (data === 'confirm_cancel') {
+          telegramStates.delete(chatId);
+          await sendTelegramMessage(chatId, "❌ <b>Operation cancelled.</b> Type /start if you want to begin again.");
+        }
+
+        return res.sendStatus(200);
+      }
+
+      // Handle normal messages
+      if (message && message.text) {
+        const text = message.text.trim();
+
+        if (text === '/start') {
+          telegramStates.delete(chatId);
+          await sendTelegramMessage(chatId, 
+            "👋 <b>Welcome to your Product Admin Bot!</b>\n\nYou can use this bot to add products directly to your database and keep seed files in sync.",
+            {
+              inline_keyboard: [
+                [ { text: "➕ Add Product", callback_data: "add_product" } ]
+              ]
+            }
+          );
+          return res.sendStatus(200);
+        }
+
+        if (text === '/cancel') {
+          telegramStates.delete(chatId);
+          await sendTelegramMessage(chatId, "❌ <b>Operation cancelled.</b> Type /start to start a new product session.");
+          return res.sendStatus(200);
+        }
+
+        const state = telegramStates.get(chatId);
+        if (!state) {
+          await sendTelegramMessage(chatId, "❓ I'm not sure what you want to do. Please send /start to open the admin options menu.");
+          return res.sendStatus(200);
+        }
+
+        switch (state.step) {
+          case 'WAIT_NAME': {
+            state.data.name = text;
+            state.step = 'WAIT_CATEGORY';
+
+            let categoriesList: any[] = [];
+            if (isMongoConnected) {
+              categoriesList = await Category.find({}).select('_id name');
+            }
+
+            const buttons = categoriesList.map(cat => [
+              { text: cat.name, callback_data: `cat_${cat._id}` }
+            ]);
+            buttons.push([
+              { text: "➕ Create New Category", callback_data: "cat_new" }
+            ]);
+
+            await sendTelegramMessage(chatId, 
+              `📝 <b>Name set:</b> ${escapeHTML(text)}\n\n<b>Step 2:</b> Please select a <b>Category</b> from the list below or create a new one:`,
+              { inline_keyboard: buttons }
+            );
+            break;
+          }
+
+          case 'WAIT_NEW_CATEGORY_NAME': {
+            if (isMongoConnected) {
+              let category = await Category.findOne({ name: text });
+              if (!category) {
+                const catSlug = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                category = new Category({ name: text, slug: catSlug });
+                await category.save();
+              }
+              state.data.category = category._id.toString();
+              state.step = 'WAIT_SUBCATEGORY';
+              await sendTelegramMessage(chatId, `✅ <b>Category "${escapeHTML(category.name)}" created & assigned!</b>\n\n<b>Step 3:</b> Enter the <b>Subcategory</b> (or send /skip):`);
+            } else {
+              await sendTelegramMessage(chatId, "❌ Database is disconnected. Cannot create category.");
+            }
+            break;
+          }
+
+          case 'WAIT_SUBCATEGORY': {
+            if (text !== '/skip') {
+              state.data.subcategory = text;
+            }
+            state.step = 'WAIT_BRAND';
+            await sendTelegramMessage(chatId, "🏷️ <b>Step 4:</b> Enter the product <b>Brand</b> (or send /skip):");
+            break;
+          }
+
+          case 'WAIT_BRAND': {
+            if (text !== '/skip') {
+              state.data.brand = text;
+            }
+            state.step = 'WAIT_PRICE';
+            await sendTelegramMessage(chatId, "💰 <b>Step 5:</b> Enter the product <b>Price</b> (number only, e.g. 1999):");
+            break;
+          }
+
+          case 'WAIT_PRICE': {
+            const price = parseFloat(text);
+            if (isNaN(price) || price < 0) {
+              await sendTelegramMessage(chatId, "⚠️ Please enter a valid positive number for <b>Price</b>:");
+            } else {
+              state.data.price = price;
+              state.step = 'WAIT_ORIGINAL_PRICE';
+              await sendTelegramMessage(chatId, "📉 <b>Step 6:</b> Enter the <b>Original Price</b> for discount calculations (or send /skip):");
+            }
+            break;
+          }
+
+          case 'WAIT_ORIGINAL_PRICE': {
+            if (text !== '/skip') {
+              const origPrice = parseFloat(text);
+              if (isNaN(origPrice) || origPrice < 0) {
+                await sendTelegramMessage(chatId, "⚠️ Please enter a valid positive number for <b>Original Price</b> or send /skip:");
+                return res.sendStatus(200);
+              }
+              state.data.originalPrice = origPrice;
+            }
+            state.step = 'WAIT_DISCOUNT';
+            await sendTelegramMessage(chatId, "🏷️ <b>Step 7:</b> Enter the <b>Discount Percentage</b> (number, e.g. 10) or send /skip to auto-calculate:");
+            break;
+          }
+
+          case 'WAIT_DISCOUNT': {
+            if (text !== '/skip') {
+              const discount = parseInt(text);
+              if (isNaN(discount) || discount < 0 || discount > 100) {
+                await sendTelegramMessage(chatId, "⚠️ Please enter a valid number between 0 and 100 for <b>Discount %</b> or send /skip:");
+                return res.sendStatus(200);
+              }
+              state.data.discount = discount;
+            } else if (state.data.originalPrice && state.data.price && state.data.originalPrice > state.data.price) {
+              state.data.discount = Math.round((1 - state.data.price / state.data.originalPrice) * 100);
+            }
+            state.step = 'WAIT_AFFILIATE_LINK';
+            await sendTelegramMessage(chatId, "🔗 <b>Step 8:</b> Paste the product <b>Affiliate/Buy Link</b> (URL starting with http:// or https://):");
+            break;
+          }
+
+          case 'WAIT_AFFILIATE_LINK': {
+            if (!text.startsWith('http://') && !text.startsWith('https://')) {
+              await sendTelegramMessage(chatId, "⚠️ Invalid URL format. Please paste a link starting with http:// or https://:");
+            } else {
+              state.data.affiliateLink = text;
+              state.step = 'WAIT_DESCRIPTION';
+              await sendTelegramMessage(chatId, "📝 <b>Step 9:</b> Enter a brief <b>Description</b> for the product (or send /skip):");
+            }
+            break;
+          }
+
+          case 'WAIT_DESCRIPTION': {
+            if (text !== '/skip') {
+              state.data.description = text;
+            }
+            state.step = 'WAIT_IMAGE';
+            await sendTelegramMessage(chatId, "🖼️ <b>Step 10:</b> Enter an <b>Image URL</b> (or send /skip to use standard generic placeholder):");
+            break;
+          }
+
+          case 'WAIT_IMAGE': {
+            if (text !== '/skip') {
+              if (!text.startsWith('http://') && !text.startsWith('https://')) {
+                await sendTelegramMessage(chatId, "⚠️ Invalid URL format. Please paste an image link starting with http:// or https://:");
+                return res.sendStatus(200);
+              }
+              state.data.images = [text];
+            } else {
+              state.data.images = ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=60'];
+            }
+            state.step = 'WAIT_CONFIRM';
+
+            let categoryName = 'Unknown';
+            if (isMongoConnected && state.data.category) {
+              const cat = await Category.findById(state.data.category);
+              if (cat) categoryName = cat.name;
+            }
+
+            const summary = 
+              `📋 <b>Please review the product details:</b>\n\n` +
+              `• <b>Name:</b> ${escapeHTML(state.data.name || '')}\n` +
+              `• <b>Category:</b> ${escapeHTML(categoryName)}\n` +
+              `• <b>Subcategory:</b> ${escapeHTML(state.data.subcategory || 'N/A')}\n` +
+              `• <b>Brand:</b> ${escapeHTML(state.data.brand || 'N/A')}\n` +
+              `• <b>Price:</b> ₹${state.data.price}\n` +
+              `• <b>Original Price:</b> ${state.data.originalPrice ? '₹' + state.data.originalPrice : 'N/A'}\n` +
+              `• <b>Discount:</b> ${state.data.discount ? state.data.discount + '%' : 'N/A'}\n` +
+              `• <b>Affiliate Link:</b> <code>${escapeHTML(state.data.affiliateLink || '')}</code>\n` +
+              `• <b>Description:</b> ${escapeHTML(state.data.description || 'N/A')}\n` +
+              `• <b>Image URL:</b> <code>${escapeHTML(state.data.images?.[0] || '')}</code>\n\n` +
+              `Would you like to save this product to the live database?`;
+
+            await sendTelegramMessage(chatId, summary, {
+              inline_keyboard: [
+                [
+                  { text: "✅ Put to Database", callback_data: "confirm_put" },
+                  { text: "❌ Cancel", callback_data: "confirm_cancel" }
+                ]
+              ]
+            });
+            break;
+          }
+        }
+      }
+
+      res.sendStatus(200);
+    } catch (err: any) {
+      console.error('[Telegram Webhook Error]:', err.message);
+      res.sendStatus(200);
+    }
+  });
+
+  // --- N8N Automation Webhooks ---
+
+  
+  // Middleware to authenticate N8N webhooks
+  const authenticateN8N = (req: express.Request, res: express.Response, next: express.NextFunction): any => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token || token !== process.env.N8N_SECRET_TOKEN) {
+      return res.status(403).json({ error: 'Forbidden: Invalid or missing N8N Secret Token' });
+    }
+    next();
+  };
+
+  // Endpoint for N8N to get products that need updating (oldest lastPriceCheck first)
+  app.get('/api/webhooks/n8n/products-to-update', authenticateN8N, async (req, res): Promise<any> => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      if (isMongoConnected) {
+        // Find products sorted by oldest lastPriceCheck (or null)
+        const products = await Product.find({})
+          .sort({ lastPriceCheck: 1, _id: 1 }) // Nulls first (or earliest dates)
+          .limit(limit)
+          .select('_id name affiliateLink price slug lastPriceCheck');
+        return res.json(products);
+      } else {
+        return res.json([]);
+      }
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Endpoint for N8N to update a specific product's price
+  app.post('/api/webhooks/n8n/update-product', authenticateN8N, async (req, res): Promise<any> => {
+    try {
+      const { productId, price, originalPrice, discount, inStock } = req.body;
+      if (!productId || typeof price !== 'number') {
+        return res.status(400).json({ error: 'productId and price (number) are required' });
+      }
+
+      if (isMongoConnected) {
+        const product = await Product.findById(productId);
+        if (!product) return res.status(404).json({ error: 'Product not found' });
+
+        product.price = price;
+        if (typeof originalPrice === 'number') product.originalPrice = originalPrice;
+        if (typeof discount === 'number') product.discount = discount;
+        if (typeof inStock === 'boolean') product.inStock = inStock;
+        product.lastPriceCheck = new Date();
+
+        await product.save();
+        return res.json({ success: true, product: { _id: product._id, price: product.price, lastPriceCheck: product.lastPriceCheck } });
+      } else {
+        return res.json({ success: false, error: 'Database not connected' });
+      }
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  // -------------------------------
+
   app.post('/api/admin/products', adminOnly, validateAdminProduct, async (req, res): Promise<any> => {
     try {
       const payload = cleanUndefined(req.body);
@@ -4090,9 +4587,30 @@ async function startServer() {
     });
   }
 
+  async function registerTelegramWebhook() {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const appUrl = process.env.APP_URL;
+    if (token && appUrl && appUrl !== "MY_APP_URL") {
+      const webhookUrl = `${appUrl.replace(/\/$/, '')}/api/webhooks/telegram`;
+      console.log(`[Telegram Bot] Registering webhook to: ${webhookUrl}`);
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(webhookUrl)}`);
+        const body: any = await res.json();
+        console.log(`[Telegram Bot] Webhook registration response:`, body);
+      } catch (err: any) {
+        console.error(`[Telegram Bot] Webhook registration failed:`, err.message);
+      }
+    } else {
+      console.log(`[Telegram Bot] Skipping auto-webhook registration. Make sure APP_URL and TELEGRAM_BOT_TOKEN are set in your environment.`);
+    }
+  }
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
     
+    // Register Telegram Webhook if configured
+    registerTelegramWebhook().catch(err => console.error("Telegram webhook registration error on startup:", err));
+
     // Perform boot-up check for Sunday tasks and expired trending products
     console.log("Initializing boot-up checks for automated Sunday products and trending items...");
     runSundayAutomation().catch(err => console.error("Startup Sunday automation check error:", err));

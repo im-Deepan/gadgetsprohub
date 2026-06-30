@@ -927,8 +927,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Deletion Failed", err.error || "The server rejected the deletion request.");
           }
-        } catch (e: any) {
-          triggerAlert("Network Error", e.message || "Failed to make deletion request to the database server.");
+        } catch (e: unknown) {
+          const errorObj = e as { message?: string };
+          triggerAlert("Network Error", errorObj.message || "Failed to make deletion request to the database server.");
         }
       },
       { isDestructive: true, confirmText: 'Yes, Delete' }
@@ -1011,8 +1012,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Deletion Failed", err.error || "The server rejected the category deletion request.");
           }
-        } catch (e: any) {
-          triggerAlert("Network Error", e.message || "Failed to contact the backend server.");
+        } catch (e: unknown) {
+          const errorObj = e as { message?: string };
+          triggerAlert("Network Error", errorObj.message || "Failed to contact the backend server.");
         }
       },
       { isDestructive: true, confirmText: 'Yes, Delete Category' }

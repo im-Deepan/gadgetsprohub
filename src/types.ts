@@ -58,6 +58,8 @@ export interface Product {
   seoDescription?: string;
   seoKeywords?: string[];
   createdAt?: string;
+  updatedAt?: string;
+  lastPriceCheck?: string;
 }
 
 export interface Blog {

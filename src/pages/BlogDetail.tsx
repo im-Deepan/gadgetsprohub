@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
 import { Blog } from '../types';
-import { ArrowLeft, Clock, Eye, Share2, Sparkle, Tag } from 'lucide-react';
+import { Clock, Eye, Share2, Sparkle, Tag } from 'lucide-react';
 import { Helmet } from '../components/Helmet';
 
 import { Breadcrumb } from '../components/Breadcrumb';
@@ -29,10 +29,18 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
 
   const loading = queryLoading || queryFetching;
 
+  const timerRef = React.useRef<number | undefined>(undefined);
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const handleShareClick = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(() => setCopiedLink(false), 2000);
   };
 
   if (loading) {

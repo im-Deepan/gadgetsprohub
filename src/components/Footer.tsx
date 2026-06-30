@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Instagram, Linkedin, Send, BadgeAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Instagram, Linkedin, Send, BadgeAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { NewsletterSubscribe } from './NewsletterSubscribe';
 import { mapErrorToFriendly } from '../utils/errorMapper';
@@ -156,7 +156,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
 
           {/* Quick NavLinks */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-905 dark:text-white mb-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-900 dark:text-white mb-4">
               Explore Portal
             </h4>
             <ul className="space-y-2.5 text-xs">
@@ -185,7 +185,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
 
           {/* Categories select */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-905 dark:text-white mb-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-900 dark:text-white mb-4">
               Real Categories
             </h4>
             <ul className="space-y-2.5 text-xs">

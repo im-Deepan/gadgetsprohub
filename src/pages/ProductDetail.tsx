@@ -227,7 +227,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           if (stored) {
             try {
               const parsed = JSON.parse(stored);
-              recents = Array.isArray(parsed) ? parsed.filter((p: { _id?: string }) => p && typeof p === 'object' && p._id) : [];
+              recents = Array.isArray(parsed) ? parsed.filter((p: unknown) => p && typeof p === 'object' && '_id' in p) as Product[] : [];
             } catch (e) {
               recents = [];
             }
