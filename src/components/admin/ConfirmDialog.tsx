@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -22,7 +23,18 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm, 
   onCancel 
 }) => {
-  if (!isOpen) return null;
+  const { isAdmin } = useAuth();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onCancel]);
+
+  if (!isOpen || !isAdmin) return null;
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">

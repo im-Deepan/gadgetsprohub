@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 interface AdminEditFormState {
   name: string;
@@ -34,6 +35,9 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
   isSavingAdminEdit,
   adminEditSuccess,
 }) => {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return null;
+
   return (
     <div className="bg-violet-50/50 dark:bg-violet-950/15 border border-violet-50 dark:border-violet-800/40 p-4 rounded-xl -mx-2 sm:-mx-0 space-y-3 mb-6 transition-all font-sans">
       <div className="flex items-center justify-between pointer-events-none">

@@ -25,18 +25,24 @@ const TAMIL_NADU_CITIES = [
 ];
 
 const mapToTamilNaduCity = (rawName: string): string => {
-  if (!rawName) return "Chennai";
+  if (!rawName) {
+    return "Chennai";
+  }
   const name = rawName.trim().toLowerCase();
   
   if (name.includes("trichy") || name.includes("tiruchirappalli") || name.includes("tiruchirapalli")) {
     return "Tiruchirappalli";
-  }
-  if (name.includes("chennai") || name.includes("madras")) return "Chennai";
-  if (name.includes("coimbatore") || name.includes("kovai")) return "Coimbatore";
-  if (name.includes("madurai")) return "Madurai";
-  if (name.includes("salem")) return "Salem";
-  if (name.includes("nellai") || name.includes("tirunelveli")) return "Tirunelveli";
-  if (name.includes("ashburn") || name.includes("montreal") || name.includes("bueren") || name.includes("virginia")) {
+  } else if (name.includes("chennai") || name.includes("madras")) {
+    return "Chennai";
+  } else if (name.includes("coimbatore") || name.includes("kovai")) {
+    return "Coimbatore";
+  } else if (name.includes("madurai")) {
+    return "Madurai";
+  } else if (name.includes("salem")) {
+    return "Salem";
+  } else if (name.includes("nellai") || name.includes("tirunelveli")) {
+    return "Tirunelveli";
+  } else if (name.includes("ashburn") || name.includes("montreal") || name.includes("bueren") || name.includes("virginia")) {
     // Return a random stable major Tamil Nadu city based on hashing
     return "Chennai";
   }

@@ -4617,11 +4617,14 @@ async function startServer() {
     cleanExpiredTrendingProducts().catch(err => console.error("Startup trending expiration check error:", err));
 
     // Schedule background check every 12 hours
-    setInterval(() => {
+    const backgroundTask = setInterval(() => {
       console.log("Running scheduled periodic background sync...");
       runSundayAutomation().catch(err => console.error("Scheduled Sunday automation error:", err));
       cleanExpiredTrendingProducts().catch(err => console.error("Scheduled trending expiration error:", err));
     }, 12 * 60 * 60 * 1000);
+
+    process.on('SIGTERM', () => clearInterval(backgroundTask));
+    process.on('SIGINT', () => clearInterval(backgroundTask));
   });
 }
 
