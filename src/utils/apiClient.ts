@@ -124,10 +124,9 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
         abortControllersRegistry.delete(requestKey);
       });
       activeRequests.set(requestKey, existingPromise);
-    } else {
-      
     }
-    return existingPromise;
+    // Return a clone of the response so multiple callers can read the body stream
+    return existingPromise.then(res => res.clone());
   }
 
   // If deduplication is not needed (e.g. POST/PUT/DELETE mutations), run directly

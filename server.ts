@@ -4363,6 +4363,125 @@ async function startServer() {
   });
 
   // Diagnostics and Analytics compilation
+  app.get('/api/admin/n8n-status', adminOnly, async (req, res) => {
+    try {
+      const webhookUrl = process.env.N8N_REALTIME_WEBHOOK_URL;
+      
+      if (!webhookUrl) {
+        return res.json({
+          configured: false,
+          status: 'offline',
+          message: 'Webhook URL not configured in environment variables'
+        });
+      }
+
+      // Perform a lightweight check to verify if the URL is reachable
+      // We use HEAD method with a short timeout to prevent hanging the admin panel
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch(webhookUrl, { 
+          method: 'HEAD',
+          signal: controller.signal
+        }).catch(err => {
+          // If HEAD fails (e.g. CORS or not supported), fallback to a lightweight GET
+          return fetch(webhookUrl, { method: 'GET', signal: controller.signal });
+        });
+        
+        clearTimeout(timeoutId);
+
+        // Treat 4xx/5xx as potentially online but misconfigured or expecting specific payload,
+        // so we don't just say offline. We just want to check network reachability.
+        if (response && (response.ok || response.status === 404 || response.status === 405)) {
+          return res.json({
+            configured: true,
+            status: 'online',
+            message: 'Connected & Reachable'
+          });
+        }
+        
+        return res.json({
+          configured: true,
+          status: response ? 'online' : 'warning',
+          message: response ? `Connected (HTTP ${response.status})` : 'Unreachable'
+        });
+      } catch (networkError: any) {
+        return res.json({
+          configured: true,
+          status: 'warning',
+          message: networkError.name === 'AbortError' ? 'Timeout reaching n8n' : 'Network error reaching n8n'
+        });
+      }
+    } catch (err: any) {
+      console.error("Error checking n8n status:", err);
+      res.status(500).json({ error: "Failed to check n8n status" });
+    }
+  });
+
+  app.post('/api/admin/n8n-test', adminOnly, async (req, res) => {
+    try {
+      const webhookUrl = process.env.N8N_REALTIME_WEBHOOK_URL;
+      
+      if (!webhookUrl) {
+        return res.status(400).json({
+          success: false,
+          error: 'Webhook URL not configured in environment variables'
+        });
+      }
+
+      // Perform a full POST request to test the webhook
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const testPayload = {
+          event: 'test_connection',
+          timestamp: new Date().toISOString(),
+          source: 'admin_diagnostic_tool',
+          data: {
+            message: 'This is a test webhook trigger from the admin panel'
+          }
+        };
+
+        const response = await fetch(webhookUrl, { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(testPayload),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        let responseBodyText = '';
+        try {
+          responseBodyText = await response.text();
+        } catch (e) {
+          responseBodyText = 'Could not read response body';
+        }
+
+        return res.json({
+          success: response.ok,
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: responseBodyText
+        });
+      } catch (networkError: any) {
+        return res.json({
+          success: false,
+          error: networkError.name === 'AbortError' ? 'Timeout reaching n8n (10 seconds)' : networkError.message,
+          errorName: networkError.name
+        });
+      }
+    } catch (err: any) {
+      console.error("Error testing n8n webhook:", err);
+      res.status(500).json({ error: "Failed to test n8n webhook", details: err.message });
+    }
+  });
+
   app.get('/api/admin/analytics', adminOnly, async (req, res) => {
     try {
       const TAMIL_NADU_DISTRICTS = [

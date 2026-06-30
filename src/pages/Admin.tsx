@@ -12,6 +12,7 @@ import { generateSlug } from '../utils/slug';
 
 import { AlertDialog } from '../components/admin/AlertDialog';
 import { ConfirmDialog } from '../components/admin/ConfirmDialog';
+import { N8nStatusIndicator } from '../components/admin/N8nStatusIndicator';
 
 interface AdminProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -1060,6 +1061,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 transition-colors duration-300">
       
+      <div className="flex justify-end mb-4 md:px-4">
+        <N8nStatusIndicator token={token} />
+      </div>
+
       {/* SEED DATA & ANALYTICS DOUBLE BOX PANEL */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10 md:px-4">
         

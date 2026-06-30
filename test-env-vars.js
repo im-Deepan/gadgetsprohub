@@ -1,0 +1,1 @@
+console.log('N8N:', process.env.N8N_REALTIME_WEBHOOK_URL || 'Unset'); console.log('Telegram Token:', process.env.TELEGRAM_BOT_TOKEN ? 'Set' : 'Unset'); console.log('Telegram User:', process.env.TELEGRAM_ALLOWED_USER_ID ? 'Set' : 'Unset'); console.log('APP_URL:', process.env.APP_URL);
