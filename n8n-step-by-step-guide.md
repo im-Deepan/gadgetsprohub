@@ -23,15 +23,25 @@ When a user views a product in your app, the app will ping this webhook to updat
 
 ## Step 2: Fetch the Product Page (The Scraper)
 
-We need n8n to visit the affiliate link sent by your app.
+*Why we need this:* When a user clicks a product in your app, the app sends a Webhook to n8n containing the product's `affiliateLink`. We need n8n to "visit" this link (just like a web browser does) and download the page's HTML code so we can find the price inside it.
 
-1. Add an **HTTP Request Node**.
-2. Connect it after the Webhook Node.
-3. Configure the HTTP Request Node:
-   - **Method**: `GET`
-   - **URL**: Click the gears icon, select "Add Expression", and select the link from the incoming webhook body (e.g., `{{ $json.body.affiliateLink }}`).
-   - **Authentication**: None (usually).
-   - *Note: Some sites block automated requests. If you get 403 Forbidden errors, you might need to use a service like ScraperAPI in this node instead of a direct GET request.*
+Here is exactly how to set this up:
+
+1. Click the **+** button on your n8n canvas, search for **HTTP Request**, and add it.
+2. Connect it: Drag a line from the right side of your **Webhook Node** to the left side of this **HTTP Request Node**.
+3. Double-click the **HTTP Request Node** to configure it:
+   - **Method**: Keep it as `GET` (this tells the node to "get" the webpage).
+   - **URL**: We cannot type a hardcoded link here because the link changes depending on which product the user clicked. We need to use a variable.
+     - Look for the little gears icon `⚙️` next to the URL input box, click it, and select **Add Expression**.
+     - In the expression editor that pops up, type exactly this: 
+       `{{ $json.body.affiliateLink }}`
+     - *How this works:* It tells n8n to look at the data that just came in from the Webhook, go inside the `body`, and grab the `affiliateLink` URL that your Node.js app sent.
+   - **Authentication**: Leave as `None`.
+
+**⚠️ Crucial Warning About Scraping Big Sites (Amazon, Flipkart, etc.):**
+If your affiliate links go to massive e-commerce sites, they have anti-bot protection. If you try a simple HTTP Request, they might return a `403 Forbidden` error or a CAPTCHA page instead of the real product page.
+- **If it works:** Great! Move to Step 3.
+- **If you get blocked:** You cannot use a direct HTTP Request. Instead, you must sign up for a Web Scraping API (like ScraperAPI, ZenRows, or Apify). In that case, the URL in this node would be the *ScraperAPI URL*, and you would pass your affiliate link to them as a parameter. They bypass the bot-protection and return the HTML to n8n.
 
 ---
 

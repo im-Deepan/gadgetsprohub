@@ -14,6 +14,7 @@ interface BlogDetailProps {
 
 export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) => {
   const [copiedLink, setCopiedLink] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const { data: blog = null, isLoading: queryLoading, isFetching: queryFetching } = useQuery<Blog | null>({
     queryKey: ['blog', blogSlug],
@@ -28,6 +29,37 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
   });
 
   const loading = queryLoading || queryFetching;
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalHeight > 0) {
+        const scrollTop = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+        const progress = (scrollTop / totalHeight) * 100;
+        setScrollProgress(Math.min(Math.max(progress, 0), 100));
+      } else {
+        setScrollProgress(0);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+    
+    // Initial calculation
+    handleScroll();
+
+    const t1 = setTimeout(handleScroll, 50);
+    const t2 = setTimeout(handleScroll, 200);
+    const t3 = setTimeout(handleScroll, 600);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [loading, blog]);
 
   const timerRef = React.useRef<number | undefined>(undefined);
   React.useEffect(() => {
@@ -46,6 +78,13 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 animate-pulse text-slate-700 dark:text-slate-50">
+        {/* Scroll Progress Bar */}
+        <div className="fixed top-0 left-0 w-full h-1 z-[9999] pointer-events-none bg-transparent">
+          <div 
+            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-75 ease-out"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
         {/* Breadcrumb Skeleton */}
         <div className="flex mb-8">
           <div className="h-9 w-40 bg-slate-100 dark:bg-slate-700 rounded-full"></div>
@@ -103,6 +142,14 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
 
   return (
     <article className="w-full mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
+      {/* Scroll Progress Bar */}
+      <div className="fixed top-0 left-0 w-full h-1 z-[9999] pointer-events-none bg-transparent">
+        <div 
+          className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-75 ease-out"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+
       <Helmet>
         <title>{blog ? `${blog.title} - Tech Insights` : 'Blog Details'} | gadgetsprohub</title>
         <meta name="description" content={blog?.excerpt || "Read our latest technology insights at gadgetsprohub."} />

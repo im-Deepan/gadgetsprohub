@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
       }
     } catch (error) {
-      
+      console.warn('AuthContext profile refresh load exception:', error);
     } finally {
       setLoading(false);
     }
@@ -125,7 +125,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (jsonErr) {
           data = { error: 'The server returned an unexpected response. Please try again.' };
         }
-
         if (!res.ok) {
           return { 
             success: false, 
@@ -145,6 +144,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isVerified: true
         });
         return { success: true };
+      } catch (err: unknown) {
+        const e = err instanceof Error ? err : new Error(String(err));
+        const friendly = mapErrorToFriendly(e, 'authenticate your user account');
+        return { success: false, error: friendly.message };
       } finally {
         setLoading(false);
       }
@@ -179,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
               await cred.user.delete();
             } catch (delErr) {
-              
+              console.warn('AuthContext silent Firebase user rollback deletion failure:', delErr);
             }
             return { success: false, error: (data.error as string) || 'Backend registration failed.' };
           }

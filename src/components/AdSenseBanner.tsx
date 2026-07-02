@@ -38,7 +38,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
               try {
                 adsbygoogle.push({});
               } catch (e) {
-                
+                console.warn('AdSense inline push warning:', e);
               }
             } else if (attempts < maxAttempts) {
               attempts++;
@@ -55,8 +55,9 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         };
       }
     } catch (e) {
-      
+      console.warn('AdSense load catch warning:', e);
     }
+    return;
   }, [publisherId]);
 
   // Ensure style always has block layout and safety dimensions to satisfy Google publisher tag layout requirements

@@ -1,0 +1,24 @@
+[
+  {
+    "_id": "665a0006bc93ef2d8c000060",
+    "email": "admin@affiliate.com",
+    "password": "$2b$10$.qgpOk1PJhsCIZNNJEObeuuwmRtiLYRwulNWHXS7PmYStZxA9isl6",
+    "name": "Admin Strator",
+    "role": "admin",
+    "wishlist": [],
+    "recentlyViewed": [],
+    "district": "Chennai",
+    "createdAt": "2026-07-02T14:33:31.489Z"
+  },
+  {
+    "_id": "665a0006bc93ef2d8c000061",
+    "email": "tester@example.com",
+    "password": "$2b$10$qE9FTPvPGp9qa8laTAjb3eZq6obGkEKX.WMJ.cooXkRGl/4lKIJvK",
+    "name": "API Tester",
+    "role": "admin",
+    "wishlist": [],
+    "recentlyViewed": [],
+    "district": "Chennai",
+    "createdAt": "2026-07-02T14:33:31.489Z"
+  }
+]

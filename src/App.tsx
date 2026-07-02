@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { safeSetItem, safeGetItem } from './utils/localStorage';
 import { DEFAULT_VIEW_METADATA, updateDocumentMetadata } from './utils/metaManager';
 import { apiFetch } from './utils/apiClient';
+import { captureError } from './utils/errorTracker';
 
 const TAMIL_NADU_CITIES = [
   "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
@@ -137,19 +138,19 @@ export const logVisit = (timeSpentSeconds: number, currentPath: string, viewCity
       body: JSON.stringify(body),
       keepalive: true
     }).catch((err) => {
-      
+      console.warn('Silent analytics page-view failed:', err);
     });
   } catch (err) {
-    
+    captureError(err, { context: 'Analytics logging exception' });
   }
 };
 
 // Helper to support manual preloading on lazy-loaded routes
-type PreloadableComponent<T extends React.ComponentType<unknown>> = React.LazyExoticComponent<T> & {
+type PreloadableComponent<T extends React.ComponentType<any>> = React.LazyExoticComponent<T> & {
   preload?: () => Promise<{ default: T }>;
 };
 
-const dynamicLoadWithPreload = <T extends React.ComponentType<unknown>>(factory: () => Promise<{ default: T }>): PreloadableComponent<T> => {
+const dynamicLoadWithPreload = <T extends React.ComponentType<any>>(factory: () => Promise<{ default: T }>): PreloadableComponent<T> => {
   const Component = lazy(factory) as PreloadableComponent<T>;
   Component.preload = factory;
   return Component;
@@ -172,49 +173,52 @@ const Disclaimer = dynamicLoadWithPreload(() => import('./pages/Disclaimer').the
 
 export const preloadView = (view: AppView) => {
   try {
+    const handlePreload = (promise?: Promise<any>) => {
+      promise?.catch?.((err) => captureError(err, { context: 'preloadView promise', view }));
+    };
     switch (view) {
       case 'home':
-        Home.preload?.();
+        handlePreload(Home.preload?.());
         break;
       case 'products':
-        ProductList.preload?.();
+        handlePreload(ProductList.preload?.());
         break;
       case 'product-detail':
-        ProductDetail.preload?.();
+        handlePreload(ProductDetail.preload?.());
         break;
       case 'blogs':
-        BlogList.preload?.();
+        handlePreload(BlogList.preload?.());
         break;
       case 'blog-detail':
-        BlogDetail.preload?.();
+        handlePreload(BlogDetail.preload?.());
         break;
       case 'contact':
-        Contact.preload?.();
+        handlePreload(Contact.preload?.());
         break;
       case 'login':
-        Login.preload?.();
+        handlePreload(Login.preload?.());
         break;
       case 'profile':
-        Profile.preload?.();
+        handlePreload(Profile.preload?.());
         break;
       case 'admin':
-        Admin.preload?.();
+        handlePreload(Admin.preload?.());
         break;
       case 'privacy-policy':
-        PrivacyPolicy.preload?.();
+        handlePreload(PrivacyPolicy.preload?.());
         break;
       case 'about-us':
-        AboutUs.preload?.();
+        handlePreload(AboutUs.preload?.());
         break;
       case 'terms-conditions':
-        TermsConditions.preload?.();
+        handlePreload(TermsConditions.preload?.());
         break;
       case 'disclaimer':
-        Disclaimer.preload?.();
+        handlePreload(Disclaimer.preload?.());
         break;
     }
   } catch (err) {
-    
+    captureError(err, { context: 'preloadView', view });
   }
 };
 
@@ -360,7 +364,7 @@ const AppContent: React.FC = () => {
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name !== 'AbortError') {
-          console.error("Failed to track visitor visit analytics:", err);
+          captureError(err, { context: 'Failed to track visitor visit analytics' });
         }
       }
     };
@@ -389,7 +393,7 @@ const AppContent: React.FC = () => {
           document.head.appendChild(script);
         }
       } catch (err) {
-        console.error("Failed to load Google AdSense script:", err);
+        captureError(err, { context: 'Failed to load Google AdSense script' });
       }
     };
 
@@ -427,9 +431,16 @@ const AppContent: React.FC = () => {
       if (viewPart && (ALLOWED_VIEWS as readonly string[]).includes(viewPart)) {
         return viewPart as AppView;
       }
+
+      // Map category slugs directly to 'products' view
+      const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports'];
+      if (viewPart && (knownCategories.includes(viewPart) || viewPart.startsWith('category-'))) {
+        return 'products';
+      }
+
       return 'home';
     } catch (err) {
-      
+      captureError(err, { context: 'getInitialView' });
       return 'home';
     }
   });
@@ -442,12 +453,23 @@ const AppContent: React.FC = () => {
 
       const path = window.location.pathname.replace(/^\/+/, '');
       const pathParts = path.split('/');
+      const viewPart = pathParts[0];
+
+      // Map category slugs
+      const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports'];
+      if (viewPart && knownCategories.includes(viewPart)) {
+        return `category-${viewPart}`;
+      }
+      if (viewPart && viewPart.startsWith('category-')) {
+        return viewPart;
+      }
+
       if (pathParts.length > 1) {
         return pathParts.slice(1).join('/'); 
       }
       return null;
     } catch (err) {
-      
+      captureError(err, { context: 'getInitialSlug' });
       return null;
     }
   });
@@ -618,12 +640,16 @@ const AppContent: React.FC = () => {
   }, [activeView, selectedSlug]);
 
   // Manage body scroll positions on navigating
-  const navigateToView = (view: AppView, slug?: string) => {
+  const navigateToView = (view: any, slug?: string) => {
     if (!(ALLOWED_VIEWS as readonly string[]).includes(view)) return;
     
     if (activeView === view && selectedSlug === (slug || null)) {
-      // If we are already on this view, still push state if history current is different 
-      // (though usually they are in sync)
+      // If we are already on this view, trigger resets for better user experience!
+      if (view === 'products') {
+        window.dispatchEvent(new CustomEvent('reset-product-filters'));
+      } else if (view === 'home') {
+        window.dispatchEvent(new CustomEvent('reset-home-filters'));
+      }
       return; 
     }
 
@@ -636,6 +662,10 @@ const AppContent: React.FC = () => {
       if (view === 'home' && !slug) {
         url.pathname = '/';
         url.search = '';
+      } else if (view === 'products' && slug && slug.startsWith('category-')) {
+        const catSlug = slug.replace('category-', '');
+        url.pathname = '/' + catSlug;
+        url.search = '';
       } else {
         url.pathname = '/' + view + (slug ? '/' + slug : '');
         url.search = ''; // Clean old queries
@@ -644,7 +674,7 @@ const AppContent: React.FC = () => {
       // Store state in history to retrieve on back/forward
       window.history.pushState({ view, slug: slug || null }, '', url.toString());
     } catch (e) {
-      
+      captureError(e, { context: 'pushState error ignored', url: window.location.href });
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -669,6 +699,7 @@ const AppContent: React.FC = () => {
         let view: AppView = 'home';
         let slug = null;
 
+        const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports'];
         if (viewUrl && (ALLOWED_VIEWS as readonly string[]).includes(viewUrl)) {
           view = viewUrl as AppView;
           slug = params.get('slug') || null;
@@ -677,6 +708,12 @@ const AppContent: React.FC = () => {
           if (pathParts.length > 1) {
              slug = pathParts.slice(1).join('/');
           }
+        } else if (viewPart && knownCategories.includes(viewPart)) {
+          view = 'products';
+          slug = `category-${viewPart}`;
+        } else if (viewPart && viewPart.startsWith('category-')) {
+          view = 'products';
+          slug = viewPart;
         }
         
         setActiveView(view);
@@ -792,7 +829,28 @@ const queryClient = new QueryClient({
   },
 });
 
+const setupGlobalErrorTracking = () => {
+  window.addEventListener('error', (event) => {
+    captureError(event.error || new Error(event.message), {
+      context: 'Global error handler',
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    });
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    captureError(event.reason, {
+      context: 'Unhandled promise rejection',
+    });
+  });
+};
+
 export default function App() {
+  useEffect(() => {
+    setupGlobalErrorTracking();
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

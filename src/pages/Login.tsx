@@ -179,7 +179,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
               body: JSON.stringify({ email })
             });
           } catch (err) {
-            
+            console.warn('Login silent newsletter subscription failed:', err);
           }
         }
       }
@@ -216,7 +216,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
               body: JSON.stringify({ email })
             });
           } catch (err) {
-            
+            console.warn('Registration silent newsletter subscription failed:', err);
           }
         }
       }
@@ -242,7 +242,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
             body: JSON.stringify({ email: res.email })
           });
         } catch (err: unknown) {
-          
+          console.warn('Google silent newsletter subscription failed:', err);
         }
       }
     }

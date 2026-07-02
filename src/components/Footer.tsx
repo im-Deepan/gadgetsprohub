@@ -49,13 +49,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
   // Track social clicks helper
   const trackSocialClick = async (platform: 'instagram' | 'linkedin') => {
     try {
-      apiFetch('/api/analytics/social-click', {
+      await apiFetch('/api/analytics/social-click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform })
       });
     } catch (err) {
-      
+      console.warn('Silent social click tracking failed:', err);
     }
   };
 

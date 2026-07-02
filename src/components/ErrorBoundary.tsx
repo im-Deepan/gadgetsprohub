@@ -1,4 +1,5 @@
 import React from 'react';
+import { captureError } from '../utils/errorTracker';
 
 interface Props {
   children: React.ReactNode;
@@ -23,22 +24,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    
-    
-    // Mock error reporting service logging
-    const detailedPayload = {
-      timestamp: new Date().toISOString(),
-      errorName: error.name || 'UnknownError',
-      errorMessage: error.message || 'No error message available',
-      stackTrace: error.stack || 'No stack trace available',
-      componentStack: errorInfo.componentStack || 'No component stack available',
+    captureError(error, { 
+      context: 'React ErrorBoundary', 
+      componentStack: errorInfo.componentStack,
       url: window.location.href,
-      userAgent: navigator.userAgent,
-    };
-    
-    
-    
-    
+      userAgent: navigator.userAgent
+    });
   }
 
   handleRetry = () => {

@@ -12,6 +12,7 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import mongoSanitize from 'express-mongo-sanitize';
 import { createServer as createViteServer } from 'vite';
+import { captureError } from './src/utils/errorTracker';
 import { seedOrders, seedCategories, seedProducts, seedBlogs, seedUsers, seedMessages, LocalUserType } from './seeddata';
 import {
   validateRegister,
@@ -994,7 +995,7 @@ async function cleanExpiredTrendingProducts() {
         { $set: { trendingStartedAt: new Date() } }
       );
     } catch (err) {
-      console.error("Error cleaning expired trending products in Mongo:", err);
+      captureError(err, { context: 'cleanExpiredTrendingProducts' });
     }
   } else {
     let modified = false;
@@ -1099,7 +1100,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
       }
       await syncProductsToSeedFile();
     } catch (err) {
-      console.error("Error saving automatic Sunday products to Mongo:", err);
+      captureError(err, { context: 'saving automatic Sunday products' });
     }
   } else {
     for (const raw of newProdsRaw) {
@@ -1157,7 +1158,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
   let errorDetails = '';
 
   const transporter = getMailTransport();
-  if (transporter) {
+  if (transporter && authorEmail) {
     try {
       const sender = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'no-reply@gadgetsprohub.com';
       await transporter.sendMail({
@@ -1171,13 +1172,16 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
       sentStatus = 'Failed';
       errorDetails = err.message;
     }
+  } else if (!authorEmail) {
+    sentStatus = 'Skipped';
+    errorDetails = 'AUTHOR_EMAIL environment variable not configured';
   }
 
   const logObj = {
     sundayDate: sundayStr,
     runAt: new Date(),
     localProductsAddedIds: addedIds,
-    emailSentTo: authorEmail,
+    emailSentTo: authorEmail || 'no-author-email@gadgetsprohub.com',
     emailSubject,
     emailBody: htmlBody,
     sentStatus,
@@ -1194,7 +1198,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
       await mongoLog.save();
       finalLog = mongoLog;
     } catch (err) {
-      console.error(err);
+      captureError(err, { context: 'Sunday Log Creation' });
     }
   } else {
     finalLog = {
@@ -1348,9 +1352,11 @@ async function startServer() {
     isMongoConnected = true;
 
     // Safely drop index sub_1 if it exists in the database
-    mongoose.connection.db.collection('users').dropIndex('sub_1')
-      .then(() => console.log('Successfully dropped stale sub_1 index.'))
-      .catch((err: any) => console.log('Stale index sub_1 dropped or not exists. Msg:', err.message));
+    if (mongoose.connection.db) {
+      mongoose.connection.db.collection('users').dropIndex('sub_1')
+        .then(() => console.log('Successfully dropped stale sub_1 index.'))
+        .catch((err: any) => console.log('Stale index sub_1 dropped or not exists. Msg:', err.message));
+    }
 
     seedDatabase();
   })
@@ -1407,6 +1413,13 @@ async function startServer() {
     }
   });
 
+  // Global Error Tracking Endpoint
+  app.post('/api/track-error', express.json(), (req, res) => {
+    const errorDetails = req.body;
+    console.error('[CentralizedTracker Server-Side]', JSON.stringify(errorDetails, null, 2));
+    res.status(200).json({ success: true });
+  });
+
   // SEO Routes (Robots & Sitemap)
   app.get('/robots.txt', (req, res) => {
     res.type('text/plain');
@@ -1447,7 +1460,7 @@ async function startServer() {
         }));
       }
     } catch (e) {
-      console.warn("Sitemap production/blog query error:", e);
+      captureError(e, { context: 'Sitemap production/blog query error' });
     }
 
     const staticUrls = [
@@ -1482,7 +1495,8 @@ async function startServer() {
       let dateStr = todayStr;
       try {
         dateStr = new Date(dateVal).toISOString().split('T')[0];
-      } catch {
+      } catch (err) {
+        captureError(err, { context: 'Sitemap Product Date Format', dateVal });
         dateStr = todayStr;
       }
       xml += `  <url>\n`;
@@ -1500,7 +1514,8 @@ async function startServer() {
       let dateStr = todayStr;
       try {
         dateStr = new Date(dateVal).toISOString().split('T')[0];
-      } catch {
+      } catch (err) {
+        captureError(err, { context: 'Sitemap Blog Date Format', dateVal });
         dateStr = todayStr;
       }
       xml += `  <url>\n`;
@@ -1723,7 +1738,7 @@ async function startServer() {
           `);
         }
 
-        user.email = user.pendingEmail;
+        user.email = user.pendingEmail || '';
         user.pendingEmail = null;
         user.pendingEmailToken = null;
         await user.save();
@@ -1742,7 +1757,7 @@ async function startServer() {
           `);
         }
 
-        user.email = user.pendingEmail;
+        user.email = user.pendingEmail || '';
         user.pendingEmail = undefined;
         user.pendingEmailToken = undefined;
         saveLocalUsers();
@@ -1923,7 +1938,7 @@ async function startServer() {
             const matchedCats = await Category.find({ name: { $regex: searchRegex } });
             categoryIds = matchedCats.map(c => c._id);
           } catch (err) {
-            console.warn("Category search mapping error:", err);
+            captureError(err, { context: 'Category search mapping' });
           }
 
           filter.$or = [
@@ -2653,7 +2668,7 @@ async function startServer() {
           const matchedCats = await Category.find({ name: { $regex: searchRegex } });
           categoryIds = matchedCats.map(c => c._id);
         } catch (err) {
-          console.warn("Category search mapping error:", err);
+          captureError(err, { context: 'Category search mapping' });
         }
 
         const productFilter: any = {
@@ -2773,7 +2788,8 @@ async function startServer() {
     try {
       const { platform } = req.body;
       if (platform === 'instagram' || platform === 'linkedin') {
-        socialClicks[platform]++;
+        const platformKey = platform as 'instagram' | 'linkedin';
+        socialClicks[platformKey]++;
         saveSocialClicks();
 
         // Also store it into the persistent database
@@ -3989,7 +4005,9 @@ async function startServer() {
         let deletedProduct: any = null;
         try {
           deletedProduct = await Product.findById(pId);
-        } catch (e) {}
+        } catch (e) {
+          captureError(e, { context: 'Product delete lookup warning' });
+        }
         if (mongoose.Types.ObjectId.isValid(pId)) {
           await Product.findByIdAndDelete(pId);
         } else {
@@ -4072,7 +4090,9 @@ async function startServer() {
         let deletedCat: any = null;
         try {
           deletedCat = await Category.findById(catId);
-        } catch (e) {}
+        } catch (e) {
+          captureError(e, { context: 'Category delete lookup warning' });
+        }
         await Category.findByIdAndDelete(catId);
         await syncCategoriesToSeedFile();
         await logSecurityAction(req, 'CATEGORY_DELETED', catId, { name: deletedCat?.name, slug: deletedCat?.slug });
@@ -4178,7 +4198,9 @@ async function startServer() {
         let deletedBlog: any = null;
         try {
           deletedBlog = await Blog.findById(bId);
-        } catch (e) {}
+        } catch (e) {
+          captureError(e, { context: 'Blog delete lookup warning' });
+        }
         await Blog.findByIdAndDelete(bId);
         await syncBlogsToSeedFile();
         await logSecurityAction(req, 'BLOG_DELETED', bId, { title: deletedBlog?.title, slug: deletedBlog?.slug });
@@ -4328,12 +4350,12 @@ async function startServer() {
         const combined = [...localSundayAutomationLogs, ...mongoLogs].sort(
           (a, b) => new Date(b.runAt || b.createdAt).getTime() - new Date(a.runAt || a.createdAt).getTime()
         );
-        res.json(combined);
+        return res.json(combined);
       } else {
-        res.json(localSundayAutomationLogs);
+        return res.json(localSundayAutomationLogs);
       }
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   });
 
@@ -4356,9 +4378,9 @@ async function startServer() {
       if (!log) {
         return res.status(400).json({ error: 'Failed to execute Sunday automation simulation.' });
       }
-      res.json({ success: true, log });
+      return res.json({ success: true, log });
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   });
 
@@ -4415,7 +4437,7 @@ async function startServer() {
       }
     } catch (err: any) {
       console.error("Error checking n8n status:", err);
-      res.status(500).json({ error: "Failed to check n8n status" });
+      return res.status(500).json({ error: "Failed to check n8n status" });
     }
   });
 
@@ -4444,11 +4466,17 @@ async function startServer() {
           }
         };
 
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        
+        if (process.env.N8N_SECRET_TOKEN) {
+          headers['Authorization'] = `Bearer ${process.env.N8N_SECRET_TOKEN}`;
+        }
+
         const response = await fetch(webhookUrl, { 
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers,
           body: JSON.stringify(testPayload),
           signal: controller.signal
         });
@@ -4459,6 +4487,7 @@ async function startServer() {
         try {
           responseBodyText = await response.text();
         } catch (e) {
+          captureError(e, { context: 'Could not read response body' });
           responseBodyText = 'Could not read response body';
         }
 
@@ -4478,7 +4507,7 @@ async function startServer() {
       }
     } catch (err: any) {
       console.error("Error testing n8n webhook:", err);
-      res.status(500).json({ error: "Failed to test n8n webhook", details: err.message });
+      return res.status(500).json({ error: "Failed to test n8n webhook", details: err.message });
     }
   });
 
@@ -4570,7 +4599,7 @@ async function startServer() {
           instaCount = await SocialClick.countDocuments({ platform: 'instagram' });
           linkedinCount = await SocialClick.countDocuments({ platform: 'linkedin' });
         } catch (err) {
-          console.warn("Could not query SocialClick counts dynamically:", err);
+          captureError(err, { context: 'SocialClick counts dynamically' });
         }
 
         return res.json({

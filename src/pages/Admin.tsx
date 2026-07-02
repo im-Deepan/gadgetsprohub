@@ -199,7 +199,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   // Modals show control
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [autoCloseEditorial, setAutoCloseEditorial] = useState(true);
   const [modalFormTab, setModalFormTab] = useState<'basics' | 'dealsSpecs' | 'editorial'>('basics');
+  const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
+  const [isSubcatDropdownOpen, setIsSubcatDropdownOpen] = useState(false);
 
   // Form Fields for Products
   const [prodForm, setProdForm] = useState({
@@ -264,7 +267,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           }
         }
       } catch (err) {
-        
+        console.warn('Silent slug checking failed:', err);
       } finally {
         setSlugChecking(false);
       }
@@ -540,7 +543,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         totalVisitors: visitors || Math.round(clicks * 0.9) + 1
       });
     } catch (aggErr) {
-      
+      console.warn('Silent aggregate metrics loading warning:', aggErr);
     } finally {
       if (!signal?.aborted) {
         setLoading(false);
@@ -553,7 +556,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     try {
       await loadAdminMetrics();
     } catch (err: unknown) {
-      
+      console.warn('Silent metrics reload error:', err);
     } finally {
       setRefreshingTraffic(false);
     }
@@ -716,13 +719,34 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         setStats(prev => ({ ...prev, unreadMessages: Math.max(prev.unreadMessages - 1, 0) }));
       }
     } catch (e) {
-      
+      console.warn('Silent read status update failed:', e);
     }
   };
 
   // Helper specification mapping builders
   const parseSpecs = (specsStr: string) => {
     return parseSpecificationsString(specsStr);
+  };
+
+  // Dedicated save function with onSuccess callback trigger
+  const saveProductApi = async (
+    url: string,
+    method: string,
+    payload: any,
+    onSuccess: () => void
+  ) => {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) {
+      onSuccess();
+    }
+    return response;
   };
 
   // Create or Edit Product POST proxy handler
@@ -792,20 +816,22 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       const url = editingProduct ? `/api/admin/products/${editingProduct._id}` : '/api/admin/products';
       const method = editingProduct ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
+      const successHandler = async () => {
+        // Reset the panel's active ID state via onSuccess callback
+        setEditingProduct(null);
+        
+        // State-based toggle that automatically closes the editorial panel upon receiving a successful save response
+        if (autoCloseEditorial) {
+          setShowProductModal(false);
+          setModalFormTab('basics');
+        }
+        await loadAdminMetrics();
+      };
+
+      const res = await saveProductApi(url, method, payload, successHandler);
 
       if (res.ok) {
-        setShowProductModal(false);
         const nameSaved = prodForm.name;
-        setEditingProduct(null);
-        await loadAdminMetrics();
         triggerAlert("Submission Successful", `The product "${nameSaved}" was successfully fed to the storefront catalog database!`);
       } else {
         const err = await res.json().catch(() => ({}));
@@ -817,19 +843,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               setProdForm(prev => ({ ...prev, slug: err.suggestedSlug }));
               const rePayload = { ...payload, slug: err.suggestedSlug };
               try {
-                const reRes = await fetch(url, {
-                  method,
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                  },
-                  body: JSON.stringify(rePayload)
-                });
+                const reRes = await saveProductApi(url, method, rePayload, successHandler);
                 if (reRes.ok) {
-                  setShowProductModal(false);
                   const nameSaved = prodForm.name;
-                  setEditingProduct(null);
-                  await loadAdminMetrics();
                   triggerAlert("Submission Successful", `The product "${nameSaved}" was successfully fed to the storefront catalog database with unique slug: "${err.suggestedSlug}"!`);
                 } else {
                   const reErr = await reRes.json().catch(() => ({}));
@@ -854,6 +870,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   // Trigger Open Add popup
   const openAddProduct = () => {
     setEditingProduct(null);
+    setModalFormTab('basics');
     setProdForm({
       name: 'Noise Cancellation Headset',
       slug: 'noise-cancelling-pro-anc',
@@ -881,6 +898,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   // Open Edit Product popup
   const openEditProduct = (p: Product) => {
     setEditingProduct(p);
+    setModalFormTab('basics');
     
     // Map specifications keys back to semicolon string format
     const specStr = Object.entries(p.specifications || {})
@@ -1757,6 +1775,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           </div>
                           <div className="flex gap-1.5 shrink-0">
                             <button
+                              type="button"
                               onClick={() => startEditCategory(c)}
                               className="text-indigo-500 hover:text-indigo-600 p-2 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl shadow-xs cursor-pointer"
                               title="Edit Classifier"
@@ -1764,7 +1783,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               <Edit className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              onClick={() => handleDeleteCategory(c._id)}
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteCategory(c._id as string); }}
                               className="text-rose-500 hover:text-rose-600 p-2 bg-rose-50 dark:bg-rose-950/40 rounded-xl shadow-xs cursor-pointer"
                               title="Delete Classifier"
                             >
@@ -1806,6 +1826,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               <td className="py-3 px-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
+                                    type="button"
                                     onClick={() => startEditCategory(c)}
                                     className="text-indigo-500 hover:text-indigo-600 p-1 bg-indigo-50 dark:bg-indigo-950/40 rounded shadow-xs cursor-pointer"
                                     title="Edit Classifier"
@@ -1813,7 +1834,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                     <Edit className="h-3.5 w-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteCategory(c._id)}
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteCategory(c._id as string); }}
                                     className="text-rose-500 hover:text-rose-600 p-1 bg-rose-50 dark:bg-rose-950/40 rounded shadow-xs cursor-pointer"
                                     title="Delete Classifier"
                                   >
@@ -2532,7 +2554,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               return (
                                 <tr key={log._id || log.id || index} className="text-xs hover:bg-slate-50/50 transition-colors dark:hover:bg-zinc-700/20">
                                   <td className="py-3.5 px-4 font-mono text-[10px] text-slate-300 dark:text-slate-400">
-                                    {new Date(log.timestamp).toLocaleString()}
+                                    {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
                                   </td>
                                   <td className="py-3.5 px-4 font-sans font-bold text-slate-700 dark:text-zinc-100">
                                     <div className="flex items-center gap-1.5">
@@ -2542,7 +2564,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                     </div>
                                   </td>
                                   <td className="py-3.5 px-4">
-                                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-mono font-black uppercase ${getActionBadgeClass(log.action)}`}>
+                                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-mono font-black uppercase ${getActionBadgeClass(log.action || '')}`}>
                                       {log.action}
                                     </span>
                                   </td>
@@ -3181,7 +3203,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 {editingProduct ? 'Edit Product Details' : 'Add New Product'}
               </h3>
               <button
-                onClick={() => setShowProductModal(false)}
+                onClick={() => { setShowProductModal(false); setModalFormTab('basics'); }}
                 className="text-slate-300 hover:text-slate-500 font-black cursor-pointer text-sm shrink-0"
               >
                 ✕
@@ -3284,34 +3306,82 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono text-center"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative">
                       <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Product Category</label>
-                      <select
-                        value={prodForm.category}
-                        onChange={(e) => setProdForm({ ...prodForm, category: e.target.value, subcategory: "" })}
-                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      <div 
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 cursor-pointer flex justify-between items-center focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                        onClick={() => {
+                          setIsCatDropdownOpen(!isCatDropdownOpen);
+                          setIsSubcatDropdownOpen(false);
+                        }}
                       >
-                        {categories.map(c => (
-                          <option key={c._id} value={c._id} className="dark:bg-slate-800 dark:text-slate-50">{c.name}</option>
-                        ))}
-                      </select>
+                        <span className="truncate">
+                          {categories.find(c => String(c._id) === String(prodForm.category))?.name || "Select Category"}
+                        </span>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${isCatDropdownOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                      
+                      {isCatDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-1 w-full z-[100] bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto overflow-x-hidden">
+                          {categories.map(c => (
+                            <div 
+                              key={c._id} 
+                              className={`px-3 py-2 text-xs cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700 ${String(prodForm.category) === String(c._id) ? 'bg-indigo-50 dark:bg-slate-700 font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}
+                              onClick={() => {
+                                setProdForm({ ...prodForm, category: c._id || '', subcategory: "" });
+                                setIsCatDropdownOpen(false);
+                              }}
+                            >
+                              {c.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative">
                       <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Product Subcategory</label>
-                      <select
-                        value={prodForm.subcategory}
-                        onChange={(e) => setProdForm({ ...prodForm, subcategory: e.target.value })}
-                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      <div 
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 cursor-pointer flex justify-between items-center focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                        onClick={() => {
+                          setIsSubcatDropdownOpen(!isSubcatDropdownOpen);
+                          setIsCatDropdownOpen(false);
+                        }}
                       >
-                        <option value="">-- No Subcategory --</option>
-                        {(() => {
-                          const activeCatId = prodForm.category || categories?.[0]?._id || '';
-                          const activeCat = categories.find(c => String(c._id) === String(activeCatId));
-                          return (activeCat?.subcategories || []).map(sub => (
-                            <option key={sub} value={sub} className="dark:bg-slate-800 dark:text-slate-50">{sub}</option>
-                          ));
-                        })()}
-                      </select>
+                        <span className="truncate">
+                          {prodForm.subcategory || "No Subcategory"}
+                        </span>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${isSubcatDropdownOpen ? 'rotate-180' : ''}`} />
+                      </div>
+
+                      {isSubcatDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-1 w-full z-[100] bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto overflow-x-hidden">
+                          <div 
+                            className={`px-3 py-2 text-xs cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700 ${!prodForm.subcategory ? 'bg-indigo-50 dark:bg-slate-700 font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}
+                            onClick={() => {
+                              setProdForm({ ...prodForm, subcategory: "" });
+                              setIsSubcatDropdownOpen(false);
+                            }}
+                          >
+                            -- No Subcategory --
+                          </div>
+                          {(() => {
+                            const activeCatId = prodForm.category || categories?.[0]?._id || '';
+                            const activeCat = categories.find(c => String(c._id) === String(activeCatId));
+                            return (activeCat?.subcategories || []).map(sub => (
+                              <div 
+                                key={sub} 
+                                className={`px-3 py-2 text-xs cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700 ${prodForm.subcategory === sub ? 'bg-indigo-50 dark:bg-slate-700 font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}
+                                onClick={() => {
+                                  setProdForm({ ...prodForm, subcategory: sub });
+                                  setIsSubcatDropdownOpen(false);
+                                }}
+                              >
+                                {sub}
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -3474,6 +3544,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       />
                       <span className="text-[11px] font-bold text-slate-600 dark:text-slate-200 uppercase tracking-widest text-[10px]">Featured Collection</span>
                     </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer select-none border-l border-slate-100 dark:border-slate-800 pl-4" id="auto-close-editorial-toggle">
+                      <input
+                        type="checkbox"
+                        id="auto-close-editorial-input"
+                        checked={autoCloseEditorial}
+                        onChange={(e) => setAutoCloseEditorial(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-200 text-indigo-500 focus:ring-indigo-400 cursor-pointer"
+                      />
+                      <span className="text-[11px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest text-[10px]">Auto-Close on Save</span>
+                    </label>
                   </div>
                 </>
               )}
@@ -3495,9 +3576,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         isOpen={confirmDialog.isOpen}
         title={confirmDialog.title}
         message={confirmDialog.message}
-        isDestructive={confirmDialog.isDestructive}
-        cancelText={confirmDialog.cancelText}
-        confirmText={confirmDialog.confirmText}
+        isDestructive={!!confirmDialog.isDestructive}
+        cancelText={confirmDialog.cancelText || ''}
+        confirmText={confirmDialog.confirmText || ''}
         onConfirm={confirmDialog.onConfirm || (() => {})}
         onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
       />

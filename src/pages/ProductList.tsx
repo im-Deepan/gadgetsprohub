@@ -272,6 +272,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       }, 1000);
       return () => clearTimeout(timer);
     }
+    return;
   }, [search]);
 
   const handleRemoveRecentSearch = (e: React.MouseEvent, queryToRemove: string) => {
@@ -292,7 +293,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     if (initialFilter) {
       if (initialFilter.startsWith('category-')) {
         const cat = initialFilter.replace('category-', '');
-        setSelectedCategory(cat);
+        const matched = categories.find(c => c.slug === cat || String(c._id) === cat);
+        const catId = matched ? String(matched._id) : cat;
+        setSelectedCategory(catId);
         setSearch('');
         setDebouncedSearch('');
         setSelectedSubcategory('');
@@ -327,7 +330,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           })
           .catch(err => {
             if (err.name !== 'AbortError') {
-              
+              console.warn('ProductList specification modal product fetch error:', err);
             }
           })
           .finally(() => {
@@ -350,7 +353,23 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     return () => {
       controller.abort();
     };
-  }, [initialFilter]);
+  }, [initialFilter, categories]);
+
+  // Listener to reset all filter parameters dynamically on user action
+  useEffect(() => {
+    const handleReset = () => {
+      setSelectedCategory('');
+      setSearch('');
+      setDebouncedSearch('');
+      setSelectedSubcategory('');
+      setMinPrice('');
+      setMaxPrice('');
+      setMinRating('');
+      setCurrentPage(1);
+    };
+    window.addEventListener('reset-product-filters', handleReset);
+    return () => window.removeEventListener('reset-product-filters', handleReset);
+  }, []);
 
   // Similar Products Fetcher logic for Search matching
   const fetchSimilarProducts = async (pageVal: number, initialReset: boolean = false, activeProducts: Product[] = []) => {

@@ -231,7 +231,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
       })
       .catch(err => {
         if (err.name !== 'AbortError') {
-          
+          console.warn('Navbar load categories error:', err);
         }
       });
     return () => {
@@ -259,9 +259,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             }
           }
         } catch (err: unknown) {
-          const e = err as { name?: string };
+          const e = err as { name?: string; message?: string };
           if (e.name !== 'AbortError') {
-            
+            console.warn('Navbar search fetch failed:', e.message);
           }
         }
       }, 300); // 300ms debounce input typing rate
@@ -271,6 +271,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
       };
     } else {
       setShowResults(false);
+      return;
     }
   }, [searchQuery]);
 

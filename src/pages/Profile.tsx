@@ -32,7 +32,7 @@ interface OrderItem {
   price: number;
 }
 
-interface Order {
+export interface Order {
   _id: string;
   items: OrderItem[];
   totalAmount: number;
@@ -189,10 +189,10 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
         // Since database gives populated wishlist
         setWishlistProducts(data.wishlist || []);
       } else {
-        
+        console.warn('Profile request not ok:', res.statusText);
       }
     } catch (e) {
-      
+      console.warn('Silent user profile loading error:', e);
     } finally {
       setLoading(false);
     }

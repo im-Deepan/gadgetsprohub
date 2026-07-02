@@ -126,7 +126,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         }
       }
     } catch (e) {
-      
+      console.warn('Home loaded recently viewed warning:', e);
     }
   }, []);
 
@@ -141,6 +141,17 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  // Listener to reset home filters/search when requested (e.g. clicking Home Hub)
+  useEffect(() => {
+    const handleReset = () => {
+      setHomeSearch('');
+      setActiveCategory('all');
+      setVisibleCount(6);
+    };
+    window.addEventListener('reset-home-filters', handleReset);
+    return () => window.removeEventListener('reset-home-filters', handleReset);
   }, []);
 
   const saveSearchToLocal = (query: string) => {
@@ -162,7 +173,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         safeSetItem('aff_recent_searches', JSON.stringify(updated));
         setRecentSearches(updated);
       } catch (err) {
-        
+        console.warn('Home save search warning:', err);
       }
     }
   };
@@ -180,7 +191,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     try {
       safeRemoveItem('aff_recent_searches');
     } catch (err) {
-      
+      console.warn('Home clear search warning:', err);
     }
   };
 
@@ -203,6 +214,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       }, 700);
       return () => clearTimeout(handler);
     }
+    return;
   }, [homeSearch, activeCategory, categories]);
 
   useEffect(() => {

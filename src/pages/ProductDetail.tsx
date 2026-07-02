@@ -75,6 +75,38 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   // Link copying state
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalHeight > 0) {
+        const scrollTop = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+        const progress = (scrollTop / totalHeight) * 100;
+        setScrollProgress(Math.min(Math.max(progress, 0), 100));
+      } else {
+        setScrollProgress(0);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+    
+    // Initial calculation
+    handleScroll();
+
+    const t1 = setTimeout(handleScroll, 50);
+    const t2 = setTimeout(handleScroll, 200);
+    const t3 = setTimeout(handleScroll, 600);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [loading, product]);
 
   const handleShareClick = async () => {
     if (!product) return;
@@ -131,7 +163,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         validatedUrl = parsed.toString();
       }
     } catch (err) {
-      
+      console.warn('ProductDetail URL copy parse warning:', err);
     }
 
     if (!validatedUrl) {
@@ -254,7 +286,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           recents = recents.slice(0, 10); // Keep last 10
           safeSetItem('aff_recent_viewed', JSON.stringify(recents));
         } catch (err) {
-          
+          console.warn('ProductDetail local storage recents save warning:', err);
         }
 
         // Disable global loading state instantly so the user can interact/view the spec sheets right away!
@@ -275,7 +307,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           })
           .catch(err => {
             if (err.name !== 'AbortError') {
-              
+              console.warn('ProductDetail load related products warning:', err);
             }
           });
       } else {
@@ -377,6 +409,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         );
         setProduct(prev => prev ? { ...prev, ...cleanPayload } : null);
         setAdminEditSuccess(true);
+        setIsAdminEditVisible(false);
         showToast("Product specifications and parameters have been updated.", "success", 4000, "System Status");
         setTimeout(() => setAdminEditSuccess(false), 2505);
       } else {
@@ -418,11 +451,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   useEffect(() => {
     const controller = new AbortController();
     apiFetch('/api/categories', { signal: controller.signal })
-      .then(res => { if (res.ok) return res.json(); })
+      .then(res => res.ok ? res.json() : null)
       .then(data => { if (data && !controller.signal.aborted) setCategories(data); })
       .catch(err => {
         if (err.name !== 'AbortError') {
-          
+          console.warn('ProductDetail categories fetch warning:', err);
         }
       });
     return () => {
@@ -433,7 +466,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   useEffect(() => {
     const controller = new AbortController();
     apiFetch('/api/products?limit=100', { signal: controller.signal })
-      .then(res => { if (res.ok) return res.json(); })
+      .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data && !controller.signal.aborted) {
           const plist = Array.isArray(data) ? data : (data.products || []);
@@ -465,7 +498,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         validatedUrl = parsed.toString();
       }
     } catch (err) {
-      
+      console.warn('ProductDetail affiliate url parse warning:', err);
     }
 
     if (!validatedUrl) {
@@ -482,7 +515,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         body: JSON.stringify({ userId: user?.id, district: user?.district || preferredCity })
       });
     } catch (e) {
-      
+      console.warn('ProductDetail click log API warning:', e);
     }
 
     // Trigger visual overlay popup and open link
@@ -540,6 +573,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   if (loading) {
     return (
       <div className="mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 animate-pulse text-slate-700 dark:text-slate-50">
+        {/* Scroll Progress Bar */}
+        <div className="fixed top-0 left-0 w-full h-1 z-[9999] pointer-events-none bg-transparent">
+          <div 
+            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-75 ease-out"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
         {/* Breadcrumb Skeleton */}
         <div className="flex mb-8 md:px-4">
           <div className="h-9 w-48 bg-slate-100 dark:bg-slate-700 rounded-full"></div>
@@ -621,6 +661,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
   return (
     <div className="w-full mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
+      {/* Scroll Progress Bar */}
+      <div className="fixed top-0 left-0 w-full h-1 z-[9999] pointer-events-none bg-transparent">
+        <div 
+          className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-75 ease-out"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+
       <Helmet>
         <title>{product ? `${product.name} - Specifications, Price & Review` : 'Product Details'} | gadgetsprohub</title>
         <meta name="description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />

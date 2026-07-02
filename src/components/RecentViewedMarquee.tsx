@@ -116,20 +116,26 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
                     className="absolute w-full h-full flex items-center justify-center p-3"
                   >
                     <img
-                      src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300'}
+                      src={(prod.images && prod.images[0] && prod.images[0].trim() !== '') ? prod.images[0] : 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300'}
                       alt={prod.name}
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300';
+                      }}
                       className="max-w-full max-h-full object-contain drop-shadow-xs group-hover:scale-105 transition-all duration-300 inline-block"
                     />
                   </motion.div>
                 </AnimatePresence>
 
-                {/* Rating overlay badge at top right */}
-                {typeof prod.rating === 'number' && (
-                  <div className="absolute top-2 right-2 bg-slate-800/80 backdrop-blur-md text-white font-extrabold font-mono text-[9px] px-1.5 py-0.5 rounded shadow-sm z-10 dark:bg-slate-800/90">
-                    ★ {prod.rating.toFixed(1)}
-                  </div>
-                )}
+                {/* Rating overlay badge at top right with baseline 4.5 fallback */}
+                {(() => {
+                  const ratingVal = typeof prod.rating === 'number' && prod.rating > 0 ? prod.rating : 4.5;
+                  return (
+                    <div className="absolute top-2 right-2 bg-slate-800/80 backdrop-blur-md text-white font-extrabold font-mono text-[9px] px-1.5 py-0.5 rounded shadow-sm z-10 dark:bg-slate-800/90">
+                      ★ {ratingVal.toFixed(1)}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Text, Brand, and title container */}

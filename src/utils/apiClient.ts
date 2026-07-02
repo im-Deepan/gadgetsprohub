@@ -46,7 +46,9 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
 
   // 1. Auto-Abort previous identical in-flight request if requested
   // This cleans up previous requests for the same endpoint (e.g. searching, typing, fast switching)
-  if (options.method === 'GET' || options.method === 'POST') {
+  // Ensure we do NOT abort the previous request if deduplication is enabled and currently coalescing active requests
+  const isDeduplicated = deduplicate && (options.method === 'GET' || !options.method);
+  if ((options.method === 'GET' || options.method === 'POST') && !(isDeduplicated && activeRequests.has(requestKey))) {
     const existingController = abortControllersRegistry.get(requestKey);
     if (existingController) {
       existingController.abort();
@@ -56,8 +58,11 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
     
     // Merge signals safely
     if (options.signal) {
-      // If user provided their own signal, listen to both
-      options.signal.addEventListener('abort', () => newController.abort());
+      if (options.signal.aborted) {
+        newController.abort();
+      } else {
+        options.signal.addEventListener('abort', () => newController.abort());
+      }
     }
     fetchOptions.signal = newController.signal;
   }
@@ -123,6 +128,9 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
         activeRequests.delete(requestKey);
         abortControllersRegistry.delete(requestKey);
       });
+      // Attach a local no-op .catch block to prevent unhandled promise rejection warnings
+      // for the master cached promise, while still allowing downstream subscribers to receive the error.
+      existingPromise.catch(() => {});
       activeRequests.set(requestKey, existingPromise);
     }
     // Return a clone of the response so multiple callers can read the body stream
