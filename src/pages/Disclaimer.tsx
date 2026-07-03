@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Gift, Info, FileWarning, ExternalLink, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Gift, Info, FileWarning, ShieldCheck } from 'lucide-react';
 
 export const Disclaimer: React.FC = () => {
   return (

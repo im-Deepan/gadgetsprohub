@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Search, Heart, User, LogOut, Menu, X, Inbox, LayoutDashboard, Gift, Sun, Moon, Keyboard } from 'lucide-react';
+import { Search, Heart, User, LogOut, Menu, X, LayoutDashboard, Sun, Moon, Keyboard } from 'lucide-react';
 import { Category, Product, Blog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../context/ThemeContext';

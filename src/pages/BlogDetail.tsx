@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
 import { Blog } from '../types';
-import { Clock, Eye, Share2, Sparkle, Tag } from 'lucide-react';
+import { Eye, Share2, Sparkle, Tag } from 'lucide-react';
 import { Helmet } from '../components/Helmet';
 
 import { Breadcrumb } from '../components/Breadcrumb';

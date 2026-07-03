@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Lock, Eye, CheckCircle2, Globe, FileText, BarChart3, Megaphone, Cookie } from 'lucide-react';
+import { ShieldCheck, Lock, FileText, BarChart3, Megaphone, Cookie } from 'lucide-react';
 
 export const PrivacyPolicy: React.FC = () => {
   return (

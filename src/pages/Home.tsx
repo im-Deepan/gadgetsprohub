@@ -3,9 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
 import { Product, Category } from '../types';
 import { 
-  Search, Star, Heart, Flame, ShieldCheck, Trophy, Sparkles, 
-  ArrowRight, Landmark, Users, CheckCircle, Smartphone,
-  Clock, History, X
+  Search, Heart, Flame, Trophy, Sparkles, 
+  ArrowRight, Clock, History, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -92,7 +91,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [recentViewed, setRecentViewed] = useState<Product[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [hasClickedFilter, setHasClickedFilter] = useState(false);
   const searchContainerRef = React.useRef<HTMLDivElement>(null);
 
   const handlePickLeftClick = (product: Product) => {
@@ -376,14 +374,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
   const trendingToShow = React.useMemo(() => {
     return (trending.length > 0 ? trending : allProducts).slice(0, 8);
   }, [trending, allProducts]);
-
-  // General products are filtered products
-  const generalProducts = React.useMemo(() => {
-    if (homeSearch) return filteredProducts;
-    
-    const trendingIds = new Set(trendingToShow.map(t => String(t._id || t.id || '')));
-    return filteredProducts.filter(prod => !trendingIds.has(String(prod._id || prod.id || '')));
-  }, [filteredProducts, homeSearch, trendingToShow]);
 
   // Sort filtered products by latest added/updated
   const latestProductsToShow = React.useMemo(() => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product, Category } from '../types';
-import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, ShieldCheck, CheckCheck, MessageSquare, Plus, Check, X, BookmarkCheck, Edit, Sparkles, Box, CheckCircle, Video, Play, Copy, Share2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, CheckCheck, MessageSquare, Check, X, BookmarkCheck, Video, Copy, Share2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Helmet } from '../components/Helmet';
@@ -68,10 +68,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const [reviewError, setReviewError] = useState('');
   const [reviewLoading, setReviewLoading] = useState(false);
 
-  // Past Orders simulation logger
-  const [orderLoading, setOrderLoading] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
-  
   // Link copying state
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
@@ -190,40 +186,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     } else {
       console.warn('Clipboard API not available');
       showToast("Clipboard API not available. Please try copying manually.", "warning", 4000, "User Action");
-    }
-  };
-
-  const handlePlaceSimulatedOrder = async () => {
-    if (!token || !product) return;
-    setOrderLoading(true);
-    try {
-      const orderItems = [{ product: product._id, quantity: 1, price: product.price }];
-      const orderRes = await apiFetch('/api/user/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          items: orderItems,
-          totalAmount: product.price
-        })
-      });
-      if (orderRes.ok) {
-        setOrderSuccess(true);
-        showToast("Your purchase reference request has been successfully submitted.", "success", 4000, "User Action");
-        setTimeout(() => setOrderSuccess(false), 3500);
-      } else {
-        const errData = await orderRes.json();
-        const friendly = mapErrorToFriendly(errData?.error || "Failed to submit order.", "submit your purchase reference");
-        showToast(friendly.message, friendly.type, 4000, friendly.category);
-      }
-    } catch (e) {
-      
-      const friendly = mapErrorToFriendly(e, "submit your purchase reference");
-      showToast(friendly.message, friendly.type, 4000, friendly.category);
-    } finally {
-      setOrderLoading(false);
     }
   };
 

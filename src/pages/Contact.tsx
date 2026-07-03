@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, MessageSquareText, ShieldAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Mail, Send, MessageSquareText, ShieldAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db, isFirebaseMock, OperationType, handleFirestoreError } from '../firebase';
+import { db, isFirebaseMock } from '../firebase';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { contactSchema } from '../utils/schemas';
 import { apiFetch } from '../utils/apiClient';
@@ -73,7 +73,6 @@ export const Contact: React.FC = () => {
       // 2. Persist to real Firestore database if active
       if (!isFirebaseMock) {
         const messageDocRef = doc(collection(db, 'messages'));
-        const messageId = messageDocRef.id;
         
         const payload: Record<string, unknown> = {
           name: name.trim(),
@@ -90,14 +89,12 @@ export const Contact: React.FC = () => {
         // Persist to Firestore in the background so slow connections or rule checks never block the main submission
         setDoc(messageDocRef, payload)
           .then(() => {
-            
             setSuccessDetail('Your communication inquiry has been submitted successfully. A specialized research analyst has been assigned to your query and will contact you via email within 24 business hours.');
-          }).catch(e => console.warn(e))
+          })
           .catch((fErr: unknown) => {
-            const errMsg = fErr instanceof Error ? fErr.message : String(fErr);
-            
+            console.warn(fErr);
             setSuccessDetail('Your communication inquiry has been submitted successfully. A specialized research analyst has been assigned to your query and will contact you via email within 24 business hours.');
-          }).catch(e => console.warn(e));
+          });
       } else {
         setSuccessDetail('Your communication inquiry has been submitted successfully. A specialized research analyst has been assigned to your query and will contact you via email within 24 business hours.');
       }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scale, ShieldCheck, HelpCircle, FileText, Globe, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Scale, HelpCircle, FileText, Globe, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 export const TermsConditions: React.FC = () => {
   return (

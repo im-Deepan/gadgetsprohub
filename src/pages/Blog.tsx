@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
-import { Search, Compass, BookOpen, Clock, ChevronRight } from 'lucide-react';
+import { Search, Compass, BookOpen, ChevronRight } from 'lucide-react';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from '../components/Helmet';

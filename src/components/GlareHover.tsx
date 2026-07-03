@@ -1,10 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 
 interface GlareHoverProps {
   children: React.ReactNode;
   glareColor?: string;
   glareOpacity?: number;
-  glareAngle?: number;
   glareSize?: number;
   transitionDuration?: number;
   playOnce?: boolean;
@@ -15,7 +14,6 @@ export const GlareHover: React.FC<GlareHoverProps> = ({
   children,
   glareColor = '#ffffff',
   glareOpacity = 0.2,
-  glareAngle = -30,
   glareSize = 100,
   transitionDuration = 700,
   playOnce = false,

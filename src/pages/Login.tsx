@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { useTheme } from '../context/ThemeContext';
 import { Lock, Mail, User, ShieldCheck, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { loginSchema, registerSchema } from '../utils/schemas';
 import { apiFetch } from '../utils/apiClient';
@@ -115,7 +114,6 @@ const LoginErrorDisplay: React.FC<{ error: string; onClear: () => void }> = ({ e
 export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   const { login, register, loginWithGoogle, isAuthenticated, user } = useAuth();
   const { showToast } = useToast();
-  const { isDark } = useTheme();
   
   // Tab states
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
