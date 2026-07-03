@@ -1,5 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { QueryClient, QueryClientProvider, useIsFetching, useIsMutating } from '@tanstack/react-query';
+import { QueryClientProvider, useIsFetching, useIsMutating } from '@tanstack/react-query';
+import { queryClient } from './utils/queryClient';
+import { prefetchData } from './utils/prefetcher';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider, useToast } from './context/ToastContext';
@@ -171,7 +173,7 @@ const AboutUs = dynamicLoadWithPreload(() => import('./pages/AboutUs').then(m =>
 const TermsConditions = dynamicLoadWithPreload(() => import('./pages/TermsConditions').then(m => ({ default: m.TermsConditions })));
 const Disclaimer = dynamicLoadWithPreload(() => import('./pages/Disclaimer').then(m => ({ default: m.Disclaimer })));
 
-export const preloadView = (view: AppView) => {
+export const preloadView = (view: AppView, slug?: string) => {
   try {
     const handlePreload = (promise?: Promise<any>) => {
       promise?.catch?.((err) => captureError(err, { context: 'preloadView promise', view }));
@@ -217,8 +219,10 @@ export const preloadView = (view: AppView) => {
         handlePreload(Disclaimer.preload?.());
         break;
     }
+    // Prefetch API and TanStack state cache
+    prefetchData(view, slug);
   } catch (err) {
-    captureError(err, { context: 'preloadView', view });
+    captureError(err, { context: 'preloadView', view, slug });
   }
 };
 
@@ -736,11 +740,11 @@ const AppContent: React.FC = () => {
   const renderActiveView = () => {
     switch (activeView) {
       case 'home':
-        return <Home onNavigate={navigateToView} />;
+        return <Home onNavigate={navigateToView} onPreload={preloadView} />;
       case 'products':
         return (
           <Suspense fallback={<ProductPageSkeleton />}>
-            <ProductList initialFilter={selectedSlug} onNavigate={navigateToView} />
+            <ProductList initialFilter={selectedSlug} onNavigate={navigateToView} onPreload={preloadView} />
           </Suspense>
         );
       case 'product-detail':
@@ -748,7 +752,7 @@ const AppContent: React.FC = () => {
       case 'blogs':
         return (
           <Suspense fallback={<BlogPageSkeleton />}>
-            <BlogList onNavigate={navigateToView} />
+            <BlogList onNavigate={navigateToView} onPreload={preloadView} />
           </Suspense>
         );
       case 'blog-detail':
@@ -819,15 +823,7 @@ const AppContent: React.FC = () => {
   );
 };
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // 5 minutes caching
-    },
-  },
-});
+// queryClient is now imported from './utils/queryClient'
 
 const setupGlobalErrorTracking = () => {
   window.addEventListener('error', (event) => {

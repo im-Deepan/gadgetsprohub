@@ -7,6 +7,7 @@ export interface Toast {
   type: 'success' | 'error' | 'warning' | 'info';
   category?: 'System Status' | 'User Action' | 'Connectivity';
   duration?: number;
+  onUndo?: () => void;
 }
 
 interface ToastContextType {
@@ -14,7 +15,8 @@ interface ToastContextType {
     message: string,
     type?: Toast['type'],
     duration?: number,
-    category?: Toast['category']
+    category?: Toast['category'] | string,
+    onUndo?: () => void
   ) => void;
   toasts: Toast[];
   removeToast: (id: string) => void;
@@ -46,7 +48,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     message: string,
     type: Toast['type'] = 'info',
     duration = 4000,
-    category?: Toast['category'] | string
+    category?: Toast['category'] | string,
+    onUndo?: () => void
   ) => {
     const id = window.crypto.randomUUID();
     
@@ -105,7 +108,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       mappedCategory = 'System Status';
     }
 
-    setToasts((prev) => [...prev, { id, message: refinedMessage, type, duration, category: mappedCategory }]);
+    setToasts((prev) => [...prev, { id, message: refinedMessage, type, duration, category: mappedCategory, onUndo }]);
 
     const timeoutId = setTimeout(() => {
       removeToast(id);
@@ -175,6 +178,21 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 <span className={`text-xs font-medium leading-relaxed ${textColor}`}>
                   {toast.message}
                 </span>
+                {toast.onUndo && (
+                  <div className="mt-1.5 flex">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toast.onUndo?.();
+                        removeToast(toast.id);
+                      }}
+                      className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-white/15 hover:bg-white/25 active:scale-95 text-white shadow-sm border border-white/10 transition-all cursor-pointer"
+                    >
+                      Undo
+                    </button>
+                  </div>
+                )}
               </div>
               <button
                 type="button"

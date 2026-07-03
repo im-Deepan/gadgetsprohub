@@ -20,6 +20,17 @@ const activeRequests = new Map<string, Promise<Response>>();
 // Registry for auto-aborting previous duplicate requests
 const abortControllersRegistry = new Map<string, AbortController>();
 
+// Memory cache to store completed GET responses with a Time To Live (TTL)
+const completedRequestsCache = new Map<string, { response: Response; timestamp: number }>();
+const CACHE_TTL_MS = 45000; // Cache GET requests for 45 seconds by default to enable lightning fast Back/Forward and Page transitions
+
+/**
+ * Manually clears the API client-side response cache
+ */
+export function clearApiCache(): void {
+  completedRequestsCache.clear();
+}
+
 /**
  * Generates a unique deterministic key for a request to identify duplicates
  */
@@ -43,12 +54,26 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
   } = options;
 
   const requestKey = getRequestKey(url, options);
+  const isGet = !options.method || options.method.toUpperCase() === 'GET';
+
+  // Check GET memory cache
+  if (isGet) {
+    const cachedEntry = completedRequestsCache.get(requestKey);
+    if (cachedEntry) {
+      const isExpired = Date.now() - cachedEntry.timestamp > CACHE_TTL_MS;
+      if (!isExpired) {
+        return cachedEntry.response.clone();
+      } else {
+        completedRequestsCache.delete(requestKey);
+      }
+    }
+  }
 
   // 1. Auto-Abort previous identical in-flight request if requested
   // This cleans up previous requests for the same endpoint (e.g. searching, typing, fast switching)
   // Ensure we do NOT abort the previous request if deduplication is enabled and currently coalescing active requests
-  const isDeduplicated = deduplicate && (options.method === 'GET' || !options.method);
-  if ((options.method === 'GET' || options.method === 'POST') && !(isDeduplicated && activeRequests.has(requestKey))) {
+  const isDeduplicated = deduplicate && isGet;
+  if ((isGet || options.method === 'POST') && !(isDeduplicated && activeRequests.has(requestKey))) {
     const existingController = abortControllersRegistry.get(requestKey);
     if (existingController) {
       existingController.abort();
@@ -121,24 +146,45 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
   };
 
   // 2. Coalescing / Deduplicating identical active requests to prevent double-firing
-  if (deduplicate && (options.method === 'GET' || !options.method)) {
+  if (deduplicate && isGet) {
     let existingPromise = activeRequests.get(requestKey);
     if (!existingPromise) {
-      existingPromise = executeFetchWithRetry().finally(() => {
+      const p = executeFetchWithRetry();
+      p.catch(() => {}); // Prevent unhandled rejection on base promise
+      existingPromise = p.finally(() => {
         activeRequests.delete(requestKey);
         abortControllersRegistry.delete(requestKey);
       });
-      // Attach a local no-op .catch block to prevent unhandled promise rejection warnings
-      // for the master cached promise, while still allowing downstream subscribers to receive the error.
       existingPromise.catch(() => {});
       activeRequests.set(requestKey, existingPromise);
     }
     // Return a clone of the response so multiple callers can read the body stream
-    return existingPromise.then(res => res.clone());
+    const returnedPromise = existingPromise.then(res => {
+      // Cache the response if it is successful and is a GET
+      if (res.ok) {
+        completedRequestsCache.set(requestKey, {
+          response: res.clone(),
+          timestamp: Date.now()
+        });
+      }
+      return res.clone();
+    });
+    returnedPromise.catch(() => {}); // Prevent unhandled rejection on the returned cloned promise
+    return returnedPromise;
   }
 
   // If deduplication is not needed (e.g. POST/PUT/DELETE mutations), run directly
-  return executeFetchWithRetry().finally(() => {
+  const p = executeFetchWithRetry();
+  p.catch(() => {}); // Prevent unhandled rejection of original promise
+  const returnedPromise = p.then(res => {
+    // Invalidate the entire GET cache on any successful non-GET mutation
+    if (res.ok && options.method && options.method.toUpperCase() !== 'GET') {
+      clearApiCache();
+    }
+    return res;
+  }).finally(() => {
     abortControllersRegistry.delete(requestKey);
   });
+  returnedPromise.catch(() => {}); // Prevent unhandled rejection on the returned promise
+  return returnedPromise;
 }

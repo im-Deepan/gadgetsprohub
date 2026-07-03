@@ -7,12 +7,14 @@ interface RecentViewedMarqueeProps {
   recentViewed: Product[];
   onNavigate: (view: string, slug?: string) => void;
   onClear: () => void;
+  onPickLeftClick?: (product: Product) => void;
 }
 
 export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
   recentViewed,
   onNavigate,
   onClear,
+  onPickLeftClick,
 }) => {
   if (!recentViewed || recentViewed.length === 0) return null;
 
@@ -92,7 +94,11 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
               key={`slot-${slotIndex}`}
               className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-800 transition-all hover:shadow-md hover:border-slate-200 dark:hover:border-slate-600 aspect-square flex flex-col justify-between p-4 group cursor-pointer ${responsiveClass}`}
               onClick={() => {
-                if (prod.slug) onNavigate('product-detail', prod.slug);
+                if (onPickLeftClick) {
+                  onPickLeftClick(prod);
+                } else if (prod.slug) {
+                  onNavigate('product-detail', prod.slug);
+                }
               }}
             >
               {/* Vertical Marquee Slide with AnimatePresence */}

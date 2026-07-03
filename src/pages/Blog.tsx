@@ -9,6 +9,7 @@ import { Breadcrumb } from '../components/Breadcrumb';
 
 interface BlogProps {
   onNavigate: (view: string, slug?: string) => void;
+  onPreload?: (view: any, slug?: string) => void;
 }
 
 const BlogCardSkeleton = () => (
@@ -22,7 +23,7 @@ const BlogCardSkeleton = () => (
   </div>
 );
 
-export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
+export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedSub, setSelectedSub] = useState('');
@@ -159,6 +160,9 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate }) => {
                 transition={{ type: 'spring', damping: 22, stiffness: 160 }}
                 className="group flex flex-col rounded-2xl border border-slate-50 bg-white hover:shadow-xl hover:border-slate-100/50 shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden cursor-pointer"
                 onClick={() => onNavigate('blog-detail', b.slug)}
+                onMouseEnter={() => {
+                  if (b.slug) onPreload?.('blog-detail', b.slug);
+                }}
               >
                 <div className="h-48 bg-slate-50 overflow-hidden relative shrink-0">
                   <img

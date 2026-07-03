@@ -69,10 +69,19 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
   }, []);
 
   const handleShareClick = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopiedLink(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = window.setTimeout(() => setCopiedLink(false), 2000);
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => {
+          setCopiedLink(true);
+          if (timerRef.current) clearTimeout(timerRef.current);
+          timerRef.current = window.setTimeout(() => setCopiedLink(false), 2000);
+        })
+        .catch((err) => {
+          console.warn('Failed to copy blog URL using clipboard API:', err);
+        });
+    } else {
+      console.warn('Clipboard API is not available in this environment');
+    }
   };
 
   if (loading) {

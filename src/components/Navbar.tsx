@@ -10,7 +10,7 @@ import { apiFetch } from '../utils/apiClient';
 interface NavbarProps {
   currentView: string;
   onNavigate: (view: string, slug?: string) => void;
-  onPreload?: (view: string) => void;
+  onPreload?: (view: any, slug?: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPreload }) => {

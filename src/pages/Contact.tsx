@@ -92,12 +92,12 @@ export const Contact: React.FC = () => {
           .then(() => {
             
             setSuccessDetail('Your communication inquiry has been submitted successfully. A specialized research analyst has been assigned to your query and will contact you via email within 24 business hours.');
-          })
+          }).catch(e => console.warn(e))
           .catch((fErr: unknown) => {
             const errMsg = fErr instanceof Error ? fErr.message : String(fErr);
             
-            setSuccessDetail('Your communication response has been processed successfully. A specialized research analyst has been assigned to your query and will email you back shortly.');
-          });
+            setSuccessDetail('Your communication inquiry has been submitted successfully. A specialized research analyst has been assigned to your query and will contact you via email within 24 business hours.');
+          }).catch(e => console.warn(e));
       } else {
         setSuccessDetail('Your communication inquiry has been submitted successfully. A specialized research analyst has been assigned to your query and will contact you via email within 24 business hours.');
       }

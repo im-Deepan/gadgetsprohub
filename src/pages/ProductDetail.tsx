@@ -137,16 +137,21 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   };
 
   const fallbackShareToClipboard = () => {
-    navigator.clipboard.writeText(window.location.href)
-      .then(() => {
-        showToast("Product link copied to clipboard for direct sharing.", "success", 4000, "User Action");
-        setShared(true);
-        setTimeout(() => setShared(false), 2000);
-      })
-      .catch((err) => {
-        
-        showToast("Unable to copy product link to your clipboard. Please check browser permissions.", "error", 4000, "User Action");
-      });
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => {
+          showToast("Product link copied to clipboard for direct sharing.", "success", 4000, "User Action");
+          setShared(true);
+          setTimeout(() => setShared(false), 2000);
+        })
+        .catch((err) => {
+          console.warn('Clipboard copy error:', err);
+          showToast("Unable to copy product link to your clipboard. Please check browser permissions.", "error", 4000, "User Action");
+        });
+    } else {
+      console.warn('Clipboard API not available');
+      showToast("Clipboard API not available. Please copy the URL from the address bar.", "warning", 4000, "User Action");
+    }
   };
 
   const handleCopyLinkClick = () => {
@@ -171,16 +176,21 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       return;
     }
 
-    navigator.clipboard.writeText(validatedUrl)
-      .then(() => {
-        showToast("Reference purchase link successfully copied to your clipboard.", "success", 4000, "User Action");
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch((err) => {
-        
-        showToast("Unable to copy reference link. Please try copying manually.", "error", 4000, "User Action");
-      });
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(validatedUrl)
+        .then(() => {
+          showToast("Reference purchase link successfully copied to your clipboard.", "success", 4000, "User Action");
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch((err) => {
+          console.warn('Clipboard copy error:', err);
+          showToast("Unable to copy reference link. Please try copying manually.", "error", 4000, "User Action");
+        });
+    } else {
+      console.warn('Clipboard API not available');
+      showToast("Clipboard API not available. Please try copying manually.", "warning", 4000, "User Action");
+    }
   };
 
   const handlePlaceSimulatedOrder = async () => {
@@ -1008,7 +1018,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
               {isAuthenticated && (
                 <button
-                  onClick={() => toggleWishlist(product._id)}
+                  onClick={() => toggleWishlist(product._id, product.name)}
                   className={`flex h-12 w-12 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-100 text-rose-500' : 'bg-white border-slate-100 hover:bg-slate-50 text-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'}`}
                   title="Bookmark item"
                   aria-label={wishlist.includes(product._id) ? "Remove from wishlist" : "Add to wishlist"}

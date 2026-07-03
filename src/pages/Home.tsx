@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Helmet } from '../components/Helmet';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
@@ -24,6 +25,7 @@ import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage'
 
 interface HomeProps {
   onNavigate: (view: string, slug?: string) => void;
+  onPreload?: (view: any, slug?: string) => void;
 }
 
 const ProductCardSkeleton = () => (
@@ -41,8 +43,13 @@ const ProductCardSkeleton = () => (
   </div>
 );
 
-export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
-  const { wishlist, toggleWishlist, isAuthenticated } = useAuth();
+export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
+  const { wishlist, toggleWishlist, isAuthenticated, user } = useAuth();
+  const { showToast } = useToast();
+
+  const [pickLeftModalProd, setPickLeftModalProd] = useState<Product | null>(null);
+  const [pickLeftEmail, setPickLeftEmail] = useState(safeGetItem('pick_left_subscribed_email') || '');
+  const [isSubmittingPickLeft, setIsSubmittingPickLeft] = useState(false);
   
   // 1. Trending Queries via TanStack Query
   const { data: trendingData = [] } = useQuery<Product[]>({
@@ -87,6 +94,76 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [hasClickedFilter, setHasClickedFilter] = useState(false);
   const searchContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const handlePickLeftClick = (product: Product) => {
+    const catName = typeof product.category === 'object' && product.category 
+      ? (product.category as any).name 
+      : (categories.find(c => c._id === product.category || c.slug === product.category)?.name || 'Electronics');
+
+    if (user && user.email) {
+      // Auto-register interest for logged in user
+      apiFetch('/api/products/pick-left-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product._id, email: user.email, categoryName: catName })
+      })
+      .then(async (res) => {
+        if (res.ok) {
+          showToast(`🔔 Direct alerts enabled! We'll email you at ${user.email} when new ${catName} products arrive.`, 'success', 5000);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          console.warn('Pick-left interest error:', errData.error);
+        }
+      })
+      .catch(e => console.warn('Interest tracking error:', e));
+
+      // Navigate to product page
+      if (product.slug) onNavigate('product-detail', product.slug);
+    } else {
+      // Set state to open the popup modal
+      setPickLeftModalProd(product);
+    }
+  };
+
+  const handlePickLeftSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pickLeftModalProd) return;
+
+    if (!pickLeftEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pickLeftEmail)) {
+      showToast('Please enter a valid email address.', 'error');
+      return;
+    }
+
+    setIsSubmittingPickLeft(true);
+    const catName = typeof pickLeftModalProd.category === 'object' && pickLeftModalProd.category 
+      ? (pickLeftModalProd.category as any).name 
+      : (categories.find(c => c._id === pickLeftModalProd.category || c.slug === pickLeftModalProd.category)?.name || 'Electronics');
+
+    try {
+      const res = await apiFetch('/api/products/pick-left-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: pickLeftModalProd._id, email: pickLeftEmail, categoryName: catName })
+      });
+
+      if (res.ok) {
+        safeSetItem('pick_left_subscribed_email', pickLeftEmail);
+        showToast(`📬 Newsletter alert registered! We'll email you at ${pickLeftEmail} when new ${catName} items are added.`, 'success', 5000);
+        
+        // Navigate
+        const slug = pickLeftModalProd.slug;
+        setPickLeftModalProd(null);
+        if (slug) onNavigate('product-detail', slug);
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to subscribe to category alerts.', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Network error occurred.', 'error');
+    } finally {
+      setIsSubmittingPickLeft(false);
+    }
+  };
 
   // Load recent searches on client side
   useEffect(() => {
@@ -608,6 +685,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         <RecentViewedMarquee
           recentViewed={recentViewed}
           onNavigate={onNavigate}
+          onPickLeftClick={handlePickLeftClick}
           onClear={() => {
             setRecentViewed([]);
             safeRemoveItem('aff_recent_viewed');
@@ -702,6 +780,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                       <div 
                         onClick={() => {
                           if (prod.slug) onNavigate('product-detail', prod.slug);
+                        }}
+                        onMouseEnter={() => {
+                          if (prod.slug) onPreload?.('product-detail', prod.slug);
                         }}
                         className="w-full h-full p-2 flex flex-col items-center justify-between group/item"
                         title={`View ${prod.name}`}
@@ -822,6 +903,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     onClick={() => {
                       if (prod.slug) onNavigate('product-detail', prod.slug);
                     }}
+                    onMouseEnter={() => {
+                      if (prod.slug) onPreload?.('product-detail', prod.slug);
+                    }}
                     className="group"
                   >
                     <BorderGlow
@@ -846,7 +930,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                       
                       {isAuthenticated && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); toggleWishlist(prod._id); }}
+                          onClick={(e) => { e.stopPropagation(); toggleWishlist(prod._id, prod.name); }}
                           className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-slate-400 shadow-xs hover:text-rose-400 dark:bg-slate-800/90 dark:text-slate-200 dark:hover:text-rose-400 transition-colors cursor-pointer border-none"
                           title="Bookmark product" aria-label="Bookmark product"
                         >
@@ -929,6 +1013,105 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-12 mb-8" id="home-newsletter-subscribe-section">
         <NewsletterSubscribe variant="inline" />
       </div>
+
+      {/* "Pick Where You Left Off" Subscription Modal */}
+      <AnimatePresence>
+        {pickLeftModalProd && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPickLeftModalProd(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 z-10"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setPickLeftModalProd(null)}
+                className="absolute right-4 top-4 rounded-xl p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="flex flex-col items-center text-center">
+                {/* Visual Icon */}
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-500 dark:bg-indigo-950/50 dark:text-indigo-400">
+                  <Sparkles className="h-7 w-7" />
+                </div>
+
+                <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+                  📬 Direct Curation Alerts
+                </h3>
+                
+                <p className="mt-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                  Would you like to receive a direct email alert whenever we add brand new premium curation products in the{' '}
+                  <span className="font-extrabold text-indigo-500">
+                    "{typeof pickLeftModalProd.category === 'object' && pickLeftModalProd.category
+                      ? (pickLeftModalProd.category as any).name
+                      : (categories.find(c => c._id === pickLeftModalProd.category || c.slug === pickLeftModalProd.category)?.name || 'Electronics')}"
+                  </span>{' '}
+                  category?
+                </p>
+
+                <form onSubmit={handlePickLeftSubmit} className="mt-6 w-full space-y-3">
+                  <div>
+                    <label htmlFor="pick-left-email-input" className="sr-only">
+                      Gmail Address
+                    </label>
+                    <input
+                      id="pick-left-email-input"
+                      type="email"
+                      required
+                      placeholder="Enter your Gmail address..."
+                      value={pickLeftEmail}
+                      onChange={(e) => setPickLeftEmail(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950/50 dark:text-white dark:focus:border-indigo-500 dark:focus:bg-slate-900 dark:focus:ring-indigo-950"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingPickLeft}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-500 hover:bg-indigo-600 active:scale-98 text-white py-3 px-4 text-xs font-extrabold tracking-wider uppercase shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingPickLeft ? (
+                      <span>Enabling Alert...</span>
+                    ) : (
+                      <>
+                        <span>Enable Alert & View Product</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const slug = pickLeftModalProd.slug;
+                    setPickLeftModalProd(null);
+                    if (slug) onNavigate('product-detail', slug);
+                  }}
+                  className="mt-3 w-full rounded-2xl border border-slate-100 bg-white hover:bg-slate-50 active:scale-98 text-slate-500 py-3 px-4 text-xs font-bold transition-all cursor-pointer dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/50 dark:text-slate-400"
+                >
+                  No thanks, just view product
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -3,11 +3,48 @@ export interface ErrorContext {
 }
 
 export const captureError = (error: Error | unknown, context?: ErrorContext) => {
+  let message = '';
+  let name = '';
+  let stack = undefined;
+
+  if (error instanceof Error) {
+    message = error.message;
+    name = error.name;
+    stack = error.stack;
+  } else if (error && typeof error === 'object') {
+    name = 'name' in error ? String((error as any).name) : '';
+    message = 'message' in error ? String((error as any).message) : String(error);
+    stack = 'stack' in error ? String((error as any).stack) : undefined;
+  } else {
+    message = String(error);
+  }
+
+  const normalizedMessage = message.toLowerCase();
+  const normalizedName = name.toLowerCase();
+
+  // Suppress expected/normal request cancellation and abort error noise
+  if (
+    normalizedName === 'aborterror' ||
+    normalizedName === 'abort' ||
+    normalizedMessage === 'canceled' ||
+    normalizedMessage.includes('abort') ||
+    normalizedMessage.includes('canceled') ||
+    normalizedMessage.includes('cancelled') ||
+    normalizedMessage.includes('aborted') ||
+    normalizedMessage === 'query was cancelled by user' ||
+    normalizedMessage.includes('failed to fetch') ||
+    normalizedMessage.includes('networkerror') ||
+    normalizedMessage.includes('network error')
+  ) {
+    return;
+  }
+
   const timestamp = new Date().toISOString();
   const errorDetails = {
     timestamp,
-    message: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : undefined,
+    message,
+    name,
+    stack,
     context,
   };
 

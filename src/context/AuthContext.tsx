@@ -18,7 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   wishlist: string[];
-  toggleWishlist: (productId: string) => Promise<void>;
+  toggleWishlist: (productId: string, productName?: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -320,13 +320,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setWishlist([]);
   };
 
-  const toggleWishlist = async (productId: string) => {
-    if (!token) return;
+  const toggleWishlist = async (productId: string, productName?: string) => {
+    if (!token) {
+      showToast("Please sign in to save products to your bookmarks.", "warning", 4000, "User Action");
+      return;
+    }
     const previousWishlist = [...wishlist];
     
     // Optimistic UI update
     const isWished = wishlist.includes(productId);
     setWishlist(isWished ? wishlist.filter(id => id !== productId) : [...wishlist, productId]);
+    
+    const displayLabel = productName ? `"${productName}"` : "Product";
+    const actionMsg = isWished 
+      ? `${displayLabel} removed from bookmarks.`
+      : `${displayLabel} added to bookmarks.`;
+
+    // Show toast with elegant Undo action
+    showToast(
+      actionMsg,
+      isWished ? 'info' : 'success',
+      5000,
+      'User Action',
+      () => {
+        toggleWishlist(productId, productName);
+      }
+    );
     
     try {
       const res = await fetch(`/api/user/wishlist/${productId}`, {

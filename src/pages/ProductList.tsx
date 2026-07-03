@@ -4,6 +4,7 @@ import { apiFetch } from '../utils/apiClient';
 import { Product, Category } from '../types';
 import { Search, Heart, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Grid, List, Star, X, CheckCheck, ShieldCheck, ShoppingBag, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from '../components/Helmet';
 import { Breadcrumb } from '../components/Breadcrumb';
@@ -16,6 +17,7 @@ import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage'
 interface ProductListProps {
   initialFilter?: string | null;
   onNavigate: (view: string, slug?: string) => void;
+  onPreload?: (view: any, slug?: string) => void;
 }
 
 const ProductCardSkeleton = () => (
@@ -52,8 +54,9 @@ const getCategoryEmoji = (categoryName: string | undefined | null) => {
   return '📦';
 };
 
-export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavigate }) => {
+export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavigate, onPreload }) => {
   const { wishlist, toggleWishlist, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   
   // States
   const [specModalProduct, setSpecModalProduct] = useState<Product | null>(null);
@@ -323,11 +326,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             if (res.ok) return res.json();
             throw new Error('Product not found');
           })
-          .then(data => {
-            if (data) {
-              setSpecModalProduct(data);
-            }
-          })
+          .then(data => { if (data) { setSpecModalProduct(data); } })
           .catch(err => {
             if (err.name !== 'AbortError') {
               console.warn('ProductList specification modal product fetch error:', err);
@@ -457,6 +456,16 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
 
   const handleResetFilters = () => {
+    const previousSearch = search;
+    const previousSelectedCategory = selectedCategory;
+    const previousSelectedSubcategory = selectedSubcategory;
+    const previousMinPrice = minPrice;
+    const previousMaxPrice = maxPrice;
+    const previousMinRating = minRating;
+    const previousSortField = sortField;
+    const previousCurrentPage = currentPage;
+    const previousExpandedSections = { ...expandedSections };
+
     setSearch('');
     setSelectedCategory('');
     setSelectedSubcategory('');
@@ -466,6 +475,45 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     setSortField('newest');
     setCurrentPage(1);
     setExpandedSections({});
+
+    showToast(
+      "All active filters have been cleared.",
+      "info",
+      5000,
+      "User Action",
+      () => {
+        setSearch(previousSearch);
+        setSelectedCategory(previousSelectedCategory);
+        setSelectedSubcategory(previousSelectedSubcategory);
+        setMinPrice(previousMinPrice);
+        setMaxPrice(previousMaxPrice);
+        setMinRating(previousMinRating);
+        setSortField(previousSortField);
+        setCurrentPage(previousCurrentPage);
+        setExpandedSections(previousExpandedSections);
+        showToast("Filters restored successfully.", "success", 3000, "User Action");
+      }
+    );
+  };
+
+  const handleClearSubcategoryFilter = () => {
+    const previousSub = selectedSubcategory;
+    const previousPage = currentPage;
+    
+    setSelectedSubcategory('');
+    setCurrentPage(1);
+    
+    showToast(
+      `Subcategory "${previousSub}" filter cleared.`,
+      "info",
+      5000,
+      "User Action",
+      () => {
+        setSelectedSubcategory(previousSub);
+        setCurrentPage(previousPage);
+        showToast("Subcategory filter restored.", "success", 3000, "User Action");
+      }
+    );
   };
 
   const renderProductCard = (p: Product) => (
@@ -475,6 +523,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
       onClick={() => onNavigate('product-detail', p.slug)}
+      onMouseEnter={() => {
+        if (p.slug) onPreload?.('product-detail', p.slug);
+      }}
       className="group"
     >
       <BorderGlow
@@ -508,7 +559,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
         {isAuthenticated && (
           <button
-            onClick={(e) => { e.stopPropagation(); toggleWishlist(p._id); }}
+            onClick={(e) => { e.stopPropagation(); toggleWishlist(p._id, p.name); }}
             className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm hover:text-rose-400 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           >
             <Heart className={`h-4 w-4 ${wishlist.includes(p._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
@@ -550,7 +601,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           <div className="flex items-center gap-2">
             {viewStyle === 'list' && isAuthenticated && (
               <button
-                onClick={(e) => { e.stopPropagation(); toggleWishlist(p._id); }}
+                onClick={(e) => { e.stopPropagation(); toggleWishlist(p._id, p.name); }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-50 text-slate-400 hover:text-rose-400 dark:border-slate-700 dark:bg-slate-800 cursor-pointer"
               >
                 <Heart className={`h-4 w-4 ${wishlist.includes(p._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
@@ -669,7 +720,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             <select
               value={sortField}
               onChange={(e) => { setSortField(e.target.value); setCurrentPage(1); }}
-              className="rounded-lg border border-slate-100 bg-white py-1.5 pl-10 pr-4 text-xs font-semibold text-slate-600 outline-none focus:border-indigo-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="rounded-lg border border-slate-100 bg-white py-1.5 pl-10 pr-4 text-xs font-semibold text-slate-600 outline-none focus:border-indigo-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors"
             >
               <option value="newest">Sort: Newest First</option>
               <option value="price-asc">Sort: Price Low-High</option>
@@ -696,7 +747,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 {selectedSubcategory && (
                   <button
                     type="button"
-                    onClick={() => { setSelectedSubcategory(''); setCurrentPage(1); }}
+                    onClick={handleClearSubcategoryFilter}
                     className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-600 dark:text-indigo-300 cursor-pointer"
                   >
                     Clear Filter
@@ -707,7 +758,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => { setSelectedSubcategory(''); setCurrentPage(1); }}
+                  onClick={handleClearSubcategoryFilter}
                   className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 cursor-pointer ${
                     !selectedSubcategory
                       ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/10'

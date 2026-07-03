@@ -113,10 +113,19 @@ export async function validateAndCheckRealEmail(email: string): Promise<{ isVali
     }
   }
 
+  // Helper to add UDP/TCP DNS timeout
+  const withDnsTimeout = <T>(promise: Promise<T>, ms: number = 5000): Promise<T> => {
+    let timer: NodeJS.Timeout;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('DNS Timeout')), ms);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+  };
+
   // Real-time DNS MX record/A record check to ensure the domain actually exists and can receive mail!
   try {
-    // Attempt to lookup MX records
-    const mxRecords = await resolveMx(normalizedDomain);
+    // Attempt to lookup MX records with timeout
+    const mxRecords = await withDnsTimeout(resolveMx(normalizedDomain));
     if (!mxRecords || mxRecords.length === 0) {
       return { 
         isValid: false, 
@@ -134,7 +143,7 @@ export async function validateAndCheckRealEmail(email: string): Promise<{ isVali
     }
     
     try {
-      await resolveAny(normalizedDomain);
+      await withDnsTimeout(resolveAny(normalizedDomain));
     } catch (fallbackErr: unknown) {
       const fallbackErrorObj = fallbackErr as { code?: string };
       if (fallbackErrorObj.code === 'ENOTFOUND' || fallbackErrorObj.code === 'EREFUSED') {

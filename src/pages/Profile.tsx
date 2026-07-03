@@ -203,7 +203,8 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
   }, [wishlist, token]);
 
   const handleRemoveBookmark = async (id: string) => {
-    await toggleWishlist(id);
+    const p = wishlistProducts.find(item => item._id === id);
+    await toggleWishlist(id, p?.name);
     // instant refresh
     setWishlistProducts(prev => prev.filter(p => p._id !== id));
   };
