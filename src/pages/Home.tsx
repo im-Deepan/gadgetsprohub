@@ -353,7 +353,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
 
   // Filter products in real-time based on the hero search query and active category filter
   const filteredProducts = React.useMemo(() => {
-    return allProducts.filter(prod => {
+    return allProducts.filter((prod: Product) => {
       const matchesSearch = 
         prod.name.toLowerCase().includes(homeSearch.toLowerCase()) ||
         (prod.brand && prod.brand.toLowerCase().includes(homeSearch.toLowerCase())) ||
@@ -370,15 +370,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
     });
   }, [allProducts, homeSearch, activeCategory]);
 
-  // Identify products listed under "Top Recommendations & Trending Choices" section (first 8 trending/products)
-  const trendingToShow = React.useMemo(() => {
-    return (trending.length > 0 ? trending : allProducts).slice(0, 8);
-  }, [trending, allProducts]);
-
   // Sort filtered products by latest added/updated
   const latestProductsToShow = React.useMemo(() => {
     const parsedTimes = new Map<string, number>();
-    filteredProducts.forEach(p => {
+    filteredProducts.forEach((p: Product) => {
       const time = p.createdAt ? new Date(p.createdAt).getTime() : 0;
       parsedTimes.set(p._id, time);
     });
@@ -401,7 +396,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
       : categories.filter(c => String(c._id) === String(activeCategory));
 
     const standardCols = filteredCats.map(cat => {
-      let catProducts = allProducts.filter(prod => {
+      let catProducts = allProducts.filter((prod: Product) => {
         const prodCatId = getCategoryId(prod.category);
         return String(prodCatId) === String(cat._id);
       });
@@ -409,7 +404,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
       // Filter by search query if user typed in the hero search bar
       if (homeSearch.trim()) {
         const query = homeSearch.toLowerCase();
-        catProducts = catProducts.filter(prod => 
+        catProducts = catProducts.filter((prod: Product) => 
           prod.name.toLowerCase().includes(query) ||
           (prod.brand && prod.brand.toLowerCase().includes(query)) ||
           prod.description.toLowerCase().includes(query)
@@ -440,7 +435,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         products: sorted,
         latestFour: sorted.slice(0, 4)
       };
-    }).filter(col => col.products.length > 0);
+    }).filter((col: any) => col.products.length > 0);
 
     return [...list, ...standardCols];
   }, [categories, allProducts, activeCategory, homeSearch]);
@@ -757,7 +752,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
 
                 {/* Grid with exactly up to 4 latest images of the collection */}
                 <div className="grid grid-cols-2 gap-3 bg-slate-50/50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-50/60 dark:border-slate-800 min-h-[220px] items-center justify-center">
-                  {latestFour.map(prod => (
+                  {latestFour.map((prod: any) => (
                     <div className="group" key={prod._id}>
                       <BorderGlow
                         className="relative aspect-square bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100/50 dark:border-slate-800/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-400/40 dark:hover:border-slate-600 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
 import { Product, Category } from '../types';
@@ -11,7 +11,7 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
 
-import { getCategoryId, getCategoryName } from '../utils/category';
+import { getCategoryName } from '../utils/category';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 
 interface ProductListProps {
@@ -163,7 +163,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     // 1. Identify "Shoes" first vs other categories
     const shoes: Product[] = [];
 
-    products.forEach(p => {
+    products.forEach((p: Product) => {
       // Find the normalized category name of this product
       const catName = getCategoryName(p.category, categories);
 

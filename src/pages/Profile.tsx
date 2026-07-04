@@ -7,8 +7,8 @@ import { mapErrorToFriendly } from '../utils/errorMapper';
 import { apiFetch } from '../utils/apiClient';
 import { profileSchema, emailChangeSchema } from '../utils/schemas';
 import { 
-  User, Heart, ExternalLink, ShieldCheck, Mail, LogOut, Sparkle, Tag, Trash2,
-  ShoppingBag, Truck, Calendar, DollarSign, CheckCircle, Box, AlertCircle, MapPin,
+  Heart, ShieldCheck, Mail, LogOut, Sparkle, Trash2,
+  CheckCircle, AlertCircle, MapPin,
   Clock, ArrowRight, RefreshCw
 } from 'lucide-react';
 

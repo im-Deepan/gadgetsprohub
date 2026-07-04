@@ -953,9 +953,9 @@ async function resolveUniqueSlug(
       }
     } else {
       if (type === 'product') {
-        return localProducts.some(p => p.slug === testSlug && p._id !== excludeId);
+        return localProducts.some((p: any) => p.slug === testSlug && p._id !== excludeId);
       } else {
-        return localBlogs.some(b => b.slug === testSlug && b._id !== excludeId);
+        return localBlogs.some((b: any) => b.slug === testSlug && b._id !== excludeId);
       }
     }
   };
@@ -1026,7 +1026,7 @@ async function triggerProductAddedEmailNotifications(product: any) {
       if (catId && typeof catId === 'object') {
         categoryName = (catId as any).name || '';
       } else {
-        const matchedCat = localCategories.find(c => c._id === catId || c.slug === catId);
+        const matchedCat = localCategories.find((c: any) => c._id === catId || c.slug === catId);
         if (matchedCat) {
           categoryName = matchedCat.name;
         }
@@ -1404,7 +1404,23 @@ async function startServer() {
   app.disable('x-powered-by');
 
   // Middleware
-  app.use(cors());
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isAllowed = 
+        origin.startsWith('http://localhost') ||
+        origin.startsWith('https://localhost') ||
+        origin.endsWith('.google.com') ||
+        origin.endsWith('.google') ||
+        origin.endsWith('.aistudio.google') ||
+        origin.endsWith('.run.app');
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  }));
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   app.use(mongoSanitize({
@@ -1475,7 +1491,6 @@ async function startServer() {
         
         const earbudId = sampleProducts[0]?._id;
         const watchId = sampleProducts[1]?._id;
-        const laptopId = sampleProducts[2]?._id;
         const userId1 = sampleUsers[0]?._id;
         const userId2 = sampleUsers[1]?._id;
 
@@ -1530,7 +1545,7 @@ async function startServer() {
   // ========== API ROUTES ==========
 
   // Lightweight health-check endpoint verifying DB connectivity gracefully without hanging
-  app.get('/api/health-check', async (req, res) => {
+  app.get('/api/health-check', async (_req: express.Request, res: express.Response) => {
     let timerId: NodeJS.Timeout | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timerId = setTimeout(() => reject(new Error('Database ping timeout (2000ms achieved)')), 2000);
@@ -1576,29 +1591,29 @@ async function startServer() {
   });
 
   // Global Error Tracking Endpoint
-  app.post('/api/track-error', express.json(), (req, res) => {
+  app.post('/api/track-error', express.json(), (req: express.Request, res: express.Response) => {
     const errorDetails = req.body;
     console.error('[CentralizedTracker Server-Side]', JSON.stringify(errorDetails, null, 2));
     res.status(200).json({ success: true });
   });
 
   // SEO Routes (Robots & Sitemap)
-  app.get('/robots.txt', (req, res) => {
+  app.get('/robots.txt', (_req: express.Request, res: express.Response) => {
     res.type('text/plain');
     res.send('User-agent: *\nAllow: /\nSitemap: /sitemap.xml');
   });
 
-  app.get('/.well-known/security.txt', (req, res) => {
+  app.get('/.well-known/security.txt', (_req: express.Request, res: express.Response) => {
     res.type('text/plain');
     res.send('Contact: mailto:security@gadgetsprohub.com\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en');
   });
 
-  app.get('/security.txt', (req, res) => {
+  app.get('/security.txt', (_req: express.Request, res: express.Response) => {
     res.type('text/plain');
     res.send('Contact: mailto:security@gadgetsprohub.com\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en');
   });
 
-  app.get('/sitemap.xml', async (req, res) => {
+  app.get('/sitemap.xml', async (req: express.Request, res: express.Response) => {
     // Dynamically resolve base URL to support both Render fallback domain and custom domains
     const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
     const host = req.get('host') || 'gadgetsprohub.com';
@@ -1695,7 +1710,7 @@ async function startServer() {
   });
 
   // Auth Routes
-  app.post('/api/auth/register', validateRegister, async (req, res): Promise<any> => {
+  app.post('/api/auth/register', validateRegister, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { email, password, name } = req.body;
       const validationResult = await validateAndCheckRealEmail(email);
@@ -1814,7 +1829,11 @@ async function startServer() {
     }
   });
 
-  app.get('/api/auth/verify', async (req, res): Promise<any> => {
+  const signUserToken = (userId: any): string => {
+    return jwt.sign({ userId }, JWT_SECRET_KEY, { expiresIn: '30d' });
+  };
+
+  app.get('/api/auth/verify', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { token } = req.query;
       if (!token || typeof token !== 'string') {
@@ -1843,7 +1862,7 @@ async function startServer() {
         user.verificationToken = null;
         await user.save();
 
-        const jwtToken = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        const jwtToken = signUserToken(user._id);
         return res.redirect(`/?verifiedToken=${jwtToken}`);
       } else {
         const user = localUsers.find(u => u.verificationToken === token);
@@ -1861,7 +1880,7 @@ async function startServer() {
         user.verificationToken = undefined;
         saveLocalUsers();
 
-        const jwtToken = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        const jwtToken = signUserToken(user._id);
         return res.redirect(`/?verifiedToken=${jwtToken}`);
       }
     } catch (error: any) {
@@ -1875,7 +1894,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/auth/verify-new-email', async (req, res): Promise<any> => {
+  app.get('/api/auth/verify-new-email', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { token } = req.query;
       if (!token || typeof token !== 'string') {
@@ -1905,7 +1924,7 @@ async function startServer() {
         user.pendingEmailToken = null;
         await user.save();
 
-        const jwtToken = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        const jwtToken = signUserToken(user._id);
         return res.redirect(`/?verifiedToken=${jwtToken}&emailUpdated=true`);
       } else {
         const user = localUsers.find(u => u.pendingEmailToken === token);
@@ -1924,7 +1943,7 @@ async function startServer() {
         user.pendingEmailToken = undefined;
         saveLocalUsers();
 
-        const jwtToken = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        const jwtToken = signUserToken(user._id);
         return res.redirect(`/?verifiedToken=${jwtToken}&emailUpdated=true`);
       }
     } catch (error: any) {
@@ -1938,7 +1957,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/auth/login', validateLogin, async (req, res): Promise<any> => {
+  app.post('/api/auth/login', validateLogin, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { email, password } = req.body;
       const storageEmail = getStorageEmail(email);
@@ -1976,7 +1995,7 @@ async function startServer() {
           user.role = 'admin';
           await user.save().catch(e => console.warn(e));
         }
-        const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        const token = signUserToken(user._id);
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
       } else {
         const user = localUsers.find(u => u.email === storageEmail);
@@ -2009,7 +2028,7 @@ async function startServer() {
           user.role = 'admin';
           saveLocalUsers();
         }
-        const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        const token = signUserToken(user._id);
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
       }
     } catch (error: any) {
@@ -2017,7 +2036,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/auth/google', validateGoogleAuth, async (req, res): Promise<any> => {
+  app.post('/api/auth/google', validateGoogleAuth, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { email, name, googleId, profileImage } = req.body;
       const storageEmail = getStorageEmail(email);
@@ -2038,7 +2057,7 @@ async function startServer() {
           user.role = 'admin';
           await user.save().catch(e => console.warn(e));
         }
-        const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        const token = signUserToken(user._id);
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
       } else {
         let user = localUsers.find(u => u.email === storageEmail);
@@ -2061,7 +2080,7 @@ async function startServer() {
           user.role = 'admin';
           saveLocalUsers();
         }
-        const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '30d' });
+        const token = signUserToken(user._id);
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
       }
     } catch (error: any) {
@@ -2078,7 +2097,7 @@ async function startServer() {
   });
 
   // Product Routes
-  app.get('/api/products', async (req, res) => {
+  app.get('/api/products', async (req: express.Request, res: express.Response) => {
     try {
       await cleanExpiredTrendingProducts();
       const { category, subcategory, brand, minPrice, maxPrice, search, rating, sort, page = 1, limit = 12, inStock, exclude, trending } = req.query;
@@ -2098,7 +2117,7 @@ async function startServer() {
           let categoryIds: any[] = [];
           try {
             const matchedCats = await Category.find({ name: { $regex: searchRegex } });
-            categoryIds = matchedCats.map(c => c._id);
+            categoryIds = matchedCats.map((c: any) => c._id);
           } catch (err) {
             captureError(err, { context: 'Category search mapping' });
           }
@@ -2199,9 +2218,9 @@ async function startServer() {
         const paginated = list.slice(skip, skip + Number(limit));
         
         // Re-inject fully populated Category object
-        const finalProducts = paginated.map(p => {
+        const finalProducts = paginated.map((p: any) => {
           const catId = typeof p.category === 'object' && p.category ? (p.category as any)._id : p.category;
-          const matchedCat = localCategories.find(c => c._id === catId);
+          const matchedCat = localCategories.find((c: any) => c._id === catId);
           return {
             ...p,
             category: matchedCat || { _id: catId, name: "General", slug: "general" }
@@ -2220,7 +2239,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/products/:slug', async (req, res): Promise<any> => {
+  app.get('/api/products/:slug', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const districtsList = ['Chennai', 'Madurai', 'Tirunelveli', 'Virudhunagar'];
       const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
@@ -2276,11 +2295,11 @@ async function startServer() {
         });
         return res.json(product);
       } else {
-        const item = localProducts.find(p => p.slug === req.params.slug);
+        const item = localProducts.find((p: any) => p.slug === req.params.slug);
         if (!item) return res.status(404).json({ error: 'Product catalog item not found' });
         
         const catId = typeof item.category === 'object' && item.category ? (item.category as any)._id : item.category;
-        const matchedCat = localCategories.find(c => c._id === catId);
+        const matchedCat = localCategories.find((c: any) => c._id === catId);
         
         // Record Analytics View
         localAnalytics.push({
@@ -2302,7 +2321,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/products/click/:slug', validateProductClick, async (req, res): Promise<any> => {
+  app.post('/api/products/click/:slug', validateProductClick, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const districtsList = ['Chennai', 'Madurai', 'Tirunelveli', 'Virudhunagar'];
       const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
@@ -2326,7 +2345,7 @@ async function startServer() {
         
         return res.json({ success: true, affiliateLink: product.affiliateLink });
       } else {
-        const product = localProducts.find(p => p.slug === req.params.slug);
+        const product = localProducts.find((p: any) => p.slug === req.params.slug);
         if (!product) return res.status(404).json({ error: 'Product not found' });
         
         product.clicks = (product.clicks || 0) + 1;
@@ -2346,7 +2365,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/products/pick-left-click', express.json(), async (req, res): Promise<any> => {
+  app.post('/api/products/pick-left-click', express.json(), async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { productId, email, categoryName } = req.body;
       if (!email) {
@@ -2367,10 +2386,10 @@ async function startServer() {
           resolvedCategory = (product.category as any).name;
         }
       } else if (productId && !isMongoConnected) {
-        const product = localProducts.find(p => p._id === productId);
+        const product = localProducts.find((p: any) => p._id === productId);
         if (product) {
           const catId = product.category;
-          const matchedCat = localCategories.find(c => c._id === catId || c.slug === catId);
+          const matchedCat = localCategories.find((c: any) => c._id === catId || c.slug === catId);
           if (matchedCat) {
             resolvedCategory = matchedCat.name;
           }
@@ -2415,7 +2434,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/products/:id/reviews', authenticate, validateProductReview, async (req, res): Promise<any> => {
+  app.post('/api/products/:id/reviews', authenticate, validateProductReview, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const { id } = req.params;
@@ -2451,7 +2470,7 @@ async function startServer() {
 
         return res.json(populatedProduct);
       } else {
-        const product = localProducts.find(p => p._id === id);
+        const product = localProducts.find((p: any) => p._id === id);
         if (!product) return res.status(404).json({ error: 'Product not found.' });
 
         const user = localUsers.find(u => u._id === uId);
@@ -2487,7 +2506,7 @@ async function startServer() {
   });
 
   // Category Retrieval
-  app.get('/api/categories', async (req, res) => {
+  app.get('/api/categories', async (req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const categories = await Category.find();
@@ -2504,15 +2523,15 @@ async function startServer() {
   });
 
   // Featured and Trending Retrieval
-  app.get('/api/featured', async (req, res) => {
+  app.get('/api/featured', async (_req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const products = await Product.find({ featured: true }).limit(6).populate('category');
         res.json(products);
       } else {
-        const list = localProducts.filter(p => p.featured).slice(0, 6).map(p => {
+        const list = localProducts.filter((p: any) => p.featured).slice(0, 6).map((p: any) => {
           const catId = typeof p.category === 'object' && p.category ? (p.category as any)._id : p.category;
-          const catObj = localCategories.find(c => c._id === catId);
+          const catObj = localCategories.find((c: any) => c._id === catId);
           return { ...p, category: catObj || { name: 'General' } };
         });
         res.json(list);
@@ -2522,16 +2541,16 @@ async function startServer() {
     }
   });
 
-  app.get('/api/trending', async (req, res) => {
+  app.get('/api/trending', async (_req: express.Request, res: express.Response) => {
     try {
       await cleanExpiredTrendingProducts();
       if (isMongoConnected) {
         const products = await Product.find({ trending: true }).limit(8).populate('category');
         res.json(products);
       } else {
-        const list = localProducts.filter(p => p.trending).slice(0, 8).map(p => {
+        const list = localProducts.filter((p: any) => p.trending).slice(0, 8).map((p: any) => {
           const catId = typeof p.category === 'object' && p.category ? (p.category as any)._id : p.category;
-          const catObj = localCategories.find(c => c._id === catId);
+          const catObj = localCategories.find((c: any) => c._id === catId);
           return { ...p, category: catObj || { name: 'General' } };
         });
         res.json(list);
@@ -2542,7 +2561,7 @@ async function startServer() {
   });
 
   // Profile management
-  app.get('/api/user/profile', authenticate, async (req, res): Promise<any> => {
+  app.get('/api/user/profile', authenticate, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
       if (isMongoConnected) {
@@ -2565,7 +2584,7 @@ async function startServer() {
 
         // Map Wishlist Items
         const wishlistPopulated = (user.wishlist || []).map(idStr => {
-          return localProducts.find(p => p._id === idStr) || null;
+          return localProducts.find((p: any) => p._id === idStr) || null;
         }).filter(Boolean);
 
         return res.json({
@@ -2579,7 +2598,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/user/wishlist/:productId', authenticate, validateWishlist, async (req, res): Promise<any> => {
+  app.post('/api/user/wishlist/:productId', authenticate, validateWishlist, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const pId = req.params.productId;
@@ -2619,7 +2638,7 @@ async function startServer() {
   });
 
   // Order Management APIs
-  app.get('/api/user/orders', authenticate, async (req, res): Promise<any> => {
+  app.get('/api/user/orders', authenticate, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
       if (isMongoConnected) {
@@ -2631,7 +2650,7 @@ async function startServer() {
         // Populate products inside localOrders items
         orders = orders.map(ord => {
           const populatedItems = ord.items.map((it: any) => {
-            const matchedProduct = typeof it.product === 'object' ? it.product : localProducts.find(lp => lp._id === it.product);
+            const matchedProduct = typeof it.product === 'object' ? it.product : localProducts.find((lp: any) => lp._id === it.product);
             return { ...it, product: matchedProduct };
           });
           return { ...ord, items: populatedItems };
@@ -2643,7 +2662,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/user/orders', authenticate, validateOrderCreation, async (req, res): Promise<any> => {
+  app.post('/api/user/orders', authenticate, validateOrderCreation, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const { items, totalAmount } = req.body;
@@ -2670,7 +2689,7 @@ async function startServer() {
           _id: "order_" + Math.random().toString(36).substring(2, 9),
           userId: uId,
           items: items.map((it: any) => {
-            const matchedProduct = localProducts.find(lp => lp._id === it.product);
+            const matchedProduct = localProducts.find((lp: any) => lp._id === it.product);
             return { ...it, product: matchedProduct || it.product };
           }),
           totalAmount,
@@ -2689,7 +2708,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/user/orders/:orderId/advance', authenticate, validateOrderAdvance, async (req, res): Promise<any> => {
+  app.post('/api/user/orders/:orderId/advance', authenticate, validateOrderAdvance, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const { orderId } = req.params;
@@ -2723,7 +2742,7 @@ async function startServer() {
         saveLocalOrders();
         
         const populatedItems = order.items.map((it: any) => {
-          const matchedProduct = typeof it.product === 'object' ? it.product : localProducts.find(lp => lp._id === it.product);
+          const matchedProduct = typeof it.product === 'object' ? it.product : localProducts.find((lp: any) => lp._id === it.product);
           return { ...it, product: matchedProduct };
         });
         
@@ -2735,7 +2754,7 @@ async function startServer() {
   });
 
   // Blog Routes
-  app.get('/api/blogs', async (req, res) => {
+  app.get('/api/blogs', async (req: express.Request, res: express.Response) => {
     try {
       const { page = 1, limit = 10, search, category } = req.query;
       
@@ -2771,7 +2790,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/blogs/:slug', async (req, res): Promise<any> => {
+  app.get('/api/blogs/:slug', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       if (isMongoConnected) {
         const blog = await Blog.findOneAndUpdate(
@@ -2793,7 +2812,7 @@ async function startServer() {
   });
 
   // Visitor tracking registration route
-  app.post('/api/visit', validateVisitorRegister, async (req, res): Promise<any> => {
+  app.post('/api/visit', validateVisitorRegister, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { visitorId } = req.body;
 
@@ -2819,7 +2838,7 @@ async function startServer() {
   });
 
   // Contact Message Route
-  app.post('/api/contact', validateContactMessage, async (req, res): Promise<any> => {
+  app.post('/api/contact', validateContactMessage, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { name, email, phone, subject, message } = req.body;
 
@@ -2854,7 +2873,7 @@ async function startServer() {
   });
 
   // Newsletter Subscription Route
-  app.post('/api/newsletter/subscribe', validateNewsletterSubscribe, async (req, res): Promise<any> => {
+  app.post('/api/newsletter/subscribe', validateNewsletterSubscribe, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { email } = req.body;
 
@@ -2885,7 +2904,7 @@ async function startServer() {
   });
 
   // Search Route
-  app.get('/api/search', async (req, res): Promise<any> => {
+  app.get('/api/search', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { q } = req.query;
       if (!q) return res.json({ products: [], blogs: [] });
@@ -2897,7 +2916,7 @@ async function startServer() {
         let categoryIds: any[] = [];
         try {
           const matchedCats = await Category.find({ name: { $regex: searchRegex } });
-          categoryIds = matchedCats.map(c => c._id);
+          categoryIds = matchedCats.map((c: any) => c._id);
         } catch (err) {
           captureError(err, { context: 'Category search mapping' });
         }
@@ -2926,12 +2945,12 @@ async function startServer() {
 
         return res.json({ products, blogs });
       } else {
-        const matchedProducts = localProducts.filter(p => {
+        const matchedProducts = localProducts.filter((p: any) => {
           const catName = typeof p.category === 'object' && p.category ? (p.category as any).name : '';
           return p.name?.toLowerCase().includes(queryStr) || 
                  p.brand?.toLowerCase().includes(queryStr) ||
                  p.sku?.toLowerCase().includes(queryStr) ||
-                 p.tags?.some(t => t.toLowerCase().includes(queryStr)) ||
+                 p.tags?.some((t: any) => t.toLowerCase().includes(queryStr)) ||
                  catName?.toLowerCase().includes(queryStr);
         }).slice(0, 10);
 
@@ -2949,7 +2968,7 @@ async function startServer() {
   });
 
   // Proxy for geolocation APIs to bypass CORS, with automatic regional mapping to Tamil Nadu districts
-  app.get('/api/proxy/location', async (req, res) => {
+  app.get('/api/proxy/location', async (req: express.Request, res: express.Response) => {
     const TAMIL_NADU_DISTRICTS = [
       "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
       "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
@@ -3015,7 +3034,7 @@ async function startServer() {
   });
 
   // Footer Social Clicks Tracking Endpoint
-  app.post('/api/analytics/social-click', validateSocialClick, async (req, res) => {
+  app.post('/api/analytics/social-click', validateSocialClick, async (req: express.Request, res: express.Response) => {
     try {
       const { platform } = req.body;
       if (platform === 'instagram' || platform === 'linkedin') {
@@ -3063,7 +3082,7 @@ async function startServer() {
   });
 
   // Filter/Search Analytics Logger Route
-  app.post('/api/analytics/filters', validateFilterAnalytics, async (req, res) => {
+  app.post('/api/analytics/filters', validateFilterAnalytics, async (req: express.Request, res: express.Response) => {
     try {
       const { searchQuery, categoryId, categorySlug } = req.body;
       if (isMongoConnected) {
@@ -3084,7 +3103,7 @@ async function startServer() {
   });
 
   // Page Visit/Session Time Tracker Endpoint
-  app.post('/api/analytics/page-view', validatePageViewAnalytics, async (req, res) => {
+  app.post('/api/analytics/page-view', validatePageViewAnalytics, async (req: express.Request, res: express.Response) => {
     try {
       const { pageUrl, timeSpent, browser, device, district } = req.body;
       
@@ -3202,7 +3221,7 @@ async function startServer() {
   });
 
   // PUT update user profile details
-  app.put('/api/user/profile', authenticate, validateUserProfileUpdate, async (req, res): Promise<any> => {
+  app.put('/api/user/profile', authenticate, validateUserProfileUpdate, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const { name, district } = req.body;
@@ -3231,7 +3250,7 @@ async function startServer() {
         
         // Map Wishlist Items
         const wishlistPopulated = (user.wishlist || []).map(idStr => {
-          return localProducts.find(p => p._id === idStr) || null;
+          return localProducts.find((p: any) => p._id === idStr) || null;
         }).filter(Boolean);
         
         return res.json({
@@ -3246,7 +3265,7 @@ async function startServer() {
   });
 
   // POST initiate email address update
-  app.post('/api/user/update-email', authenticate, async (req, res): Promise<any> => {
+  app.post('/api/user/update-email', authenticate, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
       const { newEmail } = req.body;
@@ -3323,7 +3342,7 @@ async function startServer() {
         return res.json({
           success: true,
           message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
-          verificationUrlSimulated: verificationUrl,
+          verificationUrlSimulated: emailSent ? undefined : verificationUrl,
           smtpError: smtpErrorMsg
         });
       } else {
@@ -3386,7 +3405,7 @@ async function startServer() {
         return res.json({
           success: true,
           message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
-          verificationUrlSimulated: verificationUrl,
+          verificationUrlSimulated: emailSent ? undefined : verificationUrl,
           smtpError: smtpErrorMsg
         });
       }
@@ -3398,7 +3417,7 @@ async function startServer() {
   // ========== ADMIN CAPABILITIES ==========
 
   // Seed Products Database
-  app.post('/api/admin/seed', adminOnly, async (req, res): Promise<any> => {
+  app.post('/api/admin/seed', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { clearOnly, seedTrending, seedImageOverride } = req.body || {};
       if (clearOnly) {
@@ -3665,7 +3684,7 @@ async function startServer() {
   });
 
   // Products CRUD
-  app.get('/api/admin/check-slug', adminOnly, async (req, res): Promise<any> => {
+  app.get('/api/admin/check-slug', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { slug, type, excludeId } = req.query;
       if (!slug || typeof slug !== 'string') {
@@ -3757,7 +3776,7 @@ async function startServer() {
     }
   }
 
-  app.post('/api/webhooks/telegram', async (req, res): Promise<any> => {
+  app.post('/api/webhooks/telegram', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const update = req.body;
       if (!update) return res.sendStatus(200);
@@ -4091,14 +4110,25 @@ async function startServer() {
   const authenticateN8N = (req: express.Request, res: express.Response, next: express.NextFunction): any => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
-    if (!token || token !== process.env.N8N_SECRET_TOKEN) {
+    const secret = process.env.N8N_SECRET_TOKEN || '';
+    let isMatch = false;
+    if (token && secret) {
+      const tokenBuf = Buffer.from(token);
+      const secretBuf = Buffer.from(secret);
+      if (tokenBuf.length === secretBuf.length) {
+        isMatch = crypto.timingSafeEqual(tokenBuf, secretBuf);
+      } else {
+        crypto.timingSafeEqual(tokenBuf, tokenBuf);
+      }
+    }
+    if (!token || !secret || !isMatch) {
       return res.status(403).json({ error: 'Forbidden: Invalid or missing N8N Secret Token' });
     }
     next();
   };
 
   // Endpoint for N8N to get products that need updating (oldest lastPriceCheck first)
-  app.get('/api/webhooks/n8n/products-to-update', authenticateN8N, async (req, res): Promise<any> => {
+  app.get('/api/webhooks/n8n/products-to-update', authenticateN8N, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       if (isMongoConnected) {
@@ -4117,7 +4147,7 @@ async function startServer() {
   });
 
   // Endpoint for N8N to update a specific product's price
-  app.post('/api/webhooks/n8n/update-product', authenticateN8N, async (req, res): Promise<any> => {
+  app.post('/api/webhooks/n8n/update-product', authenticateN8N, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { productId, price, originalPrice, discount, inStock } = req.body;
       if (!productId || typeof price !== 'number') {
@@ -4146,7 +4176,7 @@ async function startServer() {
 
   // -------------------------------
 
-  app.post('/api/admin/products', adminOnly, validateAdminProduct, async (req, res): Promise<any> => {
+  app.post('/api/admin/products', adminOnly, validateAdminProduct, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const payload = cleanUndefined(req.body);
       const proposedSlug = payload.slug || payload.name;
@@ -4190,7 +4220,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/admin/products/:id', adminOnly, validateAdminProduct, async (req, res): Promise<any> => {
+  app.put('/api/admin/products/:id', adminOnly, validateAdminProduct, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const pId = req.params.id;
       const payload = cleanUndefined(req.body);
@@ -4214,7 +4244,7 @@ async function startServer() {
         await logSecurityAction(req, 'PRODUCT_UPDATED', pId, { name: product?.name, slug: product?.slug });
         return res.json(product);
       } else {
-        const index = localProducts.findIndex(p => p._id === pId);
+        const index = localProducts.findIndex((p: any) => p._id === pId);
         if (index === -1) return res.status(404).json({ error: 'Product not found' });
         
         localProducts[index] = {
@@ -4231,7 +4261,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/admin/products/:id', adminOnly, async (req, res): Promise<any> => {
+  app.delete('/api/admin/products/:id', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const pId = req.params.id;
       if (isMongoConnected) {
@@ -4250,7 +4280,7 @@ async function startServer() {
         await logSecurityAction(req, 'PRODUCT_DELETED', pId, { name: deletedProduct?.name, slug: deletedProduct?.slug });
         return res.json({ success: true });
       } else {
-        const index = localProducts.findIndex(p => p._id === pId || (p as any).id === pId);
+        const index = localProducts.findIndex((p: any) => p._id === pId || (p as any).id === pId);
         if (index === -1) return res.status(404).json({ error: 'Product not found' });
         const deletedProduct = localProducts[index];
         localProducts.splice(index, 1);
@@ -4264,7 +4294,7 @@ async function startServer() {
   });
 
   // Categories CRUD
-  app.post('/api/admin/categories', adminOnly, validateAdminCategory, async (req, res) => {
+  app.post('/api/admin/categories', adminOnly, validateAdminCategory, async (req: express.Request, res: express.Response) => {
     try {
       const payload = req.body;
       const slug = payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -4292,7 +4322,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/admin/categories/:id', adminOnly, validateAdminCategory, async (req, res): Promise<any> => {
+  app.put('/api/admin/categories/:id', adminOnly, validateAdminCategory, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const catId = req.params.id;
       if (isMongoConnected) {
@@ -4301,7 +4331,7 @@ async function startServer() {
         await logSecurityAction(req, 'CATEGORY_UPDATED', catId, { name: category?.name, slug: category?.slug });
         return res.json(category);
       } else {
-        const index = localCategories.findIndex(c => c._id === catId);
+        const index = localCategories.findIndex((c: any) => c._id === catId);
         if (index === -1) return res.status(404).json({ error: 'Category not found' });
         localCategories[index] = {
           ...localCategories[index],
@@ -4316,7 +4346,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/admin/categories/:id', adminOnly, async (req, res): Promise<any> => {
+  app.delete('/api/admin/categories/:id', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const catId = req.params.id;
       if (isMongoConnected) {
@@ -4331,7 +4361,7 @@ async function startServer() {
         await logSecurityAction(req, 'CATEGORY_DELETED', catId, { name: deletedCat?.name, slug: deletedCat?.slug });
         return res.json({ success: true });
       } else {
-        const index = localCategories.findIndex(c => c._id === catId);
+        const index = localCategories.findIndex((c: any) => c._id === catId);
         if (index === -1) return res.status(404).json({ error: 'Category not found' });
         const deletedCat = localCategories[index];
         localCategories.splice(index, 1);
@@ -4345,7 +4375,7 @@ async function startServer() {
   });
 
   // Blogs CRUD
-  app.post('/api/admin/blogs', adminOnly, validateAdminBlog, async (req, res): Promise<any> => {
+  app.post('/api/admin/blogs', adminOnly, validateAdminBlog, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const payload = req.body;
       const proposedSlug = payload.slug || payload.title;
@@ -4384,7 +4414,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/admin/blogs/:id', adminOnly, validateAdminBlog, async (req, res): Promise<any> => {
+  app.put('/api/admin/blogs/:id', adminOnly, validateAdminBlog, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const bId = req.params.id;
       const payload = req.body;
@@ -4424,7 +4454,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/admin/blogs/:id', adminOnly, async (req, res): Promise<any> => {
+  app.delete('/api/admin/blogs/:id', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const bId = req.params.id;
       if (isMongoConnected) {
@@ -4453,7 +4483,7 @@ async function startServer() {
   });
 
   // Admin Messages retrieval
-  app.get('/api/admin/messages', adminOnly, async (req, res) => {
+  app.get('/api/admin/messages', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const msgs = await Message.find().sort({ createdAt: -1 });
@@ -4467,7 +4497,7 @@ async function startServer() {
   });
 
   // Admin message mark as read
-  app.post('/api/admin/messages/read/:id', adminOnly, async (req, res): Promise<any> => {
+  app.post('/api/admin/messages/read/:id', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const msgId = req.params.id;
       if (isMongoConnected) {
@@ -4488,7 +4518,7 @@ async function startServer() {
   });
 
   // Admin retrieve users
-  app.get('/api/admin/users', adminOnly, async (req, res) => {
+  app.get('/api/admin/users', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 });
@@ -4507,7 +4537,7 @@ async function startServer() {
   });
 
   // Admin promote/demote user
-  app.put('/api/admin/users/:id/role', adminOnly, async (req, res): Promise<any> => {
+  app.put('/api/admin/users/:id/role', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { id } = req.params;
       const { role } = req.body;
@@ -4562,7 +4592,7 @@ async function startServer() {
   });
 
   // Admin Security Logs / Audit Trail
-  app.get('/api/admin/security-logs', adminOnly, async (req, res) => {
+  app.get('/api/admin/security-logs', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const logs = await SecurityLog.find().sort({ timestamp: -1 });
@@ -4576,7 +4606,7 @@ async function startServer() {
   });
 
   // Sunday automated logs and simulation
-  app.get('/api/admin/sunday-logs', adminOnly, async (req, res) => {
+  app.get('/api/admin/sunday-logs', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const mongoLogs = await SundayAutomationLog.find().sort({ runAt: -1 }).populate('productsAdded');
@@ -4592,7 +4622,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/sunday-logs/simulate', adminOnly, async (req, res) => {
+  app.post('/api/admin/sunday-logs/simulate', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const { targetSundayStr, forceEmail } = req.body;
       let sundayDateString = targetSundayStr;
@@ -4618,7 +4648,7 @@ async function startServer() {
   });
 
   // Diagnostics and Analytics compilation
-  app.get('/api/admin/n8n-status', adminOnly, async (req, res) => {
+  app.get('/api/admin/n8n-status', adminOnly, async (_req: express.Request, res: express.Response): Promise<any> => {
     try {
       const webhookUrl = process.env.N8N_REALTIME_WEBHOOK_URL;
       
@@ -4674,7 +4704,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/n8n-test', adminOnly, async (req, res) => {
+  app.post('/api/admin/n8n-test', adminOnly, async (_req: express.Request, res: express.Response): Promise<any> => {
     try {
       const webhookUrl = process.env.N8N_REALTIME_WEBHOOK_URL;
       
@@ -4744,7 +4774,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/admin/analytics', adminOnly, async (req, res) => {
+  app.get('/api/admin/analytics', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const TAMIL_NADU_DISTRICTS = [
         "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
@@ -4848,7 +4878,7 @@ async function startServer() {
         const visitorCount = localVisitors.length;
 
         const mappedAnalytics = localAnalytics.map((a, idx) => {
-          const item = localProducts.find(p => p._id === a.productId);
+          const item = localProducts.find((p: any) => p._id === a.productId);
           const resolvedUser = a.userId ? localUsers.find(u => u._id === a.userId) : null;
           return {
             _id: "ana_raw_" + idx,
@@ -4907,7 +4937,7 @@ async function startServer() {
   });
 
   // Product specific click trigger conversions
-  app.post('/api/admin/analytics/conversions/:productId', adminOnly, async (req, res): Promise<any> => {
+  app.post('/api/admin/analytics/conversions/:productId', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const pId = req.params.productId;
       if (isMongoConnected) {
@@ -4921,7 +4951,7 @@ async function startServer() {
         });
         return res.json({ success: true, conversions: product.conversions });
       } else {
-        const index = localProducts.findIndex(p => p._id === pId);
+        const index = localProducts.findIndex((p: any) => p._id === pId);
         if (index === -1) return res.status(404).json({ error: 'Product not found' });
         localProducts[index].conversions = (localProducts[index].conversions || 0) + 1;
         
@@ -4938,7 +4968,7 @@ async function startServer() {
   });
 
   // Google AdSense ads.txt crawler verification endpoint
-  app.get('/ads.txt', (req, res) => {
+  app.get('/ads.txt', (_req: express.Request, res: express.Response) => {
     const publisherId = process.env.ADSENSE_CLIENT_ID || 'ca-pub-0000000000000000';
     // Clean any prefix e.g. "ca-pub-XX" -> "pub-XX" for correct ads.txt formatting
     let cleanId = publisherId;
@@ -4960,10 +4990,10 @@ async function startServer() {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     // Do not serve index.html for missing asset requests to prevent MIME type issues
-    app.use('/assets', (req, res) => {
+    app.use('/assets', (_req: express.Request, res: express.Response) => {
       res.status(404).send('Asset not found');
     });
-    app.get('*', (req, res) => {
+    app.get('*', (_req: express.Request, res: express.Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

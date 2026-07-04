@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
+import { Blog } from '../types';
 import { Search, Compass, BookOpen, ChevronRight } from 'lucide-react';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 import { motion, AnimatePresence } from 'motion/react';
@@ -149,7 +150,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:px-4">
           <AnimatePresence mode="popLayout">
-            {blogs.map((b) => (
+            {blogs.map((b: Blog) => (
               <motion.div
                 key={b._id}
                 layout

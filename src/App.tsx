@@ -234,7 +234,7 @@ const ViewLoader: React.FC = () => {
   useEffect(() => {
     const steps = [
       { msg: "Connecting to secure catalog servers...", progress: 38, stepNum: 1 },
-      { msg: "Loading product details & reviews...", progress: 62, stepNum: 2 },
+      { msg: "Loading product s & reviews...", progress: 62, stepNum: 2 },
       { msg: "Initializing interface filters and options...", progress: 84, stepNum: 3 },
       { msg: "Rendering gallery elements for you...", progress: 100, stepNum: 4 }
     ];
@@ -325,7 +325,7 @@ const AppContent: React.FC = () => {
       try {
         const response = await apiFetch('/api/health-check', { signal: controller.signal });
         if (!response.ok) {
-          const detail = await response.json().catch(() => ({}));
+          await response.json().catch(() => ({}));
           
           showToast("Reconnecting to the primary data system. Working securely with local cache.", "warning", 5000, "Connectivity");
         } else {
@@ -561,7 +561,7 @@ const AppContent: React.FC = () => {
     let active = true;
 
     const applyMetadata = async () => {
-      // 1. If it's a product detail, inspect dynamic details from db API
+      // 1. If it's a product , inspect dynamic s from db API
       if (activeView === 'product-detail' && selectedSlug) {
         try {
           const res = await fetch(`/api/products/${selectedSlug}`, { signal: controller.signal });
@@ -591,7 +591,7 @@ const AppContent: React.FC = () => {
         }
       }
 
-      // 2. If it's a blog detail, inspect dynamic details from blogs API
+      // 2. If it's a blog , inspect dynamic s from blogs API
       if (activeView === 'blog-detail' && selectedSlug) {
         try {
           const res = await fetch(`/api/blogs/${selectedSlug}`, { signal: controller.signal });
@@ -650,7 +650,7 @@ const AppContent: React.FC = () => {
     if (activeView === view && selectedSlug === (slug || null)) {
       // If we are already on this view, trigger resets for better user experience!
       if (view === 'products') {
-        window.dispatchEvent(new CustomEvent('reset-product-filters'));
+        window.dispatchEvent(new CustomEvent('reset-product-detailfilters'));
       } else if (view === 'home') {
         window.dispatchEvent(new CustomEvent('reset-home-filters'));
       }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Product, Category, Blog, Message, User } from '../types';
-import { Plus, Edit, Trash2, Heart, MailOpen, MailCheck, Coins, Eye, MousePointerClick, ShieldCheck, Mail, CheckCircle, RefreshCcw, Database, TrendingUp, Globe, Sparkles, AlertTriangle, Users, ChevronDown, ChevronUp, Image, Instagram, Linkedin, Lock, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, MailOpen, MailCheck, Coins, MousePointerClick, Mail, RefreshCcw, Database, TrendingUp, Globe, Users, ChevronDown, ChevronUp, Instagram, Linkedin } from 'lucide-react';
 import { useDeviceType } from '../hooks/useDeviceType';
 import { TabErrorView } from '../components/admin/TabErrorView';
 import { getDistrictEmoji } from '../utils/emoji';
@@ -57,7 +57,6 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [telemetryError, setTelemetryError] = useState<string | null>(null);
   const [usersError, setUsersError] = useState<string | null>(null);
-  const [updatingUserRole, setUpdatingUserRole] = useState<string | null>(null);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
 
@@ -134,10 +133,6 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     });
   };
   
-  // Seeding states
-  const [seedingInProgress, setSeedingInProgress] = useState(false);
-  const [seedingTab, setSeedingTab] = useState<'basic' | 'trending' | 'preview'>('basic');
-  const [customSeedImageUrl, setCustomSeedImageUrl] = useState<string>('');
   const [analyticsData, setAnalyticsData] = useState<Array<{ _id?: string; date?: string; activeVisitors?: number; platform?: string; bounceRate?: string; path?: string; sessionDuration?: string; event?: string; timestamp?: string | Date; pageUrl?: string; productId?: { name?: string }; browser?: string; device?: string; ipAddress?: string; stayDuration?: number; userId?: { name?: string; email?: string }; eventType?: string; timeSpent?: number; district?: string }>>([]);
   const [refreshingTraffic, setRefreshingTraffic] = useState(false);
 
@@ -282,7 +277,6 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [catSlug, setCatSlug] = useState('');
   const [catSubcategories, setCatSubcategories] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [showCatForm, setShowCatForm] = useState(false);
 
   // Check Admin clearance
   useEffect(() => {
@@ -312,10 +306,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           setUsers(uData || []);
         }
       } catch (err: unknown) {
-        const errorObj = err as { message?: string };
-        
+        // silent catch
       }
-    }, 3000);
+    }, 30000);
 
     return () => clearInterval(pollInterval);
   }, [token, activeTab]);
@@ -560,139 +553,6 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     } finally {
       setRefreshingTraffic(false);
     }
-  };
-
-  const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'admin', adminPasswordValue: string) => {
-    if (userId === user?._id || userId === (user as { id?: string })?.id) {
-      triggerAlert("Permission Denied", "You cannot demote or modify your own administrator role profile status.");
-      return;
-    }
-
-    setUpdatingUserRole(userId);
-    try {
-      const res = await fetch(`/api/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ role: newRole, adminPassword: adminPasswordValue })
-      });
-      if (res.ok) {
-        const updatedResponse = await res.json();
-        
-        setUsers(prev => prev.map(u => (u._id === userId || u.id === userId) ? { ...u, role: newRole } : u));
-
-        triggerAlert(
-          newRole === 'admin' ? "Elevation Success" : "Demotion Success", 
-          updatedResponse.message || `The user role has been set to "${newRole}" successfully.`
-        );
-      } else {
-        const err = await res.json().catch(() => ({}));
-        triggerAlert("Change Failed", err.error || "Failed to update member role privilege level.");
-      }
-    } catch (err: unknown) {
-      const errorObj = err as { message?: string };
-      triggerAlert("Change Failed", errorObj.message || "Network communication error occurred.");
-    } finally {
-      setUpdatingUserRole(null);
-    }
-  };
-
-  const handleRestoreSeed = async () => {
-    requestConfirmation(
-      "Restore Default Seed Data",
-      "Are you sure you want to restore the default product seed data? This will reset custom changes.",
-      async () => {
-        setSeedingInProgress(true);
-        try {
-          const res = await fetch('/api/admin/seed', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ clearOnly: false, seedImageOverride: customSeedImageUrl || undefined })
-          });
-          if (res.ok) {
-            await loadAdminMetrics();
-            triggerAlert("Restored Successfully", "The default products catalog and category hierarchy have been seeded successfully!");
-          } else {
-            const err = await res.json().catch(() => ({}));
-            triggerAlert("Action Failed", err.error || "Failed to restore default seed data.");
-          }
-        } catch (err: unknown) {
-          triggerAlert("Action Failed", "An error occurred while seeding: " + (err instanceof Error ? err.message : String(err)));
-        } finally {
-          setSeedingInProgress(false);
-        }
-      },
-      { isDestructive: true, confirmText: 'Yes, Restore' }
-    );
-  };
-
-  const handleClearCatalog = async () => {
-    requestConfirmation(
-      "Clear Catalog",
-      "Are you sure you want to clear all products from the catalog? This will make the storefront empty.",
-      async () => {
-        setSeedingInProgress(true);
-        try {
-          const res = await fetch('/api/admin/seed', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ clearOnly: true })
-          });
-          if (res.ok) {
-            await loadAdminMetrics();
-            triggerAlert("Catalog Cleared", "All product catalog listings and traffic logs have been wiped clean successfully!");
-          } else {
-            const err = await res.json().catch(() => ({}));
-            triggerAlert("Action Failed", err.error || "Failed to clear products catalog.");
-          }
-        } catch (err: unknown) {
-          triggerAlert("Action Failed", "An error occurred while wiping: " + (err instanceof Error ? err.message : String(err)));
-        } finally {
-          setSeedingInProgress(false);
-        }
-      },
-      { isDestructive: true, confirmText: 'Yes, Wipe Catalog' }
-    );
-  };
-
-  const handleSeedTrending = async () => {
-    requestConfirmation(
-      "Seed Analytics traffic",
-      "Do you want to seed Trending Selections data? This will instantly populate mock analytics across Madurai, Chennai, Tirunelveli, and Virudhunagar!",
-      async () => {
-        setSeedingInProgress(true);
-        try {
-          const res = await fetch('/api/admin/seed', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ seedTrending: true, seedImageOverride: customSeedImageUrl || undefined })
-          });
-          if (res.ok) {
-            await loadAdminMetrics();
-            triggerAlert("Trending Data Seeded", "High-volume trending product clicks and regional analytics traffic maps have been seeded successfully across Tamil Nadu districts!");
-          } else {
-            const err = await res.json().catch(() => ({}));
-            triggerAlert("Action Failed", err.error || "Failed to seed Trending Selections.");
-          }
-        } catch (err: unknown) {
-          triggerAlert("Action Failed", "An error occurred while seeding: " + (err instanceof Error ? err.message : String(err)));
-        } finally {
-          setSeedingInProgress(false);
-        }
-      },
-      { confirmText: 'Yes, Seed Selections' }
-    );
   };
 
   useEffect(() => {
@@ -985,7 +845,6 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         setCatSlug('');
         setCatSubcategories('');
         setEditingCategory(null);
-        setShowCatForm(false);
         await loadAdminMetrics();
         triggerAlert("Category Saved", `The category "${nameSaved}" has been successfully fed to the database!`);
       } else {
