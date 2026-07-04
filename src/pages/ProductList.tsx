@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
 import { Product, Category } from '../types';
-import { Search, Heart, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Grid, List, Star, X, CheckCheck, ShieldCheck, ShoppingBag, ExternalLink } from 'lucide-react';
+import { Search, Heart, SlidersHorizontal, ArrowUpDown, Grid, List, Star, X, CheckCheck, ShieldCheck, ShoppingBag, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -63,9 +63,6 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   const [loadingSpec, setLoadingSpec] = useState(false);
   const [viewStyle, setViewStyle] = useState<'grid' | 'list'>('grid');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  
-  // Ref for bottom observer loading sentinel
-  const loaderRef = useRef<HTMLDivElement>(null);
   
   // Filter variables
   const [search, setSearch] = useState(() => {
@@ -139,7 +136,6 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
   const products = productsData?.products || [];
   const totalPages = productsData?.pages || 1;
-  const totalItems = productsData?.total || 0;
   const loading = productsLoading || productsFetching;
 
   // ESC key to close specs modal
@@ -160,43 +156,6 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     }, 500);
     return () => clearTimeout(handler);
   }, [search]);
-
-  // Helper to group products when a category is selected and no specific subcategory is selected
-  const groupedProducts = useMemo<Record<string, Product[]> | null>(() => {
-    if (!selectedCategory || selectedSubcategory) return null;
-    const activeCategoryObj = categories.find(c => String(c._id) === String(selectedCategory));
-    if (!activeCategoryObj) return null;
-    
-    const subcats = activeCategoryObj.subcategories || [];
-    const groups: Record<string, Product[]> = {};
-    
-    // Initialize groups for current category's subcategories
-    subcats.forEach(sub => {
-      groups[sub] = [];
-    });
-    groups['Other Curations'] = [];
-    
-    products.forEach(p => {
-      const sub = p.subcategory;
-      if (sub) {
-        const matchedSub = subcats.find(s => s.toLowerCase().trim() === sub.toLowerCase().trim());
-        if (matchedSub) {
-          groups[matchedSub].push(p);
-        } else {
-          groups['Other Curations'].push(p);
-        }
-      } else {
-        groups['Other Curations'].push(p);
-      }
-    });
-
-    // Clean up empty 'Other Curations' to keep the aesthetic pristine
-    if (groups['Other Curations'].length === 0) {
-      delete groups['Other Curations'];
-    }
-    
-    return groups;
-  }, [products, selectedCategory, selectedSubcategory, categories]);
 
   const classifiedSectionGroups = useMemo(() => {
     const groups: Record<string, Product[]> = {};
@@ -239,13 +198,6 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   }, [products, categories]);
   
 
-
-  // Similar products states for when search is active
-  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
-  const [similarPage, setSimilarPage] = useState(1);
-  const [loadingSimilar, setLoadingSimilar] = useState(false);
-  const [hasMoreSimilar, setHasMoreSimilar] = useState(true);
-  const [similarEndReached, setSimilarEndReached] = useState(false);
 
   // Recent Searches using localStorage
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -369,91 +321,6 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     window.addEventListener('reset-product-filters', handleReset);
     return () => window.removeEventListener('reset-product-filters', handleReset);
   }, []);
-
-  // Similar Products Fetcher logic for Search matching
-  const fetchSimilarProducts = async (pageVal: number, initialReset: boolean = false, activeProducts: Product[] = []) => {
-    if (initialReset) {
-      setSimilarProducts([]);
-      setSimilarPage(1);
-      setHasMoreSimilar(true);
-      setSimilarEndReached(false);
-    }
-    
-    setLoadingSimilar(true);
-    try {
-      const currentProds = activeProducts.length > 0 ? activeProducts : products;
-      // Get category of matching products to suggest relevant similar ones
-      let catId = '';
-      if (currentProds.length > 0) {
-        const firstProd = currentProds[0];
-        catId = getCategoryId(firstProd.category);
-      }
-      
-      const params = new URLSearchParams();
-      if (catId) {
-        params.append('category', catId);
-      } else if (debouncedSearch) {
-        params.append('search', debouncedSearch);
-      }
-
-      // Exclude already loaded main keyword-matched products
-      const excludeIds = currentProds.map(p => p._id).filter(Boolean).join(',');
-      if (excludeIds) {
-        params.append('exclude', excludeIds);
-      }
-
-      params.append('page', String(pageVal));
-      params.append('limit', '12');
-
-      const res = await apiFetch(`/api/products?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        const incoming = data.products || [];
-        
-        // Filter out products already present in active matching products
-        const mainIds = new Set(currentProds.map(p => p._id));
-        const filteredIncoming = incoming.filter((p: Product) => !mainIds.has(p._id));
-        
-        if (filteredIncoming.length === 0) {
-          setHasMoreSimilar(false);
-          setSimilarEndReached(true);
-        } else {
-          setSimilarProducts(prev => {
-            const existingIds = new Set(prev.map(p => p._id));
-            const uniqueIncoming = filteredIncoming.filter((p: Product) => !existingIds.has(p._id));
-            if (initialReset) return uniqueIncoming;
-            return [...prev, ...uniqueIncoming];
-          });
-          if (incoming.length < 12) {
-            setHasMoreSimilar(false);
-          }
-        }
-      } else {
-        setHasMoreSimilar(false);
-        setSimilarEndReached(true);
-      }
-    } catch (err) {
-      
-      setHasMoreSimilar(false);
-      setSimilarEndReached(true);
-    } finally {
-      setLoadingSimilar(false);
-    }
-  };
-
-  const handleSeeMoreSimilar = () => {
-    const nextPage = similarPage + 1;
-    setSimilarPage(nextPage);
-    fetchSimilarProducts(nextPage, false);
-  };
-
-  useEffect(() => {
-    if (debouncedSearch && products.length > 0) {
-      fetchSimilarProducts(1, true, products);
-    }
-  }, [debouncedSearch, products]);
-
-
 
   const handleResetFilters = () => {
     const previousSearch = search;

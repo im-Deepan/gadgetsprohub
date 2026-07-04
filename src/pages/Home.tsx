@@ -625,7 +625,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             <button
               onClick={() => {
                 setActiveCategory('all');
-                setHasClickedFilter(true);
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer ${
                 activeCategory === 'all'
@@ -638,7 +637,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             <button
               onClick={() => {
                 setActiveCategory('trending');
-                setHasClickedFilter(true);
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer flex items-center gap-1 ${
                 activeCategory === 'trending'
@@ -654,7 +652,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                 key={cat._id}
                 onClick={() => {
                   setActiveCategory(activeCategory === cat._id ? 'all' : cat._id);
-                  setHasClickedFilter(true);
                 }}
                 className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer ${
                   activeCategory === cat._id
