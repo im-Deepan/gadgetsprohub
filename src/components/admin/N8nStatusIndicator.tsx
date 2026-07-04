@@ -40,8 +40,8 @@ export const N8nStatusIndicator: React.FC<{ token: string | null }> = ({ token }
   };
 
   useEffect(() => {
-    checkStatus();
-    const interval = setInterval(checkStatus, 30000);
+    checkStatus().catch(() => {});
+    const interval = setInterval(() => { checkStatus().catch(() => {}); }, 30000);
     return () => clearInterval(interval);
   }, [token]);
 

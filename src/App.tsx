@@ -220,7 +220,7 @@ export const preloadView = (view: AppView, slug?: string) => {
         break;
     }
     // Prefetch API and TanStack state cache
-    prefetchData(view, slug);
+    prefetchData(view, slug).catch(() => {});
   } catch (err) {
     captureError(err, { context: 'preloadView', view, slug });
   }
@@ -339,7 +339,7 @@ const AppContent: React.FC = () => {
         }
       }
     };
-    checkDbHealth();
+    checkDbHealth().catch(() => {});
     return () => {
       controller.abort();
     };
@@ -373,7 +373,7 @@ const AppContent: React.FC = () => {
       }
     };
 
-    trackVisit();
+    trackVisit().catch(() => {});
 
     // Lazy load AdSense safely with strict double-trigger protection
     const loadAdSense = () => {
@@ -522,7 +522,7 @@ const AppContent: React.FC = () => {
       }
     };
 
-    fetchLocation();
+    fetchLocation().catch(() => {});
     return () => {
       controller.abort();
     };
@@ -635,7 +635,7 @@ const AppContent: React.FC = () => {
       }
     };
 
-    applyMetadata();
+    applyMetadata().catch(() => {});
 
     return () => {
       active = false;
@@ -836,7 +836,7 @@ const setupGlobalErrorTracking = () => {
   });
 
   window.addEventListener('unhandledrejection', (event) => {
-    captureError(event.reason, {
+    console.error('UNHANDLED:', event.reason); captureError(event.reason, {
       context: 'Unhandled promise rejection',
     });
   });

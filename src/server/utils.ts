@@ -28,19 +28,12 @@ export const isAdminEmail = (email: string | undefined): boolean => {
   if (!email) return false;
   const normalized = email.toLowerCase().trim();
   
-  // Dynamically constructed default admin emails to prevent static analysis target enumeration
-  const defaultAdmins = [
-    ['admin', 'affiliate.com'].join('@'),
-    ['tester', 'example.com'].join('@')
-  ];
-
   const envAdmins = (process.env.ADMIN_EMAILS || '')
     .split(',')
     .map(e => e.toLowerCase().trim())
     .filter(Boolean);
     
-  const allAdmins = [...defaultAdmins, ...envAdmins];
-  return allAdmins.includes(normalized);
+  return envAdmins.includes(normalized);
 };
 
 export const getStorageEmail = (email: unknown): string | undefined => {

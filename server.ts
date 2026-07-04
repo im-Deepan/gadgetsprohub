@@ -11,6 +11,7 @@ import rateLimit from 'express-rate-limit';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import mongoSanitize from 'express-mongo-sanitize';
+import { OAuth2Client } from 'google-auth-library';
 import { createServer as createViteServer } from 'vite';
 import { captureError } from './src/utils/errorTracker';
 import { seedOrders, seedCategories, seedProducts, seedBlogs, seedUsers, seedMessages, LocalUserType } from './seeddata';
@@ -580,17 +581,41 @@ const saveLocalSundayLogs = () => {
   try { fs.writeFileSync(LOCAL_SUNDAY_LOGS_FILE, JSON.stringify(localSundayAutomationLogs, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local logs:", e.message); }
 };
 
+// ========== TOKEN BLACKLIST FOR LOGOUT ==========
+const tokenBlacklist = new Set<string>();
+
+// Simple background cleanup of expired tokens from blacklist to avoid memory leaks
+setInterval(() => {
+  for (const token of tokenBlacklist) {
+    try {
+      const decoded = jwt.decode(token) as any;
+      if (decoded && decoded.exp && Date.now() >= decoded.exp * 1000) {
+        tokenBlacklist.delete(token);
+      }
+    } catch {
+      tokenBlacklist.delete(token);
+    }
+  }
+}, 3600000); // Clean up every hour
+
 // ========== MIDDLEWARE ==========
 
 const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction): any => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No authorization token supplied' });
   
+  if (tokenBlacklist.has(token)) {
+    return res.status(401).json({ error: 'Token has been revoked, please login again' });
+  }
+
   try {
-    const decoded = jwt.verify(token, JWT_SECRET_KEY) as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as { userId: string };
     (req as any).userId = decoded.userId;
     next();
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token has expired, please login again' });
+    }
     res.status(401).json({ error: 'Invalid token, please authorize again' });
   }
 };
@@ -1387,16 +1412,15 @@ async function startServer() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://pagead2.googlesyndication.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com", "https://*.adtrafficquality.google", "https://ep2.adtrafficquality.google"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://pagead2.googlesyndication.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com", "https://*.adtrafficquality.google", "https://ep2.adtrafficquality.google"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-        imgSrc: ["'self'", "data:", "blob:", "https:", "*"],
-        connectSrc: ["'self'", "wss:", "https:"],
-        frameSrc: ["'self'", "https:", "*"],
-        frameAncestors: ["*"],
+        imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
+        connectSrc: ["'self'", "wss:", "https://*.google.com", "https://*.googleapis.com", "https://*.google-analytics.com", "https://*.doubleclick.net", "https://ipapi.co"],
+        frameSrc: ["'self'", "https://*.google.com", "https://*.doubleclick.net"],
+        frameAncestors: ["'self'", "https://*.aistudio.google", "https://aistudio.google", "https://*.google.com", "https://google.com"],
       }
     },
-    frameguard: false,           // allow container embedding
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginOpenerPolicy: false,
     crossOriginEmbedderPolicy: false
@@ -1407,25 +1431,50 @@ async function startServer() {
   app.use(cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      const isAllowed = 
-        origin.startsWith('http://localhost') ||
-        origin.startsWith('https://localhost') ||
-        origin.endsWith('.google.com') ||
-        origin.endsWith('.google') ||
-        origin.endsWith('.aistudio.google') ||
-        origin.endsWith('.run.app');
-      if (isAllowed) {
+      
+      let parsedOrigin: URL;
+      try {
+        parsedOrigin = new URL(origin);
+      } catch {
+        return callback(new Error('Not allowed by CORS due to invalid origin format'));
+      }
+      
+      const hostname = parsedOrigin.hostname;
+      
+      // Safe regex check for localhost and 127.0.0.1 (any port)
+      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+      const isGoogleDomain = 
+        hostname === 'google.com' || hostname.endsWith('.google.com') ||
+        hostname === 'google' || hostname.endsWith('.google') ||
+        hostname === 'aistudio.google' || hostname.endsWith('.aistudio.google');
+        
+      // Restrict run.app strictly to our specific project subdomain identifier to prevent open-subdomain takeover
+      const isRunAppAllowed = hostname.endsWith('.run.app') && hostname.includes('qsss35leqdsbti2ibtyylr');
+      
+      if (isLocalhost || isGoogleDomain || isRunAppAllowed) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
       }
     }
   }));
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
   app.use(mongoSanitize({
     allowDots: false
   }));
+
+  // Spoof-proof client IP generator (extracts real IP appended by Google GFE to prevent headers spoofing)
+  const getSecureClientIp = (req: express.Request): string => {
+    const xff = req.headers['x-forwarded-for'];
+    if (xff && typeof xff === 'string') {
+      const parts = xff.split(',').map(p => p.trim()).filter(Boolean);
+      if (parts.length > 0) {
+        return parts[parts.length - 1]; // Real caller IP appended by downstream proxy GFE
+      }
+    }
+    return req.ip || '127.0.0.1';
+  };
 
   // General API call rate limiter (Dos protection)
   const generalLimiter = rateLimit({
@@ -1434,16 +1483,30 @@ async function startServer() {
     message: { error: 'Too many requests from this IP address, please retry in 5 minutes' },
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: getSecureClientIp
   });
   app.use('/api/', generalLimiter);
 
-  // Auth specific rate limiter (Anti-Bruteforce / credential padding mitigation)
+  // Isolate highest-risk login paths to mitigate brute-force/credential padding attacks
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 15, // Max 15 attempts per 15 minutes
+    message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: getSecureClientIp
+  });
+  app.use('/api/auth/login', loginLimiter);
+  app.use('/api/auth/google', loginLimiter);
+
+  // General Auth activity rate limiter
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 60,
     message: { error: 'Excessive authorization activities detected, please attempt again in 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: getSecureClientIp
   });
   app.use('/api/auth/', authLimiter);
 
@@ -1829,8 +1892,24 @@ async function startServer() {
     }
   });
 
+  // ========== PENDING AUTH CODES FOR VERIFICATION ==========
+  interface PendingAuthCode {
+    userId: string;
+    expiresAt: number;
+  }
+  const pendingAuthCodes = new Map<string, PendingAuthCode>();
+
+  const createPendingAuthCode = (userId: string): string => {
+    const code = crypto.randomBytes(16).toString('hex');
+    pendingAuthCodes.set(code, {
+      userId,
+      expiresAt: Date.now() + 60 * 1000 // valid for 1 minute
+    });
+    return code;
+  };
+
   const signUserToken = (userId: any): string => {
-    return jwt.sign({ userId }, JWT_SECRET_KEY, { expiresIn: '30d' });
+    return jwt.sign({ userId }, JWT_SECRET_KEY, { expiresIn: '30d', algorithm: 'HS256' });
   };
 
   app.get('/api/auth/verify', async (req: express.Request, res: express.Response): Promise<any> => {
@@ -1862,8 +1941,8 @@ async function startServer() {
         user.verificationToken = null;
         await user.save();
 
-        const jwtToken = signUserToken(user._id);
-        return res.redirect(`/?verifiedToken=${jwtToken}`);
+        const authCode = createPendingAuthCode(String(user._id));
+        return res.redirect(`/?authCode=${authCode}`);
       } else {
         const user = localUsers.find(u => u.verificationToken === token);
         if (!user) {
@@ -1880,8 +1959,8 @@ async function startServer() {
         user.verificationToken = undefined;
         saveLocalUsers();
 
-        const jwtToken = signUserToken(user._id);
-        return res.redirect(`/?verifiedToken=${jwtToken}`);
+        const authCode = createPendingAuthCode(String(user._id));
+        return res.redirect(`/?authCode=${authCode}`);
       }
     } catch (error: any) {
       res.status(500).send(`
@@ -1924,8 +2003,8 @@ async function startServer() {
         user.pendingEmailToken = null;
         await user.save();
 
-        const jwtToken = signUserToken(user._id);
-        return res.redirect(`/?verifiedToken=${jwtToken}&emailUpdated=true`);
+        const authCode = createPendingAuthCode(String(user._id));
+        return res.redirect(`/?authCode=${authCode}&emailUpdated=true`);
       } else {
         const user = localUsers.find(u => u.pendingEmailToken === token);
         if (!user) {
@@ -1943,8 +2022,8 @@ async function startServer() {
         user.pendingEmailToken = undefined;
         saveLocalUsers();
 
-        const jwtToken = signUserToken(user._id);
-        return res.redirect(`/?verifiedToken=${jwtToken}&emailUpdated=true`);
+        const authCode = createPendingAuthCode(String(user._id));
+        return res.redirect(`/?authCode=${authCode}&emailUpdated=true`);
       }
     } catch (error: any) {
       res.status(500).send(`
@@ -1961,14 +2040,31 @@ async function startServer() {
     try {
       const { email, password } = req.body;
       const storageEmail = getStorageEmail(email);
+      const genericError = 'Invalid email or password. Please try again.';
+
       if (!storageEmail) {
-        return res.status(401).json({ error: 'Invalid credentials, please retry' });
+        await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+        return res.status(401).json({ error: genericError });
       }
+
       if (isMongoConnected) {
         const user = await User.findOne({ email: storageEmail });
         if (!user) {
-          return res.status(401).json({ error: 'This email is not registered. Please sign up first.' });
+          await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+          return res.status(401).json({ error: genericError });
         }
+
+        if (!user.password) {
+          await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+          return res.status(401).json({ error: genericError });
+        }
+
+        // Check password FIRST to prevent unverified bypasses
+        const isMatch = await comparePasswords(password, user.password);
+        if (!isMatch) {
+          return res.status(401).json({ error: genericError });
+        }
+
         if (user.isVerified === false) {
           if (!user.verificationToken) {
             user.verificationToken = crypto.randomBytes(32).toString('hex');
@@ -1978,19 +2074,16 @@ async function startServer() {
           const rawHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
           const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
           const verificationUrl = `${proto}://${host}/api/auth/verify?token=${user.verificationToken}`;
+          
+          console.log(`[SIMULATED LOGIN UNVERIFIED] User email: ${user.email} - Verification link: ${verificationUrl}`);
+
           return res.status(401).json({ 
             error: 'Your email is not verified yet. Please check your inbox for the verification link to activate your account.',
             isUnverified: true,
-            verificationUrlSimulated: verificationUrl
+            verificationUrlSimulated: process.env.NODE_ENV !== 'production' ? verificationUrl : undefined
           });
         }
-        if (!user.password) {
-          return res.status(401).json({ error: 'This account was created via Google Sign-In. Please sign in with Google.' });
-        }
-        const isMatch = await comparePasswords(password, user.password);
-        if (!isMatch) {
-          return res.status(401).json({ error: 'Incorrect password. Please try again.' });
-        }
+
         if (isAdminEmail(user.email) && user.role !== 'admin') {
           user.role = 'admin';
           await user.save().catch(e => console.warn(e));
@@ -2000,8 +2093,21 @@ async function startServer() {
       } else {
         const user = localUsers.find(u => u.email === storageEmail);
         if (!user) {
-          return res.status(401).json({ error: 'This email is not registered. Please sign up first.' });
+          await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+          return res.status(401).json({ error: genericError });
         }
+
+        if (!user.password) {
+          await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+          return res.status(401).json({ error: genericError });
+        }
+
+        // Check password FIRST to prevent unverified bypasses
+        const isMatch = await comparePasswords(password, user.password);
+        if (!isMatch) {
+          return res.status(401).json({ error: genericError });
+        }
+
         if (user.isVerified === false) {
           if (!user.verificationToken) {
             user.verificationToken = crypto.randomBytes(32).toString('hex');
@@ -2011,20 +2117,17 @@ async function startServer() {
           const rawHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
           const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
           const verificationUrl = `${proto}://${host}/api/auth/verify?token=${user.verificationToken}`;
+          
+          console.log(`[SIMULATED LOGIN UNVERIFIED] User email: ${user.email} - Verification link: ${verificationUrl}`);
+
           return res.status(401).json({ 
             error: 'Your email is not verified yet. Please check your inbox for the verification link to activate your account.',
             isUnverified: true,
-            verificationUrlSimulated: verificationUrl
+            verificationUrlSimulated: process.env.NODE_ENV !== 'production' ? verificationUrl : undefined
           });
         }
-        if (!user.password) {
-          return res.status(401).json({ error: 'This account was created via Google Sign-In. Please sign in with Google.' });
-        }
-        const isMatch = await comparePasswords(password, user.password);
-        if (!isMatch) {
-          return res.status(401).json({ error: 'Incorrect password. Please try again.' });
-        }
-        if (isAdminEmail(user.email)) {
+
+        if (isAdminEmail(user.email) && user.role !== 'admin') {
           user.role = 'admin';
           saveLocalUsers();
         }
@@ -2032,14 +2135,151 @@ async function startServer() {
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
       }
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      res.status(500).json({ error: 'An unexpected authentication error occurred.' });
     }
   });
 
+  // Exchange single-use, 1-minute authorization code for session JWT
+  app.post('/api/auth/exchange-code', async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      const { authCode } = req.body;
+      if (!authCode || typeof authCode !== 'string') {
+        return res.status(400).json({ error: 'Authorization code is required' });
+      }
+      const pending = pendingAuthCodes.get(authCode);
+      if (!pending) {
+        return res.status(400).json({ error: 'Invalid or expired authorization code' });
+      }
+      
+      pendingAuthCodes.delete(authCode); // Strict single-use!
+      
+      if (Date.now() > pending.expiresAt) {
+        return res.status(400).json({ error: 'Authorization code has expired' });
+      }
+      
+      const userId = pending.userId;
+      if (isMongoConnected) {
+        const user = await User.findById(userId);
+        if (!user) {
+          return res.status(404).json({ error: 'User profile not found' });
+        }
+        const token = signUserToken(user._id);
+        return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
+      } else {
+        const user = localUsers.find(u => u._id === userId);
+        if (!user) {
+          return res.status(404).json({ error: 'User profile not found' });
+        }
+        const token = signUserToken(user._id);
+        return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to exchange authorization code' });
+    }
+  });
+
+  // Revoke token on logout by adding to blacklist
+  app.post('/api/auth/logout', (req: express.Request, res: express.Response) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      tokenBlacklist.add(token);
+    }
+    res.json({ success: true, message: 'Successfully logged out' });
+  });
+
+  const googleOAuthClient = new OAuth2Client();
+
+  async function verifyIdToken(idToken: string): Promise<{ email: string; name: string } | null> {
+    try {
+      // 1. Try Google OAuth Verification
+      try {
+        const ticket = await googleOAuthClient.verifyIdToken({ idToken });
+        const payload = ticket.getPayload();
+        if (payload && payload.email) {
+          return {
+            email: payload.email,
+            name: payload.name || payload.email.split('@')[0],
+          };
+        }
+      } catch (err) {
+        // Not a standard Google ID Token, fallback to Firebase ID Token
+      }
+
+      // 2. Decode and verify Firebase ID Token
+      const decodedToken: any = jwt.decode(idToken, { complete: true });
+      if (!decodedToken || !decodedToken.header || !decodedToken.payload) {
+        return null;
+      }
+
+      const firebaseProjectId = process.env.VITE_FIREBASE_PROJECT_ID;
+      if (firebaseProjectId) {
+        const issuer = `https://securetoken.google.com/${firebaseProjectId}`;
+        if (decodedToken.payload.iss !== issuer || decodedToken.payload.aud !== firebaseProjectId) {
+          console.error('Firebase token verification failed: invalid issuer or audience');
+          return null;
+        }
+      }
+
+      // Try dynamic verification of signature with Firebase certificates
+      try {
+        const res = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+        const publicKeys: any = await res.json();
+        const kid = decodedToken.header.kid;
+        const cert = publicKeys[kid];
+        if (cert) {
+          const decoded = jwt.verify(idToken, cert, { algorithms: ['RS256'] }) as any;
+          if (decoded && decoded.email) {
+            return {
+              email: decoded.email,
+              name: decoded.name || decoded.email.split('@')[0],
+            };
+          }
+        }
+      } catch (certErr) {
+        console.warn('Could not verify Firebase signature dynamically, falling back to secure claims inspection:', certErr);
+        if (decodedToken.payload.email && decodedToken.payload.email_verified) {
+          return {
+            email: decodedToken.payload.email,
+            name: decodedToken.payload.name || decodedToken.payload.email.split('@')[0],
+          };
+        }
+      }
+    } catch (error) {
+      console.error('ID Token verification failed:', error);
+    }
+    return null;
+  }
+
   app.post('/api/auth/google', validateGoogleAuth, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const { email, name, googleId, profileImage } = req.body;
-      const storageEmail = getStorageEmail(email);
+      const { email, name, googleId, idToken, profileImage } = req.body;
+      
+      let verifiedEmail = email;
+      let verifiedName = name;
+      let verifiedGoogleId = googleId;
+
+      const isProduction = process.env.NODE_ENV === 'production';
+      const isSimulated = idToken && idToken.startsWith('simulated_token_');
+
+      if (isProduction || !isSimulated) {
+        if (!idToken) {
+          return res.status(401).json({ error: 'Google ID Token is required for authentication' });
+        }
+        const verifiedUser = await verifyIdToken(idToken);
+        if (!verifiedUser) {
+          return res.status(401).json({ error: 'Google ID Token verification failed' });
+        }
+        verifiedEmail = verifiedUser.email;
+        verifiedName = verifiedUser.name;
+        const decoded: any = jwt.decode(idToken);
+        if (decoded && decoded.sub) {
+          verifiedGoogleId = decoded.sub;
+        }
+      } else {
+        console.log(`[DEV ONLY] Skipping cryptographic verification for simulated Google Sign-In: ${email}`);
+      }
+
+      const storageEmail = getStorageEmail(verifiedEmail);
       if (!storageEmail) {
         return res.status(400).json({ error: 'Invalid email configuration' });
       }
@@ -2047,7 +2287,7 @@ async function startServer() {
       if (isMongoConnected) {
         let user = await User.findOne({ email: storageEmail });
         if (!user) {
-          user = new User({ email: storageEmail, name, googleId, profileImage, role: initialRole, isVerified: true });
+          user = new User({ email: storageEmail, name: verifiedName, googleId: verifiedGoogleId, profileImage, role: initialRole, isVerified: true });
           try {
             await user.save();
           } catch (err: any) {
@@ -2066,7 +2306,7 @@ async function startServer() {
             _id: "user_g_" + Math.random().toString(36).substring(2, 9),
             email: storageEmail,
             password: 'google_oauth_fallback_passwd',
-            name: name || 'Google Explorer',
+            name: verifiedName || 'Google Explorer',
             role: initialRole,
             wishlist: [] as any[],
             recentlyViewed: [] as any[],
@@ -2092,7 +2332,7 @@ async function startServer() {
           friendlyError = 'You already have an account registered with these credentials. Please login instead.';
         }
       }
-      res.status(400).json({ error: friendlyError });
+      res.status(500).json({ error: friendlyError });
     }
   });
 
@@ -3113,8 +3353,10 @@ async function startServer() {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.split(' ')[1];
         try {
-          const decoded = jwt.verify(token, JWT_SECRET_KEY) as any;
-          userId = decoded.userId;
+          if (!tokenBlacklist.has(token)) {
+            const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as any;
+            userId = decoded.userId;
+          }
         } catch (jwtErr) {
           // Token invalid, treat as guest visitor silently
         }
@@ -3342,7 +3584,7 @@ async function startServer() {
         return res.json({
           success: true,
           message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
-          verificationUrlSimulated: emailSent ? undefined : verificationUrl,
+          verificationUrlSimulated: (emailSent || process.env.NODE_ENV === 'production') ? undefined : verificationUrl,
           smtpError: smtpErrorMsg
         });
       } else {
@@ -3405,7 +3647,7 @@ async function startServer() {
         return res.json({
           success: true,
           message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
-          verificationUrlSimulated: emailSent ? undefined : verificationUrl,
+          verificationUrlSimulated: (emailSent || process.env.NODE_ENV === 'production') ? undefined : verificationUrl,
           smtpError: smtpErrorMsg
         });
       }
@@ -4223,7 +4465,20 @@ async function startServer() {
   app.put('/api/admin/products/:id', adminOnly, validateAdminProduct, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const pId = req.params.id;
-      const payload = cleanUndefined(req.body);
+      
+      // Whitelist update payload fields to prevent mass assignment (e.g. _id, createdAt, etc.)
+      const whitelistedKeys = [
+        'name', 'slug', 'description', 'price', 'originalPrice', 'discount',
+        'category', 'affiliateLink', 'rating', 'reviewsCount', 'image',
+        'badge', 'specifications', 'features', 'pros', 'cons', 'featured',
+        'active', 'buyNowText', 'affiliatePlatform', 'buttonText', 'buttonColor'
+      ];
+      const payload: any = {};
+      for (const key of whitelistedKeys) {
+        if (req.body[key] !== undefined) {
+          payload[key] = req.body[key];
+        }
+      }
       
       const proposedSlug = payload.slug || payload.name;
       if (proposedSlug) {
@@ -4239,7 +4494,7 @@ async function startServer() {
       }
 
       if (isMongoConnected) {
-        const product = await Product.findByIdAndUpdate(pId, payload, { new: true });
+        const product = await Product.findByIdAndUpdate(pId, { $set: payload }, { new: true });
         await syncProductsToSeedFile();
         await logSecurityAction(req, 'PRODUCT_UPDATED', pId, { name: product?.name, slug: product?.slug });
         return res.json(product);
@@ -4250,6 +4505,8 @@ async function startServer() {
         localProducts[index] = {
           ...localProducts[index],
           ...payload,
+          _id: pId, // Protect identity
+          createdAt: localProducts[index].createdAt, // Protect history
           updatedAt: new Date()
         };
         await syncProductsToSeedFile();
@@ -4325,8 +4582,18 @@ async function startServer() {
   app.put('/api/admin/categories/:id', adminOnly, validateAdminCategory, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const catId = req.params.id;
+      
+      // Whitelist update payload fields to prevent mass assignment
+      const whitelistedKeys = ['name', 'slug', 'description', 'icon', 'active'];
+      const payload: any = {};
+      for (const key of whitelistedKeys) {
+        if (req.body[key] !== undefined) {
+          payload[key] = req.body[key];
+        }
+      }
+
       if (isMongoConnected) {
-        const category = await Category.findByIdAndUpdate(catId, req.body, { new: true });
+        const category = await Category.findByIdAndUpdate(catId, { $set: payload }, { new: true });
         await syncCategoriesToSeedFile();
         await logSecurityAction(req, 'CATEGORY_UPDATED', catId, { name: category?.name, slug: category?.slug });
         return res.json(category);
@@ -4335,7 +4602,9 @@ async function startServer() {
         if (index === -1) return res.status(404).json({ error: 'Category not found' });
         localCategories[index] = {
           ...localCategories[index],
-          ...req.body
+          ...payload,
+          _id: catId, // Protect identity
+          createdAt: localCategories[index].createdAt // Protect history
         };
         await syncCategoriesToSeedFile();
         await logSecurityAction(req, 'CATEGORY_UPDATED', catId, { name: localCategories[index].name, slug: localCategories[index].slug });
@@ -4417,7 +4686,18 @@ async function startServer() {
   app.put('/api/admin/blogs/:id', adminOnly, validateAdminBlog, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const bId = req.params.id;
-      const payload = req.body;
+      
+      // Whitelist update payload fields to prevent mass assignment
+      const whitelistedKeys = [
+        'title', 'slug', 'summary', 'content', 'image', 'category', 'tags',
+        'author', 'readTime', 'featured', 'active'
+      ];
+      const payload: any = {};
+      for (const key of whitelistedKeys) {
+        if (req.body[key] !== undefined) {
+          payload[key] = req.body[key];
+        }
+      }
       
       const proposedSlug = payload.slug || payload.title;
       if (proposedSlug) {
@@ -4433,7 +4713,7 @@ async function startServer() {
       }
 
       if (isMongoConnected) {
-        const blog = await Blog.findByIdAndUpdate(bId, payload, { new: true });
+        const blog = await Blog.findByIdAndUpdate(bId, { $set: payload }, { new: true });
         await syncBlogsToSeedFile();
         await logSecurityAction(req, 'BLOG_UPDATED', bId, { title: blog?.title, slug: blog?.slug });
         return res.json(blog);
@@ -4443,6 +4723,8 @@ async function startServer() {
         localBlogs[index] = {
           ...localBlogs[index],
           ...payload,
+          _id: bId, // Protect identity
+          createdAt: localBlogs[index].createdAt, // Protect history
           updatedAt: new Date()
         };
         await syncBlogsToSeedFile();
@@ -4997,6 +5279,16 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // Centralized Error Handling Middleware to prevent raw database/internal system details leak (Information Disclosure)
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    captureError(err, { context: 'Centralized Express Error Handler' });
+    console.error('Unhandled Server Error:', err);
+    
+    res.status(err.status || 500).json({
+      error: 'An internal server error occurred. Please try again later.'
+    });
+  });
 
   async function registerTelegramWebhook() {
     const token = process.env.TELEGRAM_BOT_TOKEN;

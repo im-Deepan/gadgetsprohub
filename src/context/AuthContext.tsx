@@ -85,19 +85,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const verifiedToken = params.get('verifiedToken');
+    const authCode = params.get('authCode');
     const emailUpdated = params.get('emailUpdated');
-    if (verifiedToken) {
-      safeSetItem('aff_token', verifiedToken);
-      setToken(verifiedToken);
-      if (emailUpdated === 'true') {
-        showToast('Your new email address has been successfully verified and updated on your account record!', 'success', 6000, 'User Action');
-      } else {
-        showToast('Your email has been successfully verified! You have been logged in automatically.', 'success', 5000, 'User Action');
-      }
+    if (authCode) {
+      setLoading(true);
+      fetch('/api/auth/exchange-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authCode })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          safeSetItem('aff_token', data.token);
+          setToken(data.token);
+          if (emailUpdated === 'true') {
+            showToast('Your new email address has been successfully verified and updated on your account record!', 'success', 6000, 'User Action');
+          } else {
+            showToast('Your email has been successfully verified! You have been logged in automatically.', 'success', 5000, 'User Action');
+          }
+        } else {
+          showToast(data.error || 'Failed to authorize.', 'error');
+        }
+      })
+      .catch(() => {
+        showToast('Connection error during authorization exchange.', 'error');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
       
       // Clean up URL query parameters
-      params.delete('verifiedToken');
+      params.delete('authCode');
       params.delete('emailUpdated');
       const newQuery = params.toString();
       const newPath = window.location.pathname + (newQuery ? `?${newQuery}` : '');
@@ -106,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [showToast]);
 
   useEffect(() => {
-    refreshProfile();
+    refreshProfile().catch(() => {});
   }, [refreshProfile]);
 
   const fallbackBackendLogin = async (email: string, password: string) => {
@@ -242,6 +261,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let email = '';
       let name = '';
       let googleId = '';
+      let idToken = '';
       
       if (!isFirebaseMock) {
         const result = await signInWithPopup(auth, googleProvider);
@@ -249,6 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email = googleUser.email || '';
         name = googleUser.displayName || googleUser.email?.split('@')[0] || 'Google Explorer';
         googleId = googleUser.uid;
+        idToken = await googleUser.getIdToken();
       } else {
         const enterEmail = window.prompt(
           "Development Simulated Google Sign-In:\nEnter your Gmail ID to login with Google:",
@@ -260,6 +281,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email = enterEmail;
         name = enterEmail.split('@')[0].toUpperCase();
         googleId = 'simulated_' + email.split('@')[0];
+        idToken = 'simulated_token_' + email;
       }
 
       if (!email) {
@@ -269,7 +291,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, googleId })
+        body: JSON.stringify({ email, name, googleId, idToken })
       });
       
       let data: Record<string, unknown> = {};

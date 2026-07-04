@@ -86,6 +86,11 @@ export const validateGoogleAuth = [
     .isString()
     .withMessage('Google ID must be a string')
     .trim(),
+  body('idToken')
+    .optional()
+    .isString()
+    .withMessage('ID Token must be a string')
+    .trim(),
   body('profileImage')
     .optional()
     .isString()

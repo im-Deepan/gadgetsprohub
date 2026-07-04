@@ -413,7 +413,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   useEffect(() => {
     const controller = new AbortController();
     if (productSlug) {
-      loadProductStats(controller.signal);
+      loadProductStats(controller.signal).catch(() => {});
     }
     return () => {
       controller.abort();

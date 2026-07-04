@@ -199,7 +199,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
   };
 
   useEffect(() => {
-    loadUserProfile();
+    loadUserProfile().catch(() => {});
   }, [wishlist, token]);
 
   const handleRemoveBookmark = async (id: string) => {

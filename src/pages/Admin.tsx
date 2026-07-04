@@ -558,7 +558,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   useEffect(() => {
     const controller = new AbortController();
     if (token) {
-      loadAdminMetrics(controller.signal);
+      loadAdminMetrics(controller.signal).catch(() => {});
     }
     return () => {
       controller.abort();
