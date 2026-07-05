@@ -1428,7 +1428,7 @@ async function startServer() {
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
-        connectSrc: ["'self'", "wss:", "https://*.google.com", "https://*.googleapis.com", "https://*.google-analytics.com", "https://*.doubleclick.net", "https://ipapi.co"],
+        connectSrc: ["'self'", "wss:", "https://*.google.com", "https://*.googleapis.com", "https://*.google-analytics.com", "https://*.doubleclick.net", "https://ipapi.co", "https://*.run.app", "https://*.onrender.com", "https://gadgetsprohub.onrender.com"],
         frameSrc: ["'self'", "https://*.google.com", "https://*.doubleclick.net"],
         frameAncestors: ["'self'", "https://*.aistudio.google", "https://aistudio.google", "https://*.google.com", "https://google.com","https://gadgetsprohub.onrender.com"],
       }
@@ -1463,7 +1463,7 @@ async function startServer() {
       // Restrict run.app strictly to our specific project subdomain identifier to prevent open-subdomain takeover
       const isRunAppAllowed = hostname.endsWith('.run.app') && hostname.includes('qsss35leqdsbti2ibtyylr');
       const isOwnDomain = hostname === 'gadgetsprohub.onrender.com' || hostname.endsWith('.onrender.com') && hostname.includes('gadgetsprohub');
-      if (isLocalhost || isGoogleDomain || isRunAppAllowed) {
+      if (isLocalhost || isGoogleDomain || isRunAppAllowed || isOwnDomain) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
