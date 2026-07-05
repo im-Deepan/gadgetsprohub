@@ -1424,17 +1424,17 @@ async function startServer() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://pagead2.googlesyndication.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com", "https://*.adtrafficquality.google", "https://ep2.adtrafficquality.google"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://pagead2.googlesyndication.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com", "https://*.adtrafficquality.google", "https://ep1.adtrafficquality.google", "https://ep2.adtrafficquality.google"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
-        connectSrc: ["'self'", "wss:", "https://*.google.com", "https://*.googleapis.com", "https://*.google-analytics.com", "https://*.doubleclick.net", "https://ipapi.co", "https://*.run.app", "https://*.onrender.com", "https://gadgetsprohub.onrender.com"],
-        frameSrc: ["'self'", "https://*.google.com", "https://*.doubleclick.net"],
+        connectSrc: ["'self'", "wss:", "https://*.google.com", "https://*.googleapis.com", "https://*.google-analytics.com", "https://*.doubleclick.net", "https://ipapi.co", "https://*.run.app", "https://*.onrender.com", "https://gadgetsprohub.onrender.com", "https://*.adtrafficquality.google"],
+        frameSrc: ["'self'", "https://*.google.com", "https://*.doubleclick.net", "https://*.firebaseapp.com"],
         frameAncestors: ["'self'", "https://*.aistudio.google", "https://aistudio.google", "https://*.google.com", "https://google.com","https://gadgetsprohub.onrender.com"],
       }
     },
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    crossOriginOpenerPolicy: false,
+    crossOriginOpenerPolicy: { policy: "unsafe-none" },
     crossOriginEmbedderPolicy: false
   }));
   app.disable('x-powered-by');
@@ -2908,10 +2908,54 @@ async function startServer() {
     }
   });
 
-  // Profile management
-  app.get('/api/user/profile', authenticate, async (req: express.Request, res: express.Response): Promise<any> => {
+  // Non-erroring authentication check to avoid 401s in the console on initial load
+  app.get('/api/auth/status', (req: express.Request, res: express.Response): any => {
+    let token = req.headers.authorization?.split(' ')[1];
+    if (!token && req.headers.cookie) {
+      const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
+        const [key, val] = c.trim().split('=');
+        if (key && val) acc[key] = val;
+        return acc;
+      }, {} as Record<string, string>);
+      token = cookies['token'];
+    }
+    
+    if (!token || tokenBlacklist.has(token)) {
+      return res.status(200).json({ isAuthenticated: false });
+    }
+
     try {
-      const uId = (req as any).userId;
+      jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] });
+      return res.status(200).json({ isAuthenticated: true });
+    } catch {
+      return res.status(200).json({ isAuthenticated: false });
+    }
+  });
+
+  // Profile management
+  app.get('/api/user/profile', async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      let token = req.headers.authorization?.split(' ')[1];
+      if (!token && req.headers.cookie) {
+        const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
+          const [key, val] = c.trim().split('=');
+          if (key && val) acc[key] = val;
+          return acc;
+        }, {} as Record<string, string>);
+        token = cookies['token'];
+      }
+      if (!token || tokenBlacklist.has(token)) {
+        return res.status(200).json({ isAuthenticated: false });
+      }
+
+      let uId: string;
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as { userId: string };
+        uId = decoded.userId;
+      } catch {
+        return res.status(200).json({ isAuthenticated: false });
+      }
+
       if (isMongoConnected) {
         const user = await User.findById(uId).populate('wishlist');
         if (user && isAdminEmail(user.email)) {
@@ -2921,10 +2965,10 @@ async function startServer() {
           }
         }
         const userObj = user?.toObject ? user.toObject() : user;
-        return res.json({ ...userObj, token: (req as any).authToken });
+        return res.json({ ...userObj, token, isAuthenticated: true });
       } else {
         const user = localUsers.find(u => u._id === uId);
-        if (!user) return res.status(404).json({ error: 'User profiles matching identifier not found' });
+        if (!user) return res.status(200).json({ isAuthenticated: false });
         
         if (isAdminEmail(user.email)) {
           user.role = 'admin';
@@ -2940,7 +2984,8 @@ async function startServer() {
           ...user,
           wishlist: wishlistPopulated,
           recentlyViewed: [],
-          token: (req as any).authToken
+          token,
+          isAuthenticated: true
         });
       }
     } catch (error: any) {

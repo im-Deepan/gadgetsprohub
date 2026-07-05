@@ -319,7 +319,7 @@ const AppContent: React.FC = () => {
     const controller = new AbortController();
     const checkDbHealth = async () => {
       try {
-        const response = await apiFetch('/api/health-check', { signal: controller.signal });
+        const response = await apiFetch('/api/health-check', { signal: controller.signal, maxRetries: 0 });
         if (!response.ok) {
           await response.json().catch(() => ({}));
           

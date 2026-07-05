@@ -44,6 +44,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await apiFetch('/api/user/profile');
       if (res.ok) {
         const data = await res.json();
+        if (data.isAuthenticated === false) {
+          setToken(null);
+          setUser(null);
+          setWishlist([]);
+          return;
+        }
         setUser({
           id: data._id,
           email: data.email,
