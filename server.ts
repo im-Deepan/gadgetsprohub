@@ -1430,7 +1430,7 @@ async function startServer() {
         imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
         connectSrc: ["'self'", "wss:", "https://*.google.com", "https://*.googleapis.com", "https://*.google-analytics.com", "https://*.doubleclick.net", "https://ipapi.co"],
         frameSrc: ["'self'", "https://*.google.com", "https://*.doubleclick.net"],
-        frameAncestors: ["'self'", "https://*.aistudio.google", "https://aistudio.google", "https://*.google.com", "https://google.com"],
+        frameAncestors: ["'self'", "https://*.aistudio.google", "https://aistudio.google", "https://*.google.com", "https://google.com","https://gadgetsprohub.onrender.com"],
       }
     },
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -1462,7 +1462,7 @@ async function startServer() {
         
       // Restrict run.app strictly to our specific project subdomain identifier to prevent open-subdomain takeover
       const isRunAppAllowed = hostname.endsWith('.run.app') && hostname.includes('qsss35leqdsbti2ibtyylr');
-      
+      const isOwnDomain = hostname === 'gadgetsprohub.onrender.com' || hostname.endsWith('.onrender.com') && hostname.includes('gadgetsprohub');
       if (isLocalhost || isGoogleDomain || isRunAppAllowed) {
         callback(null, true);
       } else {
