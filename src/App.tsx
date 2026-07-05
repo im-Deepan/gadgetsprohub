@@ -832,7 +832,7 @@ const setupGlobalErrorTracking = () => {
   });
 
   window.addEventListener('unhandledrejection', (event) => {
-    console.error('UNHANDLED:', event.reason); captureError(event.reason, {
+    captureError(event.reason, {
       context: 'Unhandled promise rejection',
     });
   });

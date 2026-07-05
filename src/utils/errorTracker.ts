@@ -49,7 +49,7 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
   };
 
   // Log to console (simulating central service for development/demonstration)
-  console.error('[GlobalErrorTracker]', JSON.stringify(errorDetails, null, 2));
+  console.warn('[GlobalErrorTracker]', JSON.stringify(errorDetails, null, 2));
 
   // If in a browser environment, optionally send to our global error tracking endpoint
   if (typeof window !== 'undefined') {
