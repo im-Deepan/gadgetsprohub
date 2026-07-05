@@ -601,7 +601,15 @@ setInterval(() => {
 // ========== MIDDLEWARE ==========
 
 const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction): any => {
-  const token = req.headers.authorization?.split(' ')[1];
+  let token = req.headers.authorization?.split(' ')[1];
+  if (!token && req.headers.cookie) {
+    const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
+      const [key, val] = c.trim().split('=');
+      if (key && val) acc[key] = val;
+      return acc;
+    }, {} as Record<string, string>);
+    token = cookies['token'];
+  }
   if (!token) return res.status(401).json({ error: 'No authorization token supplied' });
   
   if (tokenBlacklist.has(token)) {
@@ -611,6 +619,7 @@ const authenticate = (req: express.Request, res: express.Response, next: express
   try {
     const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as { userId: string };
     (req as any).userId = decoded.userId;
+    (req as any).authToken = token;
     next();
   } catch (error: any) {
     if (error.name === 'TokenExpiredError') {
@@ -635,10 +644,11 @@ const adminOnly = (req: express.Request, res: express.Response, next: express.Ne
             user.save().catch(e => console.warn("Failed automatic database role promotion:", e));
           }
           return next();
-        }
-        
-        if (user.role === 'admin') {
-          return next();
+        } else {
+          if (user.role === 'admin') {
+            user.role = 'user';
+            user.save().catch(e => console.warn("Failed automatic database role demotion:", e));
+          }
         }
         
         return res.status(403).json({ error: 'Administrative privileges required' });
@@ -651,12 +661,14 @@ const adminOnly = (req: express.Request, res: express.Response, next: express.Ne
       
       (req as any).userEmail = u.email;
       if (isAdminEmail(u.email)) {
-        u.role = 'admin';
+        if (u.role !== 'admin') {
+          u.role = 'admin';
+        }
         return next();
-      }
-      
-      if (u.role === 'admin') {
-        return next();
+      } else {
+        if (u.role === 'admin') {
+          u.role = 'user';
+        }
       }
       
       return res.status(403).json({ error: 'Administrative privileges required' });
@@ -1460,6 +1472,36 @@ async function startServer() {
   }));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+  // Sanitize outgoing JSON error responses to prevent leaking raw technical/internal system details (Information Disclosure)
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const originalJson = res.json;
+    res.json = function (body: any) {
+      if (body && typeof body === 'object' && body.error) {
+        const msg = typeof body.error === 'string' ? body.error : (body.error.message || '');
+        const lower = msg.toLowerCase();
+        
+        // Check if error contains sensitive keywords representing internal errors, db details, paths, or secrets
+        const rawKeywords = [
+          'mongodb', 'mongo', 'database', 'query', 'connection', 'connect',
+          'socket', 'mquery', 'validation failed', 'cast to objectid', 'duplicate key',
+          'index:', 'unhandled', 'throw', 'stack', 'unexpected token', 'json', 'syntax',
+          'referenceerror', 'typeerror', 'jwt', 'token', 'unauthorized', 'forbidden',
+          '/', '\\', 'line ', 'secret', 'password', 'key'
+        ];
+        
+        const isInternal = rawKeywords.some(keyword => lower.includes(keyword));
+        if (isInternal) {
+          body.error = 'An internal database or system error occurred. Please try again later.';
+        } else {
+          body.error = msg;
+        }
+      }
+      return originalJson.call(this, body);
+    };
+    next();
+  });
+
   app.use(mongoSanitize({
     allowDots: false
   }));
@@ -1875,7 +1917,7 @@ async function startServer() {
       return res.json({
         success: true,
         message: 'Your account is registered! A verification link has been sent to your email. Please click the link to activate your account and log in.',
-        verificationUrlSimulated: emailSent ? undefined : verificationUrl,
+        verificationUrlSimulated: (emailSent || process.env.NODE_ENV === 'production') ? undefined : verificationUrl,
         smtpError: smtpErrorMsg || undefined
       });
 
@@ -2084,11 +2126,18 @@ async function startServer() {
           });
         }
 
-        if (isAdminEmail(user.email) && user.role !== 'admin') {
-          user.role = 'admin';
+        const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
+        if (user.role !== calculatedRole) {
+          user.role = calculatedRole;
           await user.save().catch(e => console.warn(e));
         }
         const token = signUserToken(user._id);
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
       } else {
         const user = localUsers.find(u => u.email === storageEmail);
@@ -2127,11 +2176,18 @@ async function startServer() {
           });
         }
 
-        if (isAdminEmail(user.email) && user.role !== 'admin') {
-          user.role = 'admin';
+        const calculatedRoleLocal = isAdminEmail(user.email) ? 'admin' : 'user';
+        if (user.role !== calculatedRoleLocal) {
+          user.role = calculatedRoleLocal;
           saveLocalUsers();
         }
         const token = signUserToken(user._id);
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
       }
     } catch (error: any) {
@@ -2163,14 +2219,36 @@ async function startServer() {
         if (!user) {
           return res.status(404).json({ error: 'User profile not found' });
         }
+        const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
+        if (user.role !== calculatedRole) {
+          user.role = calculatedRole;
+          await user.save().catch(e => console.warn(e));
+        }
         const token = signUserToken(user._id);
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
       } else {
         const user = localUsers.find(u => u._id === userId);
         if (!user) {
           return res.status(404).json({ error: 'User profile not found' });
         }
+        const calculatedRoleLocal = isAdminEmail(user.email) ? 'admin' : 'user';
+        if (user.role !== calculatedRoleLocal) {
+          user.role = calculatedRoleLocal;
+          saveLocalUsers();
+        }
         const token = signUserToken(user._id);
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
       }
     } catch (error: any) {
@@ -2178,12 +2256,25 @@ async function startServer() {
     }
   });
 
-  // Revoke token on logout by adding to blacklist
+  // Revoke token on logout by adding to blacklist and clearing HTTP-Only cookie
   app.post('/api/auth/logout', (req: express.Request, res: express.Response) => {
-    const token = req.headers.authorization?.split(' ')[1];
+    let token = req.headers.authorization?.split(' ')[1];
+    if (!token && req.headers.cookie) {
+      const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
+        const [key, val] = c.trim().split('=');
+        if (key && val) acc[key] = val;
+        return acc;
+      }, {} as Record<string, string>);
+      token = cookies['token'];
+    }
     if (token) {
       tokenBlacklist.add(token);
     }
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none'
+    });
     res.json({ success: true, message: 'Successfully logged out' });
   });
 
@@ -2223,26 +2314,25 @@ async function startServer() {
       // Try dynamic verification of signature with Firebase certificates
       try {
         const res = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+        if (!res.ok) {
+          throw new Error(`Failed to fetch Firebase certs: ${res.statusText}`);
+        }
         const publicKeys: any = await res.json();
         const kid = decodedToken.header.kid;
         const cert = publicKeys[kid];
-        if (cert) {
-          const decoded = jwt.verify(idToken, cert, { algorithms: ['RS256'] }) as any;
-          if (decoded && decoded.email) {
-            return {
-              email: decoded.email,
-              name: decoded.name || decoded.email.split('@')[0],
-            };
-          }
+        if (!cert) {
+          console.error('Firebase token verification failed: key ID (kid) not found in Firebase certs');
+          return null;
         }
-      } catch (certErr) {
-        console.warn('Could not verify Firebase signature dynamically, falling back to secure claims inspection:', certErr);
-        if (decodedToken.payload.email && decodedToken.payload.email_verified) {
+        const decoded = jwt.verify(idToken, cert, { algorithms: ['RS256'] }) as any;
+        if (decoded && decoded.email) {
           return {
-            email: decodedToken.payload.email,
-            name: decodedToken.payload.name || decodedToken.payload.email.split('@')[0],
+            email: decoded.email,
+            name: decoded.name || decoded.email.split('@')[0],
           };
         }
+      } catch (certErr) {
+        console.error('Firebase signature verification failed:', certErr);
       }
     } catch (error) {
       console.error('ID Token verification failed:', error);
@@ -2258,10 +2348,10 @@ async function startServer() {
       let verifiedName = name;
       let verifiedGoogleId = googleId;
 
-      const isProduction = process.env.NODE_ENV === 'production';
+      const allowSimulated = process.env.ALLOW_SIMULATED_AUTH === 'true' && process.env.NODE_ENV !== 'production';
       const isSimulated = idToken && idToken.startsWith('simulated_token_');
 
-      if (isProduction || !isSimulated) {
+      if (!allowSimulated || !isSimulated) {
         if (!idToken) {
           return res.status(401).json({ error: 'Google ID Token is required for authentication' });
         }
@@ -2293,11 +2383,20 @@ async function startServer() {
           } catch (err: any) {
             return res.status(500).json({ error: 'Failed to create user account: ' + err.message });
           }
-        } else if (isAdminEmail(user.email) && user.role !== 'admin') {
-          user.role = 'admin';
-          await user.save().catch(e => console.warn(e));
+        } else {
+          const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
+          if (user.role !== calculatedRole) {
+            user.role = calculatedRole;
+            await user.save().catch(e => console.warn(e));
+          }
         }
         const token = signUserToken(user._id);
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
       } else {
         let user = localUsers.find(u => u.email === storageEmail);
@@ -2316,11 +2415,20 @@ async function startServer() {
           };
           localUsers.push(user);
           saveLocalUsers();
-        } else if (isAdminEmail(user.email)) {
-          user.role = 'admin';
-          saveLocalUsers();
+        } else {
+          const calculatedRoleLocal = isAdminEmail(user.email) ? 'admin' : 'user';
+          if (user.role !== calculatedRoleLocal) {
+            user.role = calculatedRoleLocal;
+            saveLocalUsers();
+          }
         }
         const token = signUserToken(user._id);
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
       }
     } catch (error: any) {
@@ -2746,7 +2854,7 @@ async function startServer() {
   });
 
   // Category Retrieval
-  app.get('/api/categories', async (req: express.Request, res: express.Response) => {
+  app.get('/api/categories', async (_req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const categories = await Category.find();
@@ -2812,7 +2920,8 @@ async function startServer() {
             await user.save().catch(e => console.warn(e));
           }
         }
-        return res.json(user);
+        const userObj = user?.toObject ? user.toObject() : user;
+        return res.json({ ...userObj, token: (req as any).authToken });
       } else {
         const user = localUsers.find(u => u._id === uId);
         if (!user) return res.status(404).json({ error: 'User profiles matching identifier not found' });
@@ -2830,7 +2939,8 @@ async function startServer() {
         return res.json({
           ...user,
           wishlist: wishlistPopulated,
-          recentlyViewed: []
+          recentlyViewed: [],
+          token: (req as any).authToken
         });
       }
     } catch (error: any) {
@@ -3041,7 +3151,7 @@ async function startServer() {
         if (!blog) return res.status(404).json({ error: 'Blog not found' });
         return res.json(blog);
       } else {
-        const blog = localBlogs.find(b => b.slug === req.params.slug);
+        const blog = localBlogs.find((b: any) => b.slug === req.params.slug);
         if (!blog) return res.status(404).json({ error: 'Blog post not found' });
         blog.views += 1;
         return res.json(blog);
@@ -3194,7 +3304,7 @@ async function startServer() {
                  catName?.toLowerCase().includes(queryStr);
         }).slice(0, 10);
 
-        const matchedBlogs = localBlogs.filter(b => 
+        const matchedBlogs = localBlogs.filter((b: any) => 
           b.title?.toLowerCase().includes(queryStr) || 
           b.content?.toLowerCase().includes(queryStr) ||
           b.category?.toLowerCase().includes(queryStr)
@@ -3208,7 +3318,7 @@ async function startServer() {
   });
 
   // Proxy for geolocation APIs to bypass CORS, with automatic regional mapping to Tamil Nadu districts
-  app.get('/api/proxy/location', async (req: express.Request, res: express.Response) => {
+  app.get('/api/proxy/location', async (_req: express.Request, res: express.Response) => {
     const TAMIL_NADU_DISTRICTS = [
       "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
       "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
@@ -4718,7 +4828,7 @@ async function startServer() {
         await logSecurityAction(req, 'BLOG_UPDATED', bId, { title: blog?.title, slug: blog?.slug });
         return res.json(blog);
       } else {
-        const index = localBlogs.findIndex(b => b._id === bId);
+        const index = localBlogs.findIndex((b: any) => b._id === bId);
         if (index === -1) return res.status(404).json({ error: 'Blog not found' });
         localBlogs[index] = {
           ...localBlogs[index],
@@ -4751,7 +4861,7 @@ async function startServer() {
         await logSecurityAction(req, 'BLOG_DELETED', bId, { title: deletedBlog?.title, slug: deletedBlog?.slug });
         return res.json({ success: true });
       } else {
-        const index = localBlogs.findIndex(b => b._id === bId);
+        const index = localBlogs.findIndex((b: any) => b._id === bId);
         if (index === -1) return res.status(404).json({ error: 'Blog not found' });
         const deletedBlog = localBlogs[index];
         localBlogs.splice(index, 1);
@@ -4765,7 +4875,7 @@ async function startServer() {
   });
 
   // Admin Messages retrieval
-  app.get('/api/admin/messages', adminOnly, async (req: express.Request, res: express.Response) => {
+  app.get('/api/admin/messages', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const msgs = await Message.find().sort({ createdAt: -1 });
@@ -4788,7 +4898,7 @@ async function startServer() {
         await syncMessagesToSeedFile();
         return res.json(msg);
       } else {
-        const msg = localMessages.find(m => m._id === msgId);
+        const msg = localMessages.find((m: any) => m._id === msgId);
         if (!msg) return res.status(404).json({ error: 'Message not found' });
         msg.read = true;
         await syncMessagesToSeedFile();
@@ -4800,7 +4910,7 @@ async function startServer() {
   });
 
   // Admin retrieve users
-  app.get('/api/admin/users', adminOnly, async (req: express.Request, res: express.Response) => {
+  app.get('/api/admin/users', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 });
@@ -4846,6 +4956,10 @@ async function startServer() {
         return res.status(404).json({ error: 'Target user account not found.' });
       }
 
+      if (role === 'admin' && !isAdminEmail(targetUser.email)) {
+        return res.status(400).json({ error: 'Security constraint: The target email address must be configured in the ADMIN_EMAILS environment variable configuration before they can be promoted to administrator.' });
+      }
+
       const oldRole = targetUser.role;
       if (isMongoConnected) {
         targetUser.role = role;
@@ -4874,7 +4988,7 @@ async function startServer() {
   });
 
   // Admin Security Logs / Audit Trail
-  app.get('/api/admin/security-logs', adminOnly, async (req: express.Request, res: express.Response) => {
+  app.get('/api/admin/security-logs', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const logs = await SecurityLog.find().sort({ timestamp: -1 });
@@ -4951,7 +5065,7 @@ async function startServer() {
         const response = await fetch(webhookUrl, { 
           method: 'HEAD',
           signal: controller.signal
-        }).catch(err => {
+        }).catch(_err => {
           // If HEAD fails (e.g. CORS or not supported), fallback to a lightweight GET
           return fetch(webhookUrl, { method: 'GET', signal: controller.signal });
         });
@@ -5056,7 +5170,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/admin/analytics', adminOnly, async (req: express.Request, res: express.Response) => {
+  app.get('/api/admin/analytics', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
       const TAMIL_NADU_DISTRICTS = [
         "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
@@ -5281,7 +5395,7 @@ async function startServer() {
   }
 
   // Centralized Error Handling Middleware to prevent raw database/internal system details leak (Information Disclosure)
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     captureError(err, { context: 'Centralized Express Error Handler' });
     console.error('Unhandled Server Error:', err);
     

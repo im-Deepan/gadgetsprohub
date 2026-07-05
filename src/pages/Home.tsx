@@ -73,7 +73,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
   const categories = categoriesData;
 
   // 3. Products Queries via TanStack Query
-  const { data: homeProductsData } = useQuery({
+  const { data: homeProductsData } = useQuery<{ products: Product[], total?: number, pages?: number }>({
     queryKey: ['homeProducts'],
     queryFn: async ({ signal }) => {
       const res = await apiFetch('/api/products?limit=100', { signal });

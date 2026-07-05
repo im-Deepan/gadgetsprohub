@@ -325,7 +325,7 @@ export const seedProducts = [
       "Not completely waterproofed (mesh absorbs fast)",
       "Sizes scale somewhat smaller than industrial averages"
     ],
-    "reviews": [],
+    "reviews": [] as any[],
     "createdAt": "2026-05-25T00:00:00.000Z"
   },
   {
@@ -379,7 +379,7 @@ export const seedProducts = [
       "Requires typing adaptation if used to dome membranes",
       "Configuration software is currently Windows only"
     ],
-    "reviews": [],
+    "reviews": [] as any[],
     "createdAt": "2026-06-01T12:00:00.000Z",
     "trendingStartedAt": "2026-06-01T12:00:00.000Z"
   },
@@ -434,7 +434,7 @@ export const seedProducts = [
       "Tightly holds cards initially (requires brief break-in)",
       "Not suitable if you carry lots of metallic coins"
     ],
-    "reviews": [],
+    "reviews": [] as any[],
     "createdAt": "2026-06-02T10:00:00.000Z"
   },
   {
@@ -1190,7 +1190,7 @@ export const seedUsers: LocalUserType[] = [
     email: 'admin@affiliate.com',
     password: 'adminSecretPass',
     name: 'Admin Strator',
-    role: 'admin',
+    role: 'user',
     wishlist: [] as any[],
     recentlyViewed: [] as any[],
     district: 'Chennai',
@@ -1201,7 +1201,7 @@ export const seedUsers: LocalUserType[] = [
     email: 'tester@example.com',
     password: 'securePassword123',
     name: 'API Tester',
-    role: 'admin',
+    role: 'user',
     wishlist: [] as any[],
     recentlyViewed: [] as any[],
     district: 'Chennai',

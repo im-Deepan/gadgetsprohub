@@ -128,11 +128,7 @@ export const logVisit = (timeSpentSeconds: number, currentPath: string, viewCity
       district: viewCity
     };
 
-    const tokenVal = safeGetItem('aff_token');
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (tokenVal) {
-      headers['Authorization'] = `Bearer ${tokenVal}`;
-    }
 
     apiFetch('/api/analytics/page-view', {
       method: 'POST',

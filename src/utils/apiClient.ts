@@ -50,6 +50,7 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
     maxRetries = 3,
     backoffDelay = 500,
     deduplicate = true,
+    credentials = 'include',
     ...fetchOptions
   } = options;
 
@@ -109,6 +110,7 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
     try {
       const response = await fetch(url, {
         ...fetchOptions,
+        credentials,
         signal: signalToUse
       });
 

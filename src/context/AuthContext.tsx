@@ -34,24 +34,14 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() => {
-    return safeGetItem('aff_token');
-  });
+  const [token, setToken] = useState<string | null>(null);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const { showToast } = useToast();
 
   const refreshProfile = React.useCallback(async () => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
     try {
-      const res = await apiFetch('/api/user/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const res = await apiFetch('/api/user/profile');
       if (res.ok) {
         const data = await res.json();
         setUser({
@@ -66,22 +56,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           pendingEmail: data.pendingEmail
         });
         setWishlist((data.wishlist ?? []).map((p: unknown) => typeof p === 'string' ? p : (p && typeof p === 'object' && '_id' in p ? (p as { _id?: string })._id ?? '' : '')).filter(Boolean));
-      } else if (res.status === 401 || res.status === 403) {
-        // Safe logout processing without ending loading prematurely
-        safeRemoveItem('aff_token');
+        if (data.token) {
+          setToken(data.token);
+        }
+      } else {
         setToken(null);
         setUser(null);
         setWishlist([]);
-      } else {
-        // For other errors, don't clear session automatically
-        
       }
     } catch (error) {
       console.warn('AuthContext profile refresh load exception:', error);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -89,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const emailUpdated = params.get('emailUpdated');
     if (authCode) {
       setLoading(true);
-      fetch('/api/auth/exchange-code', {
+      apiFetch('/api/auth/exchange-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ authCode })
@@ -97,7 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .then(res => res.json())
       .then(data => {
         if (data.token) {
-          safeSetItem('aff_token', data.token);
           setToken(data.token);
           if (emailUpdated === 'true') {
             showToast('Your new email address has been successfully verified and updated on your account record!', 'success', 6000, 'User Action');
@@ -152,7 +139,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         }
         
-        safeSetItem('aff_token', data.token as string);
         setToken(data.token as string);
         const userData = data.user as Record<string, unknown>;
         setUser({
@@ -288,7 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: 'Could not resolve email from Google Account.' };
       }
 
-      const res = await fetch('/api/auth/google', {
+      const res = await apiFetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, googleId, idToken })
@@ -306,7 +292,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: (data.error as string) || 'Server registration refusal.' };
       }
 
-      safeSetItem('aff_token', data.token as string);
       setToken(data.token as string);
       const userData = data.user as Record<string, unknown>;
       setUser({
@@ -336,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    safeRemoveItem('aff_token');
+    apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     setToken(null);
     setUser(null);
     setWishlist([]);
@@ -370,11 +355,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     
     try {
-      const res = await fetch(`/api/user/wishlist/${productId}`, {
+      const res = await apiFetch(`/api/user/wishlist/${productId}`, {
         method: 'POST',
-        headers: {
+        headers: token ? {
           'Authorization': `Bearer ${token}`
-        }
+        } : undefined
       });
       if (res.ok) {
         const updated = await res.json();
