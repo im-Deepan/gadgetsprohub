@@ -101,6 +101,16 @@ const User = mongoose.model('User', userSchema);
 import { comparePasswords, hashHelper, isAdminEmail, getStorageEmail, validateAndCheckRealEmail } from './src/server/utils';
 
 // Category Schema
+const sanitizeUser = (userObj: any) => {
+  if (!userObj) return userObj;
+  const clean = userObj.toObject ? userObj.toObject() : { ...userObj };
+  delete clean.password;
+  delete clean.verificationToken;
+  delete clean.pendingEmailToken;
+  delete clean.pendingEmail;
+  return clean;
+};
+
 const categorySchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
   slug: { type: String, required: true, unique: true },
@@ -440,6 +450,12 @@ const securityLogSchema = new mongoose.Schema({
 
 const SecurityLog = mongoose.model('SecurityLog', securityLogSchema);
 
+const blacklistedTokenSchema = new mongoose.Schema({
+  token: { type: String, required: true, unique: true },
+  createdAt: { type: Date, default: Date.now, expires: 86400 } // 24 hours expiry
+});
+const BlacklistedToken = mongoose.model('BlacklistedToken', blacklistedTokenSchema);
+
 let localSecurityLogs: any[] = [];
 if (fs.existsSync(LOCAL_SECURITY_LOGS_FILE)) {
   try {
@@ -580,27 +596,11 @@ const saveLocalOrders = () => {
 const saveLocalSundayLogs = () => {
   try { fs.writeFileSync(LOCAL_SUNDAY_LOGS_FILE, JSON.stringify(localSundayAutomationLogs, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local logs:", e.message); }
 };
-
 // ========== TOKEN BLACKLIST FOR LOGOUT ==========
-const tokenBlacklist = new Set<string>();
-
-// Simple background cleanup of expired tokens from blacklist to avoid memory leaks
-setInterval(() => {
-  for (const token of tokenBlacklist) {
-    try {
-      const decoded = jwt.decode(token) as any;
-      if (decoded && decoded.exp && Date.now() >= decoded.exp * 1000) {
-        tokenBlacklist.delete(token);
-      }
-    } catch {
-      tokenBlacklist.delete(token);
-    }
-  }
-}, 3600000); // Clean up every hour
+// Handled by BlacklistedToken Mongoose model with TTL index
 
 // ========== MIDDLEWARE ==========
-
-const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction): any => {
+const authenticate = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<any> => {
   let token = req.headers.authorization?.split(' ')[1];
   if (!token && req.headers.cookie) {
     const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
@@ -612,8 +612,11 @@ const authenticate = (req: express.Request, res: express.Response, next: express
   }
   if (!token) return res.status(401).json({ error: 'No authorization token supplied' });
   
-  if (tokenBlacklist.has(token)) {
-    return res.status(401).json({ error: 'Token has been revoked, please login again' });
+  if (isMongoConnected) {
+    const isBlacklisted = await BlacklistedToken.exists({ token });
+    if (isBlacklisted) {
+      return res.status(401).json({ error: 'Token has been revoked, please login again' });
+    }
   }
 
   try {
@@ -1424,7 +1427,9 @@ async function startServer() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://pagead2.googlesyndication.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com", "https://*.adtrafficquality.google", "https://ep1.adtrafficquality.google", "https://ep2.adtrafficquality.google"],
+        scriptSrc: process.env.NODE_ENV === "production" 
+          ? ["'self'", "https://pagead2.googlesyndication.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com", "https://*.adtrafficquality.google", "https://ep1.adtrafficquality.google", "https://ep2.adtrafficquality.google"]
+          : ["'self'", "'unsafe-inline'", "https://pagead2.googlesyndication.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com", "https://*.adtrafficquality.google", "https://ep1.adtrafficquality.google", "https://ep2.adtrafficquality.google"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
@@ -1481,18 +1486,57 @@ async function startServer() {
         const msg = typeof body.error === 'string' ? body.error : (body.error.message || '');
         const lower = msg.toLowerCase();
         
-        // Check if error contains sensitive keywords representing internal errors, db details, paths, or secrets
-        const rawKeywords = [
-          'mongodb', 'mongo', 'database', 'query', 'connection', 'connect',
-          'socket', 'mquery', 'validation failed', 'cast to objectid', 'duplicate key',
-          'index:', 'unhandled', 'throw', 'stack', 'unexpected token', 'json', 'syntax',
-          'referenceerror', 'typeerror', 'jwt', 'token', 'unauthorized', 'forbidden',
-          '/', '\\', 'line ', 'secret', 'password', 'key'
+        // Define explicit safe error messages that we should never mask
+        const safeMessages = [
+          'incorrect password',
+          'email and password are required',
+          'invalid email format',
+          'user not found',
+          'user already exists',
+          'token has expired, please login again',
+          'token has been revoked, please login again',
+          'invalid token, please authorize again',
+          'no authorization token supplied',
+          'administrative privileges required',
+          'email verification required',
+          'invalid or expired verification token',
+          'product not found',
+          'category not found',
+          'blog not found',
+          'order not found',
+          'message not found',
+          'database not connected',
+          'slug already exists',
+          'invalid slug'
         ];
-        
-        const isInternal = rawKeywords.some(keyword => lower.includes(keyword));
-        if (isInternal) {
-          body.error = 'An internal database or system error occurred. Please try again later.';
+
+        const isExplicitlySafe = safeMessages.some(safe => lower.includes(safe));
+
+        if (!isExplicitlySafe) {
+          // If 5xx, always mask to be absolutely secure
+          if (res.statusCode >= 500) {
+            body.error = 'An internal database or system error occurred. Please try again later.';
+          } else {
+            // Check if error contains sensitive keywords representing internal errors, db details, paths, or secrets
+            const rawKeywords = [
+              'mongodb', 'mongo', 'database', 'query', 'connection', 'connect',
+              'socket', 'mquery', 'validation failed', 'cast to objectid', 'duplicate key',
+              'index:', 'unhandled', 'throw', 'stack', 'unexpected token', 'json', 'syntax',
+              'referenceerror', 'typeerror', 'error:', 'failed to', 'enoent', 'econnreset',
+              'econnrefused', 'eaddrinuse', 'etimedout', 'node_modules', '.js', '.ts',
+              '__dirname', 'filename', 'undefined', 'null', 'method', 'property', 'object'
+            ];
+            
+            const isInternal = rawKeywords.some(keyword => lower.includes(keyword)) ||
+                               /at\s+[\w\d_$.]+\s+\(/i.test(msg) || // Stack trace detector
+                               msg.includes('/') || msg.includes('\\');
+
+            if (isInternal) {
+              body.error = 'An internal database or system error occurred. Please try again later.';
+            } else {
+              body.error = msg;
+            }
+          }
         } else {
           body.error = msg;
         }
@@ -2257,7 +2301,7 @@ async function startServer() {
   });
 
   // Revoke token on logout by adding to blacklist and clearing HTTP-Only cookie
-  app.post('/api/auth/logout', (req: express.Request, res: express.Response) => {
+  app.post('/api/auth/logout', async (req: express.Request, res: express.Response) => {
     let token = req.headers.authorization?.split(' ')[1];
     if (!token && req.headers.cookie) {
       const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
@@ -2268,7 +2312,13 @@ async function startServer() {
       token = cookies['token'];
     }
     if (token) {
-      tokenBlacklist.add(token);
+      if (isMongoConnected) {
+        try {
+          await BlacklistedToken.create({ token });
+        } catch (err) {
+          console.warn("Failed to blacklist token:", err);
+        }
+      }
     }
     res.clearCookie('token', {
       httpOnly: true,
@@ -2909,7 +2959,7 @@ async function startServer() {
   });
 
   // Non-erroring authentication check to avoid 401s in the console on initial load
-  app.get('/api/auth/status', (req: express.Request, res: express.Response): any => {
+  app.get('/api/auth/status', async (req: express.Request, res: express.Response): Promise<any> => {
     let token = req.headers.authorization?.split(' ')[1];
     if (!token && req.headers.cookie) {
       const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
@@ -2920,8 +2970,12 @@ async function startServer() {
       token = cookies['token'];
     }
     
-    if (!token || tokenBlacklist.has(token)) {
+    if (!token) {
       return res.status(200).json({ isAuthenticated: false });
+    }
+    if (isMongoConnected) {
+      const isBlacklisted = await BlacklistedToken.exists({ token });
+      if (isBlacklisted) return res.status(200).json({ isAuthenticated: false });
     }
 
     try {
@@ -2944,8 +2998,12 @@ async function startServer() {
         }, {} as Record<string, string>);
         token = cookies['token'];
       }
-      if (!token || tokenBlacklist.has(token)) {
+      if (!token) {
         return res.status(200).json({ isAuthenticated: false });
+      }
+      if (isMongoConnected) {
+        const isBlacklisted = await BlacklistedToken.exists({ token });
+        if (isBlacklisted) return res.status(200).json({ isAuthenticated: false });
       }
 
       let uId: string;
@@ -2965,7 +3023,7 @@ async function startServer() {
           }
         }
         const userObj = user?.toObject ? user.toObject() : user;
-        return res.json({ ...userObj, token, isAuthenticated: true });
+        return res.json({ ...sanitizeUser(userObj), token, isAuthenticated: true });
       } else {
         const user = localUsers.find(u => u._id === uId);
         if (!user) return res.status(200).json({ isAuthenticated: false });
@@ -2981,7 +3039,7 @@ async function startServer() {
         }).filter(Boolean);
 
         return res.json({
-          ...user,
+          ...sanitizeUser(user),
           wishlist: wishlistPopulated,
           recentlyViewed: [],
           token,
@@ -3508,7 +3566,11 @@ async function startServer() {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.split(' ')[1];
         try {
-          if (!tokenBlacklist.has(token)) {
+          let isBlacklisted = false;
+          if (isMongoConnected) {
+            isBlacklisted = !!(await BlacklistedToken.exists({ token }));
+          }
+          if (!isBlacklisted) {
             const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as any;
             userId = decoded.userId;
           }
@@ -3636,7 +3698,7 @@ async function startServer() {
         }
         
         const populated = await User.findById(uId).populate('wishlist');
-        return res.json(populated);
+        return res.json(sanitizeUser(populated));
       } else {
         const user = localUsers.find(u => u._id === uId);
         if (!user) return res.status(404).json({ error: 'User profile not found' });
@@ -3651,7 +3713,7 @@ async function startServer() {
         }).filter(Boolean);
         
         return res.json({
-          ...user,
+          ...sanitizeUser(user),
           wishlist: wishlistPopulated,
           recentlyViewed: []
         });
@@ -4575,7 +4637,21 @@ async function startServer() {
 
   app.post('/api/admin/products', adminOnly, validateAdminProduct, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const payload = cleanUndefined(req.body);
+      const rawPayload = cleanUndefined(req.body);
+      const whitelistedKeys = [
+        'name', 'slug', 'description', 'longDescription', 'category', 'subcategory', 'brand',
+        'price', 'originalPrice', 'discount', 'images', 'image', 'videoUrl', 'specifications',
+        'features', 'affiliateLink', 'affiliateCode', 'inStock', 'sku', 'tags',
+        'trending', 'trendingStartedAt', 'featured', 'pros', 'cons',
+        'seoTitle', 'seoDescription', 'seoKeywords', 'comparisonProducts',
+        'badge', 'buyNowText', 'affiliatePlatform', 'buttonText', 'buttonColor'
+      ];
+      const payload: any = {};
+      for (const key of whitelistedKeys) {
+        if (rawPayload[key] !== undefined) {
+          payload[key] = rawPayload[key];
+        }
+      }
       const proposedSlug = payload.slug || payload.name;
       const { exists, finalSlug } = await resolveUniqueSlug(proposedSlug, 'product');
       
@@ -4708,8 +4784,15 @@ async function startServer() {
   // Categories CRUD
   app.post('/api/admin/categories', adminOnly, validateAdminCategory, async (req: express.Request, res: express.Response) => {
     try {
-      const payload = req.body;
-      const slug = payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const rawPayload = req.body;
+      const whitelistedKeys = ['name', 'slug', 'description', 'image', 'icon', 'subcategories'];
+      const payload: any = {};
+      for (const key of whitelistedKeys) {
+        if (rawPayload[key] !== undefined) {
+          payload[key] = rawPayload[key];
+        }
+      }
+      const slug = (payload.slug || payload.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       
       if (isMongoConnected) {
         const category = new Category({ ...payload, slug });
@@ -4801,7 +4884,17 @@ async function startServer() {
   // Blogs CRUD
   app.post('/api/admin/blogs', adminOnly, validateAdminBlog, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const payload = req.body;
+      const rawPayload = req.body;
+      const whitelistedKeys = [
+        'title', 'slug', 'summary', 'content', 'image', 'category', 'tags',
+        'author', 'readTime', 'featured', 'active'
+      ];
+      const payload: any = {};
+      for (const key of whitelistedKeys) {
+        if (rawPayload[key] !== undefined) {
+          payload[key] = rawPayload[key];
+        }
+      }
       const proposedSlug = payload.slug || payload.title;
       const { exists, finalSlug } = await resolveUniqueSlug(proposedSlug, 'blog');
       
@@ -4958,18 +5051,18 @@ async function startServer() {
   app.get('/api/admin/users', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
-        const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 });
-        res.json(users);
+        const users = await User.find({}).sort({ createdAt: -1 });
+        const sanitized = users.map(u => sanitizeUser(u));
+        res.json(sanitized);
       } else {
         // Return without password for security
         const sanitizedUsers = localUsers.map((u: any) => {
-          const { password, ...sanitized } = u;
-          return { ...sanitized, _id: u._id || u.id };
+          return sanitizeUser({ ...u, _id: u._id || u.id });
         });
         res.json(sanitizedUsers);
       }
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An error occurred while retrieving users' });
     }
   });
 
