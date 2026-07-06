@@ -59,7 +59,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
       return res.json();
     }
   });
-  const trending = trendingData;
 
   // 2. Categories Queries via TanStack Query
   const { data: categoriesData = [] } = useQuery<Category[]>({

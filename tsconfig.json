@@ -21,6 +21,17 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "noEmit": true,
+    "strict": true
+  },
+  "include": [
+    "src/**/*",
+    "server.ts",
+    "seeddata.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "extension"
+  ]
 }

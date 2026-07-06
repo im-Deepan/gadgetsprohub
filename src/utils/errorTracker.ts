@@ -21,8 +21,9 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
 
   const normalizedMessage = message.toLowerCase();
   const normalizedName = name.toLowerCase();
+  const normalizedStack = (stack || '').toLowerCase();
 
-  // Suppress expected/normal request cancellation and abort error noise
+  // Suppress expected/normal request cancellation, abort error, and third-party iframe sandbox noise (such as Google AdSense/adtrafficquality)
   if (
     normalizedName === 'aborterror' ||
     normalizedName === 'abort' ||
@@ -34,7 +35,38 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     normalizedMessage === 'query was cancelled by user' ||
     normalizedMessage.includes('failed to fetch') ||
     normalizedMessage.includes('networkerror') ||
-    normalizedMessage.includes('network error')
+    normalizedMessage.includes('network error') ||
+    normalizedMessage.includes('load failed') ||
+    normalizedMessage.includes('connection lost') ||
+    normalizedMessage.includes('connection closed') ||
+    normalizedMessage.includes('connection reset') ||
+    normalizedMessage.includes('timed out') ||
+    normalizedMessage.includes('timeout') ||
+    normalizedMessage.includes('offline mode') ||
+    normalizedMessage.includes('extension') ||
+    normalizedMessage.includes('chrome-extension') ||
+    message === '' ||
+    message === 'Error' ||
+    message === '[object Object]' ||
+    // Third-party AdSense / Doubleclick / Google adtrafficquality sandbox noise
+    normalizedMessage.includes('adsbygoogle') ||
+    normalizedMessage.includes('googlesyndication') ||
+    normalizedMessage.includes('doubleclick') ||
+    normalizedMessage.includes('adtrafficquality') ||
+    normalizedMessage.includes('pagead') ||
+    normalizedMessage.includes('google-analytics') ||
+    normalizedMessage.includes('postmessage') ||
+    normalizedMessage.includes('cross-origin') ||
+    normalizedMessage.includes('window.closed') ||
+    normalizedMessage.includes('coop') ||
+    normalizedStack.includes('adsbygoogle') ||
+    normalizedStack.includes('googlesyndication') ||
+    normalizedStack.includes('doubleclick') ||
+    normalizedStack.includes('adtrafficquality') ||
+    normalizedStack.includes('pagead') ||
+    normalizedStack.includes('google-analytics') ||
+    normalizedStack.includes('postmessage') ||
+    normalizedStack.includes('cross-origin')
   ) {
     return;
   }

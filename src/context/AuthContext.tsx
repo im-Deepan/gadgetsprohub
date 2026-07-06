@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { auth, googleProvider, isFirebaseMock } from '../firebase';
 import { signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
-import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { useToast } from './ToastContext';
 import { apiFetch } from '../utils/apiClient';

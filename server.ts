@@ -37,16 +37,48 @@ import {
 } from './src/middleware/validation';
 
 dotenv.config();
-console.log("MONGODB_URI =", process.env.MONGODB_URI);
+
+const getSanitizedMongoUri = (uri: string | undefined): string => {
+  if (!uri) return 'undefined';
+  try {
+    const parsed = new URL(uri);
+    if (parsed.password) parsed.password = '******';
+    return parsed.toString();
+  } catch {
+    return uri.replace(/:([^:@]+)@/, ':******@');
+  }
+};
+console.log("MONGODB_URI =", getSanitizedMongoUri(process.env.MONGODB_URI));
+
+const escapeHTML = (str: string | undefined): string => {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
 
 const getJwtSecret = (): string => {
   if (process.env.JWT_SECRET && process.env.JWT_SECRET.trim() !== '' && process.env.JWT_SECRET !== 'your-secret-key') {
     return process.env.JWT_SECRET;
   }
-  console.warn("⚠️ WARNING: JWT_SECRET env variable not provided or is set to a default insecure value. Generating a persistent cryptographically random fallback key for this container session to ensure absolute token integrity.");
-  return crypto.randomBytes(64).toString('hex');
+  console.warn("⚠️ WARNING: JWT_SECRET env variable not provided or is set to a default insecure value. Deriving a stable, replica-safe persistent fallback key.");
+  const seed = process.env.MONGODB_URI || process.env.VITE_FIREBASE_PROJECT_ID || 'gadgetsprohub-default-fallback-seed-string-12345';
+  return crypto.createHash('sha256').update(seed).digest('hex');
 };
 const JWT_SECRET_KEY = getJwtSecret();
+
+const getCookieToken = (req: express.Request): string | undefined => {
+  if (!req.headers.cookie) return undefined;
+  const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
+    const [key, val] = c.trim().split('=');
+    if (key && val) acc[key] = val;
+    return acc;
+  }, {} as Record<string, string>);
+  return cookies['token'];
+};
 
 const cleanUndefined = (obj: any): any => {
   if (!obj || typeof obj !== 'object') return obj;
@@ -602,13 +634,12 @@ const saveLocalSundayLogs = () => {
 // ========== MIDDLEWARE ==========
 const authenticate = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<any> => {
   let token = req.headers.authorization?.split(' ')[1];
-  if (!token && req.headers.cookie) {
-    const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
-      const [key, val] = c.trim().split('=');
-      if (key && val) acc[key] = val;
-      return acc;
-    }, {} as Record<string, string>);
-    token = cookies['token'];
+  
+  // Protect state-changing methods (POST, PUT, DELETE, etc.) against CSRF by forcing the use of Authorization header
+  const isSafeMethod = req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS';
+  
+  if (!token && isSafeMethod) {
+    token = getCookieToken(req);
   }
   if (!token) return res.status(401).json({ error: 'No authorization token supplied' });
   
@@ -1421,6 +1452,45 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Wrap all async route handlers/middlewares to automatically pass unhandled rejections to the centralized error handler
+  const wrapAsync = (fn: any) => {
+    if (typeof fn !== 'function') return fn;
+    if (fn.length === 4) {
+      return (err: any, req: any, res: any, next: any) => {
+        try {
+          const result = fn(err, req, res, next);
+          if (result && typeof result.catch === 'function') {
+            result.catch(next);
+          }
+        } catch (catchErr) {
+          next(catchErr);
+        }
+      };
+    }
+    return (req: any, res: any, next: any) => {
+      try {
+        const result = fn(req, res, next);
+        if (result && typeof result.catch === 'function') {
+          result.catch(next);
+        }
+      } catch (catchErr) {
+        next(catchErr);
+      }
+    };
+  };
+
+  const methods = ['get', 'post', 'put', 'delete', 'patch', 'use'] as const;
+  for (const method of methods) {
+    const original = (app as any)[method].bind(app);
+    (app as any)[method] = function (pathOrFn: any, ...args: any[]) {
+      if (typeof pathOrFn === 'function') {
+        return original(wrapAsync(pathOrFn), ...args.map(wrapAsync));
+      }
+      const wrappedArgs = args.map(wrapAsync);
+      return original(pathOrFn, ...wrappedArgs);
+    };
+  }
+
   // Security Headers and Reverse Proxy configuration
   app.set('trust proxy', 1);
   app.use(helmet({
@@ -1433,8 +1503,8 @@ async function startServer() {
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
-        connectSrc: ["'self'", "wss:", "https://*.google.com", "https://*.googleapis.com", "https://*.google-analytics.com", "https://*.doubleclick.net", "https://ipapi.co", "https://*.run.app", "https://*.onrender.com", "https://gadgetsprohub.onrender.com", "https://*.adtrafficquality.google"],
-        frameSrc: ["'self'", "https://*.google.com", "https://*.doubleclick.net", "https://*.firebaseapp.com"],
+        connectSrc: ["'self'", "wss:", "https://*.google.com", "https://*.googleapis.com", "https://*.google-analytics.com", "https://*.doubleclick.net", "https://ipapi.co", "https://*.run.app", "https://*.onrender.com", "https://gadgetsprohub.onrender.com", "https://*.adtrafficquality.google", "https://*.google"],
+        frameSrc: ["'self'", "https://*.google.com", "https://*.doubleclick.net", "https://*.firebaseapp.com", "https://*.adtrafficquality.google", "https://*.google"],
         frameAncestors: ["'self'", "https://*.aistudio.google", "https://aistudio.google", "https://*.google.com", "https://google.com","https://gadgetsprohub.onrender.com"],
       }
     },
@@ -1466,8 +1536,8 @@ async function startServer() {
         hostname === 'aistudio.google' || hostname.endsWith('.aistudio.google');
         
       // Restrict run.app strictly to our specific project subdomain identifier to prevent open-subdomain takeover
-      const isRunAppAllowed = hostname.endsWith('.run.app') && hostname.includes('qsss35leqdsbti2ibtyylr');
-      const isOwnDomain = hostname === 'gadgetsprohub.onrender.com' || hostname.endsWith('.onrender.com') && hostname.includes('gadgetsprohub');
+      const isRunAppAllowed = /^[a-z0-9-]+-qsss35leqdsbti2ibtyylr-[a-z0-9-]+\.[a-z0-9-]+\.run\.app$/.test(hostname);
+      const isOwnDomain = hostname === 'gadgetsprohub.onrender.com' || hostname.endsWith('.gadgetsprohub.onrender.com');
       if (isLocalhost || isGoogleDomain || isRunAppAllowed || isOwnDomain) {
         callback(null, true);
       } else {
@@ -1479,7 +1549,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
   // Sanitize outgoing JSON error responses to prevent leaking raw technical/internal system details (Information Disclosure)
-  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((_req: express.Request, res: express.Response, next: express.NextFunction) => {
     const originalJson = res.json;
     res.json = function (body: any) {
       if (body && typeof body === 'object' && body.error) {
@@ -1524,12 +1594,19 @@ async function startServer() {
               'index:', 'unhandled', 'throw', 'stack', 'unexpected token', 'json', 'syntax',
               'referenceerror', 'typeerror', 'error:', 'failed to', 'enoent', 'econnreset',
               'econnrefused', 'eaddrinuse', 'etimedout', 'node_modules', '.js', '.ts',
-              '__dirname', 'filename', 'undefined', 'null', 'method', 'property', 'object'
+              '__dirname', 'filename', 'undefined', 'null', 'method', 'property', 'object',
+              'schema', 'collection', 'cursor', 'driver', 'bson', 'client', 'dns', 'network',
+              'timeout', 'process', 'system', 'compile', 'token', 'secret', 'key', 'crypt',
+              'jwt', 'auth', 'bcrypt', 'salt', 'hash', 'signature', 'verifier', 'payload',
+              'issuer', 'audience', 'alg', 'parse', 'compiler', 'eval', 'function', 'class',
+              'construct', 'prototype', 'argument', 'parameter', 'invalid value', 'bad request',
+              'mongoose', 'model', 'unauthorized', 'forbidden', 'server error', 'exception'
             ];
             
             const isInternal = rawKeywords.some(keyword => lower.includes(keyword)) ||
                                /at\s+[\w\d_$.]+\s+\(/i.test(msg) || // Stack trace detector
-                               msg.includes('/') || msg.includes('\\');
+                               msg.includes('/') || msg.includes('\\') ||
+                               msg.includes('\n') || msg.includes('\r');
 
             if (isInternal) {
               body.error = 'An internal database or system error occurred. Please try again later.';
@@ -1569,7 +1646,8 @@ async function startServer() {
     message: { error: 'Too many requests from this IP address, please retry in 5 minutes' },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: getSecureClientIp
+    keyGenerator: getSecureClientIp,
+    validate: { xForwardedForHeader: false, default: false }
   });
   app.use('/api/', generalLimiter);
 
@@ -1580,7 +1658,8 @@ async function startServer() {
     message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: getSecureClientIp
+    keyGenerator: getSecureClientIp,
+    validate: { xForwardedForHeader: false, default: false }
   });
   app.use('/api/auth/login', loginLimiter);
   app.use('/api/auth/google', loginLimiter);
@@ -1592,7 +1671,8 @@ async function startServer() {
     message: { error: 'Excessive authorization activities detected, please attempt again in 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: getSecureClientIp
+    keyGenerator: getSecureClientIp,
+    validate: { xForwardedForHeader: false, default: false }
   });
   app.use('/api/auth/', authLimiter);
 
@@ -1684,7 +1764,9 @@ async function startServer() {
         .catch((err: any) => console.log('Stale index sub_1 dropped or not exists. Msg:', err.message));
     }
 
-    seedDatabase();
+    seedDatabase().catch((err: any) => {
+      console.error('Failed to auto-seed database:', err.message || err);
+    });
   })
   .catch((err: any) => {
     console.log('Database notice: Safe offline in-memory fallback enabled. MongoDB connection resolved as offline. Info:', err.message);
@@ -2052,7 +2134,7 @@ async function startServer() {
       res.status(500).send(`
         <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
           <h2 style="color: #ef4444;">Verification Error</h2>
-          <p style="color: #64748b;">${error.message || 'An error occurred during verification.'}</p>
+          <p style="color: #64748b;">${escapeHTML(error.message || 'An error occurred during verification.')}</p>
           <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
         </div>
       `);
@@ -2115,7 +2197,7 @@ async function startServer() {
       res.status(500).send(`
         <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
           <h2 style="color: #ef4444;">Verification Error</h2>
-          <p style="color: #64748b;">${error.message || 'An error occurred during verification.'}</p>
+          <p style="color: #64748b;">${escapeHTML(error.message || 'An error occurred during verification.')}</p>
           <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
         </div>
       `);
@@ -2303,13 +2385,8 @@ async function startServer() {
   // Revoke token on logout by adding to blacklist and clearing HTTP-Only cookie
   app.post('/api/auth/logout', async (req: express.Request, res: express.Response) => {
     let token = req.headers.authorization?.split(' ')[1];
-    if (!token && req.headers.cookie) {
-      const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
-        const [key, val] = c.trim().split('=');
-        if (key && val) acc[key] = val;
-        return acc;
-      }, {} as Record<string, string>);
-      token = cookies['token'];
+    if (!token) {
+      token = getCookieToken(req);
     }
     if (token) {
       if (isMongoConnected) {
@@ -2332,9 +2409,14 @@ async function startServer() {
 
   async function verifyIdToken(idToken: string): Promise<{ email: string; name: string } | null> {
     try {
+      const firebaseProjectId = process.env.VITE_FIREBASE_PROJECT_ID;
+      
       // 1. Try Google OAuth Verification
       try {
-        const ticket = await googleOAuthClient.verifyIdToken({ idToken });
+        const ticket = await googleOAuthClient.verifyIdToken({
+          idToken,
+          audience: firebaseProjectId || undefined
+        });
         const payload = ticket.getPayload();
         if (payload && payload.email) {
           return {
@@ -2343,7 +2425,7 @@ async function startServer() {
           };
         }
       } catch (err) {
-        // Not a standard Google ID Token, fallback to Firebase ID Token
+        // Fallback to manual Firebase verification
       }
 
       // 2. Decode and verify Firebase ID Token
@@ -2352,13 +2434,15 @@ async function startServer() {
         return null;
       }
 
-      const firebaseProjectId = process.env.VITE_FIREBASE_PROJECT_ID;
-      if (firebaseProjectId) {
-        const issuer = `https://securetoken.google.com/${firebaseProjectId}`;
-        if (decodedToken.payload.iss !== issuer || decodedToken.payload.aud !== firebaseProjectId) {
-          console.error('Firebase token verification failed: invalid issuer or audience');
-          return null;
-        }
+      if (!firebaseProjectId) {
+        console.error('Firebase token verification failed: VITE_FIREBASE_PROJECT_ID is not configured');
+        return null;
+      }
+
+      const issuer = `https://securetoken.google.com/${firebaseProjectId}`;
+      if (decodedToken.payload.iss !== issuer || decodedToken.payload.aud !== firebaseProjectId) {
+        console.error('Firebase token verification failed: invalid issuer or audience');
+        return null;
       }
 
       // Try dynamic verification of signature with Firebase certificates
@@ -2961,13 +3045,8 @@ async function startServer() {
   // Non-erroring authentication check to avoid 401s in the console on initial load
   app.get('/api/auth/status', async (req: express.Request, res: express.Response): Promise<any> => {
     let token = req.headers.authorization?.split(' ')[1];
-    if (!token && req.headers.cookie) {
-      const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
-        const [key, val] = c.trim().split('=');
-        if (key && val) acc[key] = val;
-        return acc;
-      }, {} as Record<string, string>);
-      token = cookies['token'];
+    if (!token) {
+      token = getCookieToken(req);
     }
     
     if (!token) {
@@ -2990,13 +3069,8 @@ async function startServer() {
   app.get('/api/user/profile', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       let token = req.headers.authorization?.split(' ')[1];
-      if (!token && req.headers.cookie) {
-        const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
-          const [key, val] = c.trim().split('=');
-          if (key && val) acc[key] = val;
-          return acc;
-        }, {} as Record<string, string>);
-        token = cookies['token'];
+      if (!token) {
+        token = getCookieToken(req);
       }
       if (!token) {
         return res.status(200).json({ isAuthenticated: false });
@@ -3016,7 +3090,9 @@ async function startServer() {
 
       if (isMongoConnected) {
         const user = await User.findById(uId).populate('wishlist');
-        if (user && isAdminEmail(user.email)) {
+        if (!user) return res.status(200).json({ isAuthenticated: false });
+        
+        if (isAdminEmail(user.email)) {
           if (user.role !== 'admin') {
             user.role = 'admin';
             await user.save().catch(e => console.warn(e));
@@ -4237,6 +4313,18 @@ async function startServer() {
 
   app.post('/api/webhooks/telegram', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      const secretHeader = req.headers['x-telegram-bot-api-secret-token'];
+      if (botToken) {
+        const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET || 
+          crypto.createHash('sha256').update(botToken).digest('hex');
+          
+        if (!secretHeader || secretHeader !== expectedSecret) {
+          console.warn('[Telegram Bot] Unauthorized webhook call received (secret token mismatch or missing)');
+          return res.status(403).send('Unauthorized webhook request');
+        }
+      }
+
       const update = req.body;
       if (!update) return res.sendStatus(200);
 
@@ -5588,4 +5676,7 @@ async function startServer() {
   server.requestTimeout = 30000;   // 30s request timeout to prevent hanging connections
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("Unhandled promise rejection in startServer:", err);
+  process.exit(1);
+});

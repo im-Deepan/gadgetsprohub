@@ -20,3 +20,9 @@ firebase-applet-config.json
 firebase-debug.log
 firebase-debug.*.log
 .firebase/
+
+# Local database fallback files
+local_users.json
+local_orders.json
+local_sunday_logs.json
+
