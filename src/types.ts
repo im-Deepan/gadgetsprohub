@@ -26,6 +26,7 @@ export interface Review {
 export interface Product {
   _id: string;
   id?: string; // Optional alias for view compatibility
+  asin?: string; // Amazon Standard Identification Number for extensions
   name: string;
   slug: string;
   description: string;

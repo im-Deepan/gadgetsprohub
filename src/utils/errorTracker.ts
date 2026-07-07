@@ -28,6 +28,10 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     normalizedName === 'aborterror' ||
     normalizedName === 'abort' ||
     normalizedMessage === 'canceled' ||
+    normalizedMessage === 'undefined' ||
+    normalizedMessage === 'null' ||
+    normalizedMessage === 'error' ||
+    normalizedMessage === '[object promise]' ||
     normalizedMessage.includes('abort') ||
     normalizedMessage.includes('canceled') ||
     normalizedMessage.includes('cancelled') ||
@@ -45,6 +49,16 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     normalizedMessage.includes('offline mode') ||
     normalizedMessage.includes('extension') ||
     normalizedMessage.includes('chrome-extension') ||
+    normalizedMessage.includes('safari-extension') ||
+    normalizedMessage.includes('moz-extension') ||
+    normalizedMessage.includes('content-script') ||
+    normalizedMessage.includes('inject') ||
+    normalizedMessage.includes('clipboard') ||
+    normalizedMessage.includes('writetext') ||
+    normalizedMessage.includes('share') ||
+    normalizedMessage.includes('permission') ||
+    normalizedMessage.includes('sandbox') ||
+    normalizedMessage.includes('cross-origin') ||
     message === '' ||
     message === 'Error' ||
     message === '[object Object]' ||
@@ -66,7 +80,14 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     normalizedStack.includes('pagead') ||
     normalizedStack.includes('google-analytics') ||
     normalizedStack.includes('postmessage') ||
-    normalizedStack.includes('cross-origin')
+    normalizedStack.includes('cross-origin') ||
+    normalizedStack.includes('extension') ||
+    normalizedStack.includes('chrome-extension') ||
+    normalizedStack.includes('safari-extension') ||
+    normalizedStack.includes('moz-extension') ||
+    normalizedStack.includes('webkit-masked-url') ||
+    normalizedStack.includes('content-script') ||
+    normalizedStack.includes('inject')
   ) {
     return;
   }

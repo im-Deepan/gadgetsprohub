@@ -13,6 +13,7 @@ import { generateSlug } from '../utils/slug';
 import { AlertDialog } from '../components/admin/AlertDialog';
 import { ConfirmDialog } from '../components/admin/ConfirmDialog';
 import { N8nStatusIndicator } from '../components/admin/N8nStatusIndicator';
+import { ExtensionImporter } from '../components/admin/ExtensionImporter';
 
 interface AdminProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -24,7 +25,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const tabContainerRef = useRef<HTMLDivElement>(null);
   
   // Tab selector
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler' | 'users' | 'security-logs'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler' | 'users' | 'security-logs' | 'importer'>('products');
   const [messagesFilter, setMessagesFilter] = useState<'all' | 'unread'>('all');
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
@@ -1304,6 +1305,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         >
           🛡️ Audit Logs ({securityLogs.length})
         </button>
+        <button
+          onClick={() => setActiveTab('importer')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'importer' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+        >
+          🔌 Extension Importer
+        </button>
       </div>
 
       {/* 3. DYNAMIC WORKVIEW SECTION GRID TABLES */}
@@ -2477,6 +2484,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 </div>
               );
             })()
+          ) : activeTab === 'importer' ? (
+            <ExtensionImporter />
           ) : (
 
           /* VIEW TAB : TELEMETRY TRAFFIC LOGS */
