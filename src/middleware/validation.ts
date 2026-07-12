@@ -30,9 +30,9 @@ export const validateRegister = [
   body('password')
     .isString()
     .withMessage('Password must be a string')
+    .trim()
     .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
-    .trim(),
+    .withMessage('Password must be at least 6 characters long'),
   body('name')
     .optional()
     .isString()
@@ -58,7 +58,9 @@ export const validateLogin = [
   body('password')
     .isString()
     .withMessage('Password must be a string')
-    .trim(),
+    .trim()
+    .notEmpty()
+    .withMessage('Password is required'),
   handleValidationErrors
 ];
 
@@ -358,20 +360,180 @@ export const validateAdminProduct = [
     .isString()
     .withMessage('Brand must be a string')
     .trim()
-    .escape(),
+    .escape()
+    .isLength({ max: 128 })
+    .withMessage('Brand must be under 128 characters'),
   body('price')
     .isNumeric()
     .withMessage('Price is required and must be a number')
+    .isFloat({ min: 0, max: 1000000 })
+    .withMessage('Price must be a non-negative number under 1,000,000')
     .toFloat(),
   body('originalPrice')
     .optional()
     .isNumeric()
     .withMessage('Original price must be a number')
+    .isFloat({ min: 0, max: 1000000 })
+    .withMessage('Original price must be a non-negative number under 1,000,000')
+    .toFloat(),
+  body('discount')
+    .optional()
+    .isNumeric()
+    .withMessage('Discount must be a number')
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Discount must be a percentage between 0 and 100')
+    .toFloat(),
+  body('rating')
+    .optional()
+    .isNumeric()
+    .withMessage('Rating must be a number')
+    .isFloat({ min: 0, max: 5 })
+    .withMessage('Rating must be between 0 and 5')
     .toFloat(),
   body('affiliateLink')
     .isString()
     .withMessage('Affiliate link is required and must be a string')
-    .trim(),
+    .trim()
+    .isLength({ max: 2048 })
+    .withMessage('Affiliate link must be under 2048 characters'),
+  body('description')
+    .optional()
+    .isString()
+    .withMessage('Description must be a string')
+    .trim()
+    .isLength({ max: 5000 })
+    .withMessage('Description must be under 5000 characters'),
+  body('longDescription')
+    .optional()
+    .isString()
+    .withMessage('Long description must be a string')
+    .trim()
+    .isLength({ max: 20000 })
+    .withMessage('Long description must be under 20000 characters'),
+  body('category')
+    .optional()
+    .isString()
+    .withMessage('Category must be a string')
+    .trim()
+    .isLength({ max: 128 })
+    .withMessage('Category must be under 128 characters'),
+  body('subcategory')
+    .optional()
+    .isString()
+    .withMessage('Subcategory must be a string')
+    .trim()
+    .isLength({ max: 128 })
+    .withMessage('Subcategory must be under 128 characters'),
+  body('videoUrl')
+    .optional()
+    .isString()
+    .withMessage('Video URL must be a string')
+    .trim()
+    .isLength({ max: 1024 })
+    .withMessage('Video URL must be under 1024 characters'),
+  body('affiliateCode')
+    .optional()
+    .isString()
+    .withMessage('Affiliate code must be a string')
+    .trim()
+    .isLength({ max: 128 })
+    .withMessage('Affiliate code must be under 128 characters'),
+  body('sku')
+    .optional()
+    .isString()
+    .withMessage('SKU must be a string')
+    .trim()
+    .isLength({ max: 128 })
+    .withMessage('SKU must be under 128 characters'),
+  body('seoTitle')
+    .optional()
+    .isString()
+    .withMessage('SEO Title must be a string')
+    .trim()
+    .isLength({ max: 256 })
+    .withMessage('SEO Title must be under 256 characters'),
+  body('seoDescription')
+    .optional()
+    .isString()
+    .withMessage('SEO Description must be a string')
+    .trim()
+    .isLength({ max: 512 })
+    .withMessage('SEO Description must be under 512 characters'),
+  body('seoKeywords')
+    .optional()
+    .isString()
+    .withMessage('SEO Keywords must be a string')
+    .trim()
+    .isLength({ max: 512 })
+    .withMessage('SEO Keywords must be under 512 characters'),
+  body('badge')
+    .optional()
+    .isString()
+    .withMessage('Badge must be a string')
+    .trim()
+    .isLength({ max: 128 })
+    .withMessage('Badge must be under 128 characters'),
+  body('buyNowText')
+    .optional()
+    .isString()
+    .withMessage('Buy Now Text must be a string')
+    .trim()
+    .isLength({ max: 128 })
+    .withMessage('Buy Now Text must be under 128 characters'),
+  body('affiliatePlatform')
+    .optional()
+    .isString()
+    .withMessage('Affiliate Platform must be a string')
+    .trim()
+    .isLength({ max: 128 })
+    .withMessage('Affiliate Platform must be under 128 characters'),
+  body('buttonText')
+    .optional()
+    .isString()
+    .withMessage('Button Text must be a string')
+    .trim()
+    .isLength({ max: 128 })
+    .withMessage('Button Text must be under 128 characters'),
+  body('buttonColor')
+    .optional()
+    .isString()
+    .withMessage('Button Color must be a string')
+    .trim()
+    .isLength({ max: 32 })
+    .withMessage('Button Color must be under 32 characters'),
+  body('images')
+    .optional()
+    .isArray()
+    .withMessage('Images must be an array'),
+  body('images.*')
+    .isString()
+    .withMessage('Each image must be a valid string URL')
+    .trim()
+    .isLength({ min: 1, max: 2048 })
+    .withMessage('Each image URL must be between 1 and 2048 characters'),
+  body('tags')
+    .optional()
+    .isArray()
+    .withMessage('Tags must be an array'),
+  body('tags.*')
+    .isString()
+    .withMessage('Each tag must be a string')
+    .trim()
+    .isLength({ min: 1, max: 128 })
+    .withMessage('Each tag must be between 1 and 128 characters'),
+  body('comparisonProducts')
+    .optional()
+    .isArray()
+    .withMessage('Comparison products must be an array'),
+  body('comparisonProducts.*')
+    .isString()
+    .withMessage('Each comparison product must be a string ID')
+    .trim()
+    .isLength({ min: 1, max: 128 })
+    .withMessage('Each comparison product ID must be between 1 and 128 characters'),
+  body(['inStock', 'trending', 'featured'])
+    .optional()
+    .isBoolean(),
   handleValidationErrors
 ];
 

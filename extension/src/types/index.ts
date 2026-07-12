@@ -6,6 +6,7 @@ export interface ProductPayload {
   name: string;
   brand: string;
   asin: string;
+  price?: number;
   currentPrice: number;
   originalPrice: number;
   discount: number;
@@ -18,6 +19,7 @@ export interface ProductPayload {
   specifications: Record<string, string>;
   images: string[];
   productUrl: string;
+  affiliateLink?: string;
   parserVersion?: string;
 }
 
@@ -43,6 +45,7 @@ export interface ExtensionSettings {
   apiBaseUrl: string;
   authToken: string | null;
   adminEmail: string | null;
+  tokenExpiresAt: number | null; // expiration epoch timestamp in milliseconds
   environment: 'Development' | 'Staging' | 'Production' | 'Custom';
   debugMode: boolean;
   version: string;
@@ -72,7 +75,19 @@ export type ExtensionMessageAction =
   | 'EXECUTE_PRODUCT_IMPORT'
   | 'GET_SESSION_STATUS'
   | 'SET_SESSION_TOKEN'
-  | 'TEST_PARSER';
+  | 'TEST_PARSER'
+  | 'EXECUTE_LOGIN'
+  | 'EXECUTE_LOGOUT'
+  | 'CHECK_DUPLICATE_PRODUCT'
+  | 'GET_IMPORT_HISTORY'
+  | 'GET_IMPORT_ANALYTICS'
+  | 'BULK_IMPORT_START'
+  | 'BULK_IMPORT_PAUSE'
+  | 'BULK_IMPORT_RESUME'
+  | 'BULK_IMPORT_CANCEL'
+  | 'BULK_IMPORT_STATUS'
+  | 'STORAGE_WRITE'
+  | 'STORAGE_READ';
 
 export interface ExtensionMessage<T = any> {
   action: ExtensionMessageAction;

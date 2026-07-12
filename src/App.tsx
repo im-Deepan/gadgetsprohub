@@ -733,51 +733,76 @@ const AppContent: React.FC = () => {
   }, []); // Keeps listeners clean without stale closures using stable state ref hooks
 
   // Custom visual view switcher render with exhaustive switch path checks
-  const renderActiveView = () => {
+    const renderActiveView = () => {
+    let content = null;
     switch (activeView) {
       case 'home':
-        return <Home onNavigate={navigateToView} onPreload={preloadView} />;
+        content = <Home onNavigate={navigateToView} onPreload={preloadView} />;
+        break;
       case 'products':
-        return (
+        content = (
           <Suspense fallback={<ProductPageSkeleton />}>
             <ProductList initialFilter={selectedSlug} onNavigate={navigateToView} onPreload={preloadView} />
           </Suspense>
         );
+        break;
       case 'product-detail':
-        return <ProductDetail productSlug={selectedSlug || ''} onNavigate={navigateToView} />;
+        content = (
+          <Suspense fallback={<ProductPageSkeleton />}>
+            <ProductDetail productSlug={selectedSlug || ''} onNavigate={navigateToView} />
+          </Suspense>
+        );
+        break;
       case 'blogs':
-        return (
+        content = (
           <Suspense fallback={<BlogPageSkeleton />}>
             <BlogList onNavigate={navigateToView} onPreload={preloadView} />
           </Suspense>
         );
+        break;
       case 'blog-detail':
-        return <BlogDetail blogSlug={selectedSlug || ''} onNavigate={navigateToView} />;
+        content = <BlogDetail blogSlug={selectedSlug || ''} onNavigate={navigateToView} />;
+        break;
       case 'contact':
-        return <Contact />;
+        content = <Contact />;
+        break;
       case 'login':
-        return <Login onNavigate={navigateToView} />;
+        content = <Login onNavigate={navigateToView} />;
+        break;
       case 'profile':
-        return <Profile onNavigate={navigateToView} />;
+        content = <Profile onNavigate={navigateToView} />;
+        break;
       case 'admin':
-        return <Admin onNavigate={navigateToView} />;
+        content = <Admin onNavigate={navigateToView} />;
+        break;
       case 'privacy-policy':
-        return <PrivacyPolicy />;
+        content = <PrivacyPolicy />;
+        break;
       case 'about-us':
-        return <AboutUs />;
+        content = <AboutUs />;
+        break;
       case 'terms-conditions':
-        return <TermsConditions />;
+        content = <TermsConditions />;
+        break;
       case 'disclaimer':
-        return <Disclaimer />;
-      default: {
-        return (
+        content = <Disclaimer />;
+        break;
+      default:
+        content = (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <h2 className="text-2xl font-bold mb-4">Page Not Found</h2>
             <button onClick={() => navigateToView('home')} className="bg-indigo-500 text-white px-6 py-2 rounded-lg">Return Home</button>
           </div>
         );
-      }
+        break;
     }
+    
+    // We only wrap it in ViewLoader if it doesn't already have its own Suspense (which are the cases where content is wrapped in Suspense)
+    // Actually, we can just wrap EVERYTHING in ViewLoader that doesn't have it.
+    // Since ProductList and others already have Suspense in their JSX, they won't trigger the outer Suspense unless they suspend outside it, which they don't.
+    // So we can safely return <Suspense fallback={<ViewLoader />}>{content}</Suspense>;
+    
+    return <Suspense fallback={<ViewLoader />}>{content}</Suspense>;
   };
 
   return (

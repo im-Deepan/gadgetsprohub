@@ -14,6 +14,11 @@ import { AlertDialog } from '../components/admin/AlertDialog';
 import { ConfirmDialog } from '../components/admin/ConfirmDialog';
 import { N8nStatusIndicator } from '../components/admin/N8nStatusIndicator';
 import { ExtensionImporter } from '../components/admin/ExtensionImporter';
+import { MediaLibrary } from '../components/MediaLibrary';
+import { SeoDashboard } from '../components/admin/SeoDashboard';
+import AiContentDashboard from '../components/admin/AiContentDashboard';
+import SyncDashboard from '../components/admin/SyncDashboard';
+import { SecurityConsole } from '../components/admin/SecurityConsole';
 
 interface AdminProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -25,7 +30,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const tabContainerRef = useRef<HTMLDivElement>(null);
   
   // Tab selector
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler' | 'users' | 'security-logs' | 'importer'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler' | 'users' | 'security-logs' | 'importer' | 'media' | 'seo' | 'ai-content' | 'sync-dashboard' | 'security-console'>('products');
   const [messagesFilter, setMessagesFilter] = useState<'all' | 'unread'>('all');
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
@@ -219,6 +224,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     specKeyVal: 'Driver=50mm;Frequency=20-20kHz;Weight=290g;Battery=30 Hours',
     pros: 'Exceptional depth, Safe battery life, Active ANC',
     cons: 'Premium cost, Lacks audio wire jack',
+    inStock: true,
     trending: false,
     featured: false
   });
@@ -276,6 +282,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [catName, setCatName] = useState('');
   const [catIcon, setCatIcon] = useState('📦');
   const [catSlug, setCatSlug] = useState('');
+  const [catDescription, setCatDescription] = useState('');
+  const [catImage, setCatImage] = useState('');
   const [catSubcategories, setCatSubcategories] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
@@ -668,7 +676,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       cons: consList,
       affiliateLink: prodForm.affiliateLink,
       affiliateCode: prodForm.affiliateCode,
-      inStock: true,
+      inStock: prodForm.inStock !== false,
       trending: prodForm.trending,
       featured: prodForm.featured
     };
@@ -750,6 +758,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       specKeyVal: 'Driver=40mm;ANC=Active Dual Mode;Bluetooth=V5.3;Weight=260g',
       pros: 'Exceptional isolation, Comfortable wear, Good battery',
       cons: 'Premium cost, Slightly heavy',
+      inStock: true,
       trending: false,
       featured: false
     });
@@ -784,6 +793,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       specKeyVal: specStr,
       pros: p.pros?.join(', ') || '',
       cons: p.cons?.join(', ') || '',
+      inStock: p.inStock !== false,
       trending: p.trending || false,
       featured: p.featured || false
     });
@@ -835,7 +845,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           name: catName,
           slug: generateSlug(catSlug || catName),
           icon: catIcon || '📦',
-          description: 'Custom added curator category',
+          description: catDescription || 'Custom added curator category',
+          image: catImage || undefined,
           subcategories: catSubcategories.split(',').map(sub => sub.trim()).filter(Boolean)
         })
       });
@@ -844,6 +855,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         setCatName('');
         setCatIcon('📦');
         setCatSlug('');
+        setCatDescription('');
+        setCatImage('');
         setCatSubcategories('');
         setEditingCategory(null);
         await loadAdminMetrics();
@@ -862,6 +875,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setCatName(c.name);
     setCatIcon(c.icon || '📦');
     setCatSlug(c.slug);
+    setCatDescription(c.description || '');
+    setCatImage(c.image || '');
     setCatSubcategories(c.subcategories ? c.subcategories.join(', ') : '');
   };
 
@@ -870,6 +885,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setCatName('');
     setCatIcon('📦');
     setCatSlug('');
+    setCatDescription('');
+    setCatImage('');
     setCatSubcategories('');
   };
 
@@ -1311,6 +1328,41 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         >
           🔌 Extension Importer
         </button>
+      
+        <button
+          onClick={() => setActiveTab('media')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'media' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+        >
+          🖼️ Media Library
+        </button>
+
+        <button
+          onClick={() => setActiveTab('seo')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'seo' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+        >
+          🔍 SEO & Publishing
+        </button>
+
+        <button
+          onClick={() => setActiveTab('ai-content')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'ai-content' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+        >
+          ✨ AI Content
+        </button>
+
+        <button
+          onClick={() => setActiveTab('sync-dashboard')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'sync-dashboard' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+        >
+          🔄 Monitoring & Sync
+        </button>
+
+        <button
+          onClick={() => setActiveTab('security-console')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'security-console' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+        >
+          🛡️ Security & Telemetry
+        </button>
       </div>
 
       {/* 3. DYNAMIC WORKVIEW SECTION GRID TABLES */}
@@ -1596,6 +1648,28 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         value={catSubcategories}
                         onChange={(e) => setCatSubcategories(e.target.value)}
                         className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 font-sans">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Classifier Description</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Premium quality laptops and tablets"
+                        value={catDescription}
+                        onChange={(e) => setCatDescription(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 font-sans">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Classifier Image URL (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. https://images.unsplash.com/..."
+                        value={catImage}
+                        onChange={(e) => setCatImage(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono"
                       />
                     </div>
 
@@ -2484,8 +2558,19 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 </div>
               );
             })()
+          
+          ) : activeTab === 'seo' ? (
+            <SeoDashboard token={token || ''} />
+          ) : activeTab === 'media' ? (
+            <MediaLibrary token={token} />
           ) : activeTab === 'importer' ? (
             <ExtensionImporter />
+          ) : activeTab === 'ai-content' ? (
+            <AiContentDashboard showNotice={(type, message) => triggerAlert(type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Info', message)} />
+          ) : activeTab === 'sync-dashboard' ? (
+            <SyncDashboard showNotice={(type, message) => triggerAlert(type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Info', message)} />
+          ) : activeTab === 'security-console' ? (
+            <SecurityConsole token={token} triggerAlert={triggerAlert} />
           ) : (
 
           /* VIEW TAB : TELEMETRY TRAFFIC LOGS */
@@ -3393,6 +3478,15 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   </div>
 
                   <div className="flex items-center gap-6 py-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={prodForm.inStock !== false}
+                        onChange={(e) => setProdForm({ ...prodForm, inStock: e.target.checked })}
+                        className="h-4 w-4 rounded border-slate-200 text-indigo-500 focus:ring-indigo-400"
+                      />
+                      <span className="text-[11px] font-bold text-slate-600 dark:text-slate-200 uppercase tracking-widest text-[10px]">In Stock</span>
+                    </label>
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="checkbox"

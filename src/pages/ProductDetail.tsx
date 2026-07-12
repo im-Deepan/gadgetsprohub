@@ -219,9 +219,25 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       if (res.ok) {
         const data = await res.json();
         if (signal?.aborted) return;
-        setProduct(data);
-        setActiveImageIdx(0);
-        setShowVideo(false);
+        
+        let resolvedProduct: any = null;
+        if (data && typeof data === 'object') {
+          if (data.product && typeof data.product === 'object' && '_id' in data.product) {
+            resolvedProduct = data.product;
+          } else if ('_id' in data) {
+            resolvedProduct = data;
+          }
+        }
+
+        if (resolvedProduct) {
+          setProduct(resolvedProduct);
+          setActiveImageIdx(0);
+          setShowVideo(false);
+        } else {
+          console.error('[ProductDetail] Invalid product response format:', data);
+          showToast('Product specifications data format is invalid.', 'error', 4000, 'System Error');
+          return;
+        }
         
         // Store the viewed product in localStorage for "Pick where you left off"
         try {
@@ -301,6 +317,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   // Sync admin form with product changes to prevent stale data
   useEffect(() => {
     if (product) {
+      let resolvedSpecs: Record<string, string> = {};
+      if (product.specifications) {
+        if (product.specifications instanceof Map) {
+          resolvedSpecs = Object.fromEntries((product.specifications as Map<any, any>).entries());
+        } else if (typeof product.specifications === 'object') {
+          resolvedSpecs = { ...product.specifications };
+        } else if (typeof product.specifications === 'string') {
+          resolvedSpecs = parseSpecificationsString(product.specifications);
+        }
+      }
+
       setAdminEditForm({
         name: product.name || '',
         price: String(product.price || ''),
@@ -313,7 +340,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         pros: product.pros?.join(', ') || '',
         cons: product.cons?.join(', ') || '',
         videoUrl: product.videoUrl || '',
-        specifications: Object.entries(product.specifications || {})
+        specifications: Object.entries(resolvedSpecs)
           .filter(([_, v]) => v != null)
           .map(([k, v]) => `${k}=${v}`)
           .join('; ')
@@ -527,7 +554,19 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       }
 
       const updatedProduct = await resp.json();
-      setProduct(updatedProduct);
+      if (updatedProduct && typeof updatedProduct === 'object') {
+        if ('_id' in updatedProduct) {
+          setProduct(updatedProduct);
+        } else if (updatedProduct.product && typeof updatedProduct.product === 'object' && '_id' in updatedProduct.product) {
+          setProduct(updatedProduct.product);
+        } else {
+          console.error('[ProductDetail] Malformed updated product:', updatedProduct);
+          throw new Error('Received malformed product update payload.');
+        }
+      } else {
+        console.error('[ProductDetail] Invalid updated product response type:', updatedProduct);
+        throw new Error('Invalid response received from product update.');
+      }
 
       setReviewTitle('');
       setReviewContent('');
@@ -623,8 +662,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const prevProduct = currentIdx > 0 ? allProductsSequence[currentIdx - 1] : null;
   const nextProduct = currentIdx !== -1 && currentIdx < allProductsSequence.length - 1 ? allProductsSequence[currentIdx + 1] : null;
 
-  // Specifications fields map
-  const specMap = product.specifications || {};
+  // Specifications fields map with exhaustive, safe, multi-format parsing
+  let specMap: Record<string, string> = {};
+  if (product.specifications) {
+    if (product.specifications instanceof Map) {
+      specMap = Object.fromEntries((product.specifications as Map<any, any>).entries());
+    } else if (typeof product.specifications === 'object') {
+      specMap = { ...product.specifications };
+    } else if (typeof product.specifications === 'string') {
+      specMap = parseSpecificationsString(product.specifications);
+    }
+  }
 
   // Resolve dynamic URL based on current host origin
   const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
@@ -1066,9 +1114,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       </section>
 
       {/* 4. SPECIFICATIONS TABULAR MAP GRID */}
-      {Object.keys(specMap).length > 0 && (
-        <section className="mx-auto max-w-7xl md:px-4 mb-16 space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Full Specifications Index</h3>
+      <section className="mx-auto max-w-7xl md:px-4 mb-16 space-y-4">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Full Specifications Index</h3>
+        {specMap && Object.keys(specMap).length > 0 ? (
           <div className="rounded-2xl border border-slate-100 bg-white dark:bg-slate-800 overflow-hidden dark:border-slate-700">
             <div className="overflow-x-auto w-full">
               <table className="w-full text-left border-collapse text-xs min-w-[400px] sm:min-w-0">
@@ -1089,8 +1137,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               </table>
             </div>
           </div>
-        </section>
-      )}
+        ) : (
+          <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Detailed specifications are currently unavailable for this item.</p>
+          </div>
+        )}
+      </section>
 
       {/* 5. SELLER REVIEWS & ACTIVE COMMENDS INPUT */}
       <section className="mx-auto max-w-7xl md:px-4 mb-16 grid grid-cols-1 lg:grid-cols-3 gap-10">

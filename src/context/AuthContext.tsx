@@ -91,6 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .then(data => {
         if (data.token) {
           setToken(data.token);
+          refreshProfile().catch(() => {});
           if (emailUpdated === 'true') {
             showToast('Your new email address has been successfully verified and updated on your account record!', 'success', 6000, 'User Action');
           } else {

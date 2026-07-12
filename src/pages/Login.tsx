@@ -169,17 +169,6 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         }
       } else {
         showToast('Successfully verified credentials. Welcome back to your affiliate portal!', 'success', 4000, "User Action");
-        if (subscribeNewsletter) {
-          try {
-            await apiFetch('/api/newsletter/subscribe', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email })
-            });
-          } catch (err) {
-            console.warn('Login silent newsletter subscription failed:', err);
-          }
-        }
       }
     } else {
       const validation = registerSchema.safeParse({ email, password, name });
@@ -232,7 +221,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
       showToast(errorMsg, 'error', 4000, "User Action");
     } else {
       showToast('Successfully authenticated through secure Google Sign-In services!', 'success', 4000, "User Action");
-      if (subscribeNewsletter && res.email) {
+      if (subscribeNewsletter && res.email && activeTab === 'register') {
         try {
           await apiFetch('/api/newsletter/subscribe', {
             method: 'POST',
@@ -432,18 +421,20 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           </div>
 
           {/* Newsletter Subscription Checkbox */}
-          <div className="flex items-start gap-2.5 pt-1.5 pb-2.5 select-none" id="newsletter-login-opt-in">
-            <input
-              id="newsletter-subscribe-login"
-              type="checkbox"
-              checked={subscribeNewsletter}
-              onChange={(e) => setSubscribeNewsletter(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded-md border-slate-100 text-indigo-500 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-950 cursor-pointer"
-            />
-            <label htmlFor="newsletter-subscribe-login" className="text-[11px] text-slate-400 dark:text-slate-300 leading-normal cursor-pointer font-medium">
-              Subscribe to our newsletter to receive the latest tech updates, gadget price drops, and exclusive member discounts.
-            </label>
-          </div>
+          {activeTab === 'register' && (
+            <div className="flex items-start gap-2.5 pt-1.5 pb-2.5 select-none" id="newsletter-login-opt-in">
+              <input
+                id="newsletter-subscribe-login"
+                type="checkbox"
+                checked={subscribeNewsletter}
+                onChange={(e) => setSubscribeNewsletter(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded-md border-slate-100 text-indigo-500 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-950 cursor-pointer"
+              />
+              <label htmlFor="newsletter-subscribe-login" className="text-[11px] text-slate-400 dark:text-slate-300 leading-normal cursor-pointer font-medium">
+                Subscribe to our newsletter to receive the latest tech updates, gadget price drops, and exclusive member discounts.
+              </label>
+            </div>
+          )}
 
           <button
             type="submit"

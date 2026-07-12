@@ -32,6 +32,31 @@ export function clearApiCache(): void {
 }
 
 /**
+ * Diagnostic helper to check the product collection count and structure directly.
+ */
+export async function diagnosticCheckProducts(): Promise<{
+  success: boolean;
+  source?: string;
+  count?: number;
+  sampleStructure?: string[];
+  sampleData?: any;
+  error?: string;
+}> {
+  try {
+    const res = await apiFetch('/api/diagnostic/products', { deduplicate: false });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch diagnostic data. Status: ${res.status}`);
+    }
+    const data = await res.json();
+    console.log('[Diagnostic] Product Sync Status:', data);
+    return data;
+  } catch (err: any) {
+    console.error('[Diagnostic] Client Error:', err);
+    return { success: false, error: err.message || String(err) };
+  }
+}
+
+/**
  * Generates a unique deterministic key for a request to identify duplicates
  */
 function getRequestKey(url: string, options: ApiFetchOptions = {}): string {
@@ -99,12 +124,19 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
     const id = setTimeout(() => controller.abort(), timeout);
 
     // Merge signals for timing out
-    let signalToUse = fetchOptions.signal;
+    let signalToUse: AbortSignal | null | undefined = fetchOptions.signal;
     if (!signalToUse) {
       signalToUse = controller.signal;
+    } else if (typeof AbortSignal !== 'undefined' && 'any' in AbortSignal) {
+      signalToUse = (AbortSignal as any).any([signalToUse, controller.signal]);
+      signalToUse?.addEventListener('abort', () => clearTimeout(id));
     } else {
-      // Listen to timeout controller if user did not abort first
-      signalToUse.addEventListener('abort', () => clearTimeout(id));
+      // Polyfill behavior for AbortSignal.any if unsupported
+      const combinedController = new AbortController();
+      const existingSignal = signalToUse;
+      existingSignal.addEventListener('abort', () => combinedController.abort());
+      controller.signal.addEventListener('abort', () => combinedController.abort());
+      signalToUse = combinedController.signal;
     }
 
     try {

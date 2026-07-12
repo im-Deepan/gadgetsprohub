@@ -40,14 +40,23 @@ export class ProductBuilder {
     const specifications = FieldExtractors.getSpecifications();
 
     const urlObj = new URL(window.location.href);
+    const originalTag = urlObj.searchParams.get('tag');
+    const tag = originalTag || 'shopgear-20';
+
     urlObj.search = '';
     const productUrl = urlObj.toString();
 
-    return {
+    let affiliateLink = productUrl;
+    if (asin && (productUrl.includes('amazon.com') || productUrl.includes('amzn.to'))) {
+      affiliateLink = `https://www.amazon.com/dp/${asin}/?tag=${tag}`;
+    }
+
+    const result: Partial<ProductPayload> & { title?: string } = {
       name: title,
       title, // Backward compatibility with previous schema
       brand,
       asin,
+      price: currentPrice,
       currentPrice,
       originalPrice,
       discount,
@@ -60,7 +69,10 @@ export class ProductBuilder {
       specifications,
       images,
       productUrl,
+      affiliateLink,
       parserVersion: '1.1.0'
-    } as any; // Cast for Partial<ProductPayload> while supporting title/name alias if needed
+    };
+
+    return result;
   }
 }

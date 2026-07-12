@@ -8,6 +8,8 @@ import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import multer from 'multer';
+import sharp from 'sharp';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import mongoSanitize from 'express-mongo-sanitize';
@@ -35,6 +37,33 @@ import {
   validateAdminCategory,
   validateAdminBlog
 } from './src/middleware/validation';
+
+import { seoService } from './src/services/SeoService';
+import { aiService, AiPrompt, AiProviderSetting, AiJob, AiResponse, AiAnalytics, AiCache } from './src/services/AiService';
+import { SyncService, PriceHistory, ProductChange, SyncJob, SchedulerTask, AlertRule, ProductHealth, AutomationRule, NotificationHistory } from './src/services/SyncService';
+import {
+  MarketplaceService,
+  MarketplaceProviderModel,
+  MarketplaceSettingsModel,
+  MarketplaceHealthModel,
+  MarketplaceAnalyticsModel,
+  CurrencyRatesModel,
+  AffiliateProfilesModel,
+  ProviderLogsModel,
+  ComparisonHistoryModel
+} from './src/services/MarketplaceService';
+
+const syncService = SyncService.getInstance();
+const marketplaceService = MarketplaceService.getInstance();
+
+import { 
+  UserSession, 
+  PersonalAccessToken, 
+  ConfigurationService, 
+  TotpService, 
+  MetricsService,
+  WorkerService
+} from './src/services/RefinementService';
 
 dotenv.config();
 
@@ -64,9 +93,8 @@ const getJwtSecret = (): string => {
   if (process.env.JWT_SECRET && process.env.JWT_SECRET.trim() !== '' && process.env.JWT_SECRET !== 'your-secret-key') {
     return process.env.JWT_SECRET;
   }
-  console.warn("⚠️ WARNING: JWT_SECRET env variable not provided or is set to a default insecure value. Deriving a stable, replica-safe persistent fallback key.");
-  const seed = process.env.MONGODB_URI || process.env.VITE_FIREBASE_PROJECT_ID || 'gadgetsprohub-default-fallback-seed-string-12345';
-  return crypto.createHash('sha256').update(seed).digest('hex');
+  console.error("❌ CRITICAL: JWT_SECRET env variable is required but not provided.");
+  process.exit(1);
 };
 const JWT_SECRET_KEY = getJwtSecret();
 
@@ -200,6 +228,38 @@ const productSchema = new mongoose.Schema({
   seoTitle: String,
   seoDescription: String,
   seoKeywords: [String],
+  focusKeyword: String,
+  secondaryKeywords: [String],
+  canonicalUrl: String,
+  robotsMeta: { type: String, default: 'index, follow' },
+  openGraph: {
+    title: String,
+    description: String,
+    image: String,
+    type: { type: String, default: 'product' }
+  },
+  twitterCard: {
+    card: { type: String, default: 'summary_large_image' },
+    title: String,
+    description: String,
+    image: String
+  },
+  seoScore: { type: Number, default: 0 },
+  seoSuggestions: [String],
+  publishingStatus: { type: String, enum: ['draft', 'in_review', 'approved', 'scheduled', 'published', 'archived'], default: 'draft' },
+  scheduledPublishDate: Date,
+  publishingHistory: [{
+    status: String,
+    changedBy: String,
+    changedAt: { type: Date, default: Date.now },
+    notes: String
+  }],
+  breadcrumb: [String],
+  faqs: [{
+    question: String,
+    answer: String,
+    category: String
+  }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   lastPriceCheck: { type: Date, default: null }
@@ -485,9 +545,30 @@ const SecurityLog = mongoose.model('SecurityLog', securityLogSchema);
 
 const blacklistedTokenSchema = new mongoose.Schema({
   token: { type: String, required: true, unique: true },
-  createdAt: { type: Date, default: Date.now, expires: 86400 } // 24 hours expiry
+  createdAt: { type: Date, default: Date.now, expires: 2592000 } // 30 days expiry
 });
 const BlacklistedToken = mongoose.model('BlacklistedToken', blacklistedTokenSchema);
+
+const authCodeSchema = new mongoose.Schema({
+  code: { type: String, required: true, unique: true },
+  userId: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now, expires: 60 } // 1 minute expiry
+});
+const AuthCode = mongoose.model('AuthCode', authCodeSchema);
+
+const localBlacklistedTokens = new Map<string, number>();
+const blacklistTokenLocal = (token: string) => {
+  localBlacklistedTokens.set(token, Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days expiry
+};
+const isTokenLocalBlacklisted = (token: string): boolean => {
+  const expiresAt = localBlacklistedTokens.get(token);
+  if (!expiresAt) return false;
+  if (Date.now() > expiresAt) {
+    localBlacklistedTokens.delete(token);
+    return false;
+  }
+  return true;
+};
 
 let localSecurityLogs: any[] = [];
 if (fs.existsSync(LOCAL_SECURITY_LOGS_FILE)) {
@@ -542,6 +623,178 @@ const logSecurityAction = async (
       await log.save();
     } catch (err: any) {
       console.warn("Failed saving security log to MongoDB:", err.message);
+    }
+  }
+};
+
+// ========== PRODUCT IMPORT HISTORY SCHEMA & FALLBACK ==========
+const LOCAL_IMPORT_HISTORY_FILE = path.join(process.cwd(), 'local_import_history.json');
+
+const importHistorySchema = new mongoose.Schema({
+  productName: { type: String, required: true },
+  asin: { type: String, required: true },
+  productId: { type: String },
+  importTime: { type: Date, default: Date.now },
+  adminEmail: { type: String, required: true },
+  adminId: { type: String, required: true },
+  result: { type: String, enum: ['success', 'failed', 'skipped'], required: true },
+  correlationId: { type: String, required: true },
+  processingTimeMs: { type: Number, required: true },
+  duplicateStatus: { type: String, enum: ['new', 'skip', 'update', 'merge', 'replace', 'duplicate_blocked'], required: true },
+  errorMessage: { type: String },
+  details: { type: mongoose.Schema.Types.Mixed }
+});
+
+importHistorySchema.index({ adminId: 1, correlationId: 1 });
+importHistorySchema.index({ asin: 1 });
+
+const ImportHistory = mongoose.model('ImportHistory', importHistorySchema);
+const bulkImportJobSchema = new mongoose.Schema({
+  adminId: { type: mongoose.Schema.Types.Mixed, ref: 'User', required: true },
+  status: { type: String, enum: ['waiting', 'running', 'completed', 'failed', 'cancelled', 'paused'], default: 'waiting' },
+  totalItems: { type: Number, default: 0 },
+  processedItems: { type: Number, default: 0 },
+  successfulItems: { type: Number, default: 0 },
+  failedItems: { type: Number, default: 0 },
+  skippedItems: { type: Number, default: 0 },
+  items: [{
+    asin: { type: String },
+    url: { type: String },
+    status: { type: String, enum: ['pending', 'running', 'success', 'failed', 'skipped', 'cancelled'], default: 'pending' },
+    error: { type: String },
+    retryCount: { type: Number, default: 0 }
+  }],
+  concurrency: { type: Number, default: 3 },
+  maxRetries: { type: Number, default: 3 },
+  conflictStrategy: { type: String, default: 'skip' },
+  startedAt: { type: Date },
+  completedAt: { type: Date }
+}, { timestamps: true });
+
+bulkImportJobSchema.index({ adminId: 1, status: 1 });
+
+const BulkImportJob = mongoose.model('BulkImportJob', bulkImportJobSchema);
+
+// ========== PHASE 7: MEDIA MANAGEMENT SCHEMAS ==========
+const mediaAssetSchema = new mongoose.Schema({
+  productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
+  asin: { type: String, index: true },
+  originalUrl: { type: String },
+  localPath: { type: String },
+  fileName: { type: String, required: true },
+  cdnUrl: { type: String },
+  mimeType: { type: String },
+  width: { type: Number },
+  height: { type: Number },
+  aspectRatio: { type: Number },
+  hash: { type: String, index: true },
+  uploadDate: { type: Date, default: Date.now },
+  optimizationStatus: { type: String, enum: ['pending', 'processing', 'completed', 'failed'], default: 'pending' },
+  originalSize: { type: Number },
+  optimizedSize: { type: Number },
+  compressionRatio: { type: Number },
+  storageProvider: { type: String, enum: ['local', 's3', 'r2', 'cloudinary'], default: 'local' },
+  variants: { type: mongoose.Schema.Types.Mixed }, // e.g. { webp: '...', avif: '...', thumb: '...' }
+  metadata: { type: mongoose.Schema.Types.Mixed }
+});
+
+const mediaQueueJobSchema = new mongoose.Schema({
+  assetId: { type: mongoose.Schema.Types.ObjectId, ref: 'MediaAsset' },
+  type: { type: String, enum: ['download', 'optimize', 'convert', 'upload', 'cleanup'] },
+  status: { type: String, enum: ['waiting', 'running', 'completed', 'failed', 'cancelled'], default: 'waiting' },
+  attempts: { type: Number, default: 0 },
+  maxAttempts: { type: Number, default: 3 },
+  error: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  startedAt: { type: Date },
+  completedAt: { type: Date }
+});
+
+const MediaAsset = mongoose.model('MediaAsset', mediaAssetSchema);
+const MediaQueueJob = mongoose.model('MediaQueueJob', mediaQueueJobSchema);
+
+// ========== PHASE 8: SEO & PUBLISHING SCHEMAS ==========
+const redirectRuleSchema = new mongoose.Schema({
+  sourceUrl: { type: String, required: true, unique: true, index: true },
+  targetUrl: { type: String, required: true },
+  type: { type: Number, enum: [301, 302, 410], default: 301 },
+  hits: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const seoAuditHistorySchema = new mongoose.Schema({
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', index: true },
+  score: { type: Number, required: true },
+  auditDate: { type: Date, default: Date.now },
+  suggestions: [String],
+  details: mongoose.Schema.Types.Mixed
+});
+
+const sitemapRecordSchema = new mongoose.Schema({
+  loc: { type: String, required: true, unique: true },
+  lastmod: { type: Date, default: Date.now },
+  changefreq: { type: String, default: 'daily' },
+  priority: { type: Number, default: 0.8 },
+  type: { type: String, enum: ['product', 'category', 'image', 'static'], default: 'product' }
+});
+
+const RedirectRule = mongoose.model('RedirectRule', redirectRuleSchema);
+const SeoAuditHistory = mongoose.model('SeoAuditHistory', seoAuditHistorySchema);
+const SitemapRecord = mongoose.model('SitemapRecord', sitemapRecordSchema);
+
+
+
+
+let localImportHistory: any[] = [];
+if (fs.existsSync(LOCAL_IMPORT_HISTORY_FILE)) {
+  try {
+    localImportHistory = JSON.parse(fs.readFileSync(LOCAL_IMPORT_HISTORY_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_import_history.json fallback:", err.message);
+  }
+}
+
+const saveLocalImportHistory = () => {
+  try {
+    fs.writeFileSync(LOCAL_IMPORT_HISTORY_FILE, JSON.stringify(localImportHistory, null, 2), 'utf8');
+  } catch (e: any) {
+    console.warn("Failed saving local import history:", e.message);
+  }
+};
+
+const logImportHistory = async (entry: {
+  productName: string;
+  asin: string;
+  productId?: string;
+  adminEmail: string;
+  adminId: string;
+  result: 'success' | 'failed' | 'skipped';
+  correlationId: string;
+  processingTimeMs: number;
+  duplicateStatus: 'new' | 'skip' | 'update' | 'merge' | 'replace' | 'duplicate_blocked';
+  errorMessage?: string;
+  details?: any;
+}) => {
+  const finalEntry = {
+    ...entry,
+    importTime: new Date()
+  };
+
+  // 1. Save to local fallback
+  localImportHistory.unshift(finalEntry);
+  if (localImportHistory.length > 5000) {
+    localImportHistory = localImportHistory.slice(0, 5000);
+  }
+  saveLocalImportHistory();
+
+  // 2. Save to MongoDB if connected
+  if (isMongoConnected) {
+    try {
+      const log = new ImportHistory(finalEntry);
+      await log.save();
+    } catch (err: any) {
+      console.warn("Failed saving import history to MongoDB:", err.message);
     }
   }
 };
@@ -607,6 +860,89 @@ Promise.all(localUsers.map(async (u) => {
 
 let localMessages = JSON.parse(JSON.stringify(seedMessages));
 
+const LOCAL_BULK_JOBS_FILE = path.join(process.cwd(), 'local_bulk_jobs.json');
+let localBulkImportJobs: any[] = [];
+if (fs.existsSync(LOCAL_BULK_JOBS_FILE)) {
+  try {
+    localBulkImportJobs = JSON.parse(fs.readFileSync(LOCAL_BULK_JOBS_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_bulk_jobs.json fallback:", err.message);
+  }
+}
+
+const saveLocalBulkImportJobs = () => {
+  try {
+    fs.writeFileSync(LOCAL_BULK_JOBS_FILE, JSON.stringify(localBulkImportJobs, null, 2), 'utf8');
+  } catch (err: any) {
+    console.warn("Could not save local_bulk_jobs.json:", err.message);
+  }
+};
+
+const LOCAL_ALERT_RULES_FILE = path.join(process.cwd(), 'local_alert_rules.json');
+let localAlertRules: any[] = [];
+if (fs.existsSync(LOCAL_ALERT_RULES_FILE)) {
+  try {
+    localAlertRules = JSON.parse(fs.readFileSync(LOCAL_ALERT_RULES_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_alert_rules.json fallback:", err.message);
+  }
+}
+const saveLocalAlertRules = () => {
+  try { fs.writeFileSync(LOCAL_ALERT_RULES_FILE, JSON.stringify(localAlertRules, null, 2), 'utf8'); } catch (err: any) {}
+};
+
+const LOCAL_AUTOMATION_RULES_FILE = path.join(process.cwd(), 'local_automation_rules.json');
+let localAutomationRules: any[] = [];
+if (fs.existsSync(LOCAL_AUTOMATION_RULES_FILE)) {
+  try {
+    localAutomationRules = JSON.parse(fs.readFileSync(LOCAL_AUTOMATION_RULES_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_automation_rules.json fallback:", err.message);
+  }
+}
+const saveLocalAutomationRules = () => {
+  try { fs.writeFileSync(LOCAL_AUTOMATION_RULES_FILE, JSON.stringify(localAutomationRules, null, 2), 'utf8'); } catch (err: any) {}
+};
+
+const LOCAL_PRODUCT_HEALTH_FILE = path.join(process.cwd(), 'local_product_health.json');
+let localProductHealth: any[] = [];
+if (fs.existsSync(LOCAL_PRODUCT_HEALTH_FILE)) {
+  try {
+    localProductHealth = JSON.parse(fs.readFileSync(LOCAL_PRODUCT_HEALTH_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_product_health.json fallback:", err.message);
+  }
+}
+const saveLocalProductHealth = () => {
+  try { fs.writeFileSync(LOCAL_PRODUCT_HEALTH_FILE, JSON.stringify(localProductHealth, null, 2), 'utf8'); } catch (err: any) {}
+};
+
+const LOCAL_PRICE_HISTORY_FILE = path.join(process.cwd(), 'local_price_history.json');
+let localPriceHistory: any[] = [];
+if (fs.existsSync(LOCAL_PRICE_HISTORY_FILE)) {
+  try {
+    localPriceHistory = JSON.parse(fs.readFileSync(LOCAL_PRICE_HISTORY_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_price_history.json fallback:", err.message);
+  }
+}
+const saveLocalPriceHistory = () => {
+  try { fs.writeFileSync(LOCAL_PRICE_HISTORY_FILE, JSON.stringify(localPriceHistory, null, 2), 'utf8'); } catch (err: any) {}
+};
+
+const LOCAL_PRODUCT_CHANGES_FILE = path.join(process.cwd(), 'local_product_changes.json');
+let localProductChanges: any[] = [];
+if (fs.existsSync(LOCAL_PRODUCT_CHANGES_FILE)) {
+  try {
+    localProductChanges = JSON.parse(fs.readFileSync(LOCAL_PRODUCT_CHANGES_FILE, 'utf8'));
+  } catch (err: any) {
+    console.warn("Could not read local_product_changes.json fallback:", err.message);
+  }
+}
+const saveLocalProductChanges = () => {
+  try { fs.writeFileSync(LOCAL_PRODUCT_CHANGES_FILE, JSON.stringify(localProductChanges, null, 2), 'utf8'); } catch (err: any) {}
+};
+
 const originalLocalProducts = JSON.parse(JSON.stringify(seedProducts));
 
 // ========== CURATOR COMPANION EXTENSION IMPORTER METRICS & OBSERVABILITY ==========
@@ -666,6 +1002,24 @@ const saveLocalSundayLogs = () => {
 
 // ========== MIDDLEWARE ==========
 const authenticate = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<any> => {
+  // Check for X-API-Key programmatic access first
+  const apiKey = req.headers['x-api-key'] as string;
+  if (apiKey && ConfigurationService.getFlag('enablePatAuthentication') && isMongoConnected) {
+    try {
+      const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+      const pat = await PersonalAccessToken.findOne({ tokenHash: keyHash, revoked: false });
+      if (pat) {
+        pat.lastUsedAt = new Date();
+        await pat.save().catch((e: any) => console.warn(e));
+        (req as any).userId = pat.userId.toString();
+        (req as any).isPatAuthenticated = true;
+        return next();
+      }
+    } catch (e) {
+      console.warn("API key authentication failed:", e);
+    }
+  }
+
   let token = req.headers.authorization?.split(' ')[1];
   
   // Protect state-changing methods (POST, PUT, DELETE, etc.) against CSRF by forcing the use of Authorization header
@@ -676,19 +1030,52 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
   }
   if (!token) return res.status(401).json({ error: 'No authorization token supplied' });
   
+  let isBlacklisted = false;
   if (isMongoConnected) {
-    const isBlacklisted = await BlacklistedToken.exists({ token });
-    if (isBlacklisted) {
-      return res.status(401).json({ error: 'Token has been revoked, please login again' });
-    }
+    isBlacklisted = !!(await BlacklistedToken.exists({ token }));
+  } else {
+    isBlacklisted = isTokenLocalBlacklisted(token);
+  }
+  if (isBlacklisted) {
+    return res.status(401).json({ error: 'Token has been revoked, please login again' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as { userId: string };
     (req as any).userId = decoded.userId;
     (req as any).authToken = token;
+
+    // Check if user session has been revoked
+    if (isMongoConnected && ConfigurationService.getFlag('enableDeviceManagement')) {
+      const activeSession = await UserSession.findOne({ token, revoked: false });
+      if (!activeSession) {
+        // If device management is active, session must exist and not be revoked
+        const sessionCount = await UserSession.countDocuments({ userId: decoded.userId });
+        if (sessionCount > 0) {
+          return res.status(401).json({ error: 'Session has been revoked or expired' });
+        }
+      }
+    }
+
     next();
   } catch (error: any) {
+    // Check if token is a valid Personal Access Token instead of JWT
+    if (isMongoConnected && ConfigurationService.getFlag('enablePatAuthentication')) {
+      try {
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const pat = await PersonalAccessToken.findOne({ tokenHash, revoked: false });
+        if (pat) {
+          pat.lastUsedAt = new Date();
+          await pat.save().catch((e: any) => console.warn(e));
+          (req as any).userId = pat.userId.toString();
+          (req as any).isPatAuthenticated = true;
+          return next();
+        }
+      } catch (e) {
+        console.warn("Fallback PAT authentication check failed:", e);
+      }
+    }
+
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Token has expired, please login again' });
     }
@@ -1581,6 +1968,39 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+  // Structured Logging & Request Correlation IDs with Metrics Tracking Middleware
+  app.use((req: any, res: any, next: express.NextFunction) => {
+    const correlationId = crypto.randomBytes(16).toString('hex');
+    req.correlationId = correlationId;
+    res.setHeader('X-Correlation-ID', correlationId);
+
+    MetricsService.incrementRequests();
+    const startTime = process.hrtime();
+
+    res.on('finish', () => {
+      const diff = process.hrtime(startTime);
+      const durationMs = Math.round((diff[0] * 1e9 + diff[1]) / 1e6);
+      MetricsService.recordResponseTime(durationMs);
+
+      if (ConfigurationService.getFlag('enableStructuredLogs')) {
+        const logData = {
+          timestamp: new Date().toISOString(),
+          level: 'INFO',
+          method: req.method,
+          url: req.originalUrl || req.url,
+          status: res.statusCode,
+          durationMs,
+          correlationId,
+          userAgent: req.headers['user-agent'],
+          ip: req.ip || req.connection.remoteAddress
+        };
+        console.log(JSON.stringify(logData));
+      }
+    });
+
+    next();
+  });
+
   // Sanitize outgoing JSON error responses to prevent leaking raw technical/internal system details (Information Disclosure)
   app.use((_req: express.Request, res: express.Response, next: express.NextFunction) => {
     const originalJson = res.json;
@@ -1659,6 +2079,34 @@ async function startServer() {
   app.use(mongoSanitize({
     allowDots: false
   }));
+
+  // ========== PHASE 8: REDIRECT RULES ENGINE MIDDLEWARE ==========
+  app.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // Only intercept GET requests for actual pages (skip assets/api paths)
+    if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.includes('.')) {
+      return next();
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return next();
+    }
+
+    try {
+      const RedirectRule = mongoose.model('RedirectRule');
+      const rule = await RedirectRule.findOne({ sourceUrl: req.path });
+      if (rule) {
+        // Increment redirect hits
+        rule.hits = (rule.hits || 0) + 1;
+        await rule.save();
+
+        console.log(`[Redirect Engine] Intercepted path ${req.path}. Redirecting (${rule.type}) to ${rule.targetUrl}`);
+        return res.redirect(rule.type || 301, rule.targetUrl);
+      }
+    } catch (e: any) {
+      console.warn('Redirect engine failed to check rules:', e.message);
+    }
+    next();
+  });
 
   // Spoof-proof client IP generator (extracts real IP appended by Google GFE to prevent headers spoofing)
   const getSecureClientIp = (req: express.Request): string => {
@@ -1784,7 +2232,7 @@ async function startServer() {
   // Database Connection with immediate Error Safety routing and fast timeout fallback
   mongoose.connect(
     process.env.MONGODB_URI || 'mongodb://localhost:27017/affiliate-store',
-    { serverSelectionTimeoutMS: 1500 }
+    { serverSelectionTimeoutMS: 15000 }
   )
   .then(() => {
     console.log('Successfully connected to MongoDB Cluster');
@@ -1800,6 +2248,11 @@ async function startServer() {
     seedDatabase().catch((err: any) => {
       console.error('Failed to auto-seed database:', err.message || err);
     });
+    aiService.seedPrompts().then(() => {
+      console.log('Successfully seeded AI Prompt Templates');
+    }).catch((err: any) => {
+      console.error('Failed to seed AI Prompts:', err.message || err);
+    });
   })
   .catch((err: any) => {
     console.log('Database notice: Safe offline in-memory fallback enabled. MongoDB connection resolved as offline. Info:', err.message);
@@ -1807,6 +2260,52 @@ async function startServer() {
   });
 
   // ========== API ROUTES ==========
+
+  // Public dynamic Sitemap XML endpoint
+  app.get('/sitemap.xml', async (_req: express.Request, res: express.Response) => {
+    try {
+      const xml = await seoService.buildXmlSitemap();
+      res.header('Content-Type', 'application/xml');
+      res.send(xml);
+    } catch (err: any) {
+      console.error('Sitemap rendering failed:', err.message);
+      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Sitemap failed to generate</error>');
+    }
+  });
+
+  // Diagnostic endpoint for Product Collection
+  app.get('/api/diagnostic/products', async (req: express.Request, res: express.Response) => {
+    try {
+      if (isMongoConnected) {
+        const count = await Product.countDocuments();
+        const sample = await Product.findOne().lean();
+        console.log(`[Diagnostic] MongoDB Product Count: ${count}`);
+        console.log(`[Diagnostic] MongoDB Product Structure Sample:`, Object.keys(sample || {}));
+        return res.json({
+          success: true,
+          source: 'mongodb',
+          count,
+          sampleStructure: sample ? Object.keys(sample) : [],
+          sampleData: sample
+        });
+      } else {
+        const count = localProducts.length;
+        const sample = localProducts[0];
+        console.log(`[Diagnostic] Local Product Count: ${count}`);
+        console.log(`[Diagnostic] Local Product Structure Sample:`, Object.keys(sample || {}));
+        return res.json({
+          success: true,
+          source: 'local_memory',
+          count,
+          sampleStructure: sample ? Object.keys(sample) : [],
+          sampleData: sample
+        });
+      }
+    } catch (error: any) {
+      console.error('[Diagnostic] Error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   // Lightweight health-check endpoint verifying DB connectivity gracefully without hanging
   app.get('/api/health-check', async (_req: express.Request, res: express.Response) => {
@@ -1816,7 +2315,7 @@ async function startServer() {
     });
 
     try {
-      if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
+      if (isMongoConnected && mongoose.connection.readyState === 1 && mongoose.connection.db) {
         await Promise.race([
           mongoose.connection.db.admin().ping(),
           timeoutPromise
@@ -1832,7 +2331,7 @@ async function startServer() {
         if (timerId) clearTimeout(timerId);
         const stateNames = ['disconnected', 'connected', 'connecting', 'disconnecting'];
         const state = mongoose.connection.readyState;
-        const stateName = (state >= 0 && state < stateNames.length) ? stateNames[state] : 'unknown';
+        const stateName = !isMongoConnected ? 'offline' : ((state >= 0 && state < stateNames.length) ? stateNames[state] : 'unknown');
         return res.status(503).json({
           status: 'unhealthy',
           database: stateName,
@@ -2076,7 +2575,6 @@ async function startServer() {
       return res.json({
         success: true,
         message: 'Your account is registered! A verification link has been sent to your email. Please click the link to activate your account and log in.',
-        verificationUrlSimulated: (emailSent || process.env.NODE_ENV === 'production') ? undefined : verificationUrl,
         smtpError: smtpErrorMsg || undefined
       });
 
@@ -2098,14 +2596,34 @@ async function startServer() {
     userId: string;
     expiresAt: number;
   }
-  const pendingAuthCodes = new Map<string, PendingAuthCode>();
+  const LOCAL_AUTH_CODES_FILE = path.join(process.cwd(), 'local_auth_codes.json');
+  const getLocalAuthCodes = (): Record<string, PendingAuthCode> => {
+    try {
+      if (fs.existsSync(LOCAL_AUTH_CODES_FILE)) {
+        return JSON.parse(fs.readFileSync(LOCAL_AUTH_CODES_FILE, 'utf8')) || {};
+      }
+    } catch (e) {
+      // ignore
+    }
+    return {};
+  };
+  const saveLocalAuthCodes = (codes: Record<string, PendingAuthCode>) => {
+    try {
+      fs.writeFileSync(LOCAL_AUTH_CODES_FILE, JSON.stringify(codes, null, 2), 'utf8');
+    } catch (e) {
+      // ignore
+    }
+  };
 
-  const createPendingAuthCode = (userId: string): string => {
+  const createPendingAuthCode = async (userId: string): Promise<string> => {
     const code = crypto.randomBytes(16).toString('hex');
-    pendingAuthCodes.set(code, {
-      userId,
-      expiresAt: Date.now() + 60 * 1000 // valid for 1 minute
-    });
+    if (isMongoConnected) {
+      await AuthCode.create({ code, userId });
+    } else {
+      const codes = getLocalAuthCodes();
+      codes[code] = { userId, expiresAt: Date.now() + 60000 };
+      saveLocalAuthCodes(codes);
+    }
     return code;
   };
 
@@ -2142,7 +2660,7 @@ async function startServer() {
         user.verificationToken = null;
         await user.save();
 
-        const authCode = createPendingAuthCode(String(user._id));
+        const authCode = await createPendingAuthCode(String(user._id));
         return res.redirect(`/?authCode=${authCode}`);
       } else {
         const user = localUsers.find(u => u.verificationToken === token);
@@ -2160,7 +2678,7 @@ async function startServer() {
         user.verificationToken = undefined;
         saveLocalUsers();
 
-        const authCode = createPendingAuthCode(String(user._id));
+        const authCode = await createPendingAuthCode(String(user._id));
         return res.redirect(`/?authCode=${authCode}`);
       }
     } catch (error: any) {
@@ -2204,7 +2722,7 @@ async function startServer() {
         user.pendingEmailToken = null;
         await user.save();
 
-        const authCode = createPendingAuthCode(String(user._id));
+        const authCode = await createPendingAuthCode(String(user._id));
         return res.redirect(`/?authCode=${authCode}&emailUpdated=true`);
       } else {
         const user = localUsers.find(u => u.pendingEmailToken === token);
@@ -2223,7 +2741,7 @@ async function startServer() {
         user.pendingEmailToken = undefined;
         saveLocalUsers();
 
-        const authCode = createPendingAuthCode(String(user._id));
+        const authCode = await createPendingAuthCode(String(user._id));
         return res.redirect(`/?authCode=${authCode}&emailUpdated=true`);
       }
     } catch (error: any) {
@@ -2281,7 +2799,6 @@ async function startServer() {
           return res.status(401).json({ 
             error: 'Your email is not verified yet. Please check your inbox for the verification link to activate your account.',
             isUnverified: true,
-            verificationUrlSimulated: process.env.NODE_ENV !== 'production' ? verificationUrl : undefined
           });
         }
 
@@ -2290,7 +2807,37 @@ async function startServer() {
           user.role = calculatedRole;
           await user.save().catch(e => console.warn(e));
         }
+
+        // Two-factor authentication verification if enabled
+        if ((user as any).twoFactorEnabled && ConfigurationService.getFlag('enable2fa')) {
+          const { code } = req.body;
+          if (!code) {
+            return res.status(200).json({ 
+              requiresTwoFactor: true, 
+              userId: user._id, 
+              email: user.email,
+              message: 'Two-factor authentication code is required to complete login' 
+            });
+          }
+          const isValid = TotpService.verifyToken((user as any).twoFactorSecret, code);
+          if (!isValid) {
+            return res.status(401).json({ error: 'Two-factor code verification failed. Please try again.' });
+          }
+        }
+
         const token = signUserToken(user._id);
+
+        // Create active session in database
+        if (ConfigurationService.getFlag('enableDeviceManagement')) {
+          await UserSession.create({
+            userId: user._id,
+            token,
+            ipAddress: req.ip || req.connection.remoteAddress,
+            userAgent: req.headers['user-agent'] || 'Unknown',
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          }).catch(e => console.warn("Failed to log user session:", e));
+        }
+
         res.cookie('token', token, {
           httpOnly: true,
           secure: true,
@@ -2331,7 +2878,6 @@ async function startServer() {
           return res.status(401).json({ 
             error: 'Your email is not verified yet. Please check your inbox for the verification link to activate your account.',
             isUnverified: true,
-            verificationUrlSimulated: process.env.NODE_ENV !== 'production' ? verificationUrl : undefined
           });
         }
 
@@ -2361,18 +2907,28 @@ async function startServer() {
       if (!authCode || typeof authCode !== 'string') {
         return res.status(400).json({ error: 'Authorization code is required' });
       }
-      const pending = pendingAuthCodes.get(authCode);
-      if (!pending) {
-        return res.status(400).json({ error: 'Invalid or expired authorization code' });
+      let pendingUserId: string | null = null;
+      if (isMongoConnected) {
+        const found = await AuthCode.findOne({ code: authCode });
+        if (!found) {
+          return res.status(400).json({ error: 'Invalid or expired authorization code' });
+        }
+        await AuthCode.deleteOne({ _id: found._id });
+        pendingUserId = found.userId as string;
+      } else {
+        const codes = getLocalAuthCodes();
+        const pending = codes[authCode];
+        if (!pending) {
+          return res.status(400).json({ error: 'Invalid or expired authorization code' });
+        }
+        delete codes[authCode]; // Strict single-use!
+        saveLocalAuthCodes(codes);
+        if (Date.now() > pending.expiresAt) {
+          return res.status(400).json({ error: 'Authorization code has expired' });
+        }
+        pendingUserId = pending.userId;
       }
-      
-      pendingAuthCodes.delete(authCode); // Strict single-use!
-      
-      if (Date.now() > pending.expiresAt) {
-        return res.status(400).json({ error: 'Authorization code has expired' });
-      }
-      
-      const userId = pending.userId;
+      const userId = pendingUserId;
       if (isMongoConnected) {
         const user = await User.findById(userId);
         if (!user) {
@@ -2428,6 +2984,8 @@ async function startServer() {
         } catch (err) {
           console.warn("Failed to blacklist token:", err);
         }
+      } else {
+        blacklistTokenLocal(token);
       }
     }
     res.clearCookie('token', {
@@ -2436,6 +2994,254 @@ async function startServer() {
       sameSite: 'none'
     });
     res.json({ success: true, message: 'Successfully logged out' });
+  });
+
+  // ========== ENTERPRISE REFINEMENT ENDPOINTS ==========
+
+  // 1. Device / Session Management Endpoints
+  app.get('/api/auth/sessions', authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const sessions = await UserSession.find({ userId: (req as any).userId });
+      res.json({ success: true, sessions });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/auth/sessions/revoke', authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { sessionId } = req.body;
+      await UserSession.updateOne(
+        { _id: sessionId, userId: (req as any).userId },
+        { revoked: true }
+      );
+      res.json({ success: true, message: 'Session successfully revoked' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // 2. Personal Access Tokens (PATs) Endpoints
+  app.get('/api/auth/pats', authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const pats = await PersonalAccessToken.find({ userId: (req as any).userId, revoked: false });
+      res.json({ success: true, pats });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/auth/pats/generate', authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { name } = req.body;
+      if (!name) return res.status(400).json({ error: 'Token name is required' });
+
+      const rawToken = 'gph_pat_' + crypto.randomBytes(24).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      const pat = await PersonalAccessToken.create({
+        userId: (req as any).userId,
+        name,
+        tokenHash,
+        createdAt: new Date()
+      });
+
+      res.json({
+        success: true,
+        message: 'Personal access token generated successfully. Copy it now, as it will not be shown again!',
+        token: rawToken,
+        pat
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/auth/pats/revoke', authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { patId } = req.body;
+      await PersonalAccessToken.updateOne(
+        { _id: patId, userId: (req as any).userId },
+        { revoked: true }
+      );
+      res.json({ success: true, message: 'Personal access token successfully revoked' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // 3. TOTP 2FA Endpoints
+  app.post('/api/auth/2fa/setup', authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const secret = TotpService.generateSecret();
+      const user = await User.findById((req as any).userId);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      // Save secret temporarily or send to client for verification
+      res.json({
+        success: true,
+        secret,
+        qrCodePlaceholder: `otpauth://totp/GadgetsProHub:${user.email}?secret=${secret}&issuer=GadgetsProHub`
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/auth/2fa/enable', authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { secret, code } = req.body;
+      if (!secret || !code) return res.status(400).json({ error: 'Secret and verification code are required' });
+
+      const isValid = TotpService.verifyToken(secret, code);
+      if (!isValid) {
+        return res.status(400).json({ error: 'Invalid verification code. Please try again.' });
+      }
+
+      await User.updateOne(
+        { _id: (req as any).userId },
+        { 
+          $set: { 
+            twoFactorEnabled: true, 
+            twoFactorSecret: secret 
+          } 
+        }
+      );
+
+      res.json({ success: true, message: 'Two-factor authentication successfully enabled!' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/auth/2fa/disable', authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { code } = req.body;
+      const user = await User.findById((req as any).userId);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      const secret = (user as any).twoFactorSecret;
+      if (secret) {
+        const isValid = TotpService.verifyToken(secret, code);
+        if (!isValid) {
+          return res.status(400).json({ error: 'Invalid verification code. 2FA remains active.' });
+        }
+      }
+
+      await User.updateOne(
+        { _id: (req as any).userId },
+        { 
+          $set: { 
+            twoFactorEnabled: false, 
+            twoFactorSecret: null 
+          } 
+        }
+      );
+
+      res.json({ success: true, message: 'Two-factor authentication successfully disabled!' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // 4. Feature Flags / Admin Config Endpoints
+  app.get('/api/admin/config', adminOnly, (req: express.Request, res: express.Response) => {
+    res.json({ success: true, flags: ConfigurationService.getAllFlags() });
+  });
+
+  app.post('/api/admin/config', adminOnly, (req: express.Request, res: express.Response) => {
+    try {
+      const { flags } = req.body;
+      if (flags && typeof flags === 'object') {
+        for (const [key, val] of Object.entries(flags)) {
+          ConfigurationService.setFlag(key, !!val);
+        }
+      }
+      res.json({ success: true, flags: ConfigurationService.getAllFlags() });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin Database Connection Status and Toggle Endpoints
+  app.get('/api/admin/db-toggle-status', adminOnly, (req: express.Request, res: express.Response) => {
+    res.json({
+      success: true,
+      isMongoConnected,
+      readyState: mongoose.connection.readyState,
+      uri: process.env.MONGODB_URI ? 'Configured (Atlas Cluster)' : 'Not Configured (Using Default Localhost)'
+    });
+  });
+
+  app.post('/api/admin/db-toggle', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      const { targetState } = req.body; // 'online' or 'offline'
+      
+      if (targetState === 'offline') {
+        isMongoConnected = false;
+        return res.json({
+          success: true,
+          message: 'Database connection successfully toggled to OFFLINE backup fallback mode. Local offline catalog feed is now active.',
+          isMongoConnected: false,
+          readyState: mongoose.connection.readyState
+        });
+      } else if (targetState === 'online') {
+        if (mongoose.connection.readyState === 1) {
+          isMongoConnected = true;
+          return res.json({
+            success: true,
+            message: 'Database connection successfully toggled to LIVE mode. Connected to MongoDB Atlas.',
+            isMongoConnected: true,
+            readyState: mongoose.connection.readyState
+          });
+        } else {
+          // Attempt connection
+          try {
+            console.log('[Admin DB Toggle] Attempting to reconnect to MongoDB Atlas...');
+            await mongoose.connect(
+              process.env.MONGODB_URI || 'mongodb://localhost:27017/affiliate-store',
+              { serverSelectionTimeoutMS: 5000 }
+            );
+            isMongoConnected = true;
+            return res.json({
+              success: true,
+              message: 'Database connection successfully established! Connected to Live MongoDB.',
+              isMongoConnected: true,
+              readyState: mongoose.connection.readyState
+            });
+          } catch (err: any) {
+            isMongoConnected = false;
+            return res.status(503).json({
+              success: false,
+              error: `Could not connect to live MongoDB: ${err.message}. Please verify your MongoDB Atlas cluster state and ensure your server IP is whitelisted.`,
+              isMongoConnected: false,
+              readyState: mongoose.connection.readyState
+            });
+          }
+        }
+      } else {
+        return res.status(400).json({ success: false, error: 'Invalid targetState. Use "online" or "offline".' });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 5. System Health / Readiness & Metrics Endpoints
+  app.get('/api/health', (req: express.Request, res: express.Response) => {
+    const isReady = isMongoConnected && mongoose.connection.readyState === 1;
+    res.json({
+      status: isReady ? 'healthy' : 'unhealthy',
+      checks: {
+        database: isReady ? 'ready' : 'offline',
+        server: 'online'
+      },
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  app.get('/api/metrics', authenticate, (req: express.Request, res: express.Response) => {
+    res.json({ success: true, metrics: MetricsService.getMetrics() });
   });
 
   const googleOAuthClient = new OAuth2Client();
@@ -2452,6 +3258,7 @@ async function startServer() {
         });
         const payload = ticket.getPayload();
         if (payload && payload.email) {
+          if (!payload.email_verified) return null;
           return {
             email: payload.email,
             name: payload.name || payload.email.split('@')[0],
@@ -2475,6 +3282,10 @@ async function startServer() {
       const issuer = `https://securetoken.google.com/${firebaseProjectId}`;
       if (decodedToken.payload.iss !== issuer || decodedToken.payload.aud !== firebaseProjectId) {
         console.error('Firebase token verification failed: invalid issuer or audience');
+        return null;
+      }
+      if (!decodedToken.payload.email_verified) {
+        console.error('Firebase token verification failed: email not verified');
         return null;
       }
 
@@ -2615,7 +3426,9 @@ async function startServer() {
   app.get('/api/products', async (req: express.Request, res: express.Response) => {
     try {
       await cleanExpiredTrendingProducts();
-      const { category, subcategory, brand, minPrice, maxPrice, search, rating, sort, page = 1, limit = 12, inStock, exclude, trending } = req.query;
+      const { category, subcategory, brand, minPrice, maxPrice, search, rating, sort, inStock, exclude, trending } = req.query;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 12));
       
       if (isMongoConnected) {
         const filter: any = {};
@@ -2762,9 +3575,39 @@ async function startServer() {
       if (isMongoConnected) {
         const product = await Product.findOne({ slug: req.params.slug })
           .populate('category')
-          .populate('reviews.userId', 'name profileImage');
+          .populate('reviews.userId', 'name profileImage')
+          .populate('comparisonProducts');
         
-        if (!product) return res.status(404).json({ error: 'Product catalog item not found' });
+        if (!product) {
+          // Robust secondary fallback: check localProducts in-memory store in case product hasn't been seeded to MongoDB yet
+          const item = localProducts.find((p: any) => p.slug === req.params.slug);
+          if (item) {
+            const catId = typeof item.category === 'object' && item.category ? (item.category as any)._id : item.category;
+            const matchedCat = localCategories.find((c: any) => c._id === catId);
+            const compIds = item.comparisonProducts || [];
+            const populatedComps = compIds.map((id: string) => {
+              return localProducts.find((p: any) => p._id === id || (p as any).id === id) || null;
+            }).filter(Boolean);
+
+            const detailedProduct = {
+              ...item,
+              category: matchedCat || { _id: catId, name: "General" },
+              comparisonProducts: populatedComps
+            };
+
+            // Record Analytics View in fallback
+            localAnalytics.push({
+              productId: item._id,
+              eventType: 'view',
+              district: randDistrict,
+              timestamp: new Date(),
+              userAgent: req.headers['user-agent']
+            });
+
+            return res.json(detailedProduct);
+          }
+          return res.status(404).json({ error: 'Product catalog item not found' });
+        }
         
         // --- Real-time Price Update Trigger ---
         const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
@@ -2772,30 +3615,32 @@ async function startServer() {
         const lastCheck = product.lastPriceCheck ? new Date(product.lastPriceCheck).getTime() : 0;
         
         if (now - lastCheck > TWENTY_FOUR_HOURS && process.env.N8N_REALTIME_WEBHOOK_URL) {
-          try {
-            const n8nRes = await fetch(process.env.N8N_REALTIME_WEBHOOK_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.N8N_SECRET_TOKEN || ''}` },
-              body: JSON.stringify({ 
-                productId: product._id, 
-                affiliateLink: product.affiliateLink, 
-                slug: product.slug 
-              })
-            });
+          // Fire and forget non-blocking update
+          fetch(process.env.N8N_REALTIME_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.N8N_SECRET_TOKEN || ''}` },
+            body: JSON.stringify({ 
+              productId: product._id, 
+              affiliateLink: product.affiliateLink, 
+              slug: product.slug 
+            }),
+            signal: AbortSignal.timeout(5000)
+          }).then(async (n8nRes) => {
             if (n8nRes.ok) {
               const updatedData = await n8nRes.json();
               if (updatedData && typeof updatedData.price === 'number') {
-                product.price = updatedData.price;
-                if (typeof updatedData.originalPrice === 'number') product.originalPrice = updatedData.originalPrice;
-                if (typeof updatedData.discount === 'number') product.discount = updatedData.discount;
-                if (typeof updatedData.inStock === 'boolean') product.inStock = updatedData.inStock;
-                product.lastPriceCheck = new Date();
-                await product.save();
+                await Product.findByIdAndUpdate(product._id, {
+                  price: updatedData.price,
+                  originalPrice: typeof updatedData.originalPrice === 'number' ? updatedData.originalPrice : product.originalPrice,
+                  discount: typeof updatedData.discount === 'number' ? updatedData.discount : product.discount,
+                  inStock: typeof updatedData.inStock === 'boolean' ? updatedData.inStock : product.inStock,
+                  lastPriceCheck: new Date()
+                });
               }
             }
-          } catch (error) {
+          }).catch((error) => {
             console.warn('Failed to fetch real-time price from n8n webhook:', error instanceof Error ? error.message : String(error));
-          }
+          });
         }
         // ---------------------------------------
         
@@ -2825,9 +3670,16 @@ async function startServer() {
           userAgent: req.headers['user-agent']
         });
 
+        // Populate comparisonProducts in fallback
+        const compIds = item.comparisonProducts || [];
+        const populatedComps = compIds.map((id: string) => {
+          return localProducts.find((p: any) => p._id === id || (p as any).id === id) || null;
+        }).filter(Boolean);
+
         const detailedProduct = {
           ...item,
-          category: matchedCat || { _id: catId, name: "General" }
+          category: matchedCat || { _id: catId, name: "General" },
+          comparisonProducts: populatedComps
         };
         return res.json(detailedProduct);
       }
@@ -2844,7 +3696,23 @@ async function startServer() {
 
       if (isMongoConnected) {
         const product = await Product.findOne({ slug: req.params.slug });
-        if (!product) return res.status(404).json({ error: 'Product not found' });
+        if (!product) {
+          // Robust fallback: search localProducts if product hasn't been seeded to MongoDB yet
+          const localItem = localProducts.find((p: any) => p.slug === req.params.slug);
+          if (localItem) {
+            localItem.clicks = (localItem.clicks || 0) + 1;
+            localAnalytics.push({
+              productId: localItem._id,
+              affiliateCode: localItem.affiliateCode,
+              eventType: 'click',
+              district: finalDistrict,
+              userId: req.body.userId,
+              timestamp: new Date()
+            });
+            return res.json({ success: true, affiliateLink: localItem.affiliateLink });
+          }
+          return res.status(404).json({ error: 'Product not found' });
+        }
         
         product.clicks += 1;
         product.save().catch(err => console.warn('Background product clicks count update failed:', err.message));
@@ -2962,6 +3830,9 @@ async function startServer() {
         const user = await User.findById(uId);
         if (!user) return res.status(404).json({ error: 'User validation failed.' });
 
+        const existingReview = product.reviews.find((r: any) => r.userId && r.userId.toString() === uId.toString());
+        if (existingReview) return res.status(400).json({ error: 'You have already reviewed this product.' });
+
         const newReview = {
           userId: uId,
           rating,
@@ -2975,7 +3846,7 @@ async function startServer() {
         
         const sum = product.reviews.reduce((acc, r) => acc + (r.rating || 0), 0);
         product.totalReviews = product.reviews.length;
-        product.rating = Number((sum / product.reviews.length).toFixed(1));
+        product.rating = product.reviews.length > 0 ? Number((sum / product.reviews.length).toFixed(1)) : 0;
 
         await product.save();
 
@@ -2987,6 +3858,13 @@ async function startServer() {
       } else {
         const product = localProducts.find((p: any) => p._id === id);
         if (!product) return res.status(404).json({ error: 'Product not found.' });
+
+        if (!product.reviews) product.reviews = [];
+        const existingReview = product.reviews.find((r: any) => {
+          const rUserId = r.userId && typeof r.userId === 'object' ? r.userId._id : r.userId;
+          return String(rUserId) === String(uId);
+        });
+        if (existingReview) return res.status(400).json({ error: 'You have already reviewed this product.' });
 
         const user = localUsers.find(u => u._id === uId);
         const name = user ? user.name : 'Verified Reviewer';
@@ -3011,7 +3889,7 @@ async function startServer() {
 
         const sum = (product.reviews as any).reduce((acc: number, r: any) => acc + (r.rating || 0), 0);
         product.totalReviews = product.reviews.length;
-        product.rating = Number((sum / product.reviews.length).toFixed(1));
+        product.rating = product.reviews.length > 0 ? Number((sum / product.reviews.length).toFixed(1)) : 0;
 
         return res.json(product);
       }
@@ -3085,14 +3963,31 @@ async function startServer() {
     if (!token) {
       return res.status(200).json({ isAuthenticated: false });
     }
+    let isBlacklisted = false;
     if (isMongoConnected) {
-      const isBlacklisted = await BlacklistedToken.exists({ token });
-      if (isBlacklisted) return res.status(200).json({ isAuthenticated: false });
+      isBlacklisted = !!(await BlacklistedToken.exists({ token }));
+    } else {
+      isBlacklisted = isTokenLocalBlacklisted(token);
     }
+    if (isBlacklisted) return res.status(200).json({ isAuthenticated: false });
 
     try {
-      jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] });
-      return res.status(200).json({ isAuthenticated: true });
+      const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as { userId: string };
+      if (isMongoConnected) {
+        const user = await User.findById(decoded.userId);
+        if (!user) return res.status(200).json({ isAuthenticated: false });
+        return res.status(200).json({
+          isAuthenticated: true,
+          user: { role: user.role, email: user.email }
+        });
+      } else {
+        const user = localUsers.find(u => u._id === decoded.userId);
+        if (!user) return res.status(200).json({ isAuthenticated: false });
+        return res.status(200).json({
+          isAuthenticated: true,
+          user: { role: user.role, email: user.email }
+        });
+      }
     } catch {
       return res.status(200).json({ isAuthenticated: false });
     }
@@ -3108,10 +4003,13 @@ async function startServer() {
       if (!token) {
         return res.status(200).json({ isAuthenticated: false });
       }
+      let isBlacklisted = false;
       if (isMongoConnected) {
-        const isBlacklisted = await BlacklistedToken.exists({ token });
-        if (isBlacklisted) return res.status(200).json({ isAuthenticated: false });
+        isBlacklisted = !!(await BlacklistedToken.exists({ token }));
+      } else {
+        isBlacklisted = isTokenLocalBlacklisted(token);
       }
+      if (isBlacklisted) return res.status(200).json({ isAuthenticated: false });
 
       let uId: string;
       try {
@@ -3227,13 +4125,19 @@ async function startServer() {
   app.post('/api/user/orders', authenticate, validateOrderCreation, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
-      const { items, totalAmount } = req.body;
+      const { items } = req.body;
 
       const trackingNumber = 'TRK' + Math.floor(100000000 + Math.random() * 900000000);
       const carrier = ['FedEx Ground', 'UPS Next Day Air', 'DHL Express', 'USPS Priority Mail'][Math.floor(Math.random() * 4)];
       const estDelivery = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
       if (isMongoConnected) {
+        let computedTotal = 0;
+        for (const item of items) {
+          const prod = await Product.findById(item.product);
+          if (prod) computedTotal += (prod.price || 0) * (item.quantity || 1);
+        }
+        const totalAmount = computedTotal;
         const order = await Order.create({
           userId: uId,
           items,
@@ -3247,14 +4151,16 @@ async function startServer() {
         const populated = await order.populate('items.product');
         return res.json(populated);
       } else {
+        let computedTotal = 0;
         const newOrder = {
           _id: "order_" + Math.random().toString(36).substring(2, 9),
           userId: uId,
           items: items.map((it: any) => {
             const matchedProduct = localProducts.find((lp: any) => lp._id === it.product);
+            if (matchedProduct) computedTotal += (matchedProduct.price || 0) * (it.quantity || 1);
             return { ...it, product: matchedProduct || it.product };
           }),
-          totalAmount,
+          totalAmount: computedTotal,
           status: 'Processing',
           trackingNumber,
           carrier,
@@ -3285,7 +4191,7 @@ async function startServer() {
         }
         
         const currentIndex = statuses.indexOf(order.status as any);
-        const nextIndex = (currentIndex + 1) % statuses.length;
+        const nextIndex = Math.min(currentIndex + 1, statuses.length - 1);
         order.status = statuses[nextIndex];
         await order.save();
         const populated = await order.populate('items.product');
@@ -3299,7 +4205,7 @@ async function startServer() {
         }
         
         const currentIndex = statuses.indexOf(order.status);
-        const nextIndex = (currentIndex + 1) % statuses.length;
+        const nextIndex = Math.min(currentIndex + 1, statuses.length - 1);
         order.status = statuses[nextIndex];
         saveLocalOrders();
         
@@ -3318,17 +4224,19 @@ async function startServer() {
   // Blog Routes
   app.get('/api/blogs', async (req: express.Request, res: express.Response) => {
     try {
-      const { page = 1, limit = 10, search, category } = req.query;
+      const pageNum = Math.max(1, Number(req.query.page) || 1);
+      const limitNum = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
+      const { search, category } = req.query;
       
       if (isMongoConnected) {
         const filter: any = { published: true };
         if (search) filter.$text = { $search: String(search) };
         if (category) filter.category = String(category);
-
-        const skip = (Number(page) - 1) * Number(limit);
-        const blogs = await Blog.find(filter).skip(skip).limit(Number(limit)).sort({ createdAt: -1 });
+ 
+        const skip = (pageNum - 1) * limitNum;
+        const blogs = await Blog.find(filter).skip(skip).limit(limitNum).sort({ createdAt: -1 });
         const total = await Blog.countDocuments(filter);
-        res.json({ blogs, total, pages: Math.ceil(total / Number(limit)) });
+        res.json({ blogs, total, pages: Math.ceil(total / limitNum) });
       } else {
         let list = [...localBlogs];
         if (search) {
@@ -3339,12 +4247,12 @@ async function startServer() {
           list = list.filter(b => b.category?.toLowerCase() === (category as string).toLowerCase());
         }
         
-        const skip = (Number(page) - 1) * Number(limit);
-        const paginated = list.slice(skip, skip + Number(limit));
+        const skip = (pageNum - 1) * limitNum;
+        const paginated = list.slice(skip, skip + limitNum);
         res.json({
           blogs: paginated,
           total: list.length,
-          pages: Math.ceil(list.length / Number(limit))
+          pages: Math.ceil(list.length / limitNum)
         });
       }
     } catch (error: any) {
@@ -3560,10 +4468,13 @@ async function startServer() {
     };
 
     let detectedCity = 'Chennai';
+    let clientIp = (_req.headers['x-forwarded-for'] || _req.socket.remoteAddress || '').toString().split(',')[0].trim();
+    if (clientIp.startsWith('::ffff:')) clientIp = clientIp.substring(7);
 
     try {
       // Try ipapi.co
-      const response = await fetch('https://ipapi.co/json/');
+      const ipParam = (clientIp && clientIp !== '127.0.0.1' && clientIp !== '::1') ? `${clientIp}/` : '';
+      const response = await fetch(`https://ipapi.co/${ipParam}json/`);
       if (response.ok) {
         const data = await response.json();
         if (data && data.city) {
@@ -3578,7 +4489,8 @@ async function startServer() {
 
     try {
       // Fallback: freeipapi.com
-      const response = await fetch('https://freeipapi.com/api/json');
+      const ipParamFree = (clientIp && clientIp !== '127.0.0.1' && clientIp !== '::1') ? `/${clientIp}` : '';
+      const response = await fetch(`https://freeipapi.com/api/json${ipParamFree}`);
       if (response.ok) {
         const data = await response.json();
         if (data && data.cityName) {
@@ -3678,6 +4590,8 @@ async function startServer() {
           let isBlacklisted = false;
           if (isMongoConnected) {
             isBlacklisted = !!(await BlacklistedToken.exists({ token }));
+          } else {
+            isBlacklisted = isTokenLocalBlacklisted(token);
           }
           if (!isBlacklisted) {
             const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as any;
@@ -3910,7 +4824,6 @@ async function startServer() {
         return res.json({
           success: true,
           message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
-          verificationUrlSimulated: (emailSent || process.env.NODE_ENV === 'production') ? undefined : verificationUrl,
           smtpError: smtpErrorMsg
         });
       } else {
@@ -3973,7 +4886,6 @@ async function startServer() {
         return res.json({
           success: true,
           message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
-          verificationUrlSimulated: (emailSent || process.env.NODE_ENV === 'production') ? undefined : verificationUrl,
           smtpError: smtpErrorMsg
         });
       }
@@ -3987,7 +4899,10 @@ async function startServer() {
   // Seed Products Database
   app.post('/api/admin/seed', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const { clearOnly, seedTrending, seedImageOverride } = req.body || {};
+      const { clearOnly, seedTrending, seedImageOverride, confirmWipe } = req.body || {};
+      if (!confirmWipe) {
+        return res.status(400).json({ error: 'This is a destructive action. You must provide "confirmWipe: true" in the request body to proceed.' });
+      }
       if (clearOnly) {
         if (isMongoConnected) {
           await Product.deleteMany({});
@@ -4352,7 +5267,12 @@ async function startServer() {
         const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET || 
           crypto.createHash('sha256').update(botToken).digest('hex');
           
-        if (!secretHeader || secretHeader !== expectedSecret) {
+        const providedSecret = String(secretHeader || '');
+        if (
+          !secretHeader ||
+          providedSecret.length !== expectedSecret.length ||
+          !crypto.timingSafeEqual(Buffer.from(providedSecret), Buffer.from(expectedSecret))
+        ) {
           console.warn('[Telegram Bot] Unauthorized webhook call received (secret token mismatch or missing)');
           return res.status(403).send('Unauthorized webhook request');
         }
@@ -4759,18 +5679,18 @@ async function startServer() {
   app.post('/api/admin/products', adminOnly, validateAdminProduct, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const rawPayload = cleanUndefined(req.body);
-      const whitelistedKeys = [
-        'name', 'slug', 'description', 'longDescription', 'category', 'subcategory', 'brand',
-        'price', 'originalPrice', 'discount', 'images', 'image', 'videoUrl', 'specifications',
-        'features', 'affiliateLink', 'affiliateCode', 'inStock', 'sku', 'tags',
-        'trending', 'trendingStartedAt', 'featured', 'pros', 'cons',
-        'seoTitle', 'seoDescription', 'seoKeywords', 'comparisonProducts',
-        'badge', 'buyNowText', 'affiliatePlatform', 'buttonText', 'buttonColor'
-      ];
+      
+      let schemaKeys: string[] = [];
+      if (typeof Product !== 'undefined' && Product.schema) {
+        schemaKeys = Object.keys(Product.schema.paths);
+      }
+      const blacklistedKeys = ['_id', 'id', 'createdAt', 'updatedAt', '__v'];
       const payload: any = {};
-      for (const key of whitelistedKeys) {
-        if (rawPayload[key] !== undefined) {
-          payload[key] = rawPayload[key];
+      for (const key of Object.keys(rawPayload)) {
+        if (!blacklistedKeys.includes(key) && (schemaKeys.length === 0 || schemaKeys.includes(key))) {
+          if (rawPayload[key] !== undefined) {
+            payload[key] = rawPayload[key];
+          }
         }
       }
       const proposedSlug = payload.slug || payload.name;
@@ -4798,7 +5718,7 @@ async function startServer() {
           slug: finalSlug,
           clicks: 0,
           conversions: 0,
-          rating: 4.0,
+          rating: 0,
           totalReviews: 0,
           reviews: [] as any[],
           createdAt: new Date()
@@ -4948,6 +5868,1580 @@ async function startServer() {
     });
   });
 
+  // Check Duplicate ASIN Endpoint
+  app.get('/api/admin/products/check-duplicate/:asin', adminOnly, async (req: express.Request, res: express.Response) => {
+    const asin = req.params.asin ? req.params.asin.trim().toUpperCase() : '';
+    if (!asin || asin.length !== 10) {
+      return res.status(400).json({ success: false, error: 'Invalid ASIN parameter' });
+    }
+
+    try {
+      let existingProduct = null;
+      if (isMongoConnected) {
+        existingProduct = await Product.findOne({ asin }).populate('category');
+      } else {
+        existingProduct = localProducts.find((p: any) => p.asin === asin);
+      }
+
+      return res.json({
+        success: true,
+        exists: !!existingProduct,
+        product: existingProduct || null
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Get Import History Logs (with paging, searching, filtering)
+  
+  // ================= BULK IMPORT QUEUE ENDPOINTS ================= //
+
+  app.post('/api/admin/products/bulk/start', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { items, concurrency, maxRetries, conflictStrategy } = req.body;
+      const adminId = (req as any).userId;
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Items array is required and cannot be empty.' });
+      }
+
+      if (isMongoConnected) {
+        const job = new BulkImportJob({
+          adminId,
+          status: 'running',
+          totalItems: items.length,
+          items: items.map((i: any) => ({
+            asin: i.asin,
+            url: i.url,
+            status: 'pending',
+            retryCount: 0
+          })),
+          concurrency: concurrency || 3,
+          maxRetries: maxRetries || 3,
+          conflictStrategy: conflictStrategy || 'skip',
+          startedAt: new Date()
+        });
+
+        await job.save();
+        res.status(200).json({ success: true, jobId: job._id });
+      } else {
+        const jobId = "job_" + Math.random().toString(36).substring(2, 9);
+        const job = {
+          _id: jobId,
+          adminId,
+          status: 'running',
+          totalItems: items.length,
+          items: items.map((i: any) => ({
+            asin: i.asin,
+            url: i.url,
+            status: 'pending',
+            retryCount: 0
+          })),
+          concurrency: concurrency || 3,
+          maxRetries: maxRetries || 3,
+          conflictStrategy: conflictStrategy || 'skip',
+          startedAt: new Date(),
+          processedItems: 0,
+          successfulItems: 0,
+          failedItems: 0,
+          skippedItems: 0
+        };
+        localBulkImportJobs.unshift(job);
+        saveLocalBulkImportJobs();
+        res.status(200).json({ success: true, jobId });
+      }
+    } catch (err: any) {
+      logStructured('ERROR', 'Failed to start bulk import', { error: err.message });
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.get('/api/admin/products/bulk/status/:jobId', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      if (isMongoConnected) {
+        const job = await BulkImportJob.findById(req.params.jobId);
+        if (!job) {
+          return res.status(404).json({ error: 'Job not found' });
+        }
+        res.status(200).json({ success: true, job });
+      } else {
+        const job = localBulkImportJobs.find(j => j._id === req.params.jobId);
+        if (!job) {
+          return res.status(404).json({ error: 'Job not found' });
+        }
+        res.status(200).json({ success: true, job });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.get('/api/admin/products/bulk/active', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const adminId = (req as any).userId;
+      if (isMongoConnected) {
+        const job = await BulkImportJob.findOne({ adminId, status: { $in: ['waiting', 'running', 'paused'] } }).sort({ createdAt: -1 });
+        res.status(200).json({ success: true, job });
+      } else {
+        const job = localBulkImportJobs.find(j => j.adminId === adminId && ['waiting', 'running', 'paused'].includes(j.status));
+        res.status(200).json({ success: true, job: job || null });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  
+  // ================= MEDIA MANAGEMENT API (PHASE 7) ================= //
+
+  const upload = multer({ dest: 'public/uploads/temp/' });
+
+  app.get('/api/admin/media', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { page = 1, limit = 20, search } = req.query;
+      const query: any = {};
+      if (search) {
+        query.fileName = { $regex: search, $options: 'i' };
+      }
+      
+      const media = await MediaAsset.find(query)
+        .sort({ uploadDate: -1 })
+        .skip((Number(page) - 1) * Number(limit))
+        .limit(Number(limit));
+        
+      const total = await MediaAsset.countDocuments(query);
+      
+      res.json({ success: true, data: media, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.post('/api/admin/media/upload', adminOnly, upload.single('file'), async (req: express.Request, res: express.Response) => {
+    try {
+      if (!(req as any).file) return res.status(400).json({ error: 'No file uploaded' });
+      
+      // Need to import mediaService, since it's an ES module we might just use dynamic import or require
+      const { mediaService } = await import('./src/services/MediaService.js');
+      // For a real upload we would process it directly here instead of download
+      // Since it's a file, we can read it and process it
+      
+      const file = (req as any).file;
+      const buffer = fs.readFileSync(file.path);
+      
+      const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+      const originalMetadata = await sharp(buffer).metadata();
+      const format = originalMetadata.format || 'jpg';
+      const fileName = `${hash}.${format}`;
+      const relativePath = `/uploads/media/${fileName}`;
+      const destPath = path.join(process.cwd(), 'public', 'uploads', 'media', fileName);
+      
+      // optimize
+      const optimizedBuffer = await sharp(buffer).jpeg({ quality: 80 }).toBuffer(); // Simplify
+      fs.writeFileSync(destPath, optimizedBuffer);
+      fs.unlinkSync(file.path); // cleanup temp
+      
+      const asset = new MediaAsset({
+        fileName,
+        localPath: relativePath,
+        mimeType: `image/${format}`,
+        width: originalMetadata.width,
+        height: originalMetadata.height,
+        aspectRatio: originalMetadata.width && originalMetadata.height ? (originalMetadata.width / originalMetadata.height) : 1,
+        hash,
+        optimizationStatus: 'completed',
+        originalSize: buffer.length,
+        optimizedSize: optimizedBuffer.length,
+        compressionRatio: buffer.length / optimizedBuffer.length,
+        storageProvider: 'local'
+      });
+      await asset.save();
+      
+      res.json({ success: true, data: asset });
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.get('/api/admin/media/analytics', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const totalImages = await MediaAsset.countDocuments();
+      const stats = await MediaAsset.aggregate([
+        { $group: {
+            _id: null,
+            totalOriginalSize: { $sum: "$originalSize" },
+            totalOptimizedSize: { $sum: "$optimizedSize" }
+        }}
+      ]);
+      
+      const storageUsed = stats[0]?.totalOptimizedSize || 0;
+      const spaceSaved = (stats[0]?.totalOriginalSize || 0) - storageUsed;
+      
+      const duplicates = await MediaAsset.aggregate([
+        { $group: { _id: "$hash", count: { $sum: 1 } } },
+        { $match: { count: { $gt: 1 } } }
+      ]);
+      
+      const failedJobs = await MediaQueueJob.countDocuments({ status: 'failed' });
+      const queuedJobs = await MediaQueueJob.countDocuments({ status: { $in: ['waiting', 'running'] } });
+
+      res.json({
+        success: true,
+        data: {
+          totalImages,
+          storageUsed,
+          spaceSaved,
+          duplicateImages: duplicates.length,
+          failedJobs,
+          queuedJobs
+        }
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.delete('/api/admin/media/:id', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const asset = await MediaAsset.findById(req.params.id);
+      if (!asset) return res.status(404).json({ error: 'Asset not found' });
+      
+      // Delete file
+      const fullPath = path.join(process.cwd(), 'public', asset.localPath || '');
+      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+      
+      // Delete variants
+      if (asset.variants) {
+        Object.values(asset.variants).forEach((variantPath: any) => {
+          const vp = path.join(process.cwd(), 'public', variantPath || '');
+          if (fs.existsSync(vp)) fs.unlinkSync(vp);
+        });
+      }
+      
+      await asset.deleteOne();
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // ========== PHASE 8: SEO & PUBLISHING AUTOMATION API ENDPOINTS ==========
+
+  // 1. Analyze product and calculate SEO score
+  app.get('/api/admin/seo/analyze/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const product = await Product.findById(req.params.productId);
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+
+      // Run SEO calculations
+      const seoResult = await seoService.calculateSeoScore(product);
+      
+      // Run Readability
+      const textToAnalyze = `${product.name}. ${product.description || ''} ${product.longDescription || ''}`;
+      const readabilityResult = seoService.analyzeReadability(textToAnalyze, product.focusKeyword || '');
+
+      // Scan for broken links
+      const brokenAssetsResult = await seoService.scanForBrokenAssets(product);
+
+      res.json({
+        success: true,
+        data: {
+          seoScore: seoResult.score,
+          suggestions: seoResult.suggestions,
+          readability: readabilityResult,
+          brokenAssets: brokenAssetsResult,
+          focusKeyword: product.focusKeyword,
+          secondaryKeywords: product.secondaryKeywords || []
+        }
+      });
+    } catch (err: any) {
+      console.error('SEO Analysis error:', err.message);
+      res.status(500).json({ error: 'Failed to run SEO analysis' });
+    }
+  });
+
+  // 2. Generate AI SEO Content using Gemini
+  app.post('/api/admin/seo/generate-ai', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { productName, description, brand, category, keywords } = req.body;
+      if (!productName || !description) {
+        return res.status(400).json({ error: 'Product Name and Description are required' });
+      }
+
+      const generated = await seoService.generateAiSeoContent({
+        productName,
+        description,
+        brand,
+        category,
+        keywords
+      });
+
+      res.json({
+        success: true,
+        data: generated
+      });
+    } catch (err: any) {
+      console.error('AI SEO Generation error:', err.message);
+      res.status(500).json({ error: 'Failed to generate AI SEO content' });
+    }
+  });
+
+  // 3. Save optimized SEO metadata
+  app.post('/api/admin/seo/save/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const product = await Product.findById(req.params.productId);
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+
+      const oldSlug = product.slug;
+      const {
+        seoTitle,
+        seoDescription,
+        seoKeywords,
+        focusKeyword,
+        secondaryKeywords,
+        canonicalUrl,
+        robotsMeta,
+        slug,
+        publishingStatus,
+        faqs,
+        breadcrumb,
+        openGraph,
+        twitterCard
+      } = req.body;
+
+      // Update fields
+      if (seoTitle !== undefined) product.seoTitle = seoTitle;
+      if (seoDescription !== undefined) product.seoDescription = seoDescription;
+      if (seoKeywords !== undefined) product.seoKeywords = seoKeywords;
+      if (focusKeyword !== undefined) product.focusKeyword = focusKeyword;
+      if (secondaryKeywords !== undefined) product.secondaryKeywords = secondaryKeywords;
+      if (canonicalUrl !== undefined) product.canonicalUrl = canonicalUrl;
+      if (robotsMeta !== undefined) product.robotsMeta = robotsMeta;
+      if (faqs !== undefined) product.faqs = faqs;
+      if (breadcrumb !== undefined) product.breadcrumb = breadcrumb;
+      if (openGraph !== undefined) product.openGraph = openGraph;
+      if (twitterCard !== undefined) product.twitterCard = twitterCard;
+
+      // Handle Slug change and redirect
+      if (slug && slug !== oldSlug) {
+        product.slug = slug;
+        await seoService.handleSlugChange(oldSlug, slug);
+      }
+
+      // Handle publishing workflow change
+      if (publishingStatus && publishingStatus !== product.publishingStatus) {
+        const oldStatus = product.publishingStatus || 'draft';
+        product.publishingStatus = publishingStatus;
+        
+        // Log to history
+        if (!product.publishingHistory) {
+          (product as any).publishingHistory = [];
+        }
+        product.publishingHistory.push({
+          status: publishingStatus,
+          changedBy: (req as any).user?.email || 'admin',
+          changedAt: new Date(),
+          notes: `Status transitioned from ${oldStatus} to ${publishingStatus}`
+        });
+      }
+
+      // Re-calculate score on save
+      const scoreResult = await seoService.calculateSeoScore(product);
+      product.seoScore = scoreResult.score;
+      product.seoSuggestions = scoreResult.suggestions;
+      product.updatedAt = new Date();
+
+      await product.save();
+
+      // Trigger incremental sitemap rebuild
+      await seoService.buildXmlSitemap();
+
+      res.json({
+        success: true,
+        message: 'SEO settings saved successfully',
+        data: product
+      });
+    } catch (err: any) {
+      console.error('Save SEO error:', err.message);
+      res.status(500).json({ error: 'Failed to save SEO metadata' });
+    }
+  });
+
+  // 4. Retrieve JSON-LD Schema structured data
+  app.get('/api/seo/schema/:productId', async (req: express.Request, res: express.Response) => {
+    try {
+      const product = await Product.findById(req.params.productId).populate('category');
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+
+      const categoryName = typeof product.category === 'object' && product.category ? (product.category as any).name : '';
+      const schema = seoService.generateStructuredData(product, categoryName);
+
+      res.json({
+        success: true,
+        data: schema
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to generate structured data' });
+    }
+  });
+
+  // 5. Retrieve Internal Link Recommendations
+  app.get('/api/admin/seo/recommendations/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const product = await Product.findById(req.params.productId);
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+
+      const recs = await seoService.getInternalLinkRecommendations(product);
+      res.json({
+        success: true,
+        data: recs
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to fetch link recommendations' });
+    }
+  });
+
+  // 6. Get Redirect Rules
+  app.get('/api/admin/seo/redirects', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const rules = await RedirectRule.find({}).sort({ createdAt: -1 });
+      res.json({
+        success: true,
+        data: rules
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to fetch redirect rules' });
+    }
+  });
+
+  // 7. Create/Update Redirect Rule
+  app.post('/api/admin/seo/redirects', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { sourceUrl, targetUrl, type } = req.body;
+      if (!sourceUrl || !targetUrl) {
+        return res.status(400).json({ error: 'Source URL and Target URL are required' });
+      }
+
+      const rule = await RedirectRule.findOneAndUpdate(
+        { sourceUrl },
+        { targetUrl, type: type || 301, updatedAt: new Date() },
+        { upsert: true, new: true }
+      );
+
+      res.json({
+        success: true,
+        data: rule
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to save redirect rule' });
+    }
+  });
+
+  // 8. Delete Redirect Rule
+  app.delete('/api/admin/seo/redirects/:id', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const rule = await RedirectRule.findByIdAndDelete(req.params.id);
+      if (!rule) return res.status(404).json({ error: 'Redirect rule not found' });
+
+      res.json({ success: true, message: 'Redirect rule deleted' });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to delete redirect rule' });
+    }
+  });
+
+  // 9. Manual sitemap rebuild
+  app.post('/api/admin/seo/sitemap/generate', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const xml = await seoService.buildXmlSitemap();
+      res.json({
+        success: true,
+        message: 'Sitemap rebuilt successfully',
+        length: xml.length
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to rebuild sitemap' });
+    }
+  });
+
+  // =========================================================================
+  // PHASE 9: AI CONTENT GENERATION & SMART CONTENT INTELLIGENCE ENDPOINTS
+  // =========================================================================
+
+  // A. Content Generation
+  app.post('/api/admin/ai/generate', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { productId, promptKey, customVars, stream } = req.body;
+      const ProductModel = mongoose.model('Product');
+      const product = await ProductModel.findById(productId);
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+
+      if (stream) {
+        // Set SSE Headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders?.();
+
+        const promptDoc = await AiPrompt.findOne({ key: promptKey || 'product_long_description' });
+        if (!promptDoc) {
+          res.write(`data: ${JSON.stringify({ error: 'Prompt template not found' })}\n\n`);
+          return res.end();
+        }
+
+        let finalPrompt = promptDoc.promptText;
+        const vars: Record<string, string> = {
+          productName: product.get('name') || '',
+          amazonDescription: product.get('description') || '',
+          amazonFeatures: (product.get('features') || []).join(', ') || '',
+          category: product.get('categoryName') || '',
+          focusKeyword: product.get('focusKeyword') || '',
+          ...(customVars || {})
+        };
+
+        for (const k of Object.keys(vars)) {
+          finalPrompt = finalPrompt.replace(new RegExp(`{${k}}`, 'g'), vars[k]);
+        }
+
+        try {
+          await aiService.executeGeneration({
+            prompt: finalPrompt,
+            systemInstruction: promptDoc.systemInstruction,
+            productId: product._id.toString(),
+            promptKey: promptKey || 'product_long_description',
+            streamHandler: (chunk: string) => {
+              res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+            }
+          });
+          res.write(`data: [DONE]\n\n`);
+        } catch (genErr: any) {
+          res.write(`data: ${JSON.stringify({ error: genErr.message })}\n\n`);
+        }
+        return res.end();
+      } else {
+        const responseDoc = await aiService.generateProductContent(product, promptKey || 'product_long_description', customVars);
+        res.json({ success: true, data: responseDoc });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Content generation failed' });
+    }
+  });
+
+  // B. Content Rewrite
+  app.post('/api/admin/ai/rewrite', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { text, tone } = req.body;
+      if (!text) return res.status(400).json({ error: 'Text to rewrite is required' });
+      const rewrittenText = await aiService.rewriteContent(text, tone || 'professional');
+      res.json({ success: true, rewrittenText });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Content rewrite failed' });
+    }
+  });
+
+  // C. Multi-Language Translation
+  app.post('/api/admin/ai/translate', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { text, language } = req.body;
+      if (!text || !language) return res.status(400).json({ error: 'Text and target language are required' });
+      const translatedText = await aiService.translateContent(text, language);
+      res.json({ success: true, translatedText });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Translation failed' });
+    }
+  });
+
+  // D. Prompt Library Management
+  app.get('/api/admin/ai/prompts', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const prompts = await AiPrompt.find({}).sort({ name: 1 });
+      res.json({ success: true, data: prompts });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to retrieve AI prompts' });
+    }
+  });
+
+  app.post('/api/admin/ai/prompts', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const updated = await aiService.createOrUpdatePrompt(req.body, (req as any).user?.email || 'admin');
+      res.json({ success: true, data: updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to save prompt template' });
+    }
+  });
+
+  app.post('/api/admin/ai/prompts/rollback', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { key, version } = req.body;
+      if (!key || !version) return res.status(400).json({ error: 'Key and version are required' });
+      const rolled = await aiService.rollbackPrompt(key, Number(version), (req as any).user?.email || 'admin');
+      res.json({ success: true, data: rolled });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to roll back prompt template' });
+    }
+  });
+
+  // E. Provider Configuration
+  app.get('/api/admin/ai/providers', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const providers: any[] = [];
+      const keys: Array<'gemini' | 'openai' | 'anthropic' | 'openrouter' | 'ollama' | 'lmstudio' | 'azure'> = [
+        'gemini', 'openai', 'anthropic', 'openrouter', 'ollama', 'lmstudio', 'azure'
+      ];
+      for (const key of keys) {
+        const setts = await aiService.getProviderSettings(key);
+        // Mask API Key for safe frontend delivery
+        if (setts.apiKey) {
+          setts.apiKey = setts.apiKey.substring(0, 4) + '...' + setts.apiKey.substring(setts.apiKey.length - 4);
+        }
+        providers.push(setts);
+      }
+      res.json({ success: true, data: providers });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to retrieve provider configuration' });
+    }
+  });
+
+  app.post('/api/admin/ai/providers', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { provider, apiKey, baseUrl, model, temperature, maxTokens, topP, isActive } = req.body;
+      if (!provider) return res.status(400).json({ error: 'Provider is required' });
+
+      // Handle raw key updates vs masked/empty inputs
+      let keyToSave = apiKey;
+      if (apiKey && apiKey.includes('...')) {
+        // Did not edit key
+        const oldSettings = await aiService.getProviderSettings(provider);
+        keyToSave = oldSettings.apiKey || '';
+      }
+
+      const updated = await aiService.saveProviderSettings(provider, {
+        provider,
+        apiKey: keyToSave,
+        baseUrl,
+        model,
+        temperature,
+        maxTokens,
+        topP,
+        isActive
+      });
+      res.json({ success: true, data: updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to save provider configuration' });
+    }
+  });
+
+  // F. Queue System / Batch Enrichment
+  app.get('/api/admin/ai/queue', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const jobs = await AiJob.find({}).sort({ createdAt: -1 }).limit(50);
+      res.json({ success: true, data: jobs });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to retrieve batch jobs queue' });
+    }
+  });
+
+  app.post('/api/admin/ai/queue/batch-enrich', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { productIds, promptKey, categoryId } = req.body;
+      if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({ error: 'List of productIds is required' });
+      }
+      const job = await aiService.createBatchEnrichJob(productIds, promptKey || 'product_long_description', categoryId);
+      res.json({ success: true, data: job });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to trigger batch job' });
+    }
+  });
+
+  app.post('/api/admin/ai/queue/:jobId/action', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { action } = req.body; // pause, resume, cancel, retry
+      const job = await AiJob.findById(req.params.jobId);
+      if (!job) return res.status(404).json({ error: 'Job not found' });
+
+      if (action === 'pause') job.status = 'paused';
+      else if (action === 'resume') {
+        job.status = 'running';
+        // Re-trigger background worker asynchronously
+        (aiService as any).processJob(job._id.toString()).catch((e: any) => console.error('Queue worker failure:', e));
+      } else if (action === 'cancel') job.status = 'cancelled';
+      else if (action === 'retry') {
+        job.status = 'waiting';
+        job.processed = 0;
+        job.progress = 0;
+        job.results = [];
+        await job.save();
+        (aiService as any).processJob(job._id.toString()).catch((e: any) => console.error('Queue worker failure:', e));
+      }
+
+      await job.save();
+      res.json({ success: true, data: job });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to update job action' });
+    }
+  });
+
+  // G. AI Cost Analytics Dashboard
+  app.get('/api/admin/ai/analytics', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const totalRequests = await AiAnalytics.countDocuments({});
+      const successCount = await AiAnalytics.countDocuments({ status: 'success' });
+      const failedCount = await AiAnalytics.countDocuments({ status: 'failed' });
+      
+      const tokensMetrics = await AiAnalytics.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalPromptTokens: { $sum: '$promptTokens' },
+            totalCompletionTokens: { $sum: '$completionTokens' },
+            totalTokens: { $sum: '$totalTokens' },
+            totalCost: { $sum: '$estimatedCost' },
+            avgResponseTime: { $avg: '$responseTimeMs' }
+          }
+        }
+      ]);
+
+      const providerUsage = await AiAnalytics.aggregate([
+        {
+          $group: {
+            _id: '$provider',
+            count: { $sum: 1 },
+            cost: { $sum: '$estimatedCost' }
+          }
+        },
+        { $sort: { count: -1 } }
+      ]);
+
+      const recentHistory = await AiAnalytics.find({}).sort({ createdAt: -1 }).limit(10);
+
+      const metrics = tokensMetrics[0] || {
+        totalPromptTokens: 0,
+        totalCompletionTokens: 0,
+        totalTokens: 0,
+        totalCost: 0,
+        avgResponseTime: 0
+      };
+
+      res.json({
+        success: true,
+        data: {
+          totalRequests,
+          successRate: totalRequests ? Number(((successCount / totalRequests) * 100).toFixed(1)) : 100,
+          failureRate: totalRequests ? Number(((failedCount / totalRequests) * 100).toFixed(1)) : 0,
+          totalPromptTokens: metrics.totalPromptTokens,
+          totalCompletionTokens: metrics.totalCompletionTokens,
+          totalTokens: metrics.totalTokens,
+          estimatedCost: metrics.totalCost,
+          averageResponseTime: Math.round(metrics.avgResponseTime || 0),
+          providerUsage,
+          recentHistory
+        }
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to fetch AI analytics' });
+    }
+  });
+
+  // H. Cache Management
+  app.post('/api/admin/ai/cache/clear', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { pattern } = req.body;
+      await aiService.invalidateCache(pattern);
+      res.json({ success: true, message: 'AI cache cleared successfully' });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to invalidate AI cache' });
+    }
+  });
+
+  // I. Content Approval Workflow & Version History
+  app.get('/api/admin/ai/responses/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const responses = await AiResponse.find({ productId: req.params.productId }).sort({ createdAt: -1 });
+      res.json({ success: true, data: responses });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to retrieve product AI history' });
+    }
+  });
+
+  app.post('/api/admin/ai/responses/:responseId/approve', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { status, notes } = req.body; // approved, rejected, published, etc.
+      if (!['approved', 'rejected', 'published', 'archived', 'pending_review'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid approval status' });
+      }
+
+      const responseDoc = await AiResponse.findById(req.params.responseId);
+      if (!responseDoc) return res.status(404).json({ error: 'AI response record not found' });
+
+      responseDoc.approvalStatus = status;
+      responseDoc.approvalHistory.push({
+        status,
+        changedBy: (req as any).user?.email || 'admin',
+        notes: notes || '',
+        changedAt: new Date()
+      });
+
+      await responseDoc.save();
+
+      // If approved or published, write generated content into the Product object's main description!
+      if (status === 'approved' || status === 'published') {
+        const ProductModel = mongoose.model('Product');
+        const p = await ProductModel.findById(responseDoc.productId);
+        if (p) {
+          // Determine which field to overwrite based on promptKey
+          if (responseDoc.promptKey === 'product_long_description') {
+            p.set('description', responseDoc.generatedText);
+          } else if (responseDoc.promptKey === 'pros_cons') {
+            // Can be structured or stored in description/features appropriately
+            p.set('features', [responseDoc.generatedText]);
+          }
+          await p.save();
+        }
+      }
+
+      res.json({ success: true, data: responseDoc });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to update approval status' });
+    }
+  });
+
+  // ========================================================
+  // PHASE 10: PRICE MONITORING & SYNCHRONIZATION ENDPOINTS
+  // ========================================================
+
+  app.get('/api/admin/sync/dashboard', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const stats = await syncService.getSyncDashboardAnalytics();
+      res.json({ success: true, data: stats });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to retrieve synchronization analytics' });
+    }
+  });
+
+  app.get('/api/admin/sync/jobs', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const jobs = await SyncJob.find({}).sort({ createdAt: -1 }).limit(50);
+      res.json({ success: true, data: jobs });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to list synchronization queue jobs' });
+    }
+  });
+
+  app.post('/api/admin/sync/jobs', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { name, priority } = req.body;
+      const job = new SyncJob({
+        name: name || `Manual Full Sync - ${new Date().toLocaleTimeString()}`,
+        priority: priority || 1,
+        status: 'waiting'
+      });
+      await job.save();
+
+      // Trigger asynchronous background execution
+      syncService.processJob(job._id.toString()).catch(e => console.error('Background Sync job failure:', e));
+
+      res.json({ success: true, data: job });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to enqueue synchronization job' });
+    }
+  });
+
+  app.post('/api/admin/sync/jobs/:jobId/action', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { action } = req.body; // pause, resume, cancel, retry
+      const job = await SyncJob.findById(req.params.jobId);
+      if (!job) return res.status(404).json({ error: 'Job not found' });
+
+      if (action === 'pause') job.status = 'paused';
+      else if (action === 'resume') {
+        job.status = 'running';
+        syncService.processJob(job._id.toString()).catch(e => console.error('Background Sync job resume failure:', e));
+      } else if (action === 'cancel') job.status = 'cancelled';
+      else if (action === 'retry') {
+        job.status = 'waiting';
+        job.processedItems = 0;
+        job.failedItems = 0;
+        job.progress = 0;
+        job.results = [];
+        await job.save();
+        syncService.processJob(job._id.toString()).catch(e => console.error('Background Sync job retry failure:', e));
+      }
+
+      await job.save();
+      res.json({ success: true, data: job });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to update job status' });
+    }
+  });
+
+  app.get('/api/admin/sync/schedules', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const schedules = await SchedulerTask.find({});
+      res.json({ success: true, data: schedules });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to list scheduler tasks' });
+    }
+  });
+
+  app.post('/api/admin/sync/schedules/:taskId/run', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const task = await SchedulerTask.findById(req.params.taskId);
+      if (!task) return res.status(404).json({ error: 'Scheduler task not found' });
+
+      task.lastRun = new Date();
+      const startTime = Date.now();
+
+      // Trigger automatic background worker job on behalf of scheduler
+      const job = new SyncJob({
+        name: `Automated Task: ${task.name}`,
+        priority: 2,
+        status: 'waiting'
+      });
+      await job.save();
+
+      syncService.processJob(job._id.toString()).then(async () => {
+        const duration = Date.now() - startTime;
+        task.successCount += 1;
+        task.averageDurationMs = task.averageDurationMs === 0 ? duration : Math.round((task.averageDurationMs + duration) / 2);
+        await task.save();
+      }).catch(async (e) => {
+        task.failCount += 1;
+        await task.save();
+        console.error('Scheduler spawned background job failed:', e);
+      });
+
+      res.json({ success: true, message: 'Automated job launched successfully!', data: task });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to run scheduler task' });
+    }
+  });
+
+  app.post('/api/admin/sync/schedules/:taskId/toggle', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const task = await SchedulerTask.findById(req.params.taskId);
+      if (!task) return res.status(404).json({ error: 'Scheduler task not found' });
+
+      task.active = !task.active;
+      await task.save();
+      res.json({ success: true, data: task });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to toggle schedule' });
+    }
+  });
+
+  app.get('/api/admin/sync/alerts', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      if (isMongoConnected) {
+        const alerts = await AlertRule.find({}).populate('productId', 'name');
+        res.json({ success: true, data: alerts });
+      } else {
+        const alerts = localAlertRules.map(alert => {
+          const prod = localProducts.find((p: any) => String(p._id || p.id) === String(alert.productId));
+          return {
+            ...alert,
+            productId: prod ? { _id: prod._id || prod.id, name: prod.name } : null
+          };
+        });
+        res.json({ success: true, data: alerts });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch alert rules' });
+    }
+  });
+
+  app.post('/api/admin/sync/alerts', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { _id, name, productId, triggerType, threshold, channels, active } = req.body;
+      if (isMongoConnected) {
+        let alert;
+        if (_id) {
+          alert = await AlertRule.findByIdAndUpdate(_id, { name, productId, triggerType, threshold, channels, active }, { new: true });
+        } else {
+          alert = new AlertRule({ name, productId: productId || null, triggerType, threshold, channels, active });
+          await alert.save();
+        }
+        res.json({ success: true, data: alert });
+      } else {
+        let alert;
+        if (_id) {
+          const index = localAlertRules.findIndex(a => String(a._id) === String(_id));
+          if (index !== -1) {
+            localAlertRules[index] = { ...localAlertRules[index], name, productId, triggerType, threshold, channels, active };
+            alert = localAlertRules[index];
+          } else {
+            return res.status(404).json({ error: 'Alert not found' });
+          }
+        } else {
+          alert = {
+            _id: "alert_" + Math.random().toString(36).substring(2, 9),
+            name,
+            productId: productId || null,
+            triggerType,
+            threshold,
+            channels,
+            active,
+            createdAt: new Date()
+          };
+          localAlertRules.unshift(alert);
+        }
+        saveLocalAlertRules();
+        res.json({ success: true, data: alert });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to save alert rule' });
+    }
+  });
+
+  app.delete('/api/admin/sync/alerts/:id', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      if (isMongoConnected) {
+        await AlertRule.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+      } else {
+        localAlertRules = localAlertRules.filter(a => String(a._id) !== String(req.params.id));
+        saveLocalAlertRules();
+        res.json({ success: true });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to delete alert rule' });
+    }
+  });
+
+  app.get('/api/admin/sync/health', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      if (isMongoConnected) {
+        const reports = await ProductHealth.find({}).populate('productId', 'name price lastPriceCheck');
+        res.json({ success: true, data: reports });
+      } else {
+        const reports = localProductHealth.map(report => {
+          const prod = localProducts.find((p: any) => String(p._id || p.id) === String(report.productId));
+          return {
+            ...report,
+            productId: prod ? { _id: prod._id || prod.id, name: prod.name, price: prod.price, lastPriceCheck: prod.lastPriceCheck || new Date() } : null
+          };
+        });
+        res.json({ success: true, data: reports });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to retrieve product health details' });
+    }
+  });
+
+  app.get('/api/admin/sync/rules', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      if (isMongoConnected) {
+        const rules = await AutomationRule.find({});
+        res.json({ success: true, data: rules });
+      } else {
+        res.json({ success: true, data: localAutomationRules });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch automation rules' });
+    }
+  });
+
+  app.post('/api/admin/sync/rules', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { _id, name, triggerType, triggerThreshold, actions, active } = req.body;
+      if (isMongoConnected) {
+        let rule;
+        if (_id) {
+          rule = await AutomationRule.findByIdAndUpdate(_id, { name, triggerType, triggerThreshold, actions, active }, { new: true });
+        } else {
+          rule = new AutomationRule({ name, triggerType, triggerThreshold, actions, active });
+          await rule.save();
+        }
+        res.json({ success: true, data: rule });
+      } else {
+        let rule;
+        if (_id) {
+          const index = localAutomationRules.findIndex(r => String(r._id) === String(_id));
+          if (index !== -1) {
+            localAutomationRules[index] = { ...localAutomationRules[index], name, triggerType, triggerThreshold, actions, active };
+            rule = localAutomationRules[index];
+          } else {
+            return res.status(404).json({ error: 'Rule not found' });
+          }
+        } else {
+          rule = {
+            _id: "rule_" + Math.random().toString(36).substring(2, 9),
+            name,
+            triggerType,
+            triggerThreshold,
+            actions,
+            active,
+            createdAt: new Date()
+          };
+          localAutomationRules.unshift(rule);
+        }
+        saveLocalAutomationRules();
+        res.json({ success: true, data: rule });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to save automation rule' });
+    }
+  });
+
+  app.delete('/api/admin/sync/rules/:id', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      if (isMongoConnected) {
+        await AutomationRule.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+      } else {
+        localAutomationRules = localAutomationRules.filter(r => String(r._id) !== String(req.params.id));
+        saveLocalAutomationRules();
+        res.json({ success: true });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to delete automation rule' });
+    }
+  });
+
+  app.get('/api/admin/sync/timeline/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      if (isMongoConnected) {
+        const priceHistory = await PriceHistory.find({ productId: req.params.productId }).sort({ timestamp: -1 }).limit(30);
+        const changes = await ProductChange.find({ productId: req.params.productId }).sort({ timestamp: -1 }).limit(30);
+        res.json({
+          success: true,
+          data: {
+            priceHistory,
+            changes
+          }
+        });
+      } else {
+        const priceHistory = localPriceHistory.filter(h => String(h.productId) === String(req.params.productId)).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 30);
+        const changes = localProductChanges.filter(c => String(c.productId) === String(req.params.productId)).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 30);
+        res.json({
+          success: true,
+          data: {
+            priceHistory,
+            changes
+          }
+        });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch timeline and historical price series' });
+    }
+  });
+
+  app.post('/api/admin/sync/product/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const result = await syncService.runLiveProductSync(req.params.productId, req.body);
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Product synchronization run failed' });
+    }
+  });
+
+  app.post('/api/admin/sync/link-validate', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { affiliateLink, affiliateCode } = req.body;
+      const result = syncService.validateAffiliateLink(affiliateLink, affiliateCode);
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Link validation processing failed' });
+    }
+  });
+
+  app.get('/api/admin/sync/notifications', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const logs = await NotificationHistory.find({}).sort({ timestamp: -1 }).limit(100);
+      res.json({ success: true, data: logs });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch notification and automation execution history' });
+    }
+  });
+
+  // ========================================================
+  // PHASE 11: MULTI-MARKETPLACE & UNIVERSAL IMPORT ENDPOINTS
+  // ========================================================
+
+  app.get('/api/admin/marketplace/analytics', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const stats = await marketplaceService.getAnalytics();
+      res.json({ success: true, data: stats });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch marketplace analytics' });
+    }
+  });
+
+  app.get('/api/admin/marketplace/providers', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const providers = await MarketplaceProviderModel.find({});
+      res.json({ success: true, data: providers });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to retrieve marketplace providers' });
+    }
+  });
+
+  app.post('/api/admin/marketplace/providers/toggle', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { providerId, enabled } = req.body;
+      const provider = await MarketplaceProviderModel.findOneAndUpdate(
+        { providerId },
+        { enabled },
+        { new: true }
+      );
+      if (!provider) return res.status(404).json({ error: 'Marketplace provider not found' });
+      res.json({ success: true, data: provider });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to toggle marketplace provider' });
+    }
+  });
+
+  app.get('/api/admin/marketplace/settings', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const settings = await MarketplaceSettingsModel.find({});
+      res.json({ success: true, data: settings });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch marketplace settings' });
+    }
+  });
+
+  app.post('/api/admin/marketplace/settings', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { providerId, apiKeys, sessionTokens, cookies, importRules } = req.body;
+      const settings = await MarketplaceSettingsModel.findOneAndUpdate(
+        { providerId },
+        { apiKeys, sessionTokens, cookies, importRules },
+        { new: true, upsert: true }
+      );
+      res.json({ success: true, data: settings });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to save marketplace settings' });
+    }
+  });
+
+  app.get('/api/admin/marketplace/affiliate', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const profiles = await AffiliateProfilesModel.find({});
+      res.json({ success: true, data: profiles });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch affiliate profiles' });
+    }
+  });
+
+  app.post('/api/admin/marketplace/affiliate', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { providerId, region, affiliateId, campaignName, customParams } = req.body;
+      const profile = await AffiliateProfilesModel.findOneAndUpdate(
+        { providerId, region },
+        { affiliateId, campaignName, customParams },
+        { new: true, upsert: true }
+      );
+      res.json({ success: true, data: profile });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to save affiliate profile' });
+    }
+  });
+
+  app.get('/api/admin/marketplace/health', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const status = await MarketplaceHealthModel.find({});
+      res.json({ success: true, data: status });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to retrieve marketplace health status' });
+    }
+  });
+
+  app.get('/api/admin/marketplace/logs', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const logs = await ProviderLogsModel.find({}).sort({ timestamp: -1 }).limit(100);
+      res.json({ success: true, data: logs });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch provider logs' });
+    }
+  });
+
+  app.post('/api/admin/marketplace/import', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { url, categoryId, forceUpdate } = req.body;
+      if (!url) return res.status(400).json({ error: 'URL parameter is required' });
+      
+      const result = await marketplaceService.importProduct(url, categoryId, forceUpdate);
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Marketplace import failed' });
+    }
+  });
+
+  app.post('/api/admin/marketplace/bulk-import', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { urls, categoryId } = req.body;
+      if (!urls || !Array.isArray(urls)) {
+        return res.status(400).json({ error: 'URLs array is required' });
+      }
+      const result = await marketplaceService.bulkImportProducts(urls, categoryId);
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Bulk marketplace import failed' });
+    }
+  });
+
+  app.post('/api/admin/marketplace/merge', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { primaryId, duplicateId, strategy } = req.body;
+      if (!primaryId || !duplicateId) {
+        return res.status(400).json({ error: 'Primary and duplicate IDs are required' });
+      }
+      const result = await marketplaceService.mergeProducts(primaryId, duplicateId, strategy || 'combine');
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to merge duplicate products' });
+    }
+  });
+
+  app.get('/api/admin/marketplace/compare/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const comparison = await marketplaceService.compareCrossMarketplace(req.params.productId);
+      res.json({ success: true, data: comparison });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Cross-marketplace comparison failed' });
+    }
+  });
+
+  app.get('/api/admin/marketplace/currencies', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const rates = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+      res.json({ success: true, data: rates });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to retrieve currency rates' });
+    }
+  });
+
+  app.post('/api/admin/marketplace/currencies/convert', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { amount, from, to } = req.body;
+      const converted = await marketplaceService.convertCurrency(amount, from, to);
+      res.json({ success: true, data: { amount, from, to, converted } });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Currency conversion failed' });
+    }
+  });
+
+app.post('/api/admin/products/bulk/:jobId/action', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { action } = req.body; // pause, resume, cancel
+      if (isMongoConnected) {
+        const job = await BulkImportJob.findById(req.params.jobId);
+        if (!job) return res.status(404).json({ error: 'Job not found' });
+
+        if (action === 'pause') job.status = 'paused';
+        else if (action === 'resume') job.status = 'running';
+        else if (action === 'cancel') {
+          job.status = 'cancelled';
+          job.completedAt = new Date();
+        }
+        
+        await job.save();
+        res.status(200).json({ success: true, status: job.status });
+      } else {
+        const job = localBulkImportJobs.find(j => j._id === req.params.jobId);
+        if (!job) return res.status(404).json({ error: 'Job not found' });
+
+        if (action === 'pause') job.status = 'paused';
+        else if (action === 'resume') job.status = 'running';
+        else if (action === 'cancel') {
+          job.status = 'cancelled';
+          job.completedAt = new Date();
+        }
+        
+        saveLocalBulkImportJobs();
+        res.status(200).json({ success: true, status: job.status });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.post('/api/admin/products/bulk/:jobId/item', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { itemIndex, status, error, retryCount } = req.body;
+      if (isMongoConnected) {
+        const job = await BulkImportJob.findById(req.params.jobId);
+        if (!job) return res.status(404).json({ error: 'Job not found' });
+
+        if (itemIndex >= 0 && itemIndex < job.items.length) {
+          const item = job.items[itemIndex];
+          const oldStatus = item.status;
+          item.status = status;
+          if (error) item.error = error;
+          if (retryCount !== undefined) item.retryCount = retryCount;
+
+          // Update counts
+          if (oldStatus !== status) {
+            if (status === 'success') job.successfulItems += 1;
+            else if (status === 'failed') job.failedItems += 1;
+            else if (status === 'skipped') job.skippedItems += 1;
+
+            if (['success', 'failed', 'skipped', 'cancelled'].includes(status) && !['success', 'failed', 'skipped', 'cancelled'].includes(oldStatus)) {
+              job.processedItems += 1;
+            }
+          }
+
+          if (job.processedItems === job.totalItems && job.status === 'running') {
+            job.status = 'completed';
+            job.completedAt = new Date();
+          }
+
+          await job.save();
+        }
+        res.status(200).json({ success: true, jobStatus: job.status });
+      } else {
+        const job = localBulkImportJobs.find(j => j._id === req.params.jobId);
+        if (!job) return res.status(404).json({ error: 'Job not found' });
+
+        if (itemIndex >= 0 && itemIndex < job.items.length) {
+          const item = job.items[itemIndex];
+          const oldStatus = item.status;
+          item.status = status;
+          if (error) item.error = error;
+          if (retryCount !== undefined) item.retryCount = retryCount;
+
+          // Update counts
+          if (oldStatus !== status) {
+            if (status === 'success') job.successfulItems = (job.successfulItems || 0) + 1;
+            else if (status === 'failed') job.failedItems = (job.failedItems || 0) + 1;
+            else if (status === 'skipped') job.skippedItems = (job.skippedItems || 0) + 1;
+
+            if (['success', 'failed', 'skipped', 'cancelled'].includes(status) && !['success', 'failed', 'skipped', 'cancelled'].includes(oldStatus)) {
+              job.processedItems = (job.processedItems || 0) + 1;
+            }
+          }
+
+          if (job.processedItems === job.totalItems && job.status === 'running') {
+            job.status = 'completed';
+            job.completedAt = new Date();
+          }
+
+          saveLocalBulkImportJobs();
+        }
+        res.status(200).json({ success: true, jobStatus: job.status });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.get('/api/admin/products/bulk/history', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const adminId = (req as any).userId;
+      if (isMongoConnected) {
+        const jobs = await BulkImportJob.find({ adminId }).sort({ createdAt: -1 }).limit(20);
+        res.status(200).json({ success: true, jobs });
+      } else {
+        const jobs = localBulkImportJobs.filter(j => j.adminId === adminId).slice(0, 20);
+        res.status(200).json({ success: true, jobs });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+app.get('/api/admin/products/import/history', adminOnly, async (req: express.Request, res: express.Response) => {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
+    const search = (req.query.search as string || '').trim().toLowerCase();
+    const resultFilter = req.query.result as string || '';
+
+    try {
+      let results: any[] = [];
+      let total = 0;
+
+      if (isMongoConnected) {
+        const query: any = {};
+        if (resultFilter) {
+          query.result = resultFilter;
+        }
+        if (search) {
+          query.$or = [
+            { productName: { $regex: search, $options: 'i' } },
+            { asin: { $regex: search, $options: 'i' } },
+            { correlationId: { $regex: search, $options: 'i' } }
+          ];
+        }
+
+        total = await ImportHistory.countDocuments(query);
+        results = await ImportHistory.find(query)
+          .sort({ importTime: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit);
+      } else {
+        let filtered = [...localImportHistory];
+        if (resultFilter) {
+          filtered = filtered.filter(item => item.result === resultFilter);
+        }
+        if (search) {
+          filtered = filtered.filter(item => 
+            (item.productName || '').toLowerCase().includes(search) ||
+            (item.asin || '').toLowerCase().includes(search) ||
+            (item.correlationId || '').toLowerCase().includes(search)
+          );
+        }
+
+        total = filtered.length;
+        results = filtered.slice((page - 1) * limit, page * limit);
+      }
+
+      return res.json({
+        success: true,
+        data: results,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        }
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Get Import Analytics Endpoint
+  app.get('/api/admin/products/import/analytics', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      let logs: any[] = [];
+      if (isMongoConnected) {
+        logs = await ImportHistory.find({});
+      } else {
+        logs = [...localImportHistory];
+      }
+
+      const totalImports = logs.length;
+      const successfulImports = logs.filter(l => l.result === 'success').length;
+      const failedImports = logs.filter(l => l.result === 'failed').length;
+      const skippedProducts = logs.filter(l => l.result === 'skipped' || l.duplicateStatus === 'skip').length;
+      const duplicateAttempts = logs.filter(l => l.duplicateStatus !== 'new').length;
+      const updatedProducts = logs.filter(l => l.duplicateStatus === 'update' || l.duplicateStatus === 'replace').length;
+      const mergedProducts = logs.filter(l => l.duplicateStatus === 'merge').length;
+      const validationFailures = logs.filter(l => l.result === 'failed' && l.errorMessage?.includes('Validation')).length;
+
+      const totalSuccessTime = logs.filter(l => l.result === 'success').reduce((sum, l) => sum + (l.processingTimeMs || 0), 0);
+      const successCountForAvg = logs.filter(l => l.result === 'success').length;
+      const averageProcessingTimeMs = successCountForAvg > 0 ? Math.round(totalSuccessTime / successCountForAvg) : 0;
+
+      return res.json({
+        success: true,
+        data: {
+          totalImports,
+          successfulImports,
+          failedImports,
+          duplicateAttempts,
+          updatedProducts,
+          mergedProducts,
+          skippedProducts,
+          averageProcessingTimeMs,
+          validationFailures
+        }
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Dedicated Product Import API endpoint
   app.post('/api/admin/products/import', adminOnly, importLimiter, express.json(), async (req: express.Request, res: express.Response): Promise<any> => {
     const startTime = Date.now();
@@ -4965,6 +7459,9 @@ async function startServer() {
       logStructured('INFO', 'Idempotent request intercepted. Returning cached result.', { requestId });
       return res.status(200).json(processedImportsCache.get(requestId));
     }
+
+    const adminId = (req as any).userId || 'system';
+    const adminEmail = (req as any).userEmail || 'unknown';
 
     try {
       const rawPayload = cleanUndefined(req.body);
@@ -5055,7 +7552,89 @@ async function startServer() {
         : (typeof req.headers['x-extension-version'] === 'string' ? sanitizeInput(String(req.headers['x-extension-version'])) : '1.0.0');
       cleanSpecs["Imported Via"] = `Curator Companion v${extVersion}`;
 
-      // 6. Detect Duplicate Products via ASIN
+      // 6. Detect & Resolve Duplicate Products via ASIN with Custom Strategies
+      const strategy = rawPayload.strategy || 'create';
+      const options = rawPayload.options || {};
+      const resolvedAffiliateCode = affiliateCode || 'gadgetspro-20';
+
+      // 6a. Validate Affiliate Code/Tag Format (Format must be xxxxx-20 or similar)
+      const tagRegex = /^[a-zA-Z0-9_\-]+-[0-9]+$/;
+      if (!tagRegex.test(resolvedAffiliateCode)) {
+        logStructured('WARN', 'Validation failed: Invalid affiliate tag format', { requestId, affiliateCode: resolvedAffiliateCode });
+        importerMetrics.failedImports++;
+        
+        await logImportHistory({
+          productName: name,
+          asin: normalizedAsin || 'UNKNOWN',
+          adminEmail,
+          adminId: adminId.toString(),
+          result: 'failed',
+          correlationId: requestId,
+          processingTimeMs: Date.now() - startTime,
+          duplicateStatus: 'new',
+          errorMessage: 'Validation failed: Affiliate tag parameter must match xxxxx-20 format'
+        });
+
+        return res.status(400).json({
+          success: false,
+          requestId,
+          error: 'Affiliate URL validation failed: missing or invalid affiliate tag. Code must match xxxxx-20 format.',
+          code: 'INVALID_AFFILIATE_URL',
+          details: {
+            errors: ['Affiliate tag parameter must be formatted like xxxxx-20.']
+          }
+        });
+      }
+
+      // 6b. Normalize Affiliate Link to clean canonical form
+      let cleanAffiliateLink = '';
+      if (normalizedAsin) {
+        cleanAffiliateLink = `https://www.amazon.com/dp/${normalizedAsin}/?tag=${resolvedAffiliateCode}`;
+      } else if (rawPayload.affiliateLink && typeof rawPayload.affiliateLink === 'string') {
+        const urlStr = rawPayload.affiliateLink.trim();
+        try {
+          const parsedUrl = new URL(urlStr);
+          const paramTag = parsedUrl.searchParams.get('tag');
+          const customTag = paramTag || resolvedAffiliateCode;
+          const pathAsinMatch = urlStr.match(/\/(dp|gp\/product)\/([A-Z0-9]{10})/i);
+          const finalAsin = normalizedAsin || (pathAsinMatch ? pathAsinMatch[2] : 'unknown');
+          cleanAffiliateLink = `https://www.amazon.com/dp/${finalAsin}/?tag=${customTag}`;
+        } catch (e) {
+          cleanAffiliateLink = `https://www.amazon.com/dp/unknown/?tag=${resolvedAffiliateCode}`;
+        }
+      } else {
+        cleanAffiliateLink = `https://www.amazon.com/dp/unknown/?tag=${resolvedAffiliateCode}`;
+      }
+
+      // 6c. Image Management (High-resolution restoration, deduplication, and fallback verification)
+      const rawImages: string[] = [];
+      if (imageUrl && typeof imageUrl === 'string') {
+        rawImages.push(imageUrl);
+      }
+      if (rawPayload.images && Array.isArray(rawPayload.images)) {
+        rawPayload.images.forEach((img: any) => {
+          if (img && typeof img === 'string') rawImages.push(img);
+        });
+      }
+
+      const processedImages = rawImages.map(imgUrl => {
+        if (!imgUrl) return '';
+        const modifierPattern = /\._[A-Za-z0-9,_\-]+_\.(jpg|jpeg|png|gif)/i;
+        if (modifierPattern.test(imgUrl)) {
+          return imgUrl.replace(modifierPattern, '.$1');
+        }
+        return imgUrl;
+      }).filter(Boolean);
+
+      const uniqueImages = Array.from(new Set(processedImages));
+      if (uniqueImages.length === 0) {
+        uniqueImages.push('https://images.unsplash.com/photo-1547082299-de196ea013d6?w=800');
+      }
+
+      // ARCHITECTURE FOR FUTURE IMAGE CDN INTEGRATION:
+      // To integrate Cloudinary or custom CDN:
+      // const uploadedToCDN = await Promise.all(uniqueImages.map(url => cdn.upload(url)));
+
       if (normalizedAsin) {
         let duplicateProduct = null;
         if (isMongoConnected) {
@@ -5065,15 +7644,208 @@ async function startServer() {
         }
 
         if (duplicateProduct) {
-          logStructured('WARN', 'Duplicate ASIN import blocked', { requestId, asin: normalizedAsin });
-          importerMetrics.duplicateRejections++;
-          return res.status(409).json({
-            success: false,
-            requestId,
-            error: `Product with ASIN '${normalizedAsin}' already exists.`,
-            code: 'DUPLICATE_ASIN',
-            existingProduct: duplicateProduct
-          });
+          if (strategy === 'create') {
+            logStructured('WARN', 'Duplicate ASIN import blocked', { requestId, asin: normalizedAsin });
+            importerMetrics.duplicateRejections++;
+
+            await logImportHistory({
+              productName: name,
+              asin: normalizedAsin,
+              productId: duplicateProduct._id.toString(),
+              adminEmail,
+              adminId: adminId.toString(),
+              result: 'failed',
+              correlationId: requestId,
+              processingTimeMs: Date.now() - startTime,
+              duplicateStatus: 'duplicate_blocked',
+              errorMessage: `Product with ASIN '${normalizedAsin}' already exists.`
+            });
+
+            return res.status(409).json({
+              success: false,
+              requestId,
+              error: `Product with ASIN '${normalizedAsin}' already exists.`,
+              code: 'DUPLICATE_ASIN',
+              existingProduct: duplicateProduct
+            });
+          }
+
+          if (strategy === 'skip') {
+            logStructured('INFO', 'Duplicate ASIN import skipped by request', { requestId, asin: normalizedAsin });
+            const duration = Date.now() - startTime;
+            importerMetrics.successfulImports++;
+            importerMetrics.totalImports++;
+            importerMetrics.totalProcessingTimeMs += duration;
+
+            await logImportHistory({
+              productName: duplicateProduct.name,
+              asin: normalizedAsin,
+              productId: duplicateProduct._id.toString(),
+              adminEmail,
+              adminId: adminId.toString(),
+              result: 'skipped',
+              correlationId: requestId,
+              processingTimeMs: duration,
+              duplicateStatus: 'skip'
+            });
+
+            return res.status(200).json({
+              success: true,
+              requestId,
+              message: `Product with ASIN '${normalizedAsin}' skipped. Existing product returned.`,
+              data: duplicateProduct,
+              details: {
+                duplicateStatus: 'skip',
+                categoryStatus: 'reused',
+                extensionVersion: extVersion
+              }
+            });
+          }
+
+          // Handle Granular Update / Merge / Replace
+          let updatedPayload = { ...duplicateProduct };
+          const overwriteDescription = options.overwriteDescription === true;
+          const overwriteImages = options.overwriteImages === true;
+
+          if (strategy === 'replace') {
+            updatedPayload.name = cleanName;
+            updatedPayload.description = cleanDescription;
+            updatedPayload.longDescription = cleanLongDescription;
+            updatedPayload.brand = cleanBrand;
+            updatedPayload.price = Number(price);
+            updatedPayload.originalPrice = rawPayload.originalPrice ? Number(rawPayload.originalPrice) : undefined;
+            updatedPayload.discount = rawPayload.originalPrice && Number(rawPayload.originalPrice) > Number(price) 
+              ? Math.round(((Number(rawPayload.originalPrice) - Number(price)) / Number(rawPayload.originalPrice)) * 100)
+              : undefined;
+            updatedPayload.images = uniqueImages;
+            updatedPayload.specifications = cleanSpecs;
+            updatedPayload.features = cleanFeatures;
+            updatedPayload.affiliateLink = cleanAffiliateLink;
+            updatedPayload.affiliateCode = resolvedAffiliateCode;
+            updatedPayload.inStock = rawPayload.inStock !== false;
+          } else if (strategy === 'update') {
+            if (overwriteDescription) {
+              updatedPayload.description = cleanDescription;
+              updatedPayload.longDescription = cleanLongDescription;
+            }
+            if (overwriteImages) {
+              updatedPayload.images = uniqueImages;
+            }
+            updatedPayload.price = Number(price);
+            if (rawPayload.originalPrice) {
+              updatedPayload.originalPrice = Number(rawPayload.originalPrice);
+              updatedPayload.discount = Math.round(((Number(rawPayload.originalPrice) - Number(price)) / Number(rawPayload.originalPrice)) * 100);
+            }
+            updatedPayload.specifications = {
+              ...(duplicateProduct.specifications || {}),
+              ...cleanSpecs
+            };
+            const existingFeatures = duplicateProduct.features || [];
+            const newFeatures = cleanFeatures.filter((f: string) => !existingFeatures.includes(f));
+            updatedPayload.features = [...existingFeatures, ...newFeatures];
+            updatedPayload.affiliateLink = cleanAffiliateLink;
+            updatedPayload.affiliateCode = resolvedAffiliateCode;
+            updatedPayload.inStock = rawPayload.inStock !== false;
+          } else if (strategy === 'merge') {
+            if (!duplicateProduct.description || duplicateProduct.description.trim() === '') {
+              updatedPayload.description = cleanDescription;
+            }
+            if (!duplicateProduct.longDescription || duplicateProduct.longDescription.trim() === '') {
+              updatedPayload.longDescription = cleanLongDescription;
+            }
+            if (!duplicateProduct.images || duplicateProduct.images.length === 0) {
+              updatedPayload.images = uniqueImages;
+            }
+            updatedPayload.specifications = {
+              ...cleanSpecs,
+              ...(duplicateProduct.specifications || {})
+            };
+            const existingFeatures = duplicateProduct.features || [];
+            const newFeatures = cleanFeatures.filter((f: string) => !existingFeatures.includes(f));
+            updatedPayload.features = [...existingFeatures, ...newFeatures];
+          }
+
+          if (isMongoConnected) {
+            const resultDoc = await Product.findByIdAndUpdate(
+              duplicateProduct._id,
+              { $set: updatedPayload },
+              { new: true }
+            );
+            if (!resultDoc) {
+              throw new Error("Failed to update product");
+            }
+            await syncProductsToSeedFile();
+            await logSecurityAction(req, 'PRODUCT_IMPORTED_UPDATE', duplicateProduct._id.toString(), { name: resultDoc.name, asin: normalizedAsin, strategy });
+            
+            const duration = Date.now() - startTime;
+            importerMetrics.successfulImports++;
+            importerMetrics.totalImports++;
+            importerMetrics.totalProcessingTimeMs += duration;
+
+            await logImportHistory({
+              productName: resultDoc.name,
+              asin: normalizedAsin,
+              productId: resultDoc._id.toString(),
+              adminEmail,
+              adminId: adminId.toString(),
+              result: 'success',
+              correlationId: requestId,
+              processingTimeMs: duration,
+              duplicateStatus: strategy
+            });
+
+            return res.status(200).json({
+              success: true,
+              requestId,
+              message: `Product with ASIN '${normalizedAsin}' successfully updated via ${strategy} strategy.`,
+              data: resultDoc,
+              details: {
+                duplicateStatus: strategy,
+                categoryStatus: 'reused',
+                extensionVersion: extVersion
+              }
+            });
+          } else {
+            const idx = localProducts.findIndex((p: any) => p.asin === normalizedAsin);
+            if (idx !== -1) {
+              localProducts[idx] = {
+                ...localProducts[idx],
+                ...updatedPayload,
+                updatedAt: new Date()
+              };
+            }
+            await syncProductsToSeedFile();
+            await logSecurityAction(req, 'PRODUCT_IMPORTED_UPDATE', duplicateProduct._id, { name: updatedPayload.name, asin: normalizedAsin, strategy });
+
+            const duration = Date.now() - startTime;
+            importerMetrics.successfulImports++;
+            importerMetrics.totalImports++;
+            importerMetrics.totalProcessingTimeMs += duration;
+
+            await logImportHistory({
+              productName: updatedPayload.name,
+              asin: normalizedAsin,
+              productId: duplicateProduct._id,
+              adminEmail,
+              adminId: adminId.toString(),
+              result: 'success',
+              correlationId: requestId,
+              processingTimeMs: duration,
+              duplicateStatus: strategy
+            });
+
+            return res.status(200).json({
+              success: true,
+              requestId,
+              message: `Product with ASIN '${normalizedAsin}' successfully updated locally via ${strategy} strategy.`,
+              data: localProducts[idx],
+              details: {
+                duplicateStatus: strategy,
+                categoryStatus: 'reused',
+                extensionVersion: extVersion
+              }
+            });
+          }
         }
       }
 
@@ -5131,34 +7903,6 @@ async function startServer() {
         const baseSlugForImport = rawPayload.slug || cleanName;
         const { finalSlug } = await resolveUniqueSlug(baseSlugForImport, 'product');
 
-        // 9. Generate and attach affiliate link
-        const resolvedAffiliateCode = affiliateCode && typeof affiliateCode === 'string' ? affiliateCode.trim() : 'shopgear-20';
-        const cleanAffiliateLink = normalizedAsin 
-          ? `https://www.amazon.com/dp/${normalizedAsin}/?tag=${resolvedAffiliateCode}`
-          : (rawPayload.affiliateLink && typeof rawPayload.affiliateLink === 'string' ? rawPayload.affiliateLink.trim() : `https://www.amazon.com/dp/unknown/?tag=${resolvedAffiliateCode}`);
-
-        // 10. Normalise images (Amazon Image Strategy)
-        const rawImages: string[] = [];
-        if (imageUrl && typeof imageUrl === 'string') {
-          rawImages.push(imageUrl);
-        } else if (rawPayload.images && Array.isArray(rawPayload.images)) {
-          rawPayload.images.forEach((img: any) => {
-            if (img && typeof img === 'string') rawImages.push(img);
-          });
-        }
-
-        const processedImages = rawImages.map(imgUrl => {
-          const amazonPattern = /\._AC_[a-zA-Z0-9_]+_\.(jpg|jpeg|png|gif)/i;
-          if (amazonPattern.test(imgUrl)) {
-            return imgUrl.replace(amazonPattern, '.$1');
-          }
-          return imgUrl;
-        });
-
-        if (processedImages.length === 0) {
-          processedImages.push('https://images.unsplash.com/photo-1547082299-de196ea013d6?w=800');
-        }
-
         // Create product payload
         const productPayload = {
           name: cleanName,
@@ -5174,7 +7918,7 @@ async function startServer() {
           discount: rawPayload.originalPrice && Number(rawPayload.originalPrice) > Number(price) 
             ? Math.round(((Number(rawPayload.originalPrice) - Number(price)) / Number(rawPayload.originalPrice)) * 100)
             : undefined,
-          images: processedImages,
+          images: uniqueImages,
           videoUrl: rawPayload.videoUrl || '',
           specifications: cleanSpecs,
           features: cleanFeatures,
@@ -5199,6 +7943,20 @@ async function startServer() {
         if (isMongoConnected) {
           const product = new Product(productPayload);
           await product.save();
+
+          // PHASE 7: Background Media Download Trigger
+          if (uniqueImages && uniqueImages.length > 0) {
+            import('./src/services/MediaService.js').then(({ mediaService }) => {
+              uniqueImages.forEach((imgUrl: any) => {
+                mediaService.processImageDownload({
+                  url: imgUrl,
+                  productId: product._id.toString(),
+                  asin: normalizedAsin || undefined
+                }).catch((err: any) => console.warn('Media download failed in background:', err.message));
+              });
+            }).catch((err: any) => console.warn('MediaService dynamic import failed:', err.message));
+          }
+
           await syncProductsToSeedFile();
           await logSecurityAction(req, 'PRODUCT_IMPORTED', product._id.toString(), { name: product.name, slug: finalSlug, asin: normalizedAsin });
           triggerProductAddedEmailNotifications(product).catch(err => console.warn('Newsletter trigger failed:', err.message));
@@ -5224,6 +7982,18 @@ async function startServer() {
           importerMetrics.totalImports++;
           importerMetrics.totalProcessingTimeMs += duration;
 
+          await logImportHistory({
+            productName: product.name,
+            asin: normalizedAsin || 'UNKNOWN',
+            productId: product._id.toString(),
+            adminEmail,
+            adminId: adminId.toString(),
+            result: 'success',
+            correlationId: requestId,
+            processingTimeMs: duration,
+            duplicateStatus: 'new'
+          });
+
           logStructured('INFO', 'Product imported successfully to DB', { requestId, durationMs: duration, asin: normalizedAsin });
           return res.status(201).json(responsePayload);
         } else {
@@ -5232,7 +8002,7 @@ async function startServer() {
             ...productPayload,
             clicks: 0,
             conversions: 0,
-            rating: 4.5,
+            rating: 0,
             totalReviews: 0,
             reviews: [] as any[],
             createdAt: new Date()
@@ -5262,6 +8032,18 @@ async function startServer() {
           importerMetrics.successfulImports++;
           importerMetrics.totalImports++;
           importerMetrics.totalProcessingTimeMs += duration;
+
+          await logImportHistory({
+            productName: newProduct.name,
+            asin: normalizedAsin || 'UNKNOWN',
+            productId: newProduct._id,
+            adminEmail,
+            adminId: adminId.toString(),
+            result: 'success',
+            correlationId: requestId,
+            processingTimeMs: duration,
+            duplicateStatus: 'new'
+          });
 
           logStructured('INFO', 'Product imported successfully to memory fallback', { requestId, durationMs: duration, asin: normalizedAsin });
           return res.status(201).json(responsePayload);
@@ -5295,6 +8077,18 @@ async function startServer() {
       importerMetrics.totalImports++;
       importerMetrics.totalProcessingTimeMs += duration;
 
+      await logImportHistory({
+        productName: req.body.name || 'Unknown Product',
+        asin: req.body.asin || 'UNKNOWN',
+        adminEmail,
+        adminId: adminId.toString(),
+        result: 'failed',
+        correlationId: requestId,
+        processingTimeMs: duration,
+        duplicateStatus: 'new',
+        errorMessage: error.message || 'Import transaction failed'
+      });
+
       logStructured('ERROR', 'Import endpoint overall failure', { requestId, error: error.message });
       res.status(500).json({
         success: false,
@@ -5309,17 +8103,18 @@ async function startServer() {
     try {
       const pId = req.params.id;
       
-      // Whitelist update payload fields to prevent mass assignment (e.g. _id, createdAt, etc.)
-      const whitelistedKeys = [
-        'name', 'slug', 'description', 'price', 'originalPrice', 'discount',
-        'category', 'affiliateLink', 'rating', 'reviewsCount', 'image',
-        'badge', 'specifications', 'features', 'pros', 'cons', 'featured',
-        'active', 'buyNowText', 'affiliatePlatform', 'buttonText', 'buttonColor'
-      ];
+      // Dynamically get valid keys from Product schema if registered, otherwise fall back to a comprehensive list
+      let schemaKeys: string[] = [];
+      if (typeof Product !== 'undefined' && Product.schema) {
+        schemaKeys = Object.keys(Product.schema.paths);
+      }
+      const blacklistedKeys = ['_id', 'id', 'createdAt', 'updatedAt', '__v'];
       const payload: any = {};
-      for (const key of whitelistedKeys) {
-        if (req.body[key] !== undefined) {
-          payload[key] = req.body[key];
+      for (const key of Object.keys(req.body)) {
+        if (!blacklistedKeys.includes(key) && (schemaKeys.length === 0 || schemaKeys.includes(key))) {
+          if (req.body[key] !== undefined) {
+            payload[key] = req.body[key];
+          }
         }
       }
       
@@ -5373,6 +8168,16 @@ async function startServer() {
         }
         if (mongoose.Types.ObjectId.isValid(pId)) {
           await Product.findByIdAndDelete(pId);
+          // Clean up comparison products referencing this deleted product
+          await Product.updateMany(
+            { comparisonProducts: pId },
+            { $pull: { comparisonProducts: pId } }
+          );
+          // Clean up user wishlists referencing this deleted product
+          await User.updateMany(
+            { wishlist: pId },
+            { $pull: { wishlist: pId } }
+          );
         } else {
           await Product.deleteOne({ _id: pId });
         }
@@ -5384,6 +8189,23 @@ async function startServer() {
         if (index === -1) return res.status(404).json({ error: 'Product not found' });
         const deletedProduct = localProducts[index];
         localProducts.splice(index, 1);
+        
+        // Clean up comparison products in local storage fallback
+        localProducts.forEach((p: any) => {
+          if (Array.isArray(p.comparisonProducts)) {
+            p.comparisonProducts = p.comparisonProducts.filter((id: string) => String(id) !== String(pId));
+          }
+        });
+        saveLocalProducts();
+
+        // Clean up user wishlists in local storage fallback
+        localUsers.forEach((u: any) => {
+          if (Array.isArray(u.wishlist)) {
+            u.wishlist = u.wishlist.filter((id: any) => String(id) !== String(pId));
+          }
+        });
+        saveLocalUsers();
+
         await syncProductsToSeedFile();
         await logSecurityAction(req, 'PRODUCT_DELETED', pId, { name: deletedProduct.name, slug: deletedProduct.slug });
         return res.json({ success: true });
@@ -5434,7 +8256,7 @@ async function startServer() {
       const catId = req.params.id;
       
       // Whitelist update payload fields to prevent mass assignment
-      const whitelistedKeys = ['name', 'slug', 'description', 'icon', 'active'];
+      const whitelistedKeys = ['name', 'slug', 'description', 'image', 'icon', 'subcategories'];
       const payload: any = {};
       for (const key of whitelistedKeys) {
         if (req.body[key] !== undefined) {
@@ -5469,6 +8291,10 @@ async function startServer() {
     try {
       const catId = req.params.id;
       if (isMongoConnected) {
+        const productsCount = await Product.countDocuments({ category: catId });
+        if (productsCount > 0) {
+          return res.status(400).json({ error: `Cannot delete category: It is currently referenced by ${productsCount} product(s). Please reassign or delete those products first.` });
+        }
         let deletedCat: any = null;
         try {
           deletedCat = await Category.findById(catId);
@@ -5480,6 +8306,10 @@ async function startServer() {
         await logSecurityAction(req, 'CATEGORY_DELETED', catId, { name: deletedCat?.name, slug: deletedCat?.slug });
         return res.json({ success: true });
       } else {
+        const productsCount = localProducts.filter((p: any) => p.category === catId).length;
+        if (productsCount > 0) {
+          return res.status(400).json({ error: `Cannot delete category: It is currently referenced by ${productsCount} product(s). Please reassign or delete those products first.` });
+        }
         const index = localCategories.findIndex((c: any) => c._id === catId);
         if (index === -1) return res.status(404).json({ error: 'Category not found' });
         const deletedCat = localCategories[index];
@@ -5498,8 +8328,8 @@ async function startServer() {
     try {
       const rawPayload = req.body;
       const whitelistedKeys = [
-        'title', 'slug', 'summary', 'content', 'image', 'category', 'tags',
-        'author', 'readTime', 'featured', 'active'
+        'title', 'slug', 'excerpt', 'content', 'featured_image', 'category', 'tags',
+        'author', 'published', 'seoTitle', 'seoDescription', 'seoKeywords'
       ];
       const payload: any = {};
       for (const key of whitelistedKeys) {
@@ -5549,8 +8379,8 @@ async function startServer() {
       
       // Whitelist update payload fields to prevent mass assignment
       const whitelistedKeys = [
-        'title', 'slug', 'summary', 'content', 'image', 'category', 'tags',
-        'author', 'readTime', 'featured', 'active'
+        'title', 'slug', 'excerpt', 'content', 'featured_image', 'category', 'tags',
+        'author', 'published', 'seoTitle', 'seoDescription', 'seoKeywords'
       ];
       const payload: any = {};
       for (const key of whitelistedKeys) {
@@ -5904,7 +8734,7 @@ async function startServer() {
           success: response.ok,
           status: response.status,
           statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
+          headers: Object.fromEntries((response.headers as any).entries()),
           body: responseBodyText
         });
       } catch (networkError: any) {
@@ -5916,7 +8746,7 @@ async function startServer() {
       }
     } catch (err: any) {
       console.error("Error testing n8n webhook:", err);
-      return res.status(500).json({ error: "Failed to test n8n webhook", details: err.message });
+      return res.status(500).json({ error: "Failed to test n8n webhook", details: "Error" });
     }
   });
 
@@ -5977,28 +8807,18 @@ async function startServer() {
           districtCounts[d] = 0;
         });
  
-        const seenKeys = new Set<string>();
-        analytics.forEach(a => {
-          let identifier = '';
-          if (a.userId && typeof a.userId === 'object') {
-            identifier = a.userId.email || a.userId._id || '';
-          } else if (a.userId && typeof a.userId === 'string') {
-            identifier = a.userId;
-          }
-          if (!identifier) {
-            identifier = `guest_${a.ipAddress || '127.0.0.1'}`;
-          }
- 
-          const dist = sanitizeDistrict(a.district || 'Chennai');
-          const comboKey = `${identifier}_${dist}`;
-
-          if (!seenKeys.has(comboKey)) {
-            seenKeys.add(comboKey);
-            if (districtCounts[dist] !== undefined) {
-              districtCounts[dist]++;
-            } else {
-              districtCounts[dist] = 1;
-            }
+        const distAggr = await Analytics.aggregate([
+          { $group: { _id: { id: { $ifNull: ["$userId", "$ipAddress"] }, dist: { $ifNull: ["$district", "Chennai"] } } } },
+          { $group: { _id: "$_id.dist", count: { $sum: 1 } } }
+        ]);
+        
+        distAggr.forEach(row => {
+          const distName = row._id.charAt(0).toUpperCase() + row._id.slice(1).toLowerCase();
+          const dist = TAMIL_NADU_DISTRICTS.includes(distName) ? distName : 'Chennai';
+          if (districtCounts[dist] !== undefined) {
+            districtCounts[dist] += row.count;
+          } else {
+            districtCounts[dist] = row.count;
           }
         });
         
@@ -6139,6 +8959,15 @@ async function startServer() {
     app.use('/assets', (_req: express.Request, res: express.Response) => {
       res.status(404).send('Asset not found');
     });
+    // Do not serve index.html for source code requests to prevent MIME type and loading issues
+    app.get(/^\/src\/.+\.(tsx|ts|jsx|js)$/, (req: express.Request, res: express.Response) => {
+      const filePath = path.join(process.cwd(), req.path);
+      res.sendFile(filePath, (err) => {
+        if (err) {
+          res.status(404).send('Source file not found');
+        }
+      });
+    });
     app.get('*', (_req: express.Request, res: express.Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
@@ -6175,6 +9004,12 @@ async function startServer() {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
     
+    // Start high-performance queue Worker
+    if (ConfigurationService.getFlag('enableDependencyInjection')) {
+      console.log("Starting background worker queue state machine...");
+      WorkerService.start();
+    }
+
     // Register Telegram Webhook if configured
     registerTelegramWebhook().catch(err => console.error("Telegram webhook registration error on startup:", err));
 
@@ -6190,8 +9025,34 @@ async function startServer() {
       cleanExpiredTrendingProducts().catch(err => console.error("Scheduled trending expiration error:", err));
     }, 12 * 60 * 60 * 1000);
 
-    process.on('SIGTERM', () => clearInterval(backgroundTask));
-    process.on('SIGINT', () => clearInterval(backgroundTask));
+    const gracefulShutdown = (signal: string) => {
+      console.log(`[Graceful Shutdown] Received ${signal}. Starting shutdown sequence...`);
+      clearInterval(backgroundTask);
+      WorkerService.stop();
+
+      server.close(async () => {
+        console.log('[Graceful Shutdown] HTTP server closed.');
+        if (isMongoConnected) {
+          try {
+            await mongoose.disconnect();
+            console.log('[Graceful Shutdown] MongoDB connection disconnected cleanly.');
+          } catch (e) {
+            console.error('[Graceful Shutdown] Failed to cleanly disconnect MongoDB:', e);
+          }
+        }
+        console.log('[Graceful Shutdown] Shutdown complete. Exiting.');
+        process.exit(0);
+      });
+
+      // Force shutdown after 10s timeout
+      setTimeout(() => {
+        console.error('[Graceful Shutdown] Forced shutdown timeout exceeded. Forcing exit.');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   });
 
   // TCP / HTTP server production-ready optimizations

@@ -5,14 +5,18 @@
   "description": "One-click Amazon product import tool for GadgetsProHub Affiliate Store.",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "tabs",
+    "notifications",
+    "alarms"
   ],
   "host_permissions": [
     "https://*.amazon.com/*",
     "https://*.amazon.in/*",
     "https://*.amazon.co.uk/*",
     "https://*.amazon.ca/*",
-    "https://*.run.app/*",
+    "https://ais-dev-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app/*",
+    "https://ais-pre-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app/*",
     "https://gadgetsprohub.onrender.com/*"
   ],
   "background": {

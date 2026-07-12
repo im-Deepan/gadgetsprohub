@@ -64,6 +64,12 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     message === '[object Object]' ||
     // Third-party AdSense / Doubleclick / Google adtrafficquality sandbox noise
     normalizedMessage.includes('adsbygoogle') ||
+    normalizedMessage.includes('adsense') ||
+    normalizedMessage.includes('google adsense') ||
+    normalizedMessage.includes('failed to load google adsense script') ||
+    normalizedMessage.includes('script error') ||
+    normalizedMessage.includes('failed to load') ||
+    normalizedMessage.includes('script load') ||
     normalizedMessage.includes('googlesyndication') ||
     normalizedMessage.includes('doubleclick') ||
     normalizedMessage.includes('adtrafficquality') ||
@@ -74,6 +80,7 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     normalizedMessage.includes('window.closed') ||
     normalizedMessage.includes('coop') ||
     normalizedStack.includes('adsbygoogle') ||
+    normalizedStack.includes('adsense') ||
     normalizedStack.includes('googlesyndication') ||
     normalizedStack.includes('doubleclick') ||
     normalizedStack.includes('adtrafficquality') ||

@@ -13,6 +13,7 @@ import { GlareHover } from '../components/GlareHover';
 
 import { getCategoryName } from '../utils/category';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
+import { parseSpecificationsString } from '../utils/specParser';
 
 interface ProductListProps {
   initialFilter?: string | null;
@@ -1117,36 +1118,49 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 </div>
 
                 {/* Tabular Specifications Map */}
-                {specModalProduct.specifications && Object.keys(specModalProduct.specifications).length > 0 ? (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300 dark:text-slate-400">Technical Specifications</h4>
-                    <div className="rounded-xl border border-slate-50 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-700">
-                      <div className="overflow-x-auto w-full">
-                        <table className="w-full text-left border-collapse text-xs min-w-[340px] sm:min-w-0">
-                          <thead className="bg-slate-50/50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-700">
-                            <tr>
-                              <th className="py-2.5 px-3 font-bold text-slate-400 uppercase text-[9px] tracking-wider">Parameter</th>
-                              <th className="py-2.5 px-3 font-bold text-slate-400 uppercase text-[9px] tracking-wider">Specification Metric</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
-                            {Object.entries(specModalProduct.specifications).map(([key, value]) => (
-                              <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/10 transition-colors">
-                                <td className="py-2 px-3 font-semibold text-slate-700 dark:text-slate-100">{key}</td>
-                                <td className="py-2 px-3 text-slate-500 dark:text-slate-300 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                {(() => {
+                  let modalSpecMap: Record<string, string> = {};
+                  if (specModalProduct.specifications) {
+                    if (specModalProduct.specifications instanceof Map) {
+                      modalSpecMap = Object.fromEntries((specModalProduct.specifications as Map<any, any>).entries());
+                    } else if (typeof specModalProduct.specifications === 'object') {
+                      modalSpecMap = { ...specModalProduct.specifications };
+                    } else if (typeof specModalProduct.specifications === 'string') {
+                      modalSpecMap = parseSpecificationsString(specModalProduct.specifications);
+                    }
+                  }
+                  return (
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300 dark:text-slate-400">Technical Specifications</h4>
+                      {modalSpecMap && Object.keys(modalSpecMap).length > 0 ? (
+                        <div className="rounded-xl border border-slate-50 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-700">
+                          <div className="overflow-x-auto w-full">
+                            <table className="w-full text-left border-collapse text-xs min-w-[340px] sm:min-w-0">
+                              <thead className="bg-slate-50/50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-700">
+                                <tr>
+                                  <th className="py-2.5 px-3 font-bold text-slate-400 uppercase text-[9px] tracking-wider">Parameter</th>
+                                  <th className="py-2.5 px-3 font-bold text-slate-400 uppercase text-[9px] tracking-wider">Specification Metric</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                                {Object.entries(modalSpecMap).map(([key, value]) => (
+                                  <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/10 transition-colors">
+                                    <td className="py-2 px-3 font-semibold text-slate-700 dark:text-slate-100">{key}</td>
+                                    <td className="py-2 px-3 text-slate-500 dark:text-slate-300 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center">
+                          <p className="text-slate-500 dark:text-slate-400 text-xs">Detailed specifications are currently unavailable for this item.</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300">Technical Specifications</h4>
-                    <p className="text-xs text-slate-300 italic">No specific technical parameter metrics registered yet for this item category. See expert overview for highlight claims.</p>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Highlight Featured advantages */}
                 {specModalProduct.features && specModalProduct.features.length > 0 && (

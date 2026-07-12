@@ -34,6 +34,38 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
   // Custom states for running color longitudinally in catchy directions
   const [colorFlowDir, setColorFlowDir] = useState<'ltr' | 'rtl' | 'diagonal' | 'vertical'>('ltr');
 
+  // Real-time Database Connection verification status
+  const [dbStatus, setDbStatus] = useState<'connected' | 'offline' | 'checking'>('checking');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const checkDb = async () => {
+      try {
+        const res = await apiFetch('/api/health-check', { signal: controller.signal, maxRetries: 0 });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.database === 'connected') {
+            setDbStatus('connected');
+            return;
+          }
+        }
+        setDbStatus('offline');
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          setDbStatus('offline');
+        }
+      }
+    };
+    checkDb().catch(() => {});
+    const interval = setInterval(() => {
+      checkDb().catch(() => {});
+    }, 15000);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, []);
+
   // Interactive search bar Refs for global power user focus shortcuts
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = React.useRef<HTMLInputElement>(null);
@@ -329,7 +361,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               </AnimatePresence>
             </button>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2.5">
               <button 
                 onClick={() => onNavigate('home')} 
                 className="flex items-center text-sm sm:text-lg font-bold tracking-tight cursor-pointer group"
@@ -338,6 +370,37 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                   gadgetsprohub
                 </span>
               </button>
+
+              {/* Real-time DB Connection status badge */}
+              {isAdmin && (
+                <div 
+                  className={`flex items-center gap-1 sm:gap-1.5 rounded-full px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider select-none border transition-all duration-300 ${
+                    dbStatus === 'connected'
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50'
+                      : dbStatus === 'offline'
+                      ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50'
+                      : 'bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800'
+                  }`}
+                  title={
+                    dbStatus === 'connected'
+                      ? 'Connected to Live MongoDB Database'
+                      : dbStatus === 'offline'
+                      ? 'Safe Offline Fallback (Using Local Seed Backup)'
+                      : 'Verifying connection status...'
+                  }
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    dbStatus === 'connected'
+                      ? 'bg-emerald-400 animate-pulse'
+                      : dbStatus === 'offline'
+                      ? 'bg-amber-400'
+                      : 'bg-slate-300'
+                  }`} />
+                  <span className="hidden xs:inline">
+                    {dbStatus === 'connected' ? 'Live DB' : dbStatus === 'offline' ? 'Local DB' : 'Syncing'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

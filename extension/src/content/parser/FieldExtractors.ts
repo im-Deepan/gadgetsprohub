@@ -63,7 +63,6 @@ export class FieldExtractors {
   public static getOriginalPriceString(): string | null {
     const selectors = [
       '.basisPrice .a-offscreen',
-      '#priceblock_ourprice',
       'span.a-text-strike'
     ];
     return this.getTextContent(selectors);
@@ -105,8 +104,12 @@ export class FieldExtractors {
       if (dynamicImages) {
         try {
           const parsed = JSON.parse(dynamicImages);
-          // Get the highest resolution image
-          images.push(...Object.keys(parsed));
+          // Get the highest resolution image (the keys are URLs, values are resolutions array)
+          const urls = Object.keys(parsed);
+          if (urls.length > 0) {
+             // sort by resolution or just take the last one, usually they are ordered
+             images.push(urls[urls.length - 1]);
+          }
         } catch (e) {
           if (imgEl.src) images.push(imgEl.src);
         }
@@ -116,7 +119,7 @@ export class FieldExtractors {
     }
 
     // Attempt 2: Image gallery thumbnail clicks (left nav)
-    if (images.length === 0) {
+    if (true) {
       const thumbs = document.querySelectorAll('.a-button-thumbnail img');
       thumbs.forEach((t) => {
         const src = (t as HTMLImageElement).src;
