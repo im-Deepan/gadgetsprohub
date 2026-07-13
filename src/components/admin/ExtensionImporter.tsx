@@ -558,7 +558,10 @@ export function ExtensionImporter() {
                     <span className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400 font-bold flex items-center justify-center shrink-0">1</span>
                     <div>
                       <h4 className="font-bold text-slate-800 dark:text-slate-200">Download & Install Ext</h4>
-                      <p className="mt-0.5">Unpack the Chrome extension source from your developer zip package and load it into <code className="bg-slate-50 dark:bg-zinc-800 px-1 rounded">chrome://extensions</code> in Developer Mode.</p>
+                      <p className="mt-0.5 mb-2">Unpack the Chrome extension source from your developer zip package and load it into <code className="bg-slate-50 dark:bg-zinc-800 px-1 rounded">chrome://extensions</code> in Developer Mode.</p>
+                      <a href="/extension.zip" download className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-bold rounded-lg text-xs transition-colors cursor-pointer">
+                        Download Extension ZIP
+                      </a>
                     </div>
                   </div>
 

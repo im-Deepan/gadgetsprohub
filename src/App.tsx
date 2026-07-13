@@ -858,6 +858,9 @@ const setupGlobalErrorTracking = () => {
   });
 
   window.addEventListener('unhandledrejection', (event) => {
+    if (!event.reason || event.reason.name === 'AbortError' || event.reason.message?.includes('abort') || event.reason.message?.includes('canceled')) {
+      return;
+    }
     captureError(event.reason, {
       context: 'Unhandled promise rejection',
     });
