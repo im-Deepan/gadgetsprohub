@@ -20,6 +20,17 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
  * Validation rules for user registration.
  */
 export const validateRegister = [
+  (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      res.status(400).json({ error: 'Invalid request body format' });
+      return;
+    }
+    if ('__proto__' in req.body || 'constructor' in req.body || 'prototype' in req.body) {
+      res.status(400).json({ error: 'Potential prototype pollution attempt detected' });
+      return;
+    }
+    next();
+  },
   body('email')
     .isEmail()
     .withMessage('Please provide a valid email address')

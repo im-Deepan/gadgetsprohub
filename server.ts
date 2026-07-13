@@ -77,7 +77,7 @@ const getSanitizedMongoUri = (uri: string | undefined): string => {
     return uri.replace(/:([^:@]+)@/, ':******@');
   }
 };
-console.log("MONGODB_URI =", getSanitizedMongoUri(process.env.MONGODB_URI));
+console.log("MONGODB connection string configured.");
 
 const escapeHTML = (str: string | undefined): string => {
   if (!str) return '';
@@ -100,12 +100,8 @@ const JWT_SECRET_KEY = getJwtSecret();
 
 const getCookieToken = (req: express.Request): string | undefined => {
   if (!req.headers.cookie) return undefined;
-  const cookies = req.headers.cookie.split(';').reduce((acc, c) => {
-    const [key, val] = c.trim().split('=');
-    if (key && val) acc[key] = val;
-    return acc;
-  }, {} as Record<string, string>);
-  return cookies['token'];
+  const match = req.headers.cookie.match(/(?:^|;\s*)token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
 };
 
 const cleanUndefined = (obj: any): any => {
@@ -141,6 +137,7 @@ const userSchema = new mongoose.Schema({
   district: { type: String, default: 'Chennai' },
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String, default: null },
+  verificationExpiresAt: { type: Date, default: null },
   pendingEmail: { type: String, default: null },
   pendingEmailToken: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
@@ -358,13 +355,8 @@ const sanitizeDistrict = (name: string): string => {
     return found;
   }
   
-  let hash = 0;
-  for (let i = 0; i < formatted.length; i++) {
-    hash = (hash << 5) - hash + formatted.charCodeAt(i);
-    hash |= 0;
-  }
-  const index = Math.abs(hash) % TAMIL_NADU_DISTRICTS.length;
-  return TAMIL_NADU_DISTRICTS[index];
+  // Strictly fall back to a validated whitelisted district
+  return "Chennai";
 };
 
 // Visitor Schema (site visitors)
@@ -494,7 +486,7 @@ const orderSchema = new mongoose.Schema({
 
 const Order = mongoose.model('Order', orderSchema);
 
-let localOrders: any[] = JSON.parse(JSON.stringify(seedOrders));
+let localOrders: any[] = structuredClone(seedOrders);
 if (fs.existsSync(LOCAL_ORDERS_FILE)) {
   try {
     localOrders = JSON.parse(fs.readFileSync(LOCAL_ORDERS_FILE, 'utf8'));
@@ -560,6 +552,15 @@ const localBlacklistedTokens = new Map<string, number>();
 const blacklistTokenLocal = (token: string) => {
   localBlacklistedTokens.set(token, Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days expiry
 };
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, expiresAt] of localBlacklistedTokens.entries()) {
+    if (now > expiresAt) {
+      localBlacklistedTokens.delete(token);
+    }
+  }
+}, 60 * 60 * 1000);
+
 const isTokenLocalBlacklisted = (token: string): boolean => {
   const expiresAt = localBlacklistedTokens.get(token);
   if (!expiresAt) return false;
@@ -823,9 +824,9 @@ const saveSocialClicks = () => {
 
 // ========== ROBUST IN-MEMORY STORE DATASETS ==========
 
-let localCategories = JSON.parse(JSON.stringify(seedCategories));
+let localCategories: any[] = structuredClone(seedCategories);
 
-let localProducts = JSON.parse(JSON.stringify(seedProducts));
+let localProducts: any[] = structuredClone(seedProducts);
 if (fs.existsSync(LOCAL_PRODUCTS_FILE)) {
   try {
     localProducts = JSON.parse(fs.readFileSync(LOCAL_PRODUCTS_FILE, 'utf8'));
@@ -834,9 +835,9 @@ if (fs.existsSync(LOCAL_PRODUCTS_FILE)) {
   }
 }
 
-let localBlogs = JSON.parse(JSON.stringify(seedBlogs));
+let localBlogs: any[] = structuredClone(seedBlogs);
 
-let localUsers: LocalUserType[] = JSON.parse(JSON.stringify(seedUsers));
+let localUsers: LocalUserType[] = structuredClone(seedUsers);
 if (fs.existsSync(LOCAL_USERS_FILE)) {
   try {
     localUsers = JSON.parse(fs.readFileSync(LOCAL_USERS_FILE, 'utf8'));
@@ -1084,48 +1085,51 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
 };
 
 const adminOnly = (req: express.Request, res: express.Response, next: express.NextFunction): any => {
-  authenticate(req, res, () => {
-    const userId = (req as any).userId;
-    
-    if (isMongoConnected) {
-      User.findById(userId).then(user => {
+  authenticate(req, res, async () => {
+    try {
+      const userId = (req as any).userId;
+      
+      if (isMongoConnected) {
+        const user = await User.findById(userId);
         if (!user) return res.status(403).json({ error: 'Administrative privileges required' });
         
         (req as any).userEmail = user.email;
         if (isAdminEmail(user.email)) {
           if (user.role !== 'admin') {
+            await User.updateOne({ _id: user._id }, { $set: { role: 'admin' } });
             user.role = 'admin';
-            user.save().catch(e => console.warn("Failed automatic database role promotion:", e));
           }
           return next();
         } else {
           if (user.role === 'admin') {
+            await User.updateOne({ _id: user._id }, { $set: { role: 'user' } });
             user.role = 'user';
-            user.save().catch(e => console.warn("Failed automatic database role demotion:", e));
           }
         }
         
         return res.status(403).json({ error: 'Administrative privileges required' });
-      }).catch(err => {
-        res.status(500).json({ error: err.message });
-      });
-    } else {
-      const u = localUsers.find(user => user._id === userId);
-      if (!u) return res.status(403).json({ error: 'Administrative privileges required' });
-      
-      (req as any).userEmail = u.email;
-      if (isAdminEmail(u.email)) {
-        if (u.role !== 'admin') {
-          u.role = 'admin';
-        }
-        return next();
       } else {
-        if (u.role === 'admin') {
-          u.role = 'user';
+        const u = localUsers.find(user => user._id === userId);
+        if (!u) return res.status(403).json({ error: 'Administrative privileges required' });
+        
+        (req as any).userEmail = u.email;
+        if (isAdminEmail(u.email)) {
+          if (u.role !== 'admin') {
+            u.role = 'admin';
+            saveLocalUsers();
+          }
+          return next();
+        } else {
+          if (u.role === 'admin') {
+            u.role = 'user';
+            saveLocalUsers();
+          }
         }
+        
+        return res.status(403).json({ error: 'Administrative privileges required' });
       }
-      
-      return res.status(403).json({ error: 'Administrative privileges required' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 };
@@ -1269,139 +1273,225 @@ function generateUniqueProduct(index: number, sundayStr: string): any {
   };
 }
 
-// Helper function to dynamically sync the current products list to seeddata.ts
-async function syncProductsToSeedFile() {
-  try {
-    let productsToSave: any[] = [];
-    if (isMongoConnected) {
-      productsToSave = await Product.find().lean();
-    } else {
-      productsToSave = localProducts;
+// File synchronization queue to serialize writes to seeddata.ts and prevent concurrency-related corruption
+const fileSyncQueue = {
+  queue: [] as (() => Promise<void>)[],
+  running: false,
+  add(task: () => Promise<void>) {
+    this.queue.push(task);
+    this.runNext();
+  },
+  async runNext() {
+    if (this.running) return;
+    const nextTask = this.queue.shift();
+    if (!nextTask) return;
+    this.running = true;
+    try {
+      await nextTask();
+    } catch (e: any) {
+      console.error('FileSyncQueue execution error:', e.message);
+    } finally {
+      this.running = false;
+      this.runNext();
     }
+  }
+};
 
-    const filePath = path.join(process.cwd(), 'seeddata.ts');
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const startKeyword = 'export const seedProducts = ';
-      const endKeyword = 'export const seedBlogs = ';
+async function syncProductsToSeedFile(): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    fileSyncQueue.add(async () => {
+      try {
+        let productsToSave: any[] = [];
+        if (isMongoConnected) {
+          productsToSave = await Product.find().lean();
+        } else {
+          productsToSave = localProducts;
+        }
 
-      const startIndex = content.indexOf(startKeyword);
-      const endIndex = content.indexOf(endKeyword);
+        const filePath = path.join(process.cwd(), 'seeddata.ts');
+        if (!fs.existsSync(filePath)) {
+          console.warn('seeddata.ts file does not exist at expected path:', filePath);
+          resolve();
+          return;
+        }
+        const content = fs.readFileSync(filePath, 'utf8');
+        const startKeyword = 'export const seedProducts = ';
+        const endKeyword = 'export const seedBlogs = ';
 
-      if (startIndex !== -1 && endIndex !== -1) {
+        const startIndex = content.indexOf(startKeyword);
+        const endIndex = content.indexOf(endKeyword);
+
+        if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
+          throw new Error('Could not find valid seedProducts or seedBlogs keywords in seeddata.ts');
+        }
+
         const before = content.substring(0, startIndex);
         const after = content.substring(endIndex);
-        // Standardize JSON representation of products
         const productsJson = JSON.stringify(productsToSave, null, 2);
+
+        // Content validation
+        const parsedCheck = JSON.parse(productsJson);
+        if (!Array.isArray(parsedCheck)) {
+          throw new Error('Generated products JSON is not a valid array');
+        }
 
         const newContent = before + startKeyword + productsJson + ';\n\n' + after;
         fs.writeFileSync(filePath, newContent, 'utf8');
         console.log(`Successfully synchronized ${productsToSave.length} products to seeddata.ts`);
-      } else {
-        console.warn('Could not find seedProducts or seedBlogs keywords in seeddata.ts');
+        resolve();
+      } catch (err: any) {
+        console.error('Error in syncProductsToSeedFile:', err.message);
+        reject(err);
       }
-    } else {
-      console.warn('seeddata.ts file does not exist at expected path:', filePath);
-    }
-  } catch (err: any) {
-    console.error('Error in syncProductsToSeedFile:', err.message);
-  }
+    });
+  });
 }
 
-async function syncCategoriesToSeedFile() {
-  try {
-    let categoriesToSave: any[] = [];
-    if (isMongoConnected) {
-      categoriesToSave = await Category.find().lean();
-    } else {
-      categoriesToSave = localCategories;
-    }
+async function syncCategoriesToSeedFile(): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    fileSyncQueue.add(async () => {
+      try {
+        let categoriesToSave: any[] = [];
+        if (isMongoConnected) {
+          categoriesToSave = await Category.find().lean();
+        } else {
+          categoriesToSave = localCategories;
+        }
 
-    const filePath = path.join(process.cwd(), 'seeddata.ts');
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const startKeyword = 'export const seedCategories = ';
-      const endKeyword = 'export const seedProducts = ';
+        const filePath = path.join(process.cwd(), 'seeddata.ts');
+        if (!fs.existsSync(filePath)) {
+          console.warn('seeddata.ts file does not exist at expected path:', filePath);
+          resolve();
+          return;
+        }
+        const content = fs.readFileSync(filePath, 'utf8');
+        const startKeyword = 'export const seedCategories = ';
+        const endKeyword = 'export const seedProducts = ';
 
-      const startIndex = content.indexOf(startKeyword);
-      const endIndex = content.indexOf(endKeyword);
+        const startIndex = content.indexOf(startKeyword);
+        const endIndex = content.indexOf(endKeyword);
 
-      if (startIndex !== -1 && endIndex !== -1) {
+        if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
+          throw new Error('Could not find valid seedCategories or seedProducts keywords in seeddata.ts');
+        }
+
         const before = content.substring(0, startIndex);
         const after = content.substring(endIndex);
         const categoriesJson = JSON.stringify(categoriesToSave, null, 2);
 
+        // Content validation
+        const parsedCheck = JSON.parse(categoriesJson);
+        if (!Array.isArray(parsedCheck)) {
+          throw new Error('Generated categories JSON is not a valid array');
+        }
+
         const newContent = before + startKeyword + categoriesJson + ';\n\n' + after;
         fs.writeFileSync(filePath, newContent, 'utf8');
         console.log(`Successfully synchronized ${categoriesToSave.length} categories to seeddata.ts`);
+        resolve();
+      } catch (err: any) {
+        console.error('Error in syncCategoriesToSeedFile:', err.message);
+        reject(err);
       }
-    }
-  } catch (err: any) {
-    console.error('Error in syncCategoriesToSeedFile:', err.message);
-  }
+    });
+  });
 }
 
-async function syncBlogsToSeedFile() {
-  try {
-    let blogsToSave: any[] = [];
-    if (isMongoConnected) {
-      blogsToSave = await Blog.find().lean();
-    } else {
-      blogsToSave = localBlogs;
-    }
+async function syncBlogsToSeedFile(): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    fileSyncQueue.add(async () => {
+      try {
+        let blogsToSave: any[] = [];
+        if (isMongoConnected) {
+          blogsToSave = await Blog.find().lean();
+        } else {
+          blogsToSave = localBlogs;
+        }
 
-    const filePath = path.join(process.cwd(), 'seeddata.ts');
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const startKeyword = 'export const seedBlogs = ';
-      const endKeyword = 'export const seedUsers';
+        const filePath = path.join(process.cwd(), 'seeddata.ts');
+        if (!fs.existsSync(filePath)) {
+          console.warn('seeddata.ts file does not exist at expected path:', filePath);
+          resolve();
+          return;
+        }
+        const content = fs.readFileSync(filePath, 'utf8');
+        const startKeyword = 'export const seedBlogs = ';
+        const endKeyword = 'export const seedUsers';
 
-      const startIndex = content.indexOf(startKeyword);
-      const endIndex = content.indexOf(endKeyword);
+        const startIndex = content.indexOf(startKeyword);
+        const endIndex = content.indexOf(endKeyword);
 
-      if (startIndex !== -1 && endIndex !== -1) {
+        if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
+          throw new Error('Could not find valid seedBlogs or seedUsers keywords in seeddata.ts');
+        }
+
         const before = content.substring(0, startIndex);
         const after = content.substring(endIndex);
         const blogsJson = JSON.stringify(blogsToSave, null, 2);
 
+        // Content validation
+        const parsedCheck = JSON.parse(blogsJson);
+        if (!Array.isArray(parsedCheck)) {
+          throw new Error('Generated blogs JSON is not a valid array');
+        }
+
         const newContent = before + startKeyword + blogsJson + ';\n\n' + after;
         fs.writeFileSync(filePath, newContent, 'utf8');
         console.log(`Successfully synchronized ${blogsToSave.length} blogs to seeddata.ts`);
+        resolve();
+      } catch (err: any) {
+        console.error('Error in syncBlogsToSeedFile:', err.message);
+        reject(err);
       }
-    }
-  } catch (err: any) {
-    console.error('Error in syncBlogsToSeedFile:', err.message);
-  }
+    });
+  });
 }
 
-async function syncMessagesToSeedFile() {
-  try {
-    let messagesToSave: any[] = [];
-    if (isMongoConnected) {
-      messagesToSave = await Message.find().lean();
-    } else {
-      messagesToSave = localMessages;
-    }
+async function syncMessagesToSeedFile(): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    fileSyncQueue.add(async () => {
+      try {
+        let messagesToSave: any[] = [];
+        if (isMongoConnected) {
+          messagesToSave = await Message.find().lean();
+        } else {
+          messagesToSave = localMessages;
+        }
 
-    const filePath = path.join(process.cwd(), 'seeddata.ts');
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const startKeyword = 'export const seedMessages = ';
+        const filePath = path.join(process.cwd(), 'seeddata.ts');
+        if (!fs.existsSync(filePath)) {
+          console.warn('seeddata.ts file does not exist at expected path:', filePath);
+          resolve();
+          return;
+        }
+        const content = fs.readFileSync(filePath, 'utf8');
+        const startKeyword = 'export const seedMessages = ';
 
-      const startIndex = content.indexOf(startKeyword);
+        const startIndex = content.indexOf(startKeyword);
 
-      if (startIndex !== -1) {
+        if (startIndex === -1) {
+          throw new Error('Could not find valid seedMessages keyword in seeddata.ts');
+        }
+
         const before = content.substring(0, startIndex);
         const messagesJson = JSON.stringify(messagesToSave, null, 2);
+
+        // Content validation
+        const parsedCheck = JSON.parse(messagesJson);
+        if (!Array.isArray(parsedCheck)) {
+          throw new Error('Generated messages JSON is not a valid array');
+        }
 
         const newContent = before + startKeyword + messagesJson + ';\n';
         fs.writeFileSync(filePath, newContent, 'utf8');
         console.log(`Successfully synchronized ${messagesToSave.length} messages to seeddata.ts`);
+        resolve();
+      } catch (err: any) {
+        console.error('Error in syncMessagesToSeedFile:', err.message);
+        reject(err);
       }
-    }
-  } catch (err: any) {
-    console.error('Error in syncMessagesToSeedFile:', err.message);
-  }
+    });
+  });
 }
 
 async function resolveUniqueSlug(
@@ -1409,7 +1499,11 @@ async function resolveUniqueSlug(
   type: 'product' | 'blog',
   excludeId?: string
 ): Promise<{ exists: boolean; finalSlug: string }> {
-  let slug = baseSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  const safeBaseSlug = String(baseSlug || '').toLowerCase();
+  let slug = safeBaseSlug.replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  if (slug.length > 100) {
+    slug = slug.substring(0, 100);
+  }
   if (!slug) {
     slug = 'item-' + Math.random().toString(36).substring(2, 6);
   }
@@ -1472,16 +1566,32 @@ let mailTransport: any = null;
 
 function getMailTransport() {
   if (!mailTransport) {
-    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const port = Number(process.env.SMTP_PORT) || 587;
+    const host = process.env.SMTP_HOST;
+    const port = process.env.SMTP_PORT;
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
 
-    if (user && pass) {
+    const hasAnySmtpConfig = host || port || user || pass;
+
+    if (hasAnySmtpConfig) {
+      if (!host || !port || !user || !pass) {
+        console.warn("⚠️ SMTP Mail configuration is incomplete. Missing fields: " + 
+          [
+            !host && "SMTP_HOST",
+            !port && "SMTP_PORT",
+            !user && "SMTP_USER",
+            !pass && "SMTP_PASS"
+          ].filter(Boolean).join(", ") + 
+          ". SMTP emails will be logged and simulated."
+        );
+        return null;
+      }
+
+      const numericPort = Number(port);
       mailTransport = nodemailer.createTransport({
         host,
-        port,
-        secure: port === 465,
+        port: numericPort,
+        secure: numericPort === 465,
         auth: { user, pass },
         // Production SMTP / TCP connection configurations
         pool: true,
@@ -1493,7 +1603,7 @@ function getMailTransport() {
       });
       console.log("Nodemailer SMTP transport configured successfully.");
     } else {
-      console.log("SMTP user/pass missing, SMTP emails will be logged and simulated.");
+      console.log("SMTP mail server is not configured. SMTP emails will be logged and simulated.");
     }
   }
   return mailTransport;
@@ -1618,8 +1728,9 @@ async function triggerProductAddedEmailNotifications(product: any) {
   }
 }
 
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function escapeRegExp(value: any) {
+  const str = typeof value === 'string' ? value : String(value || '');
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // Automatically demote and clean expired trending products that are older than 7 days
@@ -1665,6 +1776,21 @@ async function cleanExpiredTrendingProducts() {
     });
     if (modified) {
       syncProductsToSeedFile().catch(e => console.warn(e));
+    }
+  }
+}
+
+// Manually purge expired blacklisted tokens from database as a safety maintenance routine
+async function cleanExpiredBlacklistedTokens() {
+  if (isMongoConnected) {
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const result = await BlacklistedToken.deleteMany({ createdAt: { $lt: thirtyDaysAgo } });
+      if (result.deletedCount > 0) {
+        console.log(`[Maintenance] Purged ${result.deletedCount} expired blacklisted tokens from database.`);
+      }
+    } catch (err: any) {
+      console.error('[Maintenance Error] Failed to purge blacklisted tokens:', err.message);
     }
   }
 }
@@ -2354,7 +2480,7 @@ async function startServer() {
   });
 
   // Global Error Tracking Endpoint
-  app.post('/api/track-error', express.json(), (req: express.Request, res: express.Response) => {
+  app.post('/api/track-error', express.json({ limit: '100kb' }), (req: express.Request, res: express.Response) => {
     const errorDetails = req.body;
     console.error('[CentralizedTracker Server-Side]', JSON.stringify(errorDetails, null, 2));
     res.status(200).json({ success: true });
@@ -2473,7 +2599,7 @@ async function startServer() {
   });
 
   // Auth Routes
-  app.post('/api/auth/register', validateRegister, async (req: express.Request, res: express.Response): Promise<any> => {
+  app.post('/api/auth/register', authLimiter, validateRegister, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { email, password, name } = req.body;
       const validationResult = await validateAndCheckRealEmail(email);
@@ -2504,7 +2630,8 @@ async function startServer() {
           name, 
           role: initialRole,
           isVerified: false,
-          verificationToken
+          verificationToken,
+          verificationExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
         });
         try {
           await user.save();
@@ -2527,7 +2654,8 @@ async function startServer() {
           district: 'Chennai',
           createdAt: new Date(),
           isVerified: false,
-          verificationToken
+          verificationToken,
+          verificationExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
         };
         localUsers.push(newUser);
         saveLocalUsers();
@@ -2646,7 +2774,7 @@ async function startServer() {
 
       if (isMongoConnected) {
         const user = await User.findOne({ verificationToken: token });
-        if (!user) {
+        if (!user || (user.verificationExpiresAt && user.verificationExpiresAt < new Date())) {
           return res.status(400).send(`
             <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
               <h2 style="color: #ef4444;">Verification Link Expired</h2>
@@ -2664,7 +2792,7 @@ async function startServer() {
         return res.redirect(`/?authCode=${authCode}`);
       } else {
         const user = localUsers.find(u => u.verificationToken === token);
-        if (!user) {
+        if (!user || ((user as any).verificationExpiresAt && new Date((user as any).verificationExpiresAt) < new Date())) {
           return res.status(400).send(`
             <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
               <h2 style="color: #ef4444;">Verification Link Expired</h2>
@@ -2755,7 +2883,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/auth/login', validateLogin, async (req: express.Request, res: express.Response): Promise<any> => {
+  app.post('/api/auth/login', loginLimiter, validateLogin, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { email, password } = req.body;
       const storageEmail = getStorageEmail(email);
@@ -2787,6 +2915,7 @@ async function startServer() {
         if (user.isVerified === false) {
           if (!user.verificationToken) {
             user.verificationToken = crypto.randomBytes(32).toString('hex');
+            user.verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
             await user.save().catch(e => console.warn(e));
           }
           const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
@@ -2866,6 +2995,7 @@ async function startServer() {
         if (user.isVerified === false) {
           if (!user.verificationToken) {
             user.verificationToken = crypto.randomBytes(32).toString('hex');
+            (user as any).verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
             saveLocalUsers();
           }
           const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
@@ -3001,6 +3131,7 @@ async function startServer() {
   // 1. Device / Session Management Endpoints
   app.get('/api/auth/sessions', authenticate, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, sessions: [], warning: 'Database disconnected.' });
       const sessions = await UserSession.find({ userId: (req as any).userId });
       res.json({ success: true, sessions });
     } catch (error: any) {
@@ -3010,6 +3141,7 @@ async function startServer() {
 
   app.post('/api/auth/sessions/revoke', authenticate, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database disconnected.' });
       const { sessionId } = req.body;
       await UserSession.updateOne(
         { _id: sessionId, userId: (req as any).userId },
@@ -3024,6 +3156,7 @@ async function startServer() {
   // 2. Personal Access Tokens (PATs) Endpoints
   app.get('/api/auth/pats', authenticate, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, pats: [], warning: 'Database disconnected.' });
       const pats = await PersonalAccessToken.find({ userId: (req as any).userId, revoked: false });
       res.json({ success: true, pats });
     } catch (error: any) {
@@ -3567,9 +3700,11 @@ async function startServer() {
     }
   });
 
+  const n8nWebhookInFlight = new Set<string>();
+
   app.get('/api/products/:slug', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const districtsList = ['Chennai', 'Madurai', 'Tirunelveli', 'Virudhunagar'];
+      const districtsList = TAMIL_NADU_DISTRICTS;
       const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
 
       if (isMongoConnected) {
@@ -3613,8 +3748,18 @@ async function startServer() {
         const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
         const now = Date.now();
         const lastCheck = product.lastPriceCheck ? new Date(product.lastPriceCheck).getTime() : 0;
+        const prodIdStr = String(product._id);
         
-        if (now - lastCheck > TWENTY_FOUR_HOURS && process.env.N8N_REALTIME_WEBHOOK_URL) {
+        if (now - lastCheck > TWENTY_FOUR_HOURS && process.env.N8N_REALTIME_WEBHOOK_URL && !n8nWebhookInFlight.has(prodIdStr)) {
+          n8nWebhookInFlight.add(prodIdStr);
+          // Optimistically update lastPriceCheck to prevent race condition deduplication
+          product.lastPriceCheck = new Date();
+          const savePromise = product.save 
+            ? product.save() 
+            : Product.updateOne({ _id: product._id }, { $set: { lastPriceCheck: new Date() } });
+          
+          savePromise.catch(e => console.warn('Optimistic price check save failed:', e));
+          
           // Fire and forget non-blocking update
           fetch(process.env.N8N_REALTIME_WEBHOOK_URL, {
             method: 'POST',
@@ -3640,6 +3785,8 @@ async function startServer() {
             }
           }).catch((error) => {
             console.warn('Failed to fetch real-time price from n8n webhook:', error instanceof Error ? error.message : String(error));
+          }).finally(() => {
+            n8nWebhookInFlight.delete(prodIdStr);
           });
         }
         // ---------------------------------------
@@ -3690,7 +3837,7 @@ async function startServer() {
 
   app.post('/api/products/click/:slug', validateProductClick, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const districtsList = ['Chennai', 'Madurai', 'Tirunelveli', 'Virudhunagar'];
+      const districtsList = TAMIL_NADU_DISTRICTS;
       const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
       const finalDistrict = sanitizeDistrict(req.body.district || randDistrict);
 
@@ -3748,7 +3895,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/products/pick-left-click', express.json(), async (req: express.Request, res: express.Response): Promise<any> => {
+  app.post('/api/products/pick-left-click', express.json({ limit: '100kb' }), async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { productId, email, categoryName } = req.body;
       if (!email) {
@@ -4097,13 +4244,51 @@ async function startServer() {
     }
   });
 
+  const getRealTrackingDetails = async (carrier: string, trackingNumber: string): Promise<any> => {
+    const shippoKey = process.env.SHIPPO_API_KEY;
+    if (!shippoKey) return null;
+    try {
+      // Normalize carrier name for Shippo endpoint
+      const normalizedCarrier = (carrier || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const response = await fetch(`https://api.goshippo.com/v1/tracks/${normalizedCarrier}/${trackingNumber}`, {
+        headers: {
+          'Authorization': `ShippoToken ${shippoKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.warn('Failed to fetch tracking data from Shippo:', err);
+    }
+    return null;
+  };
+
   // Order Management APIs
   app.get('/api/user/orders', authenticate, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const uId = (req as any).userId;
       if (isMongoConnected) {
-        const orders = await Order.find({ userId: uId }).populate('items.product').sort({ createdAt: -1 });
-        return res.json(orders);
+        const orders = await Order.find({ userId: uId }).populate('items.product').sort({ createdAt: -1 }).lean();
+        
+        // Enrich tracking with real-time Shippo provider data if API key is present
+        const enrichedOrders = await Promise.all(orders.map(async (ord: any) => {
+          if (ord.trackingNumber && process.env.SHIPPO_API_KEY) {
+            const trackingInfo = await getRealTrackingDetails(ord.carrier, ord.trackingNumber);
+            if (trackingInfo) {
+              return {
+                ...ord,
+                status: trackingInfo.tracking_status?.status || ord.status,
+                trackingHistory: trackingInfo.tracking_history || [],
+                eta: trackingInfo.eta || ord.estimatedDelivery
+              };
+            }
+          }
+          return ord;
+        }));
+        
+        return res.json(enrichedOrders);
       } else {
         // In-Memory Fallback
         let orders = localOrders.filter(o => o.userId === uId);
@@ -4115,7 +4300,24 @@ async function startServer() {
           });
           return { ...ord, items: populatedItems };
         });
-        return res.json(orders);
+
+        // Enrich fallback tracking with Shippo if key present
+        const enrichedOrders = await Promise.all(orders.map(async (ord: any) => {
+          if (ord.trackingNumber && process.env.SHIPPO_API_KEY) {
+            const trackingInfo = await getRealTrackingDetails(ord.carrier, ord.trackingNumber);
+            if (trackingInfo) {
+              return {
+                ...ord,
+                status: trackingInfo.tracking_status?.status || ord.status,
+                trackingHistory: trackingInfo.tracking_history || [],
+                eta: trackingInfo.eta || ord.estimatedDelivery
+              };
+            }
+          }
+          return ord;
+        }));
+
+        return res.json(enrichedOrders);
       }
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -4127,8 +4329,15 @@ async function startServer() {
       const uId = (req as any).userId;
       const { items } = req.body;
 
-      const trackingNumber = 'TRK' + Math.floor(100000000 + Math.random() * 900000000);
-      const carrier = ['FedEx Ground', 'UPS Next Day Air', 'DHL Express', 'USPS Priority Mail'][Math.floor(Math.random() * 4)];
+      let trackingNumber = 'TRK' + crypto.randomBytes(6).toString('hex').toUpperCase();
+      let carrier = ['FedEx Ground', 'UPS Next Day Air', 'DHL Express', 'USPS Priority Mail'][Math.floor(Math.random() * 4)];
+      
+      // If Shippo key is provided, register sandbox transit code
+      if (process.env.SHIPPO_API_KEY) {
+        trackingNumber = 'SHIPPO_TRANSIT';
+        carrier = 'shippo';
+      }
+
       const estDelivery = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
       if (isMongoConnected) {
@@ -5613,13 +5822,9 @@ async function startServer() {
     const secret = process.env.N8N_SECRET_TOKEN || '';
     let isMatch = false;
     if (token && secret) {
-      const tokenBuf = Buffer.from(token);
-      const secretBuf = Buffer.from(secret);
-      if (tokenBuf.length === secretBuf.length) {
-        isMatch = crypto.timingSafeEqual(tokenBuf, secretBuf);
-      } else {
-        crypto.timingSafeEqual(tokenBuf, tokenBuf);
-      }
+      const tokenHash = crypto.createHash('sha256').update(token).digest();
+      const secretHash = crypto.createHash('sha256').update(secret).digest();
+      isMatch = crypto.timingSafeEqual(tokenHash, secretHash);
     }
     if (!token || !secret || !isMatch) {
       return res.status(403).json({ error: 'Forbidden: Invalid or missing N8N Secret Token' });
@@ -5995,7 +6200,18 @@ async function startServer() {
   
   // ================= MEDIA MANAGEMENT API (PHASE 7) ================= //
 
-  const upload = multer({ dest: 'public/uploads/temp/' });
+  const upload = multer({ 
+    dest: 'public/uploads/temp/',
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
+    fileFilter: (req, file, cb) => {
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only JPEG, PNG, WEBP, and GIF are allowed.'));
+      }
+    }
+  });
 
   app.get('/api/admin/media', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
@@ -7443,7 +7659,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
   });
 
   // Dedicated Product Import API endpoint
-  app.post('/api/admin/products/import', adminOnly, importLimiter, express.json(), async (req: express.Request, res: express.Response): Promise<any> => {
+  app.post('/api/admin/products/import', adminOnly, importLimiter, express.json({ limit: '5mb' }), async (req: express.Request, res: express.Response): Promise<any> => {
     const startTime = Date.now();
     
     // 1. Resolve / Generate Request & Correlation ID
@@ -7636,7 +7852,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       // const uploadedToCDN = await Promise.all(uniqueImages.map(url => cdn.upload(url)));
 
       if (normalizedAsin) {
-        let duplicateProduct = null;
+        let duplicateProduct: any = null;
         if (isMongoConnected) {
           duplicateProduct = await Product.findOne({ asin: normalizedAsin });
         } else {
@@ -7815,7 +8031,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
               };
             }
             await syncProductsToSeedFile();
-            await logSecurityAction(req, 'PRODUCT_IMPORTED_UPDATE', duplicateProduct._id, { name: updatedPayload.name, asin: normalizedAsin, strategy });
+            await logSecurityAction(req, 'PRODUCT_IMPORTED_UPDATE', duplicateProduct._id.toString(), { name: updatedPayload.name, asin: normalizedAsin, strategy });
 
             const duration = Date.now() - startTime;
             importerMetrics.successfulImports++;
@@ -7825,7 +8041,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             await logImportHistory({
               productName: updatedPayload.name,
               asin: normalizedAsin,
-              productId: duplicateProduct._id,
+              productId: duplicateProduct._id.toString(),
               adminEmail,
               adminId: adminId.toString(),
               result: 'success',
@@ -7881,13 +8097,15 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             categoryId = cat._id.toString();
           }
         } else {
-          let cat = localCategories.find((c: any) => c.name.toLowerCase() === resolvedCategoryInput.toLowerCase() || c._id === resolvedCategoryInput);
+          let cat: any = localCategories.find((c: any) => c.name.toLowerCase() === resolvedCategoryInput.toLowerCase() || c._id === resolvedCategoryInput);
           if (!cat) {
             cat = {
               _id: "cat_" + Math.random().toString(36).substring(2, 9),
               name: resolvedCategoryInput,
               slug: resolvedCategoryInput.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
               description: `Auto-created category for imported products: ${resolvedCategoryInput}`,
+              image: '',
+              icon: 'Smartphone',
               subcategories: [],
               createdAt: new Date()
             };
@@ -8133,8 +8351,11 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
 
       if (isMongoConnected) {
         const product = await Product.findByIdAndUpdate(pId, { $set: payload }, { new: true });
+        if (!product) {
+          return res.status(404).json({ error: 'Product not found' });
+        }
         await syncProductsToSeedFile();
-        await logSecurityAction(req, 'PRODUCT_UPDATED', pId, { name: product?.name, slug: product?.slug });
+        await logSecurityAction(req, 'PRODUCT_UPDATED', pId, { name: product.name, slug: product.slug });
         return res.json(product);
       } else {
         const index = localProducts.findIndex((p: any) => p._id === pId);
@@ -8160,27 +8381,31 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     try {
       const pId = req.params.id;
       if (isMongoConnected) {
-        let deletedProduct: any = null;
-        try {
-          deletedProduct = await Product.findById(pId);
-        } catch (e) {
-          captureError(e, { context: 'Product delete lookup warning' });
+        if (!mongoose.Types.ObjectId.isValid(pId)) {
+          return res.status(400).json({ error: 'Invalid Product ID format' });
         }
-        if (mongoose.Types.ObjectId.isValid(pId)) {
-          await Product.findByIdAndDelete(pId);
-          // Clean up comparison products referencing this deleted product
-          await Product.updateMany(
-            { comparisonProducts: pId },
-            { $pull: { comparisonProducts: pId } }
-          );
-          // Clean up user wishlists referencing this deleted product
-          await User.updateMany(
-            { wishlist: pId },
-            { $pull: { wishlist: pId } }
-          );
-        } else {
-          await Product.deleteOne({ _id: pId });
+        const deletedProduct = await Product.findById(pId);
+        if (!deletedProduct) {
+          return res.status(404).json({ error: 'Product not found' });
         }
+
+        // Enforce referential integrity
+        const orderCount = await Order.countDocuments({ 'items.product': pId });
+        if (orderCount > 0) {
+          return res.status(400).json({ error: 'Cannot delete product referenced in orders.' });
+        }
+
+        // Cascade delete Analytics, Visitors views, and Health diagnostics referencing this product
+        await Analytics.deleteMany({ productId: pId });
+        await Visitor.deleteMany({ productId: pId });
+        await ProductHealth.deleteMany({ productId: pId });
+        
+        await Product.findByIdAndDelete(pId);
+        await Product.updateMany({ comparisonProducts: pId }, { $pull: { comparisonProducts: pId } });
+        await User.updateMany(
+          { wishlist: pId },
+          { $pull: { wishlist: pId } }
+        );
         await syncProductsToSeedFile();
         await logSecurityAction(req, 'PRODUCT_DELETED', pId, { name: deletedProduct?.name, slug: deletedProduct?.slug });
         return res.json({ success: true });
@@ -8189,6 +8414,11 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         if (index === -1) return res.status(404).json({ error: 'Product not found' });
         const deletedProduct = localProducts[index];
         localProducts.splice(index, 1);
+        
+        // Cascade in local storage fallback
+        localAnalytics = localAnalytics.filter((a: any) => String(a.productId) !== String(pId));
+        localVisitors = localVisitors.filter((v: any) => String(v.productId) !== String(pId));
+        localProductHealth = localProductHealth.filter((h: any) => String(h.productId) !== String(pId));
         
         // Clean up comparison products in local storage fallback
         localProducts.forEach((p: any) => {
@@ -8291,27 +8521,30 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     try {
       const catId = req.params.id;
       if (isMongoConnected) {
+        if (!mongoose.Types.ObjectId.isValid(catId)) {
+          return res.status(400).json({ error: 'Invalid Category ID format' });
+        }
+        const deletedCat = await Category.findById(catId);
+        if (!deletedCat) {
+          return res.status(404).json({ error: 'Category not found' });
+        }
+
         const productsCount = await Product.countDocuments({ category: catId });
         if (productsCount > 0) {
           return res.status(400).json({ error: `Cannot delete category: It is currently referenced by ${productsCount} product(s). Please reassign or delete those products first.` });
         }
-        let deletedCat: any = null;
-        try {
-          deletedCat = await Category.findById(catId);
-        } catch (e) {
-          captureError(e, { context: 'Category delete lookup warning' });
-        }
+
         await Category.findByIdAndDelete(catId);
         await syncCategoriesToSeedFile();
         await logSecurityAction(req, 'CATEGORY_DELETED', catId, { name: deletedCat?.name, slug: deletedCat?.slug });
         return res.json({ success: true });
       } else {
+        const index = localCategories.findIndex((c: any) => c._id === catId);
+        if (index === -1) return res.status(404).json({ error: 'Category not found' });
         const productsCount = localProducts.filter((p: any) => p.category === catId).length;
         if (productsCount > 0) {
           return res.status(400).json({ error: `Cannot delete category: It is currently referenced by ${productsCount} product(s). Please reassign or delete those products first.` });
         }
-        const index = localCategories.findIndex((c: any) => c._id === catId);
-        if (index === -1) return res.status(404).json({ error: 'Category not found' });
         const deletedCat = localCategories[index];
         localCategories.splice(index, 1);
         await syncCategoriesToSeedFile();
@@ -8430,12 +8663,14 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     try {
       const bId = req.params.id;
       if (isMongoConnected) {
-        let deletedBlog: any = null;
-        try {
-          deletedBlog = await Blog.findById(bId);
-        } catch (e) {
-          captureError(e, { context: 'Blog delete lookup warning' });
+        if (!mongoose.Types.ObjectId.isValid(bId)) {
+          return res.status(400).json({ error: 'Invalid Blog ID format' });
         }
+        const deletedBlog = await Blog.findById(bId);
+        if (!deletedBlog) {
+          return res.status(404).json({ error: 'Blog not found' });
+        }
+
         await Blog.findByIdAndDelete(bId);
         await syncBlogsToSeedFile();
         await logSecurityAction(req, 'BLOG_DELETED', bId, { title: deletedBlog?.title, slug: deletedBlog?.slug });
@@ -8514,7 +8749,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       const { id } = req.params;
       const { role } = req.body;
       
-      if (role !== 'user' && role !== 'admin') {
+      if (typeof role !== 'string' || (role !== 'user' && role !== 'admin')) {
         return res.status(400).json({ error: 'Invalid role specified' });
       }
 
@@ -8933,9 +9168,18 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     }
   });
 
+  const adsTxtLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 requests per 15 minutes
+    message: 'Too many requests, please try again later.'
+  });
+
   // Google AdSense ads.txt crawler verification endpoint
-  app.get('/ads.txt', (_req: express.Request, res: express.Response) => {
-    const publisherId = process.env.ADSENSE_CLIENT_ID || 'ca-pub-0000000000000000';
+  app.get('/ads.txt', adsTxtLimiter, (_req: express.Request, res: express.Response) => {
+    const publisherId = process.env.ADSENSE_CLIENT_ID;
+    if (!publisherId || publisherId === 'ca-pub-0000000000000000') {
+      return res.status(404).send('Not configured');
+    }
     // Clean any prefix e.g. "ca-pub-XX" -> "pub-XX" for correct ads.txt formatting
     let cleanId = publisherId;
     if (cleanId.startsWith('ca-')) {
@@ -8961,11 +9205,28 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     });
     // Do not serve index.html for source code requests to prevent MIME type and loading issues
     app.get(/^\/src\/.+\.(tsx|ts|jsx|js)$/, (req: express.Request, res: express.Response) => {
-      const filePath = path.join(process.cwd(), req.path);
+      const pathPart = req.path.toLowerCase();
+      // Block directory traversal explicitly
+      if (pathPart.includes('..') || pathPart.includes('%2e%2e') || pathPart.includes('\\')) {
+        return res.status(403).send("Forbidden directory traversal");
+      }
+
+      // Block access to potential configuration/secret/database/credential files
+      const sensitivePattern = /(config|secret|credential|key|token|auth|env|database|db|schema|setting|setup|password|private)\./i;
+      if (sensitivePattern.test(pathPart)) {
+        return res.status(403).send("Forbidden: Access to sensitive source configuration or database schema files is restricted.");
+      }
+
+      const safeSrcDir = path.resolve(process.cwd(), "src");
+      // Sanitize req.path to prevent backslash-based bypass and resolve properly
+      const sanitizedPath = req.path.replace(/\\/g, '/');
+      const filePath = path.resolve(process.cwd(), sanitizedPath.startsWith('/') ? sanitizedPath.substring(1) : sanitizedPath);
+      
+      if (!filePath.startsWith(safeSrcDir + path.sep) && filePath !== safeSrcDir) {
+        return res.status(403).send("Forbidden directory traversal");
+      }
       res.sendFile(filePath, (err) => {
-        if (err) {
-          res.status(404).send('Source file not found');
-        }
+        if (err) { res.status(404).send("Source file not found"); }
       });
     });
     app.get('*', (_req: express.Request, res: express.Response) => {
@@ -8990,7 +9251,15 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       const webhookUrl = `${appUrl.replace(/\/$/, '')}/api/webhooks/telegram`;
       console.log(`[Telegram Bot] Registering webhook to: ${webhookUrl}`);
       try {
-        const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(webhookUrl)}`);
+        const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET || crypto.createHash('sha256').update(token).digest('hex').substring(0, 32);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(webhookUrl)}&secret_token=${encodeURIComponent(secretToken)}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
         const body: any = await res.json();
         console.log(`[Telegram Bot] Webhook registration response:`, body);
       } catch (err: any) {
@@ -9017,12 +9286,14 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     console.log("Initializing boot-up checks for automated Sunday products and trending items...");
     runSundayAutomation().catch(err => console.error("Startup Sunday automation check error:", err));
     cleanExpiredTrendingProducts().catch(err => console.error("Startup trending expiration check error:", err));
+    cleanExpiredBlacklistedTokens().catch(err => console.error("Startup blacklisted tokens purge error:", err));
 
     // Schedule background check every 12 hours
     const backgroundTask = setInterval(() => {
       console.log("Running scheduled periodic background sync...");
       runSundayAutomation().catch(err => console.error("Scheduled Sunday automation error:", err));
       cleanExpiredTrendingProducts().catch(err => console.error("Scheduled trending expiration error:", err));
+      cleanExpiredBlacklistedTokens().catch(err => console.error("Scheduled blacklisted tokens purge error:", err));
     }, 12 * 60 * 60 * 1000);
 
     const gracefulShutdown = (signal: string) => {

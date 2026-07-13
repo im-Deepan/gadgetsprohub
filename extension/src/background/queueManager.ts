@@ -1,4 +1,5 @@
 import { logger } from '../services/logger';
+import { extensionStorage } from '../services/storage';
 
 export interface QueueJob {
   jobId: string;
@@ -144,11 +145,13 @@ class QueueManager {
         const payload = await this.scrapeViaTab(url);
         
         // Import to backend
-        const res = await fetch('http://localhost:3000/api/admin/products/import', {
+        const baseUrl = await extensionStorage.getApiUrl();
+        const token = await extensionStorage.getAuthToken();
+        const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/admin/products/import`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await chrome.storage.local.get('token')).token}`
+            'Authorization': `Bearer ${token || ''}`
           },
           body: JSON.stringify({ product: payload, strategy, options })
         });
@@ -182,11 +185,13 @@ class QueueManager {
 
     // Update backend item status
     try {
-      await fetch(`http://localhost:3000/api/admin/products/bulk/${jobId}/item`, {
+      const baseUrl = await extensionStorage.getApiUrl();
+      const token = await extensionStorage.getAuthToken();
+      await fetch(`${baseUrl.replace(/\/$/, '')}/api/admin/products/bulk/${jobId}/item`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await chrome.storage.local.get('token')).token}`
+          'Authorization': `Bearer ${token || ''}`
         },
         body: JSON.stringify({ itemIndex: index, status: finalStatus, error: finalError, retryCount: item.retryCount })
       });

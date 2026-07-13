@@ -202,8 +202,8 @@ export class AiService {
   };
 
   constructor() {
-    // Determine secure key from JWT Secret or fallback for local development
-    const secret = process.env.JWT_SECRET || 'a-very-secure-enterprise-32-byte-secret-key-phrase';
+    // Decouple API key encryption from JWT_SECRET to prevent token rotation from destroying database keys.
+    const secret = process.env.AI_KEY_ENCRYPTION_SECRET || process.env.JWT_SECRET || 'a-very-secure-enterprise-32-byte-secret-key-phrase';
     this.encryptionKey = crypto.scryptSync(secret, 'salt-enterprise-affiliate-ai', 32);
   }
 
@@ -463,19 +463,19 @@ export class AiService {
   // CACHE ENGINE
   // ==========================================
 
-  private computeHash(prompt: string, provider: string, model: string): string {
-    return crypto.createHash('md5').update(`${prompt}:${provider}:${model}`).digest('hex');
+  private computeHash(prompt: string, provider: string, model: string, systemInstruction?: string): string {
+    return crypto.createHash('sha256').update(`${prompt}:${provider}:${model}:${systemInstruction || ''}`).digest('hex');
   }
 
-  public async getCachedResponse(prompt: string, provider: string, model: string): Promise<string | null> {
-    const hash = this.computeHash(prompt, provider, model);
+  public async getCachedResponse(prompt: string, provider: string, model: string, systemInstruction?: string): Promise<string | null> {
+    const hash = this.computeHash(prompt, provider, model, systemInstruction);
     const cached = await AiCache.findOne({ hash, expiresAt: { $gt: new Date() } });
     if (cached) return cached.response;
     return null;
   }
 
-  public async setCachedResponse(prompt: string, provider: string, model: string, response: string, ttlMs = 86400000): Promise<void> {
-    const hash = this.computeHash(prompt, provider, model);
+  public async setCachedResponse(prompt: string, provider: string, model: string, response: string, ttlMs = 86400000, systemInstruction?: string): Promise<void> {
+    const hash = this.computeHash(prompt, provider, model, systemInstruction);
     const expiresAt = new Date(Date.now() + ttlMs);
     await AiCache.findOneAndUpdate(
       { hash },
@@ -512,7 +512,7 @@ export class AiService {
 
     // Check Cache first if not forcing refresh
     if (!params.forceRefresh && !params.streamHandler) {
-      const cachedVal = await this.getCachedResponse(params.prompt, provider, model);
+      const cachedVal = await this.getCachedResponse(params.prompt, provider, model, params.systemInstruction);
       if (cachedVal) {
         return { text: cachedVal, cached: true };
       }
@@ -675,7 +675,7 @@ export class AiService {
     }
 
     // Cache the successful output
-    await this.setCachedResponse(params.prompt, provider, model, responseText);
+    await this.setCachedResponse(params.prompt, provider, model, responseText, 86400000, params.systemInstruction);
 
     return {
       text: responseText,

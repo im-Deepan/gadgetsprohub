@@ -137,6 +137,14 @@ class StorageService {
         };
         await this.set(SETTINGS_KEY, settings);
         
+        // Backup legacy keys in case of any schema / migration issues
+        await this.set('backup_legacy_keys', {
+          authToken: legacyToken || null,
+          adminEmail: legacyEmail || null,
+          customApiUrl: legacyUrl || null,
+          migratedAt: new Date().toISOString()
+        });
+        
         // Clean up legacy keys
         await this.remove('authToken');
         await this.remove('adminEmail');

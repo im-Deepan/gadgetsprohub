@@ -16,15 +16,15 @@ export const ENVIRONMENTS: Record<'Development' | 'Staging' | 'Production', Envi
   },
   Staging: {
     name: 'Staging',
-    apiBaseUrl: 'https://ais-dev-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app',
+    apiBaseUrl: 'https://ais-pre-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app',
     debugMode: true,
   },
   Production: {
     name: 'Production',
-    apiBaseUrl: 'https://ais-pre-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app',
+    apiBaseUrl: 'https://gadgetsprohub.onrender.com',
     debugMode: false,
   },
 };
 
-export const DEFAULT_ENVIRONMENT: 'Development' | 'Staging' | 'Production' = 'Staging';
+export const DEFAULT_ENVIRONMENT: 'Development' | 'Staging' | 'Production' = 'Production';
 export const EXTENSION_VERSION = '1.0.0';

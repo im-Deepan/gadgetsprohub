@@ -146,7 +146,7 @@ export class TotpService {
       tmp >>= 8;
     }
 
-    const hmac = crypto.createHmac('sha1', key);
+    const hmac = crypto.createHmac('sha256', key);
     hmac.update(buffer);
     const hmacResult = hmac.digest();
 

@@ -1,5 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, Square, Upload, RefreshCw, AlertCircle } from 'lucide-react';
+import { extensionStorage } from '../../services/storage';
+import { CONFIG } from '../../config';
+
+const isValidAmazonUrl = (input: string): boolean => {
+  let urlStr = input.trim();
+  if (!urlStr.startsWith('http://') && !urlStr.startsWith('https://')) {
+    urlStr = 'https://' + urlStr;
+  }
+  try {
+    const urlObj = new URL(urlStr);
+    const hostname = urlObj.hostname.toLowerCase();
+    return CONFIG.SUPPORTED_AMAZON_DOMAINS.some(domain => 
+      hostname === domain || hostname.endsWith('.' + domain)
+    );
+  } catch {
+    return false;
+  }
+};
 
 export function BulkImportTab() {
   const [inputText, setInputText] = useState('');
@@ -27,7 +45,7 @@ export function BulkImportTab() {
     if (rawItems.length === 0) return alert("Please enter at least one ASIN or URL.");
     
     // Parse and Validate
-    const items = [];
+    const items: { asin: string; url: string }[] = [];
     const seen = new Set();
     const asinRegex = /^[A-Z0-9]{10}$/;
     let errors = 0;
@@ -36,8 +54,11 @@ export function BulkImportTab() {
       let asin = '';
       let url = '';
       
-      if (raw.includes('amazon.')) {
+      if (isValidAmazonUrl(raw)) {
         url = raw;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = 'https://' + url;
+        }
         const match = url.match(/\/([A-Z0-9]{10})(?:[/?]|$)/);
         if (match) asin = match[1];
       } else {
@@ -59,21 +80,32 @@ export function BulkImportTab() {
     if (errors > 0) alert(`Skipped ${errors} invalid or malformed items.`);
 
     const jobId = 'job_' + Date.now();
+    
     // First, register with backend
-    fetch('http://localhost:3000/api/admin/products/bulk/start', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}` // Wait, token in popup is in chrome.storage.local!
-      },
-      body: JSON.stringify({ items, concurrency, maxRetries, conflictStrategy })
-    }).catch(e => console.error("Backend bulk start fail (will proceed locally)", e));
+    const startBackendJob = async () => {
+      try {
+        const baseUrl = await extensionStorage.getApiUrl();
+        const token = await extensionStorage.getAuthToken();
+        await fetch(`${baseUrl.replace(/\/$/, '')}/api/admin/products/bulk/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token || ''}`
+          },
+          body: JSON.stringify({ items, concurrency, maxRetries, conflictStrategy })
+        });
+      } catch (e) {
+        console.error("Backend bulk start fail (will proceed locally)", e);
+      }
+    };
 
-    chrome.runtime.sendMessage({
-      action: 'BULK_IMPORT_START',
-      payload: { jobId, items, concurrency, maxRetries, conflictStrategy, options: {} }
-    }, (res) => {
-      if (res.success) fetchStatus();
+    startBackendJob().then(() => {
+      chrome.runtime.sendMessage({
+        action: 'BULK_IMPORT_START',
+        payload: { jobId, items, concurrency, maxRetries, conflictStrategy, options: {} }
+      }, (res) => {
+        if (res && res.success) fetchStatus();
+      });
     });
   };
 

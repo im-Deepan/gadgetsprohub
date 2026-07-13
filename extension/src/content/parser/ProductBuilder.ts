@@ -40,15 +40,25 @@ export class ProductBuilder {
     const specifications = FieldExtractors.getSpecifications();
 
     const urlObj = new URL(window.location.href);
-    const originalTag = urlObj.searchParams.get('tag');
-    const tag = originalTag || 'shopgear-20';
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    // Determine the current Amazon domain dynamically
+    let domain = 'amazon.com';
+    const supportedDomains = ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca'];
+    for (const d of supportedDomains) {
+      if (hostname === d || hostname.endsWith('.' + d)) {
+        domain = d;
+        break;
+      }
+    }
 
+    const tag = 'gadgetspro-20'; // Centralized official affiliate tag
     urlObj.search = '';
     const productUrl = urlObj.toString();
 
     let affiliateLink = productUrl;
-    if (asin && (productUrl.includes('amazon.com') || productUrl.includes('amzn.to'))) {
-      affiliateLink = `https://www.amazon.com/dp/${asin}/?tag=${tag}`;
+    if (asin) {
+      affiliateLink = `https://www.${domain}/dp/${asin}/?tag=${tag}`;
     }
 
     const result: Partial<ProductPayload> & { title?: string } = {

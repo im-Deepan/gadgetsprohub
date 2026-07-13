@@ -20,7 +20,9 @@ import {
   Command,
   Sun,
   Moon,
-  Terminal
+  Terminal,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { ExtensionMessage, ExtensionResponse, ProductPayload } from '../types';
 import { CONFIG } from '../config';
@@ -47,6 +49,7 @@ export default function Popup() {
   // Settings & Connection States
   const [apiUrl, setApiUrl] = useState<string>('');
   const [authToken, setAuthToken] = useState<string>('');
+  const [showToken, setShowToken] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [adminEmail, setAdminEmail] = useState<string>('');
   const [environment, setEnvironment] = useState<'Development' | 'Staging' | 'Production' | 'Custom'>('Staging');
@@ -231,7 +234,7 @@ export default function Popup() {
     } else {
       // Offline fallback
       setIsAuthenticated(true);
-      setAdminEmail('deepan20060609@gmail.com');
+      setAdminEmail('admin@gadgetsprohub.com');
     }
   };
 
@@ -379,15 +382,16 @@ export default function Popup() {
         }
       });
     } else {
-      // Simulation mode
+      // Simulation mode (Only active in non-extension local development previews)
       setTimeout(() => {
         setLoginLoading(false);
-        if (email.includes('admin') || email === 'deepan20060609@gmail.com') {
+        const isMockAdmin = email === 'admin@gadgetsprohub.com' || (email.startsWith('admin@') && email.endsWith('.com'));
+        if (isMockAdmin) {
           setIsAuthenticated(true);
           setAdminEmail(email);
           setStatusMessage({ type: 'success', text: 'Logged in successfully (Simulation Mode).' });
         } else {
-          setStatusMessage({ type: 'error', text: 'Access denied: Only administrators are authorized.' });
+          setStatusMessage({ type: 'error', text: 'Access denied: Please use admin@gadgetsprohub.com for local simulation.' });
         }
       }, 1000);
     }
@@ -927,8 +931,8 @@ export default function Popup() {
                   className="w-full px-2 py-1.5 rounded border border-slate-200 text-[11px] bg-slate-50 font-medium focus:outline-none focus:border-violet-500 cursor-pointer"
                 >
                   <option value="Development">Development (Localhost)</option>
-                  <option value="Staging">Staging (AIS Dev)</option>
-                  <option value="Production">Production (AIS Pre-Prod)</option>
+                  <option value="Staging">Staging (AIS Pre-Prod)</option>
+                  <option value="Production">Production (Render)</option>
                   <option value="Custom">Custom Override</option>
                 </select>
               </div>
@@ -948,12 +952,23 @@ export default function Popup() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Admin JWT Token</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider">Admin JWT Token</label>
+                  <button 
+                    type="button"
+                    onClick={() => setShowToken(!showToken)}
+                    className="text-slate-400 hover:text-slate-600 focus:outline-none flex items-center gap-1 text-[10px] transition-colors"
+                  >
+                    {showToken ? <EyeOff size={12} /> : <Eye size={12} />}
+                    <span>{showToken ? "Mask" : "Reveal"}</span>
+                  </button>
+                </div>
                 <textarea 
                   value={authToken}
                   onChange={(e) => setAuthToken(e.target.value)}
                   rows={2}
                   placeholder="Paste your admin web session JWT"
+                  style={{ WebkitTextSecurity: showToken ? 'none' : 'disc' } as React.CSSProperties}
                   className="w-full px-2.5 py-1.5 rounded border border-slate-200 font-mono text-[10px] focus:outline-none focus:border-violet-500 bg-white text-slate-800" 
                 />
               </div>
@@ -1454,73 +1469,67 @@ export default function Popup() {
       </main>
 
       {/* COMMAND PALETTE OVERLAY */}
-      {showCommandPalette && (
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex flex-col p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl flex flex-col max-h-[350px] overflow-hidden">
-            <div className="flex items-center px-3 py-2.5 border-b border-slate-800">
-              <Command className="w-4 h-4 text-indigo-400 mr-2 shrink-0" />
-              <input
-                type="text"
-                placeholder="Type a command or search action..."
-                autoFocus
-                value={commandSearch}
-                onChange={(e) => setCommandSearch(e.target.value)}
-                className="w-full bg-transparent text-xs text-slate-100 outline-none placeholder-slate-500"
-              />
-              <button 
-                onClick={() => setShowCommandPalette(false)}
-                className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded hover:text-white"
-              >
-                ESC
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
-              {[
-                { label: 'Switch to Product Scraper Tab', icon: <Sparkles className="w-3.5 h-3.5 text-emerald-400" />, action: () => { setActiveTab('scraper'); setShowCommandPalette(false); } },
-                { label: 'Switch to Bulk Import Queue Tab', icon: <Layers className="w-3.5 h-3.5 text-sky-400" />, action: () => { setActiveTab('bulk'); setShowCommandPalette(false); } },
-                { label: 'Switch to Scraper History Tab', icon: <History className="w-3.5 h-3.5 text-amber-400" />, action: () => { setActiveTab('history'); setShowCommandPalette(false); } },
-                { label: 'Switch to Scraper Analytics Tab', icon: <BarChart2 className="w-3.5 h-3.5 text-pink-400" />, action: () => { setActiveTab('analytics'); setShowCommandPalette(false); } },
-                { label: `Toggle Visual Theme (Current: ${theme.toUpperCase()})`, icon: theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-slate-400" />, action: () => { setTheme(prev => { const next = prev === 'dark' ? 'light' : 'dark'; extensionStorage.set('gph_theme', next); return next; }); setShowCommandPalette(false); } },
-                { label: 'Open Server Connection Settings', icon: <Key className="w-3.5 h-3.5 text-violet-400" />, action: () => { setShowSettings(true); setShowDevMode(false); setShowHealthCheck(false); setShowCommandPalette(false); } },
-                { label: 'Run Automated Health Diagnostics', icon: <CheckCircle className="w-3.5 h-3.5 text-teal-400" />, action: () => { setShowHealthCheck(true); setShowSettings(false); setShowDevMode(false); runHealthCheck(); setShowCommandPalette(false); } },
-                { label: 'Trigger Active Browser Parser Scraping', icon: <Terminal className="w-3.5 h-3.5 text-rose-400" />, action: () => { checkCurrentTab(); setShowCommandPalette(false); } }
-              ]
-              .filter(cmd => cmd.label.toLowerCase().includes(commandSearch.toLowerCase()))
-              .map((cmd, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={cmd.action}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 text-[11px] text-slate-300 hover:text-white hover:bg-indigo-950/40 border border-transparent hover:border-indigo-900/40 rounded-lg text-left transition cursor-pointer"
+      {showCommandPalette && (() => {
+        const commands = [
+          { label: 'Switch to Product Scraper Tab', icon: <Sparkles className="w-3.5 h-3.5 text-emerald-400" />, action: () => { setActiveTab('scraper'); setShowCommandPalette(false); } },
+          { label: 'Switch to Bulk Import Queue Tab', icon: <Layers className="w-3.5 h-3.5 text-sky-400" />, action: () => { setActiveTab('bulk'); setShowCommandPalette(false); } },
+          { label: 'Switch to Scraper History Tab', icon: <History className="w-3.5 h-3.5 text-amber-400" />, action: () => { setActiveTab('history'); setShowCommandPalette(false); } },
+          { label: 'Switch to Scraper Analytics Tab', icon: <BarChart2 className="w-3.5 h-3.5 text-pink-400" />, action: () => { setActiveTab('analytics'); setShowCommandPalette(false); } },
+          { label: `Toggle Visual Theme (Current: ${theme.toUpperCase()})`, icon: theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-slate-400" />, action: () => { setTheme(prev => { const next = prev === 'dark' ? 'light' : 'dark'; extensionStorage.set('gph_theme', next); return next; }); setShowCommandPalette(false); } },
+          { label: 'Open Server Connection Settings', icon: <Key className="w-3.5 h-3.5 text-violet-400" />, action: () => { setShowSettings(true); setShowDevMode(false); setShowHealthCheck(false); setShowCommandPalette(false); } },
+          { label: 'Run Automated Health Diagnostics', icon: <CheckCircle className="w-3.5 h-3.5 text-teal-400" />, action: () => { setShowHealthCheck(true); setShowSettings(false); setShowDevMode(false); runHealthCheck(); setShowCommandPalette(false); } },
+          { label: 'Trigger Active Browser Parser Scraping', icon: <Terminal className="w-3.5 h-3.5 text-rose-400" />, action: () => { checkCurrentTab(); setShowCommandPalette(false); } }
+        ];
+        const filteredCommands = commands.filter(cmd => cmd.label.toLowerCase().includes(commandSearch.toLowerCase()));
+
+        return (
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex flex-col p-4 animate-fade-in">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl flex flex-col max-h-[350px] overflow-hidden">
+              <div className="flex items-center px-3 py-2.5 border-b border-slate-800">
+                <Command className="w-4 h-4 text-indigo-400 mr-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Type a command or search action..."
+                  autoFocus
+                  value={commandSearch}
+                  onChange={(e) => setCommandSearch(e.target.value)}
+                  className="w-full bg-transparent text-xs text-slate-100 outline-none placeholder-slate-500"
+                />
+                <button 
+                  onClick={() => setShowCommandPalette(false)}
+                  className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded hover:text-white"
                 >
-                  {cmd.icon}
-                  <span className="flex-1">{cmd.label}</span>
-                  <span className="text-[9px] text-slate-500 font-mono">⌘{i + 1}</span>
+                  ESC
                 </button>
-              ))}
+              </div>
               
-              {[
-                { label: 'Switch to Product Scraper Tab', icon: <Sparkles className="w-3.5 h-3.5 text-emerald-400" />, action: () => { setActiveTab('scraper'); setShowCommandPalette(false); } },
-                { label: 'Switch to Bulk Import Queue Tab', icon: <Layers className="w-3.5 h-3.5 text-sky-400" />, action: () => { setActiveTab('bulk'); setShowCommandPalette(false); } },
-                { label: 'Switch to Scraper History Tab', icon: <History className="w-3.5 h-3.5 text-amber-400" />, action: () => { setActiveTab('history'); setShowCommandPalette(false); } },
-                { label: 'Switch to Scraper Analytics Tab', icon: <BarChart2 className="w-3.5 h-3.5 text-pink-400" />, action: () => { setActiveTab('analytics'); setShowCommandPalette(false); } },
-                { label: `Toggle Visual Theme (Current: ${theme.toUpperCase()})`, icon: theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-slate-400" />, action: () => { setTheme(prev => { const next = prev === 'dark' ? 'light' : 'dark'; extensionStorage.set('gph_theme', next); return next; }); setShowCommandPalette(false); } },
-                { label: 'Open Server Connection Settings', icon: <Key className="w-3.5 h-3.5 text-violet-400" />, action: () => { setShowSettings(true); setShowDevMode(false); setShowHealthCheck(false); setShowCommandPalette(false); } },
-                { label: 'Run Automated Health Diagnostics', icon: <CheckCircle className="w-3.5 h-3.5 text-teal-400" />, action: () => { setShowHealthCheck(true); setShowSettings(false); setShowDevMode(false); runHealthCheck(); setShowCommandPalette(false); } },
-                { label: 'Trigger Active Browser Parser Scraping', icon: <Terminal className="w-3.5 h-3.5 text-rose-400" />, action: () => { checkCurrentTab(); setShowCommandPalette(false); } }
-              ].filter(cmd => cmd.label.toLowerCase().includes(commandSearch.toLowerCase())).length === 0 && (
-                <div className="text-center py-6 text-slate-500 text-xs">No command matched your request. Try another term!</div>
-              )}
-            </div>
-            
-            <div className="bg-slate-950 px-3 py-2 border-t border-slate-800/80 flex items-center justify-between text-[9px] text-slate-400">
-              <span>Use shortcuts <strong className="text-indigo-400">Alt+1/2/3/4</strong> for tab switching</span>
-              <span>Press <strong className="text-indigo-400">ESC</strong> to exit</span>
+              <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
+                {filteredCommands.map((cmd, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={cmd.action}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 text-[11px] text-slate-300 hover:text-white hover:bg-indigo-950/40 border border-transparent hover:border-indigo-900/40 rounded-lg text-left transition cursor-pointer"
+                  >
+                    {cmd.icon}
+                    <span className="flex-1">{cmd.label}</span>
+                    <span className="text-[9px] text-slate-500 font-mono">⌘{i + 1}</span>
+                  </button>
+                ))}
+                
+                {filteredCommands.length === 0 && (
+                  <div className="text-center py-6 text-slate-500 text-xs">No command matched your request. Try another term!</div>
+                )}
+              </div>
+              
+              <div className="bg-slate-950 px-3 py-2 border-t border-slate-800/80 flex items-center justify-between text-[9px] text-slate-400">
+                <span>Use shortcuts <strong className="text-indigo-400">Alt+1/2/3/4</strong> for tab switching</span>
+                <span>Press <strong className="text-indigo-400">ESC</strong> to exit</span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );

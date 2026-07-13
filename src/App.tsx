@@ -383,7 +383,8 @@ const AppContent: React.FC = () => {
       window.removeEventListener('mousemove', loadAdSense);
 
       try {
-        const publisherId = import.meta.env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-5970826882216712';
+        const publisherId = import.meta.env.VITE_ADSENSE_CLIENT_ID;
+        if (!publisherId) return; // Do not load if publisher ID is not configured
         const existingScript = document.querySelector(`script[src*="pagead2.googlesyndication.com"]`);
         if (!existingScript) {
           const script = document.createElement('script');

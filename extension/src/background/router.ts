@@ -7,6 +7,22 @@ import { handleStorageWrite, handleStorageRead } from './handlers/storageHandler
 import { apiService } from '../services/api';
 import { queueManager } from './queueManager';
 
+const isPrivilegedSender = (sender: chrome.runtime.MessageSender): boolean => {
+  if (!sender.id || sender.id !== chrome.runtime.id) {
+    return false;
+  }
+  if (sender.tab) {
+    return false;
+  }
+  if (sender.url && !sender.url.startsWith('chrome-extension://')) {
+    return false;
+  }
+  if (sender.origin && !sender.origin.startsWith('chrome-extension://')) {
+    return false;
+  }
+  return true;
+};
+
 /**
  * Universal background coordinator routing incoming chrome runtime messages
  * safely to their dedicated business handlers.
@@ -20,8 +36,21 @@ export function routeMessage(
 
   logger.debug(`Background router incoming action: ${action}`);
 
-  if (sender.tab) {
-    logger.debug(`Routed message context originates from active tab: ${sender.tab.url}`);
+  if (!isPrivilegedSender(sender)) {
+    logger.warn(`Rejected unauthorized message sender. Action: ${action}`, {
+      senderId: sender.id,
+      senderUrl: sender.url,
+      senderOrigin: sender.origin,
+      hasTab: !!sender.tab
+    });
+    sendResponse({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED_SENDER',
+        message: 'Access denied: Sender lacks necessary privileges to execute background commands.'
+      }
+    });
+    return false;
   }
 
   switch (action) {

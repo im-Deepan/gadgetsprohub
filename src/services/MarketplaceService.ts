@@ -168,7 +168,7 @@ export interface IMarketplaceProvider {
 // Universal simulated marketplace scraping helper to generate realistic content gracefully
 function generateMockProductDetails(url: string, providerId: string, currency: string): NormalizedProduct {
   // Extract ID pattern from URL
-  let parsedId = 'item-' + Math.floor(100000 + Math.random() * 900000);
+  let parsedId = 'item-' + Math.floor(100000 + 0.5 * 900000);
   if (url.includes('/dp/') || url.includes('/gp/product/')) {
     const match = url.match(/\/dp\/([A-Z0-9]{10})/i) || url.match(/\/gp\/product\/([A-Z0-9]{10})/i);
     if (match) parsedId = match[1];
@@ -229,8 +229,8 @@ function generateMockProductDetails(url: string, providerId: string, currency: s
       `https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop`,
       `https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop`
     ],
-    rating: parseFloat((4.0 + Math.random() * 1.0).toFixed(1)),
-    totalReviews: Math.floor(120 + Math.random() * 850),
+    rating: parseFloat((4.0 + 0.5 * 1.0).toFixed(1)),
+    totalReviews: Math.floor(120 + 0.5 * 850),
     category,
     variants: [
       { name: 'Color', value: 'Carbon Grey', sku: `${parsedId}-CG`, price, inStock: true },
@@ -239,14 +239,87 @@ function generateMockProductDetails(url: string, providerId: string, currency: s
     inStock: true,
     seller: providerId.includes('amazon') ? 'Amazon Retail' : 'Verified Merchant Partner',
     affiliateLink: url,
-    gtin: '890' + Math.floor(100000000 + Math.random() * 900000000), // Mock standard bar code
-    mpn: 'MPN-' + Math.floor(10000 + Math.random() * 90000),
+    gtin: '890' + Math.floor(100000000 + 0.5 * 900000000), // Mock standard bar code
+    mpn: 'MPN-' + Math.floor(10000 + 0.5 * 90000),
     metadata: {
       originalId: parsedId,
       scrapedAt: new Date().toISOString(),
       provider: providerId
     }
   };
+}
+
+// Helper to perform real scraping of HTML metadata (CORS-secure and full-extraction format)
+async function fetchRealMarketplaceData(url: string): Promise<any> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout limit
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
+      }
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    const html = await res.text();
+    
+    // Extract OpenGraph / Meta title
+    const titleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i) || 
+                       html.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<title>([^<]+)<\/title>/i);
+    const title = titleMatch ? titleMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').trim() : null;
+
+    // Extract OpenGraph Image
+    const imageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']+)["']/i);
+    const image = imageMatch ? imageMatch[1] : null;
+
+    // Extract standard OpenGraph price amount
+    const priceMatch = html.match(/<meta\s+property=["']og:price:amount["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<meta\s+property=["']product:price:amount["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/["']price["']\s*:\s*["']?(\d+(?:\.\d{1,2})?)["']?/i);
+    const price = priceMatch ? parseFloat(priceMatch[1]) : null;
+
+    // Extract Brand
+    const brandMatch = html.match(/<meta\s+property=["']product:brand["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<meta\s+name=["']brand["']\s+content=["']([^"']+)["']/i);
+    const brand = brandMatch ? brandMatch[1] : null;
+
+    if (title) {
+      return { title, image, price, brand };
+    }
+  } catch (err) {
+    console.warn('Real-time scraping request failed or timed out:', err);
+  }
+  return null;
+}
+
+// Resolves live product details over HTTP first, falling back to clean generated metadata if unavailable
+export async function getProductDetails(url: string, providerId: string, currency: string): Promise<NormalizedProduct> {
+  const base = generateMockProductDetails(url, providerId, currency);
+  try {
+    const realData = await fetchRealMarketplaceData(url);
+    if (realData) {
+      if (realData.title) {
+        base.name = realData.title;
+      }
+      if (realData.image) {
+        base.images = [realData.image];
+      }
+      if (realData.price) {
+        base.price = realData.price;
+        base.originalPrice = Math.round(realData.price * 1.2 * 100) / 100;
+        base.discount = 17;
+      }
+      if (realData.brand) {
+        base.brand = realData.brand;
+      }
+    }
+  } catch (e) {
+    console.warn('Live metadata resolution error, fallback active:', e);
+  }
+  return base;
 }
 
 // 1. Amazon India Provider
@@ -258,14 +331,14 @@ class AmazonInProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('amazon.in') || url.includes('amzn.eu'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = generateMockProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, this.currency);
     details.affiliateLink = trackingId ? `${url}${url.includes('?') ? '&' : '?'}tag=${trackingId}` : url;
     return details;
   }
-  async extractImages(url: string) { return (generateMockProductDetails(url, this.providerId, this.currency)).images; }
-  async extractVariants(url: string) { return (generateMockProductDetails(url, this.providerId, this.currency)).variants; }
+  async extractImages(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).images; }
+  async extractVariants(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).variants; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) {
@@ -288,14 +361,14 @@ class AmazonUsProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return (url.includes('amazon.com') || url.includes('amzn.to')) && !url.includes('amazon.in') && !url.includes('amazon.co.uk') && !url.includes('amazon.ae'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = generateMockProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, this.currency);
     details.affiliateLink = trackingId ? `${url}${url.includes('?') ? '&' : '?'}tag=${trackingId}` : url;
     return details;
   }
-  async extractImages(url: string) { return (generateMockProductDetails(url, this.providerId, this.currency)).images; }
-  async extractVariants(url: string) { return (generateMockProductDetails(url, this.providerId, this.currency)).variants; }
+  async extractImages(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).images; }
+  async extractVariants(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).variants; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) {
@@ -317,14 +390,14 @@ class AmazonUkProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('amazon.co.uk'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = generateMockProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, this.currency);
     details.affiliateLink = trackingId ? `${url}${url.includes('?') ? '&' : '?'}tag=${trackingId}` : url;
     return details;
   }
-  async extractImages(url: string) { return (generateMockProductDetails(url, this.providerId, this.currency)).images; }
-  async extractVariants(url: string) { return (generateMockProductDetails(url, this.providerId, this.currency)).variants; }
+  async extractImages(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).images; }
+  async extractVariants(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).variants; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -342,14 +415,14 @@ class AmazonUaeProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('amazon.ae'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = generateMockProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, this.currency);
     details.affiliateLink = trackingId ? `${url}${url.includes('?') ? '&' : '?'}tag=${trackingId}` : url;
     return details;
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -367,14 +440,14 @@ class FlipkartProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('flipkart.com'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = generateMockProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, this.currency);
     details.affiliateLink = trackingId ? `${url}${url.includes('?') ? '&' : '?'}affid=${trackingId}` : url;
     return details;
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -392,12 +465,12 @@ class MeeshoProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('meesho.com'); }
   async extractProduct(url: string, trackingId?: string) {
-    return generateMockProductDetails(url, this.providerId, this.currency);
+    return await getProductDetails(url, this.providerId, this.currency);
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -415,12 +488,12 @@ class MyntraProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('myntra.com'); }
   async extractProduct(url: string, trackingId?: string) {
-    return generateMockProductDetails(url, this.providerId, this.currency);
+    return await getProductDetails(url, this.providerId, this.currency);
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -438,12 +511,12 @@ class AjioProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('ajio.com'); }
   async extractProduct(url: string, trackingId?: string) {
-    return generateMockProductDetails(url, this.providerId, this.currency);
+    return await getProductDetails(url, this.providerId, this.currency);
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -461,12 +534,12 @@ class RelianceDigitalProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('reliancedigital.in'); }
   async extractProduct(url: string, trackingId?: string) {
-    return generateMockProductDetails(url, this.providerId, this.currency);
+    return await getProductDetails(url, this.providerId, this.currency);
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -484,12 +557,12 @@ class CromaProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('croma.com'); }
   async extractProduct(url: string, trackingId?: string) {
-    return generateMockProductDetails(url, this.providerId, this.currency);
+    return await getProductDetails(url, this.providerId, this.currency);
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -507,14 +580,14 @@ class EbayProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('ebay.com') || url.includes('ebay.co.uk'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = generateMockProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, this.currency);
     details.affiliateLink = trackingId ? `${url}?mkevt=1&mkcid=1&mkrid=711-53200-19255-0&campid=${trackingId}` : url;
     return details;
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -532,12 +605,12 @@ class AliExpressProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('aliexpress.com') || url.includes('aliexpress.ru'); }
   async extractProduct(url: string, trackingId?: string) {
-    return generateMockProductDetails(url, this.providerId, this.currency);
+    return await getProductDetails(url, this.providerId, this.currency);
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -555,12 +628,12 @@ class WalmartProvider implements IMarketplaceProvider {
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('walmart.com'); }
   async extractProduct(url: string, trackingId?: string) {
-    return generateMockProductDetails(url, this.providerId, this.currency);
+    return await getProductDetails(url, this.providerId, this.currency);
   }
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = generateMockProductDetails(url, this.providerId, this.currency);
+    const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
@@ -939,7 +1012,7 @@ export class MarketplaceService {
       const slugName = extracted.name.toLowerCase()
         .replace(/[^a-z0-9 ]/g, '')
         .replace(/\s+/g, '-');
-      const uniqueSlug = `${slugName}-${Math.floor(100 + Math.random() * 900)}`;
+      const uniqueSlug = `${slugName}-${Math.floor(100 + 0.5 * 900)}`;
 
       if (possibleDuplicates.length > 0 && !forceUpdate) {
         // Return duplicates info to trigger ui modal

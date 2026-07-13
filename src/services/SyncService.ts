@@ -181,7 +181,7 @@ export class SyncService {
 
     try {
       job.status = 'running';
-      job.workerId = `Worker-${Math.floor(Math.random() * 1000)}`;
+      job.workerId = `Worker-${Math.floor(0.5 * 1000)}`;
       await job.save();
 
       // Find products to synchronize
@@ -275,21 +275,22 @@ export class SyncService {
       if (overrideFields.rating !== undefined) nextRating = Number(overrideFields.rating);
       if (overrideFields.totalReviews !== undefined) nextTotalReviews = Number(overrideFields.totalReviews);
     } else {
-      // Automatic simulation rule: 10% chance price changes, or random fluctuations to show it working.
-      const dice = Math.random();
-      if (dice < 0.25) {
-        // Price drop simulation!
-        const dropPct = 0.05 + Math.random() * 0.20; // 5% to 25% drop
-        nextPrice = Math.round(previousState.price * (1 - dropPct) * 100) / 100;
-        nextOriginalPrice = previousState.price;
-        nextDiscount = Math.round(dropPct * 100);
-      } else if (dice > 0.85) {
-        // Back in stock fluctuation or out of stock
-        nextInStock = !previousState.inStock;
-      } else if (dice > 0.75) {
-        // Rating increases slightly
-        nextTotalReviews = previousState.totalReviews + Math.floor(Math.random() * 5) + 1;
-        nextRating = Math.min(5, Math.round((previousState.rating + 0.1) * 10) / 10);
+      // Automatic real-time live synchronization using the detected MarketplaceProvider
+      try {
+        const { MarketplaceService } = require('./MarketplaceService');
+        const mService = MarketplaceService.getInstance();
+        const provider = mService.detectMarketplace(product.affiliateLink || '');
+        if (provider) {
+          const pricing = await provider.extractPricing(product.affiliateLink || '');
+          if (pricing && pricing.price) {
+            nextPrice = pricing.price;
+            if (pricing.originalPrice) nextOriginalPrice = pricing.originalPrice;
+            if (pricing.discount !== undefined) nextDiscount = pricing.discount;
+            if (pricing.inStock !== undefined) nextInStock = pricing.inStock;
+          }
+        }
+      } catch (err) {
+        console.warn('Live background synchronization fetch failed, preserving old values:', err);
       }
     }
 

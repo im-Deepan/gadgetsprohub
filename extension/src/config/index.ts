@@ -4,7 +4,7 @@
 
 export const CONFIG = {
   // Default development environment endpoint (can be overridden by Chrome storage)
-  API_BASE_URL: "https://ais-dev-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app",
+  API_BASE_URL: "https://gadgetsprohub.onrender.com",
   
   // Storage Keys
   STORAGE_KEYS: {
