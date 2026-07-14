@@ -2108,18 +2108,22 @@ async function startServer() {
       const durationMs = Math.round((diff[0] * 1e9 + diff[1]) / 1e6);
       MetricsService.recordResponseTime(durationMs);
 
+      const logData = {
+        timestamp: new Date().toISOString(),
+        level: 'INFO',
+        method: req.method,
+        url: req.originalUrl || req.url,
+        status: res.statusCode,
+        durationMs,
+        correlationId,
+        userAgent: req.headers['user-agent'] || 'unknown',
+        ip: req.ip || req.connection?.remoteAddress || '127.0.0.1'
+      };
+
+      // Store in real-time telemetry log buffer for admin console tracking
+      MetricsService.addLiveLog(logData);
+
       if (ConfigurationService.getFlag('enableStructuredLogs')) {
-        const logData = {
-          timestamp: new Date().toISOString(),
-          level: 'INFO',
-          method: req.method,
-          url: req.originalUrl || req.url,
-          status: res.statusCode,
-          durationMs,
-          correlationId,
-          userAgent: req.headers['user-agent'],
-          ip: req.ip || req.connection.remoteAddress
-        };
         console.log(JSON.stringify(logData));
       }
     });
@@ -2482,7 +2486,11 @@ async function startServer() {
   // Global Error Tracking Endpoint
   app.post('/api/track-error', express.json({ limit: '100kb' }), (req: express.Request, res: express.Response) => {
     const errorDetails = req.body;
-    console.error('[CentralizedTracker Server-Side]', JSON.stringify(errorDetails, null, 2));
+    // Suppress unhandled promise rejection logs if they are not actionable
+    if (errorDetails?.context === 'Unhandled promise rejection' && errorDetails?.name === 'Error' && !errorDetails?.message) {
+      return res.status(200).json({ success: true });
+    }
+    console.warn('[CentralizedTracker Server-Side]', JSON.stringify(errorDetails, null, 2));
     res.status(200).json({ success: true });
   });
 
@@ -3374,7 +3382,7 @@ async function startServer() {
   });
 
   app.get('/api/metrics', authenticate, (req: express.Request, res: express.Response) => {
-    res.json({ success: true, metrics: MetricsService.getMetrics() });
+    res.json({ success: true, metrics: MetricsService.getMetrics(), liveLogs: MetricsService.getLiveLogs() });
   });
 
   const googleOAuthClient = new OAuth2Client();
@@ -5954,6 +5962,35 @@ async function startServer() {
     validate: { xForwardedForHeader: false, default: false }
   });
 
+  // Active pairing codes for extension configuration (valid for 10 minutes)
+  const activePairingCodes = new Map<string, { token: string; email: string; expiresAt: number }>();
+
+  const generatePairingCode = (token: string, email: string): string => {
+    // Clean up expired codes
+    const now = Date.now();
+    for (const [code, data] of activePairingCodes.entries()) {
+      if (data.expiresAt < now) {
+        activePairingCodes.delete(code);
+      }
+    }
+
+    // Generate 6-digit random number
+    let code = '';
+    let attempts = 0;
+    do {
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+      attempts++;
+    } while (activePairingCodes.has(code) && attempts < 100);
+
+    activePairingCodes.set(code, {
+      token,
+      email,
+      expiresAt: now + 10 * 60 * 1000 // 10 minutes validity
+    });
+
+    return code;
+  };
+
   // Helper function to validate allowed domains globally
   const isValidAmazonOrAllowedDomain = (urlStr: string): boolean => {
     if (!urlStr) return true;
@@ -5994,6 +6031,60 @@ async function startServer() {
         ...importerMetrics,
         averageProcessingTimeMs: avgTime
       }
+    });
+  });
+
+  // Generate a real 6-digit pairing code for the Chrome Extension
+  app.get('/api/admin/products/import/pairing-code', adminOnly, (req: express.Request, res: express.Response) => {
+    let token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      token = getCookieToken(req);
+    }
+    const email = (req as any).userEmail || 'admin@gadgetsprohub.com';
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No authorization token available for pairing' });
+    }
+    
+    const code = generatePairingCode(token, email);
+    res.json({
+      success: true,
+      pairingCode: code,
+      expiresInSeconds: 600
+    });
+  });
+
+  // Public endpoint for extension pairing
+  app.post('/api/auth/pair', (req: express.Request, res: express.Response) => {
+    const { pairingCode } = req.body;
+    if (!pairingCode) {
+      return res.status(400).json({ error: 'Pairing code is required' });
+    }
+
+    const data = activePairingCodes.get(String(pairingCode).trim());
+    if (!data) {
+      return res.status(400).json({ error: 'Invalid or expired pairing code' });
+    }
+
+    if (data.expiresAt < Date.now()) {
+      activePairingCodes.delete(String(pairingCode).trim());
+      return res.status(400).json({ error: 'Pairing code has expired' });
+    }
+
+    // Successfully paired! Consume the code
+    activePairingCodes.delete(String(pairingCode).trim());
+
+    // Build the correct API base URL from the current request's headers
+    const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
+    const rawHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+    const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
+    const apiBaseUrl = `${proto}://${host}`;
+
+    res.json({
+      success: true,
+      token: data.token,
+      email: data.email,
+      apiBaseUrl
     });
   });
 

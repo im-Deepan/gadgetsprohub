@@ -4,6 +4,7 @@ import { resolve } from 'path';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
+  base: '',
   plugins: [
     react(),
     viteStaticCopy({
@@ -17,7 +18,13 @@ export default defineConfig({
           dest: '.'
         }
       ]
-    })
+    }),
+    {
+      name: 'remove-crossorigin',
+      transformIndexHtml(html) {
+        return html.replace(/crossorigin/g, '');
+      }
+    }
   ],
   resolve: {
     alias: {

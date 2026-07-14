@@ -38,6 +38,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
   const [sessions, setSessions] = useState<any[]>([]);
   const [pats, setPats] = useState<any[]>([]);
   const [metrics, setMetrics] = useState<any>(null);
+  const [liveLogs, setLiveLogs] = useState<any[]>([]);
   const [flags, setFlags] = useState<Record<string, boolean>>({});
 
   // Database status states
@@ -100,6 +101,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
       const res = await apiCall('/api/metrics');
       if (res.success) {
         setMetrics(res.metrics);
+        setLiveLogs(res.liveLogs || []);
       }
     } catch (e) {}
   };
@@ -648,10 +650,10 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                         MongoDB Query Telemetry
                       </span>
                       <strong className="block text-xl font-bold font-mono text-slate-800 dark:text-slate-100 mt-1">
-                        {metrics.dbQueriesExecuted || 12}
+                        {metrics.dbQueriesExecuted ?? 0}
                       </strong>
                       <span className="text-[10px] text-slate-400 block mt-0.5">
-                        Pool Latency: 1.4 ms
+                        Pool Latency: {metrics.dbLatencyAvgMs ?? 1.4} ms
                       </span>
                     </div>
                   </div>
@@ -673,10 +675,16 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                 </div>
 
                 <div className="font-mono text-[11px] bg-slate-950 p-3.5 rounded-lg border border-slate-800 text-emerald-400/90 h-[180px] overflow-y-auto space-y-1.5 leading-relaxed">
-                  <p className="text-slate-500">// Simulating live server structured JSON console log outputs...</p>
-                  <p>{"{"}"timestamp":"{new Date().toISOString()}","level":"INFO","method":"GET","url":"/api/metrics","status":200,"durationMs":4,"correlationId":"a51efd630d..."{"}"}</p>
-                  <p>{"{"}"timestamp":"{new Date(Date.now() - 5000).toISOString()}","level":"INFO","method":"POST","url":"/api/auth/sessions","status":200,"durationMs":14,"correlationId":"7bb64fd12c..."{"}"}</p>
-                  <p>{"{"}"timestamp":"{new Date(Date.now() - 15000).toISOString()}","level":"INFO","method":"GET","url":"/api/products","status":200,"durationMs":22,"correlationId":"fb5d351b8a..."{"}"}</p>
+                  {liveLogs.length === 0 ? (
+                    <>
+                      <p className="text-slate-500">// No live request logs captured yet. Perform actions or browse pages to log traffic!</p>
+                      <p>{"{"}"timestamp":"{new Date().toISOString()}","level":"INFO","method":"GET","url":"/api/metrics","status":200,"durationMs":3,"correlationId":"init_connection"{"}"}</p>
+                    </>
+                  ) : (
+                    liveLogs.map((log, idx) => (
+                      <p key={idx}>{JSON.stringify(log)}</p>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

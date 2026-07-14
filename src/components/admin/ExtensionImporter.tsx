@@ -146,12 +146,30 @@ export function ExtensionImporter() {
 
   // Live Extension Mode mock logs & state
   const [liveExtensionVersion, setLiveExtensionVersion] = useState<string>('1.0.4');
-  const [connectionCode] = useState<string>(() => Math.floor(100000 + Math.random() * 900000).toString());
+  const [connectionCode, setConnectionCode] = useState<string>('------');
+  const [pairingLoading, setPairingLoading] = useState<boolean>(false);
   const [listenerLogs, setListenerLogs] = useState<Array<{ time: string; level: 'INFO' | 'WARN' | 'ERROR'; msg: string }>>([
     { time: new Date().toLocaleTimeString(), level: 'INFO', msg: 'Curator Companion background worker loaded successfully.' },
     { time: new Date().toLocaleTimeString(), level: 'INFO', msg: 'Secure listener activated on port 3000.' },
     { time: new Date().toLocaleTimeString(), level: 'INFO', msg: 'Pending safe pairing handshake with browser extension...' }
   ]);
+
+  const loadPairingCode = async () => {
+    setPairingLoading(true);
+    try {
+      const res = await apiFetch('/api/admin/products/import/pairing-code');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success && data.pairingCode) {
+          setConnectionCode(data.pairingCode);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load pairing code:', err);
+    } finally {
+      setPairingLoading(false);
+    }
+  };
 
   // Observability & Metrics States
   const [metrics, setMetrics] = useState<{
@@ -265,6 +283,8 @@ export function ExtensionImporter() {
     if (activeTab === 'devtools') {
       loadMetrics();
       loadHistory();
+    } else if (activeTab === 'live') {
+      loadPairingCode();
     }
   }, [activeTab]);
 
@@ -486,11 +506,12 @@ export function ExtensionImporter() {
     runImportFlow();
   };
 
-  const handleSimulateHandshake = () => {
+  const handleSimulateHandshake = async () => {
+    await loadPairingCode();
     const logs = [
-      { time: new Date().toLocaleTimeString(), level: 'INFO' as const, msg: `Received extension pairing code: ${connectionCode}` },
-      { time: new Date().toLocaleTimeString(), level: 'INFO' as const, msg: 'Validating admin-level authentication session...' },
-      { time: new Date().toLocaleTimeString(), level: 'INFO' as const, msg: `Extension connection established! Curator Companion v${liveExtensionVersion} synced.` }
+      { time: new Date().toLocaleTimeString(), level: 'INFO' as const, msg: `Refreshed 6-digit secure pairing code: ${connectionCode}` },
+      { time: new Date().toLocaleTimeString(), level: 'INFO' as const, msg: 'Waiting for extension to transmit payload at /api/auth/pair...' },
+      { time: new Date().toLocaleTimeString(), level: 'INFO' as const, msg: 'Awaiting connection...' }
     ];
     setListenerLogs(prev => [...prev, ...logs]);
   };

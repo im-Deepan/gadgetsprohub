@@ -49,6 +49,8 @@ export default function Popup() {
   // Settings & Connection States
   const [apiUrl, setApiUrl] = useState<string>('');
   const [authToken, setAuthToken] = useState<string>('');
+  const [pairingCodeInput, setPairingCodeInput] = useState<string>('');
+  const [pairingLoading, setPairingLoading] = useState<boolean>(false);
   const [showToken, setShowToken] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [adminEmail, setAdminEmail] = useState<string>('');
@@ -174,6 +176,18 @@ export default function Popup() {
             isAmazon: data.isAmazon || false,
             contentScriptLoaded: data.contentScriptLoaded !== false
           });
+
+          const activeUrl = data.url || "";
+          if (activeUrl.includes('.run.app') || activeUrl.includes('localhost:3000') || activeUrl.includes('.onrender.com')) {
+            try {
+              const origin = new URL(activeUrl).origin;
+              extensionStorage.updateSettings({ apiBaseUrl: origin });
+              setApiUrl(origin);
+              logger.debug(`Detected active Portal tab! Automatically updated apiBaseUrl to: ${origin}`);
+            } catch (e) {
+              console.warn("Could not parse active tab url:", e);
+            }
+          }
         } else {
           setTabInfo({
             url: "",
@@ -452,6 +466,60 @@ export default function Popup() {
       verifyRemoteSession();
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: 'Failed to write settings: ' + err.message });
+    }
+  };
+
+  const handlePairViaCode = async () => {
+    if (pairingCodeInput.length !== 6) return;
+    setPairingLoading(true);
+    setStatusMessage(null);
+    try {
+      let targetApiUrl = apiUrl;
+      if (environment !== 'Custom') {
+        const config = ENVIRONMENTS[environment];
+        targetApiUrl = config.apiBaseUrl;
+      }
+      
+      const response = await fetch(`${targetApiUrl.replace(/\/$/, '')}/api/auth/pair`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ pairingCode: pairingCodeInput })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setApiUrl(data.apiBaseUrl);
+        setAuthToken(data.token);
+        setAdminEmail(data.email);
+        
+        await extensionStorage.updateSettings({
+          apiBaseUrl: data.apiBaseUrl,
+          authToken: data.token,
+          adminEmail: data.email,
+          environment: 'Custom'
+        });
+
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+          chrome.runtime.sendMessage({ 
+            action: "SET_SESSION_TOKEN", 
+            payload: { token: data.token, email: data.email } 
+          });
+        }
+
+        setIsAuthenticated(true);
+        setPairingCodeInput('');
+        setStatusMessage({ type: 'success', text: 'Extension successfully paired! You are now authenticated.' });
+        setShowSettings(false);
+      } else {
+        setStatusMessage({ type: 'error', text: data.error || 'Failed to pair. Please verify your pairing code and API URL.' });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: 'Connection failed: ' + err.message });
+    } finally {
+      setPairingLoading(false);
     }
   };
 
@@ -913,7 +981,7 @@ export default function Popup() {
           </div>
         ) : showSettings ? (
           /* SETTINGS CARD */
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3.5">
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3.5 text-slate-800">
             <h3 className="text-xs font-bold text-slate-800 flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <Key className="w-4 h-4 text-violet-600" />
@@ -921,6 +989,32 @@ export default function Popup() {
               </span>
               <span className="text-[9px] font-mono text-slate-400 font-normal">v{extVersion}</span>
             </h3>
+
+            {/* FAST-PAIR VIA CODE */}
+            <div className="p-3 bg-violet-50 border border-violet-100 rounded-lg space-y-2">
+              <label className="block text-[10px] font-bold text-violet-700 uppercase tracking-wider">Fast-Pair via 6-Digit Code</label>
+              <p className="text-[10px] text-slate-500 leading-normal">
+                Go to the Admin Portal Importer tab and copy the pairing code, then paste it here:
+              </p>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="e.g. 123456"
+                  value={pairingCodeInput}
+                  onChange={(e) => setPairingCodeInput(e.target.value.replace(/\D/g, ''))}
+                  className="flex-1 px-2.5 py-1.5 rounded border border-violet-200 text-center font-mono text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 focus:border-violet-500 text-slate-800"
+                />
+                <button
+                  type="button"
+                  onClick={handlePairViaCode}
+                  disabled={pairingCodeInput.length !== 6 || pairingLoading}
+                  className="px-3 py-1 bg-violet-600 hover:bg-violet-700 disabled:bg-slate-200 text-white font-bold rounded text-[11px] transition-colors shadow-xs"
+                >
+                  {pairingLoading ? 'Pairing...' : 'Pair'}
+                </button>
+              </div>
+            </div>
             
             <div className="space-y-3.5 text-xs">
               <div>
