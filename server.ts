@@ -5901,8 +5901,8 @@ async function startServer() {
   // Check Duplicate ASIN Endpoint
   app.get('/api/admin/products/check-duplicate/:asin', adminOnly, async (req: express.Request, res: express.Response) => {
     const asin = req.params.asin ? req.params.asin.trim().toUpperCase() : '';
-    if (!asin || asin.length !== 10) {
-      return res.status(400).json({ success: false, error: 'Invalid ASIN parameter' });
+    if (!asin || asin.length < 8 || asin.length > 15) {
+      return res.status(400).json({ success: false, error: 'Invalid ASIN parameter (must be 8 to 15 characters)' });
     }
 
     try {
@@ -7532,14 +7532,14 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
 
       const normalizedAsin = asin && typeof asin === 'string' ? asin.trim().toUpperCase() : null;
       if (normalizedAsin) {
-        const asinRegex = /^[a-zA-Z0-9]{10}$/;
+        const asinRegex = /^[a-zA-Z0-9]{8,15}$/;
         if (!asinRegex.test(normalizedAsin)) {
           logStructured('WARN', 'Validation failed: Invalid ASIN format', { requestId, asin: normalizedAsin });
           importerMetrics.failedImports++;
           return res.status(400).json({
             success: false,
             requestId,
-            error: 'ASIN must be a 10-character alphanumeric string',
+            error: 'ASIN must be an 8 to 15-character alphanumeric string',
             code: 'INVALID_PAYLOAD_ASIN'
           });
         }

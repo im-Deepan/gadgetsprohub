@@ -235,7 +235,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           setShowVideo(false);
         } else {
           console.error('[ProductDetail] Invalid product response format:', data);
-          showToast('Product specifications data format is invalid.', 'error', 4000, 'System Error');
+          showToast(data?.error || 'Product not found or database is offline.', 'error', 4000, 'System Error');
           return;
         }
         
@@ -257,19 +257,19 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           }
           // Keep only simple info to avoid large sizes
           const productSummary = {
-            _id: data._id,
-            name: data.name,
-            slug: data.slug,
-            price: data.price,
-            originalPrice: data.originalPrice,
-            discount: data.discount,
-            images: [data.images?.[0]],
-            brand: data.brand,
-            category: data.category,
-            description: data.description,
-            rating: data.rating
+            _id: resolvedProduct._id,
+            name: resolvedProduct.name,
+            slug: resolvedProduct.slug,
+            price: resolvedProduct.price,
+            originalPrice: resolvedProduct.originalPrice,
+            discount: resolvedProduct.discount,
+            images: [resolvedProduct.images?.[0]],
+            brand: resolvedProduct.brand,
+            category: resolvedProduct.category,
+            description: resolvedProduct.description,
+            rating: resolvedProduct.rating
           } as Product;
-          recents = recents.filter(p => p._id !== data._id);
+          recents = recents.filter(p => p._id !== resolvedProduct._id);
           recents.unshift(productSummary);
           recents = recents.slice(0, 10); // Keep last 10
           safeSetItem('aff_recent_viewed', JSON.stringify(recents));

@@ -106,6 +106,40 @@ const PRESET_PRODUCTS: ScrapedProduct[] = [
   }
 ];
 
+// Helper to extract ASIN/Identifier from various Amazon formats/URLs
+const extractAsin = (input: string): string => {
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+  
+  const patterns = [
+    /\/dp\/([A-Za-z0-9]{8,15})/i,
+    /\/gp\/product\/([A-Za-z0-9]{8,15})/i,
+    /amazon\.[a-z\.]+\/.*\/([A-Za-z0-9]{8,15})/i,
+    /link\.amazon\/([A-Za-z0-9]{8,15})/i,
+    /\/([A-Za-z0-9]{8,15})$/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (match && match[1]) {
+      return match[1].toUpperCase();
+    }
+  }
+
+  if (trimmed.includes('/')) {
+    const segments = trimmed.split('/').filter(Boolean);
+    if (segments.length > 0) {
+      const last = segments[segments.length - 1];
+      const cleaned = last.replace(/[^a-zA-Z0-9]/g, '');
+      if (cleaned.length >= 8 && cleaned.length <= 15) {
+        return cleaned.toUpperCase();
+      }
+    }
+  }
+
+  return trimmed.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+};
+
 export function ExtensionImporter() {
   const { user } = useAuth();
   
@@ -330,8 +364,9 @@ export function ExtensionImporter() {
   // Scrape a custom ASIN (with randomized dummy specs)
   const handleCustomAsinScrape = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!targetAsin || targetAsin.trim().length !== 10) {
-      alert("Please enter a valid 10-character Amazon ASIN to simulate scraping!");
+    const cleanAsin = extractAsin(targetAsin);
+    if (!cleanAsin || cleanAsin.length < 8 || cleanAsin.length > 15) {
+      alert("Please enter a valid 8 to 15-character Amazon ASIN or URL to simulate scraping!");
       return;
     }
     
@@ -339,7 +374,7 @@ export function ExtensionImporter() {
     setScrapedProduct(null);
     setScraping(true);
 
-    const asin = targetAsin.trim().toUpperCase();
+    const asin = cleanAsin;
 
     const steps = [
       'Analyzing Amazon product URL pattern...',
@@ -725,11 +760,16 @@ export function ExtensionImporter() {
                       <div className="relative flex-grow">
                         <input
                           type="text"
-                          placeholder="e.g. B0B9G6T2V1"
-                          maxLength={10}
+                          placeholder="e.g. B0B9G6T2V1 or Amazon URL"
+                          maxLength={200}
                           value={targetAsin}
                           onChange={(e) => {
-                            setTargetAsin(e.target.value.toUpperCase());
+                            const val = e.target.value;
+                            if (val.includes('/') || val.includes('.') || val.includes(':')) {
+                              setTargetAsin(val);
+                            } else {
+                              setTargetAsin(val.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+                            }
                             setSelectedPreset(null);
                           }}
                           disabled={scraping || importing}
@@ -739,7 +779,7 @@ export function ExtensionImporter() {
                       </div>
                       <button
                         type="submit"
-                        disabled={scraping || importing || targetAsin.length !== 10}
+                        disabled={scraping || importing || !targetAsin.trim()}
                         className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs cursor-pointer hover:bg-slate-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none shrink-0"
                       >
                         {scraping ? 'Parsing...' : 'Scrape Web'}

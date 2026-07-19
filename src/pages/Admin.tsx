@@ -40,7 +40,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [productPage, setProductPage] = useState(1);
   
   // Security audit trail States
-  const [securityLogs, setSecurityLogs] = useState<Array<{ _id?: string; date?: string; userId?: string; user?: { name?: string; email?: string }; action?: string; ipAddress?: string; location?: string; details?: string; timestamp?: string | Date; actorEmail?: string; targetId?: string; userAgent?: string; id?: string }>>([]);
+  const [securityLogs, setSecurityLogs] = useState<Array<{ _id?: string; date?: string; userId?: string; user?: { name?: string; email?: string }; action?: string; ipAddress?: string; location?: string; details?: string; timestamp?: string | Date; adminEmail?: string; targetId?: string; userAgent?: string; id?: string }>>([]);
   const [securityLogsError, setSecurityLogsError] = useState<string | null>(null);
   
   // Sunday automation States
@@ -173,21 +173,21 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const resolvedProducts = useMemo(() => {
     return products.map(p => {
       const clickEvents = analyticsData.filter(a => {
-        if (a.eventType !== 'click') return false;
-        const aProdId = (a.productId as { _id?: string })?._id || a.productId;
-        const targetId = typeof aProdId === 'object' ? (aProdId as { _id?: string })._id : aProdId;
-        return targetId?.toString() === p._id.toString();
+        if (a?.eventType !== 'click') return false;
+        const aProdId = (a?.productId as { _id?: string })?._id || a?.productId;
+        const targetId = typeof aProdId === 'object' && aProdId !== null ? (aProdId as { _id?: string })._id : aProdId;
+        return targetId?.toString() === p?._id?.toString();
       });
       const convEvents = analyticsData.filter(a => {
-        if (a.eventType !== 'conversion') return false;
-        const aProdId = (a.productId as { _id?: string })?._id || a.productId;
-        const targetId = typeof aProdId === 'object' ? (aProdId as { _id?: string })._id : aProdId;
-        return targetId?.toString() === p._id.toString();
+        if (a?.eventType !== 'conversion') return false;
+        const aProdId = (a?.productId as { _id?: string })?._id || a?.productId;
+        const targetId = typeof aProdId === 'object' && aProdId !== null ? (aProdId as { _id?: string })._id : aProdId;
+        return targetId?.toString() === p?._id?.toString();
       });
 
       const hasAnalytics = analyticsData.length > 0;
-      const dynamicClicks = hasAnalytics ? clickEvents.length : (p.clicks || 0);
-      const dynamicConversions = hasAnalytics ? convEvents.length : (p.conversions || 0);
+      const dynamicClicks = hasAnalytics ? clickEvents.length : (p?.clicks || 0);
+      const dynamicConversions = hasAnalytics ? convEvents.length : (p?.conversions || 0);
 
       return {
         ...p,
@@ -287,6 +287,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [catSubcategories, setCatSubcategories] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
+  // States for Security Logs Tab (declared at top-level to comply with Rules of Hooks)
+  const [selectedActionType, setSelectedActionType] = useState<string>('all');
+  const [securitySearchQuery, setSecuritySearchQuery] = useState<string>('');
+  const [localLogsPage, setLocalLogsPage] = useState<number>(1);
+
   // Check Admin clearance
   useEffect(() => {
     if (authLoading) return; // Do not redirect while loading is pending
@@ -312,7 +317,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
         if (usersRes.ok) {
           const uData = await usersRes.json();
-          setUsers(uData || []);
+          setUsers(Array.isArray(uData) ? uData : (uData?.users || []));
         }
       } catch (err: unknown) {
         // silent catch
@@ -352,7 +357,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const d = await res.json();
         if (signal?.aborted) return;
         pData = d.products || [];
-        setProducts(pData);
+        setProducts(Array.isArray(pData) ? pData : []);
       } else {
         const errJson = await res.json().catch(() => ({}));
         if (signal?.aborted) return;
@@ -371,7 +376,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       if (res.ok) {
         cData = await res.json();
         if (signal?.aborted) return;
-        setCategories(cData);
+        setCategories(Array.isArray(cData) ? cData : []);
       } else {
         const errJson = await res.json().catch(() => ({}));
         if (signal?.aborted) return;
@@ -391,7 +396,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         const d = await res.json();
         if (signal?.aborted) return;
         bData = d.blogs || [];
-        setBlogs(bData);
+        setBlogs(Array.isArray(bData) ? bData : []);
       } else {
         const errJson = await res.json().catch(() => ({}));
         if (signal?.aborted) return;
@@ -444,7 +449,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         }
         setDistrictStats(prev => ({
           ...prev,
-          ...(aData.districts || {})
+          ...(aData?.districts || {})
         }));
       } else {
         const errJson = await analyticsRes.json().catch(() => ({}));
@@ -468,7 +473,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         if (usersRes.ok) {
           const uData = await usersRes.json();
           if (signal?.aborted) return;
-          setUsers(uData || []);
+          setUsers(Array.isArray(uData) ? uData : (uData?.users || []));
         } else {
           const errData = await usersRes.json().catch(() => ({}));
           if (signal?.aborted) return;
@@ -516,7 +521,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         if (secRes.ok) {
           const secData = await secRes.json();
           if (signal?.aborted) return;
-          setSecurityLogs(secData || []);
+          setSecurityLogs(Array.isArray(secData) ? secData : (secData?.logs || secData?.data || []));
         } else {
           const errData = await secRes.json().catch(() => ({}));
           if (signal?.aborted) return;
@@ -531,10 +536,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
     // Calculate aggregates safely with whichever metrics loaded successfully
     try {
-      const clicks = (telemetryClicks !== undefined && telemetryClicks !== null) ? telemetryClicks : pData.reduce((acc, p) => acc + (p.clicks || 0), 0);
-      const conversions = (telemetryConversions !== undefined && telemetryConversions !== null) ? telemetryConversions : (pData.reduce((acc, p) => acc + (p.conversions || 0), 0) || Math.round(clicks * 0.12));
+      const clicks = (telemetryClicks !== undefined && telemetryClicks !== null) ? telemetryClicks : pData.reduce((acc, p) => acc + (p?.clicks || 0), 0);
+      const conversions = (telemetryConversions !== undefined && telemetryConversions !== null) ? telemetryConversions : (pData.reduce((acc, p) => acc + (p?.conversions || 0), 0) || Math.round(clicks * 0.12));
       const estimated = Number((clicks * 0.08 + conversions * 4.5).toFixed(2));
-      const unreads = mData.filter(m => !m.read).length;
+      const unreads = mData.filter(m => !m?.read).length;
 
       if (signal?.aborted) return;
       setStats({
@@ -584,7 +589,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         }
       });
       if (res.ok) {
-        setMessages(prev => prev.map(m => m._id === msgId ? { ...m, read: true } : m));
+        setMessages(prev => prev.map(m => m?._id === msgId ? { ...m, read: true } : m));
         setStats(prev => ({ ...prev, unreadMessages: Math.max(prev.unreadMessages - 1, 0) }));
       }
     } catch (e) {
@@ -771,28 +776,39 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setModalFormTab('basics');
     
     // Map specifications keys back to semicolon string format
-    const specStr = Object.entries(p.specifications || {})
-      .map(([k, v]) => `${k}=${v}`)
-      .join(';');
+    let specStr = '';
+    if (p.specifications) {
+      if (typeof p.specifications === 'string') {
+        specStr = p.specifications;
+      } else if (p.specifications instanceof Map) {
+        specStr = Array.from((p.specifications as Map<any, any>).entries())
+          .map(([k, v]) => `${k}=${v}`)
+          .join(';');
+      } else if (typeof p.specifications === 'object') {
+        specStr = Object.entries(p.specifications)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(';');
+      }
+    }
     
     setProdForm({
-      name: p.name,
+      name: p?.name,
       slug: p.slug,
       brand: p.brand || '',
-      price: String(p.price),
+      price: String(p?.price),
       originalPrice: String(p.originalPrice || ''),
       discount: String(p.discount || ''),
-      category: typeof p.category === 'object' ? p.category._id : p.category,
+      category: typeof p?.category === 'object' && p?.category !== null ? p?.category._id : p?.category,
       subcategory: p.subcategory || '',
       description: p.description,
       longDescription: p.longDescription || '',
-      affiliateLink: p.affiliateLink,
+      affiliateLink: p?.affiliateLink,
       affiliateCode: p.affiliateCode || '',
-      images: (p.images && p.images.length > 0) ? p.images.join('\n') : '',
-      features: p.features?.join(', ') || '',
+      images: Array.isArray(p.images) ? p.images.join("\n") : "",
+      features: Array.isArray(p.features) ? p.features.join(', ') : '',
       specKeyVal: specStr,
-      pros: p.pros?.join(', ') || '',
-      cons: p.cons?.join(', ') || '',
+      pros: Array.isArray(p.pros) ? p.pros.join(', ') : '',
+      cons: Array.isArray(p.cons) ? p.cons.join(', ') : '',
       inStock: p.inStock !== false,
       trending: p.trending || false,
       featured: p.featured || false
@@ -812,7 +828,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (res.ok) {
-            setProducts(prev => prev.filter(p => p._id !== id));
+            setProducts(prev => prev.filter(p => p?._id !== id));
           } else {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Deletion Failed", err.error || "The server rejected the deletion request.");
@@ -872,12 +888,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
   const startEditCategory = (c: Category) => {
     setEditingCategory(c);
-    setCatName(c.name);
-    setCatIcon(c.icon || '📦');
-    setCatSlug(c.slug);
+    setCatName(c?.name);
+    setCatIcon(c?.icon || '📦');
+    setCatSlug(c?.slug);
     setCatDescription(c.description || '');
     setCatImage(c.image || '');
-    setCatSubcategories(c.subcategories ? c.subcategories.join(', ') : '');
+    setCatSubcategories(c?.subcategories && Array.isArray(c.subcategories) ? c.subcategories.join(', ') : '');
   };
 
   const cancelEditCategory = () => {
@@ -930,7 +946,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       });
       if (res.ok) {
         const bodyObj = await res.json();
-        triggerAlert("Simulation Completed", `Sunday automated scheduler event completed! Added ${bodyObj.log.productsAdded?.length || 0} product items.`);
+        triggerAlert("Simulation Completed", `Sunday automated scheduler event completed! Added ${bodyObj.log?.productsAdded?.length || 0} product items.`);
         await loadAdminMetrics();
       } else {
         const errJson = await res.json().catch(() => ({}));
@@ -1109,17 +1125,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             <div className="space-y-2 pt-1">
               <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Targeted Product Affiliate Click Counts</h4>
               <div className="divide-y divide-slate-50 dark:divide-slate-700 text-[11px] font-sans max-h-[140px] overflow-y-auto pr-1">
-                {resolvedProducts.filter(p => (p.clicks || 0) > 0).length === 0 ? (
+                {resolvedProducts.filter(p => (p?.clicks || 0) > 0).length === 0 ? (
                   <p className="text-xs text-slate-300 italic py-2">No product clicks recorded yet in this session. Go browse the homepage and click authorized store links to log click telemetry!</p>
                 ) : (
-                  [...resolvedProducts].filter(p => (p.clicks || 0) > 0).sort((a,b) => (b.clicks || 0) - (a.clicks || 0)).slice(0, 4).map((p, index) => {
+                  [...resolvedProducts].filter(p => (p?.clicks || 0) > 0).sort((a,b) => (b?.clicks || 0) - (a?.clicks || 0)).slice(0, 4).map((p, index) => {
                     const clickCount = p.clicks || 0;
                     const convRating = p.conversions || Math.round(clickCount * 0.12);
                     return (
-                      <div key={p._id} className="py-2 flex items-center justify-between gap-4">
+                      <div key={p?._id} className="py-2 flex items-center justify-between gap-4">
                         <div className="truncate max-w-[180px] sm:max-w-[260px]">
-                          <span className="font-bold text-slate-700 dark:text-slate-100">{index + 1}. {p.name}</span>
-                          <span className="block font-mono text-[9px] text-indigo-400 truncate" title={p.affiliateLink}>{p.affiliateLink}</span>
+                          <span className="font-bold text-slate-700 dark:text-slate-100">{index + 1}. {p?.name}</span>
+                          <span className="block font-mono text-[9px] text-indigo-400 truncate" title={p?.affiliateLink}>{p?.affiliateLink}</span>
                         </div>
                         <div className="flex items-center gap-3 font-mono text-center shrink-0">
                           <div>
@@ -1406,7 +1422,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               const startIndex = (currentProductPage - 1) * 10;
               const paginatedProducts = resolvedProducts.slice(startIndex, startIndex + 10);
               const catMap = new Map<string, string>();
-              categories.forEach(c => catMap.set(String(c._id), c.name));
+              categories.forEach(c => catMap.set(String(c?._id), c?.name));
 
               return (
                 <div className="space-y-4">
@@ -1424,18 +1440,18 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   {isMobile ? (
                     <div className="grid grid-cols-1 gap-4">
                       {paginatedProducts.map((p, idx) => (
-                        <div key={p._id || `prod-mob-${idx}`} className="bg-white dark:bg-zinc-800/30 p-4 rounded-2xl border border-slate-50 dark:border-slate-700 shadow-xs space-y-3">
+                        <div key={p?._id || `prod-mob-${idx}`} className="bg-white dark:bg-zinc-800/30 p-4 rounded-2xl border border-slate-50 dark:border-slate-700 shadow-xs space-y-3">
                           <div className="flex justify-between items-start gap-2">
-                            <h5 className="font-bold text-slate-800 dark:text-white text-xs leading-snug">{p.name}</h5>
+                            <h5 className="font-bold text-slate-800 dark:text-white text-xs leading-snug">{p?.name}</h5>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-200 shrink-0">
                               {(() => {
-                                if (!p.category) return 'Curated Line';
-                                if (typeof p.category === 'object' && p.category) {
-                                  if (p.category.name) return p.category.name;
-                                  const catId = p.category._id || '';
+                                if (!p?.category) return 'Curated Line';
+                                if (typeof p?.category === 'object' && p?.category !== null && p?.category) {
+                                  if (p?.category.name) return p?.category.name;
+                                  const catId = p?.category._id || '';
                                   return catMap.get(String(catId)) || 'Curated Line';
                                 }
-                                return catMap.get(String(p.category)) || 'Curated Line';
+                                return catMap.get(String(p?.category)) || 'Curated Line';
                               })()}
                             </span>
                           </div>
@@ -1443,7 +1459,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             <div className="flex gap-4">
                               <div>
                                 <span className="text-slate-300 text-[9px] block font-sans uppercase font-bold tracking-wider">Price</span>
-                                <span className="font-bold text-slate-700 dark:text-slate-100">₹{p.price}</span>
+                                <span className="font-bold text-slate-700 dark:text-slate-100">₹{p?.price}</span>
                               </div>
                               <div>
                                 <span className="text-slate-300 text-[9px] block font-sans uppercase font-bold tracking-wider">CTR Clicks</span>
@@ -1459,7 +1475,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 <Edit className="h-3.5 w-3.5" />
                               </button>
                               <button
-                                onClick={() => handleDeleteProduct(p._id)}
+                                onClick={() => handleDeleteProduct(p?._id)}
                                 className="text-rose-500 hover:text-rose-700 p-2 bg-rose-50 dark:bg-rose-950/40 rounded-lg shadow-xs"
                                 title="Delete specifications"
                               >
@@ -1485,20 +1501,20 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           </thead>
                           <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                             {paginatedProducts.map((p, idx) => (
-                              <tr key={p._id || `prod-desk-${idx}`} className="hover:bg-slate-50/20 transition-all">
-                                <td className="py-3 px-4 font-bold text-slate-800 dark:text-white truncate max-w-xs">{p.name}</td>
+                              <tr key={p?._id || `prod-desk-${idx}`} className="hover:bg-slate-50/20 transition-all">
+                                <td className="py-3 px-4 font-bold text-slate-800 dark:text-white truncate max-w-xs">{p?.name}</td>
                                 <td className="py-3 px-4 text-slate-400">
                                   {(() => {
-                                    if (!p.category) return 'Curated Line';
-                                    if (typeof p.category === 'object' && p.category) {
-                                      if (p.category.name) return p.category.name;
-                                      const catId = p.category._id || '';
+                                    if (!p?.category) return 'Curated Line';
+                                    if (typeof p?.category === 'object' && p?.category !== null && p?.category) {
+                                      if (p?.category.name) return p?.category.name;
+                                      const catId = p?.category._id || '';
                                       return catMap.get(String(catId)) || 'Curated Line';
                                     }
-                                    return catMap.get(String(p.category)) || 'Curated Line';
+                                    return catMap.get(String(p?.category)) || 'Curated Line';
                                   })()}
                                 </td>
-                                <td className="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-100">₹{p.price}</td>
+                                <td className="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-100">₹{p?.price}</td>
                                 <td className="py-3 px-4 font-mono font-semibold text-indigo-400">{p.clicks || 0}</td>
                                 <td className="py-3 px-4">
                                   <div className="flex gap-2">
@@ -1510,7 +1526,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                       <Edit className="h-3.5 w-3.5" />
                                     </button>
                                     <button
-                                      onClick={() => handleDeleteProduct(p._id)}
+                                      onClick={() => handleDeleteProduct(p?._id)}
                                       className="text-rose-500 hover:text-rose-700 p-1 bg-rose-50 dark:bg-rose-950/40 rounded shadow-xs"
                                       title="Delete specifications"
                                     >
@@ -1700,11 +1716,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       {categories.map((c, idx) => (
                         <div key={c._id || `cat-mob-${idx}`} className="pt-4 first:pt-0 flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl shrink-0 p-1.5 bg-slate-50 dark:bg-slate-800 rounded-xl">{c.icon || '📦'}</span>
+                            <span className="text-2xl shrink-0 p-1.5 bg-slate-50 dark:bg-slate-800 rounded-xl">{c?.icon || '📦'}</span>
                             <div>
-                               <h5 className="font-bold text-slate-800 dark:text-white text-xs">{c.name}</h5>
-                               <span className="font-mono text-[10px] text-slate-300 block truncate max-w-[140px]">{c.slug}</span>
-                               {c.subcategories && c.subcategories.length > 0 && (
+                               <h5 className="font-bold text-slate-800 dark:text-white text-xs">{c?.name}</h5>
+                               <span className="font-mono text-[10px] text-slate-300 block truncate max-w-[140px]">{c?.slug}</span>
+                               {c?.subcategories && Array.isArray(c.subcategories) && c.subcategories.length > 0 && (
                                  <div className="flex flex-wrap gap-1 mt-1 max-w-[180px]">
                                    {c.subcategories.map((sub, sIdx) => (
                                      <span key={`${sub || 'sub'}-${sIdx}`} className="text-[8px] px-1.5 py-0.5 bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300 rounded font-semibold">{sub}</span>
@@ -1749,12 +1765,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                           {categories.map((c, idx) => (
                             <tr key={c._id || `cat-desk-${idx}`} className="hover:bg-slate-50/20">
-                              <td className="py-3 px-4 font-semibold text-lg">{c.icon || '📦'}</td>
-                              <td className="py-3 px-4 font-bold text-slate-800 dark:text-white">{c.name}</td>
-                              <td className="py-3 px-4 text-slate-400 font-mono text-[11px] font-semibold">{c.slug}</td>
+                              <td className="py-3 px-4 font-semibold text-lg">{c?.icon || '📦'}</td>
+                              <td className="py-3 px-4 font-bold text-slate-800 dark:text-white">{c?.name}</td>
+                              <td className="py-3 px-4 text-slate-400 font-mono text-[11px] font-semibold">{c?.slug}</td>
                               <td className="py-3 px-4">
                                 <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                  {c.subcategories && c.subcategories.length > 0 ? (
+                                  {c?.subcategories && Array.isArray(c.subcategories) && c.subcategories.length > 0 ? (
                                     c.subcategories.map((sub, sIdx) => (
                                       <span key={`${sub || 'sub'}-${sIdx}`} className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300 rounded font-semibold">{sub}</span>
                                     ))
@@ -1809,11 +1825,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   {isMobile ? (
                     <div className="divide-y divide-slate-50 dark:divide-slate-700/80 p-5 space-y-4">
                       {blogs.map((b, idx) => (
-                        <div key={b._id || `blog-mob-${idx}`} className="pt-4 first:pt-0 space-y-2">
-                          <h5 className="font-bold text-slate-800 dark:text-white text-xs leading-snug">{b.title}</h5>
+                        <div key={b?._id || `blog-mob-${idx}`} className="pt-4 first:pt-0 space-y-2">
+                          <h5 className="font-bold text-slate-800 dark:text-white text-xs leading-snug">{b?.title}</h5>
                           <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                            <span className="px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-200">{b.category}</span>
-                            <span className="font-mono text-indigo-500 dark:text-indigo-300">👀 {b.views || 0} views</span>
+                            <span className="px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-200">{b?.category}</span>
+                            <span className="font-mono text-indigo-500 dark:text-indigo-300">👀 {b?.views || 0} views</span>
                           </div>
                         </div>
                       ))}
@@ -1831,11 +1847,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         </thead>
                         <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                           {blogs.map((b, idx) => (
-                            <tr key={b._id || `blog-desk-${idx}`} className="hover:bg-slate-50/20">
-                              <td className="py-3 px-4 font-bold text-slate-800 truncate max-w-sm dark:text-white">{b.title}</td>
-                              <td className="py-3 px-4 text-slate-400 font-semibold">{b.category}</td>
-                              <td className="py-3 px-4 font-mono font-bold text-slate-600 dark:text-slate-200">{b.views || 0}</td>
-                              <td className="py-3 px-4 text-slate-300 font-semibold">{b.author || 'Admin'}</td>
+                            <tr key={b?._id || `blog-desk-${idx}`} className="hover:bg-slate-50/20">
+                              <td className="py-3 px-4 font-bold text-slate-800 truncate max-w-sm dark:text-white">{b?.title}</td>
+                              <td className="py-3 px-4 text-slate-400 font-semibold">{b?.category}</td>
+                              <td className="py-3 px-4 font-mono font-bold text-slate-600 dark:text-slate-200">{b?.views || 0}</td>
+                              <td className="py-3 px-4 text-slate-300 font-semibold">{b?.author || 'Admin'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1880,7 +1896,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 
                 {(() => {
                   const displayedMessages = messagesFilter === 'unread' 
-                    ? messages.filter(m => !m.read) 
+                    ? messages.filter(m => !m?.read) 
                     : messages;
 
                   if (displayedMessages.length === 0) {
@@ -1899,23 +1915,23 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   return (
                     <div className="space-y-4">
                       {displayedMessages.map((m, idx) => {
-                        const isReplying = activeReplyId === m._id;
-                        const replyText = replyTextMap[m._id] || '';
+                        const isReplying = activeReplyId === m?._id;
+                        const replyText = replyTextMap[m?._id] || '';
                         
                         return (
                           <div
-                            key={m._id || `msg-${idx}`}
-                            className={`rounded-2xl border p-5 space-y-3.5 transition-all ${!m.read ? 'bg-indigo-50/40 border-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800 shadow-xs' : 'bg-slate-50/20 border-slate-100 dark:border-slate-700'}`}
+                            key={m?._id || `msg-${idx}`}
+                            className={`rounded-2xl border p-5 space-y-3.5 transition-all ${!m?.read ? 'bg-indigo-50/40 border-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800 shadow-xs' : 'bg-slate-50/20 border-slate-100 dark:border-slate-700'}`}
                           >
                             <div className="flex items-center justify-between gap-4 border-b pb-2 dark:border-slate-700">
                               <div>
-                                <span className="text-[9px] text-slate-300 font-bold font-mono">Date: {new Date(m.createdAt).toLocaleString()}</span>
+                                <span className="text-[9px] text-slate-300 font-bold font-mono">Date: {new Date(m?.createdAt).toLocaleString()}</span>
                                 <h4 className="text-xs font-black text-slate-800 dark:text-white mt-1">Sender: {m.name} ({m.email})</h4>
                               </div>
 
-                              {!m.read ? (
+                              {!m?.read ? (
                                 <button
-                                  onClick={() => handleMarkRead(m._id)}
+                                  onClick={() => handleMarkRead(m?._id)}
                                   className="flex items-center gap-1 rounded bg-indigo-500 hover:bg-indigo-600 text-white px-2.5 py-1 text-[10px] font-bold shadow-xs cursor-pointer"
                                 >
                                   <MailCheck className="h-3.5 w-3.5 shrink-0" />
@@ -1926,7 +1942,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               )}
                             </div>
 
-                            <p className="text-[11px] text-slate-300 font-bold">Subject: <span className="text-slate-700 dark:text-slate-50">{m.subject}</span></p>
+                            <p className="text-[11px] text-slate-300 font-bold">Subject: <span className="text-slate-700 dark:text-slate-50">{m?.subject}</span></p>
                             <p className="text-xs text-slate-500 leading-relaxed dark:text-slate-200 italic">"{m.message}"</p>
 
                             {/* Actions bar */}
@@ -1934,14 +1950,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (activeReplyId === m._id) {
+                                  if (activeReplyId === m?._id) {
                                     setActiveReplyId(null);
                                   } else {
-                                    setActiveReplyId(m._id);
-                                    if (!replyTextMap[m._id]) {
+                                    setActiveReplyId(m?._id);
+                                    if (!replyTextMap[m?._id]) {
                                       setReplyTextMap(prev => ({
                                         ...prev,
-                                        [m._id]: `Hi ${m.name},\n\nThank you for reaching out to gadgetsprohub! Regarding your query about "${m.subject}":\n\n`
+                                        [m?._id]: `Hi ${m.name},\n\nThank you for reaching out to gadgetsprohub! Regarding your query about "${m?.subject}":\n\n`
                                       }));
                                     }
                                   }
@@ -1957,7 +1973,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               </button>
 
                               <a
-                                href={`mailto:${m.email}?subject=${encodeURIComponent(`Re: ${m.subject}`)}&body=${encodeURIComponent(`Hi ${m.name},\n\n`)}`}
+                                href={`mailto:${m.email}?subject=${encodeURIComponent(`Re: ${m?.subject}`)}&body=${encodeURIComponent(`Hi ${m.name},\n\n`)}`}
                                 className="flex items-center gap-1.5 rounded-lg bg-teal-50 hover:bg-teal-50 text-teal-700 px-3 py-1.5 text-xs font-bold transition-all cursor-pointer dark:bg-teal-950/20 dark:text-teal-200 dark:hover:bg-teal-905"
                               >
                                 <span className="text-xs">✉</span>
@@ -1976,13 +1992,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                   onChange={(e) => {
                                     setReplyTextMap(prev => ({
                                       ...prev,
-                                      [m._id]: e.target.value
+                                      [m?._id]: e.target.value
                                     }));
                                   }}
                                   placeholder="Type your email response here..."
                                 />
 
-                                {sentReplySuccess === m._id ? (
+                                {sentReplySuccess === m?._id ? (
                                   <div className="text-[11px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-300 p-2.5 rounded-lg flex items-center gap-1.5">
                                     <span>✓ Your email response has been simulated and marked sent!</span>
                                   </div>
@@ -1997,17 +2013,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                         }
                                         
                                         // Mark read automatically
-                                        if (!m.read) {
-                                          await handleMarkRead(m._id);
+                                        if (!m?.read) {
+                                          await handleMarkRead(m?._id);
                                         }
 
-                                        setSentReplySuccess(m._id);
+                                        setSentReplySuccess(m?._id);
                                         setTimeout(() => {
                                           setSentReplySuccess(null);
                                           setActiveReplyId(null);
                                           setReplyTextMap(prev => {
                                             const copy = { ...prev };
-                                            delete copy[m._id];
+                                            delete copy[m?._id];
                                             return copy;
                                           });
                                         }, 2500);
@@ -2120,9 +2136,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 </td>
                                 <td className="py-3 px-4 max-w-[200px] truncate">
                                   <span className="text-slate-700 dark:text-slate-200 font-sans font-medium">
-                                    {Array.isArray(log.productsAdded) 
-                                      ? log.productsAdded?.map((p) => typeof p === 'object' && p !== null ? (p as { name?: string }).name : String(p)).join(', ')
-                                      : log.productsAdded || 'N/A'
+                                    {Array.isArray(log?.productsAdded) 
+                                      ? log?.productsAdded?.map((p) => typeof p === 'object' && p !== null ? (p as { name?: string }).name : String(p)).join(', ')
+                                      : log?.productsAdded || 'N/A'
                                     }
                                   </span>
                                 </td>
@@ -2176,12 +2192,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             ) : (() => {
               const filteredUsers = users.filter(usr => {
                 const matchesSearch = 
-                  (usr.email || '').toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-                  (usr.name || '').toLowerCase().includes(userSearchQuery.toLowerCase());
+                  (usr?.email || '').toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                  (usr?.name || '').toLowerCase().includes(userSearchQuery.toLowerCase());
                 
                 const matchesRole = 
                   userRoleFilter === 'all' || 
-                  usr.role === userRoleFilter;
+                  usr?.role === userRoleFilter;
 
                 return matchesSearch && matchesRole;
               });
@@ -2305,9 +2321,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           </thead>
                           <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                             {filteredUsers.map((usr: User, idx: number) => {
-                              const usrId = usr._id || usr.id || `usr-${idx}`;
+                              const usrId = usr?._id || usr?.id || `usr-${idx}`;
                               const isSelf = usrId === user?._id || usrId === (user as { id?: string })?.id;
-                              const isCurrentAdmin = usr.role === 'admin';
+                              const isCurrentAdmin = usr?.role === 'admin';
 
                               return (
                                 <tr key={usrId} className="hover:bg-slate-50/20 dark:hover:bg-slate-700/20 transition-colors">
@@ -2317,24 +2333,24 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                         {usr.profileImage ? (
                                           <img
                                             src={usr.profileImage}
-                                            alt={usr.name}
+                                            alt={usr?.name}
                                             referrerPolicy="no-referrer"
                                             className="h-full w-full rounded-full object-cover"
                                           />
                                         ) : (
-                                          <span>{(usr.name || usr.email || 'U')[0].toUpperCase()}</span>
+                                          <span>{(usr?.name || usr?.email || 'U')[0].toUpperCase()}</span>
                                         )}
                                       </div>
                                       <div className="space-y-0.5">
                                         <div className="font-bold text-slate-700 dark:text-slate-50 flex items-center gap-1.5">
-                                          <span>{usr.name || 'Anonymous User'}</span>
+                                          <span>{usr?.name || 'Anonymous User'}</span>
                                           {isSelf && (
                                             <span className="text-[9px] bg-slate-800 text-white rounded px-1.5 py-0.2 font-extrabold dark:bg-slate-50 dark:text-slate-800 uppercase">
                                               You
                                             </span>
                                           )}
                                         </div>
-                                        <div className="text-[11px] text-slate-300 font-mono font-medium">{usr.email}</div>
+                                        <div className="text-[11px] text-slate-300 font-mono font-medium">{usr?.email}</div>
                                       </div>
                                     </div>
                                   </td>
@@ -2375,17 +2391,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 onRetry={loadAdminMetrics} 
               />
             ) : (() => {
-              const [selectedActionType, setSelectedActionType] = useState<string>('all');
-              const [searchQuery, setSearchQuery] = useState<string>('');
-              const [localLogsPage, setLocalLogsPage] = useState<number>(1);
-
               const filteredLogs = securityLogs.filter(log => {
-                const matchesAction = selectedActionType === 'all' || log.action === selectedActionType;
+                const matchesAction = selectedActionType === 'all' || log?.action === selectedActionType;
                 const matchesSearch = 
-                  (log.actorEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  (log.action || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  (log.targetId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  JSON.stringify(log.details || {}).toLowerCase().includes(searchQuery.toLowerCase());
+                  (log?.adminEmail || '').toLowerCase().includes(securitySearchQuery.toLowerCase()) ||
+                  (log?.action || '').toLowerCase().includes(securitySearchQuery.toLowerCase()) ||
+                  (log?.targetId || '').toLowerCase().includes(securitySearchQuery.toLowerCase()) ||
+                  JSON.stringify(log?.details || {}).toLowerCase().includes(securitySearchQuery.toLowerCase());
                 return matchesAction && matchesSearch;
               });
 
@@ -2433,8 +2445,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <input 
                         type="text"
                         placeholder="Search actor, target, metadata..."
-                        value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setLocalLogsPage(1); }}
+                        value={securitySearchQuery}
+                        onChange={(e) => { setSecuritySearchQuery(e.target.value); setLocalLogsPage(1); }}
                         className="w-full text-xs bg-white dark:bg-zinc-800 border border-slate-100 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-600 dark:text-slate-300 focus:outline-hidden focus:border-indigo-400 font-sans"
                       />
                     </div>
@@ -2454,7 +2466,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     <div className="flex items-end justify-end">
                       <button
                         type="button"
-                        onClick={() => { setSelectedActionType('all'); setSearchQuery(''); setLocalLogsPage(1); }}
+                        onClick={() => { setSelectedActionType('all'); setSecuritySearchQuery(''); setLocalLogsPage(1); }}
                         className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-600 hover:underline dark:text-indigo-300 transition-all px-2 py-2"
                       >
                         Reset Filters
@@ -2494,18 +2506,18 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               return (
                                 <tr key={log._id || log.id || index} className="text-xs hover:bg-slate-50/50 transition-colors dark:hover:bg-zinc-700/20">
                                   <td className="py-3.5 px-4 font-mono text-[10px] text-slate-300 dark:text-slate-400">
-                                    {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
+                                    {log?.timestamp ? new Date(log?.timestamp).toLocaleString() : 'N/A'}
                                   </td>
                                   <td className="py-3.5 px-4 font-sans font-bold text-slate-700 dark:text-zinc-100">
                                     <div className="flex items-center gap-1.5">
                                       <span className="text-[11px] bg-slate-50 text-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-700 dark:text-slate-300 font-mono">
-                                        {log.actorEmail}
+                                        {log?.adminEmail}
                                       </span>
                                     </div>
                                   </td>
                                   <td className="py-3.5 px-4">
-                                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-mono font-black uppercase ${getActionBadgeClass(log.action || '')}`}>
-                                      {log.action}
+                                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-mono font-black uppercase ${getActionBadgeClass(log?.action || '')}`}>
+                                      {log?.action}
                                     </span>
                                   </td>
                                   <td className="py-3.5 px-4 font-mono text-[10px] text-slate-400 dark:text-slate-400">
@@ -2513,11 +2525,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                     <div className="text-[9px] text-slate-300 dark:text-slate-500">UA: {(log.userAgent || '').substring(0, 20)}...</div>
                                   </td>
                                   <td className="py-3.5 px-4 font-mono text-[10px] text-slate-400">
-                                    {log.targetId || 'N/A'}
+                                    {log?.targetId || 'N/A'}
                                   </td>
                                   <td className="py-3.5 px-4">
                                     <div className="text-[10px] bg-slate-50 p-2 rounded-lg border border-slate-50 dark:bg-zinc-800/50 dark:border-slate-700/80 font-mono text-slate-500 dark:text-slate-300 max-w-xs overflow-x-auto">
-                                      {log.details ? JSON.stringify(log.details) : 'None'}
+                                      {log?.details ? JSON.stringify(log?.details) : 'None'}
                                     </div>
                                   </td>
                                 </tr>
@@ -2624,17 +2636,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               isMobile ? (
                 <div className="space-y-4">
                   {paginatedLogs.map((a, idx) => {
-                    const isPage = a.eventType === 'page_visit';
-                    const isClick = a.eventType === 'click';
-                    const isConv = a.eventType === 'conversion';
-                    const isView = a.eventType === 'view';
+                    const isPage = a?.eventType === 'page_visit';
+                    const isClick = a?.eventType === 'click';
+                    const isConv = a?.eventType === 'conversion';
+                    const isView = a?.eventType === 'view';
                     const absoluteIndex = startIndex + idx;
                     const recordId = `log-mob-${a._id || absoluteIndex}-${idx}`;
                     const isExpanded = expandedVisitorId === recordId;
 
                     // Display nice status color badge
                     let statusColor = "bg-slate-50 text-slate-400 dark:bg-slate-700/60 dark:text-slate-300";
-                    let statusLabel = a.eventType;
+                    let statusLabel = a?.eventType;
                     if (isPage) {
                       statusColor = "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-300";
                       statusLabel = "Page View";
@@ -2651,19 +2663,19 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                     // Display stayed time nicely
                     let stayDisplay = "—";
-                    if (isPage && typeof a.timeSpent === "number") {
-                      if (a.timeSpent === 0) {
+                    if (isPage && typeof a?.timeSpent === "number") {
+                      if (a?.timeSpent === 0) {
                         stayDisplay = "Instant visit";
-                      } else if (a.timeSpent < 60) {
-                        stayDisplay = `${a.timeSpent} sec`;
+                      } else if (a?.timeSpent < 60) {
+                        stayDisplay = `${a?.timeSpent} sec`;
                       } else {
-                        const mins = Math.floor(a.timeSpent / 60);
-                        const secs = a.timeSpent % 60;
+                        const mins = Math.floor(a?.timeSpent / 60);
+                        const secs = a?.timeSpent % 60;
                         stayDisplay = secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
                       }
                     }
 
-                    const visitorPlace = a.district || "Chennai";
+                    const visitorPlace = a?.district || "Chennai";
                     const visitorName = a.userId ? (a.userId.name || 'Explorer Member') : 'Guest Visitor';
 
                     return (
@@ -2702,13 +2714,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           <div>
                             <span className="text-slate-300 text-[9px] uppercase tracking-wider block font-bold">Timestamp</span>
                             <span className="font-mono text-[10px] text-slate-400 font-bold block">
-                              {new Date(a.timestamp || Date.now()).toLocaleTimeString()}
+                              {new Date(a?.timestamp || Date.now()).toLocaleTimeString()}
                             </span>
                           </div>
                           <div>
                             <span className="text-slate-300 text-[9px] uppercase tracking-wider block font-bold">Target</span>
-                            <span className="font-mono text-[10px] text-slate-400 dark:text-slate-300 truncate block" title={isPage ? a.pageUrl : (a.productId?.name || "Product")}>
-                              {isPage ? (a.pageUrl || "home") : (a.productId?.name || "Product Item")}
+                            <span className="font-mono text-[10px] text-slate-400 dark:text-slate-300 truncate block" title={isPage ? a?.pageUrl : (a?.productId?.name || "Product")}>
+                              {isPage ? (a?.pageUrl || "home") : (a?.productId?.name || "Product Item")}
                             </span>
                           </div>
                         </div>
@@ -2723,7 +2735,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               </div>
                               <div>
                                 <div className="text-slate-300 uppercase font-bold tracking-wider text-[8px]">IP Address</div>
-                                <div className="font-mono font-bold text-slate-600 dark:text-slate-200 mt-1">{a.ipAddress || "127.0.0.1"}</div>
+                                <div className="font-mono font-bold text-slate-600 dark:text-slate-200 mt-1">{a?.ipAddress || "127.0.0.1"}</div>
                               </div>
                               <div className="col-span-2 pt-1">
                                 <div className="text-slate-300 uppercase font-bold tracking-wider text-[8px]">Action Type & Stay Time</div>
@@ -2737,7 +2749,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  triggerAlert("Diagnostic Registry Info", `Simulating diagnostic IP lookup for: ${a.ipAddress || "127.0.0.1"}\n\nLocation: ${visitorPlace} District\nNetwork ISP Status: Verified Clean`);
+                                  triggerAlert("Diagnostic Registry Info", `Simulating diagnostic IP lookup for: ${a?.ipAddress || "127.0.0.1"}\n\nLocation: ${visitorPlace} District\nNetwork ISP Status: Verified Clean`);
                                 }}
                                 className="text-[9px] rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-500 font-bold px-2 py-1 transition-all dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 cursor-pointer"
                               >
@@ -2791,17 +2803,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       </thead>
                       <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60 font-semibold text-slate-500 dark:text-slate-200">
                         {paginatedLogs.map((a, idx) => {
-                          const isPage = a.eventType === 'page_visit';
-                          const isClick = a.eventType === 'click';
-                          const isConv = a.eventType === 'conversion';
-                          const isView = a.eventType === 'view';
+                          const isPage = a?.eventType === 'page_visit';
+                          const isClick = a?.eventType === 'click';
+                          const isConv = a?.eventType === 'conversion';
+                          const isView = a?.eventType === 'view';
                           const absoluteIndex = startIndex + idx;
                           const recordId = `log-desk-${a._id || absoluteIndex}-${idx}`;
                           const isExpanded = expandedVisitorId === recordId;
 
                           // Display nice status color badge
                           let statusColor = "bg-slate-50 text-slate-400 dark:bg-slate-700/60 dark:text-slate-300";
-                          let statusLabel = a.eventType;
+                          let statusLabel = a?.eventType;
                           if (isPage) {
                             statusColor = "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-300";
                             statusLabel = "Page View";
@@ -2818,19 +2830,19 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                           // Display stayed time nicely
                           let stayDisplay = "—";
-                          if (isPage && typeof a.timeSpent === "number") {
-                            if (a.timeSpent === 0) {
+                          if (isPage && typeof a?.timeSpent === "number") {
+                            if (a?.timeSpent === 0) {
                               stayDisplay = "Instant visit";
-                            } else if (a.timeSpent < 60) {
-                              stayDisplay = `${a.timeSpent} sec`;
+                            } else if (a?.timeSpent < 60) {
+                              stayDisplay = `${a?.timeSpent} sec`;
                             } else {
-                              const mins = Math.floor(a.timeSpent / 60);
-                              const secs = a.timeSpent % 60;
+                              const mins = Math.floor(a?.timeSpent / 60);
+                              const secs = a?.timeSpent % 60;
                               stayDisplay = secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
                             }
                           }
 
-                          const visitorPlace = a.district || "Chennai";
+                          const visitorPlace = a?.district || "Chennai";
                           const visitorName = a.userId ? (a.userId.name || 'Explorer Member') : 'Guest Visitor';
 
                           return (
@@ -2875,10 +2887,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 {/* Timestamp & IP */}
                                 <td className="py-3.5 px-4 font-normal">
                                   <span className="text-[9px] font-mono font-bold block text-slate-300 dark:text-slate-400 leading-tight">
-                                    {new Date(a.timestamp || Date.now()).toLocaleString()}
+                                    {new Date(a?.timestamp || Date.now()).toLocaleString()}
                                   </span>
                                   <span className="text-xs font-mono font-black text-slate-700 dark:text-slate-300">
-                                    {a.ipAddress || "127.0.0.1"}
+                                    {a?.ipAddress || "127.0.0.1"}
                                   </span>
                                 </td>
 
@@ -2890,11 +2902,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 </td>
 
                                 {/* Action Target/Page */}
-                                <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400 dark:text-slate-300 max-w-[180px] truncate" title={isPage ? a.pageUrl : (a.productId?.name || "Product")}>
+                                <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400 dark:text-slate-300 max-w-[180px] truncate" title={isPage ? a?.pageUrl : (a?.productId?.name || "Product")}>
                                   {isPage ? (
-                                    a.pageUrl || "home"
+                                    a?.pageUrl || "home"
                                   ) : (
-                                    a.productId?.name || "Product Item"
+                                    a?.productId?.name || "Product Item"
                                   )}
                                 </td>
 
@@ -2977,7 +2989,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                               Hardware Group: {a.device || "Desktop Terminal"}
                                             </div>
                                             <div className="text-[10px] text-slate-300 leading-tight block">
-                                              Proxy Mask IP: {a.ipAddress || "127.0.0.1"}
+                                              Proxy Mask IP: {a?.ipAddress || "127.0.0.1"}
                                             </div>
                                           </div>
                                         </div>
@@ -2991,10 +3003,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                               <span>Type: {statusLabel}</span>
                                             </div>
                                             <div className="text-[10px] text-slate-400 font-semibold font-mono leading-tight">
-                                              Duration: {stayDisplay} (Seconds: {a.timeSpent || 0}s)
+                                              Duration: {stayDisplay} (Seconds: {a?.timeSpent || 0}s)
                                             </div>
-                                            <div className="text-[10px] text-indigo-600 font-bold dark:text-indigo-300 truncate max-w-xs" title={isPage ? a.pageUrl : (a.productId?.name || "Product")}>
-                                              Target: {isPage ? (a.pageUrl || "/") : (a.productId?.name || "Affiliate Hub Item")}
+                                            <div className="text-[10px] text-indigo-600 font-bold dark:text-indigo-300 truncate max-w-xs" title={isPage ? a?.pageUrl : (a?.productId?.name || "Product")}>
+                                              Target: {isPage ? (a?.pageUrl || "/") : (a?.productId?.name || "Affiliate Hub Item")}
                                             </div>
                                           </div>
                                         </div>
@@ -3010,7 +3022,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            triggerAlert("Diagnostic Registry Info", `Simulating diagnostic IP lookup for: ${a.ipAddress || "127.0.0.1"}\n\nLocation: ${visitorPlace} District\nNetwork ISP Status: Verified Clean`);
+                                            triggerAlert("Diagnostic Registry Info", `Simulating diagnostic IP lookup for: ${a?.ipAddress || "127.0.0.1"}\n\nLocation: ${visitorPlace} District\nNetwork ISP Status: Verified Clean`);
                                           }}
                                           className="text-[10px] rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-500 font-bold px-3 py-1.5 transition-all dark:border-slate-600 dark:text-slate-305 dark:hover:bg-slate-700 cursor-pointer"
                                         >
@@ -3285,7 +3297,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 setIsCatDropdownOpen(false);
                               }}
                             >
-                              {c.name}
+                              {c?.name}
                             </div>
                           ))}
                         </div>
@@ -3320,7 +3332,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           {(() => {
                             const activeCatId = prodForm.category || categories?.[0]?._id || '';
                             const activeCat = categories.find(c => String(c._id) === String(activeCatId));
-                            return (activeCat?.subcategories || []).map(sub => (
+                            const subcats = activeCat?.subcategories && Array.isArray(activeCat.subcategories) ? activeCat.subcategories : [];
+                            return subcats.map(sub => (
                               <div 
                                 key={sub} 
                                 className={`px-3 py-2 text-xs cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700 ${prodForm.subcategory === sub ? 'bg-indigo-50 dark:bg-slate-700 font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}

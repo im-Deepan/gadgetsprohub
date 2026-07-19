@@ -65,9 +65,10 @@ export default function AiContentDashboard({ showNotice }: AiContentDashboardPro
         const pRes = await apiFetch('/api/products');
         if (pRes.ok) {
           const pData = await pRes.json();
-          setProducts(pData);
-          if (pData.length > 0 && !selectedProductId) {
-            setSelectedProductId(pData[0]._id);
+          const resolvedProducts = Array.isArray(pData) ? pData : (pData?.products || []);
+          setProducts(resolvedProducts);
+          if (resolvedProducts.length > 0 && !selectedProductId) {
+            setSelectedProductId(resolvedProducts[0]._id);
           }
         }
         const prRes = await apiFetch('/api/admin/ai/prompts');
@@ -85,7 +86,8 @@ export default function AiContentDashboard({ showNotice }: AiContentDashboardPro
         const pRes = await apiFetch('/api/products');
         if (pRes.ok) {
           const pData = await pRes.json();
-          setProducts(pData);
+          const resolvedProducts = Array.isArray(pData) ? pData : (pData?.products || []);
+          setProducts(resolvedProducts);
         }
         const res = await apiFetch('/api/admin/ai/queue');
         if (res.ok) {

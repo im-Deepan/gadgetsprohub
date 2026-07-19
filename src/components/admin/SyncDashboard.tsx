@@ -115,53 +115,54 @@ export default function SyncDashboard({ showNotice }: SyncDashboardProps) {
       const pRes = await apiFetch('/api/products');
       if (pRes.ok) {
         const pData = await pRes.json();
-        setProducts(pData);
-        if (pData.length > 0 && !selectedProductId) {
-          setSelectedProductId(pData[0]._id);
-          fetchTimeline(pData[0]._id);
+        const resolvedProducts = Array.isArray(pData) ? pData : (pData?.products || []);
+        setProducts(resolvedProducts);
+        if (resolvedProducts.length > 0 && !selectedProductId) {
+          setSelectedProductId(resolvedProducts[0]._id);
+          fetchTimeline(resolvedProducts[0]._id);
         }
       }
 
       const dRes = await apiFetch('/api/admin/sync/dashboard');
       if (dRes.ok) {
         const dData = await dRes.json();
-        setStats(dData.data);
+        setStats(dData.data || {});
       }
 
       if (activeTab === 'overview') {
         const jRes = await apiFetch('/api/admin/sync/jobs');
         if (jRes.ok) {
           const jData = await jRes.json();
-          setJobs(jData.data);
+          setJobs(Array.isArray(jData?.data) ? jData.data : []);
         }
       } else if (activeTab === 'scheduler') {
         const sRes = await apiFetch('/api/admin/sync/schedules');
         if (sRes.ok) {
           const sData = await sRes.json();
-          setSchedules(sData.data);
+          setSchedules(Array.isArray(sData?.data) ? sData.data : []);
         }
       } else if (activeTab === 'health') {
         const hRes = await apiFetch('/api/admin/sync/health');
         if (hRes.ok) {
           const hData = await hRes.json();
-          setHealthReports(hData.data);
+          setHealthReports(Array.isArray(hData?.data) ? hData.data : []);
         }
       } else if (activeTab === 'rules') {
         const aRes = await apiFetch('/api/admin/sync/alerts');
         if (aRes.ok) {
           const aData = await aRes.json();
-          setAlertRules(aData.data);
+          setAlertRules(Array.isArray(aData?.data) ? aData.data : []);
         }
         const rRes = await apiFetch('/api/admin/sync/rules');
         if (rRes.ok) {
           const rData = await rRes.json();
-          setAutomationRules(rData.data);
+          setAutomationRules(Array.isArray(rData?.data) ? rData.data : []);
         }
       } else if (activeTab === 'audits') {
         const nRes = await apiFetch('/api/admin/sync/notifications');
         if (nRes.ok) {
           const nData = await nRes.json();
-          setAuditLogs(nData.data);
+          setAuditLogs(Array.isArray(nData?.data) ? nData.data : []);
         }
       } else if (activeTab === 'marketplace') {
         await fetchMarketplaceData();
@@ -178,40 +179,41 @@ export default function SyncDashboard({ showNotice }: SyncDashboardProps) {
       const aRes = await apiFetch('/api/admin/marketplace/analytics');
       if (aRes.ok) {
         const json = await aRes.json();
-        setMAnalytics(json.data);
+        setMAnalytics(json.data || { totalProducts: 0, overallSuccessRate: 100, providersCount: 0, providers: [] });
       }
       const pRes = await apiFetch('/api/admin/marketplace/providers');
       if (pRes.ok) {
         const json = await pRes.json();
-        setMProviders(json.data);
-        if (json.data.length > 0 && !selectedProvId) {
-          setSelectedProvId(json.data[0].providerId);
+        const providersList = Array.isArray(json?.data) ? json.data : [];
+        setMProviders(providersList);
+        if (providersList.length > 0 && !selectedProvId) {
+          setSelectedProvId(providersList[0].providerId);
         }
       }
       const sRes = await apiFetch('/api/admin/marketplace/settings');
       if (sRes.ok) {
         const json = await sRes.json();
-        setMSettings(json.data);
+        setMSettings(Array.isArray(json?.data) ? json.data : []);
       }
       const fRes = await apiFetch('/api/admin/marketplace/affiliate');
       if (fRes.ok) {
         const json = await fRes.json();
-        setMAffiliates(json.data);
+        setMAffiliates(Array.isArray(json?.data) ? json.data : []);
       }
       const hRes = await apiFetch('/api/admin/marketplace/health');
       if (hRes.ok) {
         const json = await hRes.json();
-        setMHealth(json.data);
+        setMHealth(Array.isArray(json?.data) ? json.data : []);
       }
       const lRes = await apiFetch('/api/admin/marketplace/logs');
       if (lRes.ok) {
         const json = await lRes.json();
-        setMLogs(json.data);
+        setMLogs(Array.isArray(json?.data) ? json.data : []);
       }
       const cRes = await apiFetch('/api/admin/marketplace/currencies');
       if (cRes.ok) {
         const json = await cRes.json();
-        setMCurrencies(json.data);
+        setMCurrencies(json.data || { baseCurrency: 'USD', rates: {} });
       }
     } catch {
       showNotice('error', 'Failed to retrieve multi-marketplace configurations.');
