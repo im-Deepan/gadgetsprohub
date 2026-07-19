@@ -165,90 +165,6 @@ export interface IMarketplaceProvider {
   healthCheck(): Promise<boolean>;
 }
 
-// Universal simulated marketplace scraping helper to generate realistic content gracefully
-function generateMockProductDetails(url: string, providerId: string, currency: string): NormalizedProduct {
-  // Extract ID pattern from URL
-  let parsedId = 'item-' + Math.floor(100000 + 0.5 * 900000);
-  if (url.includes('/dp/') || url.includes('/gp/product/')) {
-    const match = url.match(/\/dp\/([A-Z0-9]{10})/i) || url.match(/\/gp\/product\/([A-Z0-9]{10})/i);
-    if (match) parsedId = match[1];
-  } else if (url.includes('/p/itm') || url.includes('pid=')) {
-    const match = url.match(/pid=([A-Z0-9]{16})/i) || url.match(/\/p\/(itm[a-f0-9]{12,16})/i);
-    if (match) parsedId = match[1];
-  } else if (url.match(/\/itm\/(\d+)/)) {
-    const match = url.match(/\/itm\/(\d+)/);
-    if (match) parsedId = match[1];
-  }
-
-  // Create semantic details based on keyword hints in URL
-  let name = 'Premium Tech Gadget';
-  let brand = 'ElectroForce';
-  let category = 'Electronics';
-  let price = 499.00;
-  let originalPrice = 599.00;
-  let discount = 17;
-  let description = 'An advanced consumer electronics masterpiece featuring cutting-edge components, high performance standards, and sleek industrial aesthetics.';
-
-  const lowerUrl = url.toLowerCase();
-  if (lowerUrl.includes('iphone') || lowerUrl.includes('apple') || lowerUrl.includes('phone') || lowerUrl.includes('mobile')) {
-    name = 'Apple iPhone 15 Pro Max (Ultra-Refined Slate)';
-    brand = 'Apple';
-    category = 'Smartphones';
-    price = currency === 'INR' ? 144900 : currency === 'AED' ? 4299 : 1199;
-    originalPrice = currency === 'INR' ? 159900 : currency === 'AED' ? 4799 : 1349;
-    discount = 9;
-    description = 'The ultimate smartphone with aerospace-grade titanium casing, an immersive Super Retina XDR display with ProMotion, and the revolutionary A17 Pro system chip.';
-  } else if (lowerUrl.includes('laptop') || lowerUrl.includes('macbook') || lowerUrl.includes('computer')) {
-    name = 'Dell XPS 14 Developer Edition Laptop';
-    brand = 'Dell';
-    category = 'Laptops';
-    price = currency === 'INR' ? 129990 : currency === 'AED' ? 3899 : 1499;
-    originalPrice = currency === 'INR' ? 149990 : currency === 'AED' ? 4499 : 1799;
-    discount = 13;
-    description = 'Sleek premium notebook crafted with CNC aluminum, sporting an Intel Core Ultra processor, brilliant infinity-edge OLED display, and high capacity SSD storage.';
-  } else if (lowerUrl.includes('shoe') || lowerUrl.includes('nike') || lowerUrl.includes('sneaker') || lowerUrl.includes('apparel')) {
-    name = 'Nike Pegasus 40 Road Running Sneakers';
-    brand = 'Nike';
-    category = 'Footwear';
-    price = currency === 'INR' ? 11490 : currency === 'AED' ? 449 : 130;
-    originalPrice = currency === 'INR' ? 12990 : currency === 'AED' ? 520 : 150;
-    discount = 12;
-    description = 'Highly responsive running shoes engineered with React Foam tech and dual Zoom Air cushioning bags to amplify athletic rebound and endurance.';
-  }
-
-  return {
-    name,
-    brand,
-    description,
-    longDescription: description + '\n\nBuilt for demanding lifestyles, this high-grade accessory integrates perfectly into your daily routines. Complete with multi-marketplace reviews, standard manufacturing warranty profiles, and reliable post-sales support pipelines.',
-    price,
-    originalPrice,
-    discount,
-    currency,
-    images: [
-      `https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop`,
-      `https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop`
-    ],
-    rating: parseFloat((4.0 + 0.5 * 1.0).toFixed(1)),
-    totalReviews: Math.floor(120 + 0.5 * 850),
-    category,
-    variants: [
-      { name: 'Color', value: 'Carbon Grey', sku: `${parsedId}-CG`, price, inStock: true },
-      { name: 'Color', value: 'Silver Sand', sku: `${parsedId}-SS`, price, inStock: true }
-    ],
-    inStock: true,
-    seller: providerId.includes('amazon') ? 'Amazon Retail' : 'Verified Merchant Partner',
-    affiliateLink: url,
-    gtin: '890' + Math.floor(100000000 + 0.5 * 900000000), // Mock standard bar code
-    mpn: 'MPN-' + Math.floor(10000 + 0.5 * 90000),
-    metadata: {
-      originalId: parsedId,
-      scrapedAt: new Date().toISOString(),
-      provider: providerId
-    }
-  };
-}
-
 // Helper to perform real scraping of HTML metadata (CORS-secure and full-extraction format)
 async function fetchRealMarketplaceData(url: string): Promise<any> {
   try {
@@ -295,31 +211,55 @@ async function fetchRealMarketplaceData(url: string): Promise<any> {
   return null;
 }
 
-// Resolves live product details over HTTP first, falling back to clean generated metadata if unavailable
+// Resolves live product details over HTTP
 export async function getProductDetails(url: string, providerId: string, currency: string): Promise<NormalizedProduct> {
-  const base = generateMockProductDetails(url, providerId, currency);
-  try {
-    const realData = await fetchRealMarketplaceData(url);
-    if (realData) {
-      if (realData.title) {
-        base.name = realData.title;
-      }
-      if (realData.image) {
-        base.images = [realData.image];
-      }
-      if (realData.price) {
-        base.price = realData.price;
-        base.originalPrice = Math.round(realData.price * 1.2 * 100) / 100;
-        base.discount = 17;
-      }
-      if (realData.brand) {
-        base.brand = realData.brand;
-      }
-    }
-  } catch (e) {
-    console.warn('Live metadata resolution error, fallback active:', e);
+  const realData = await fetchRealMarketplaceData(url);
+  if (!realData || !realData.title) {
+    throw new Error('Failed to scrape live marketplace data. The URL might be protected by anti-bot measures, or the page renders client-side.');
   }
-  return base;
+
+  // Extract ID pattern from URL
+  let parsedId = 'item-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+  if (url.includes('/dp/') || url.includes('/gp/product/')) {
+    const match = url.match(/\/dp\/([A-Z0-9]{10})/i) || url.match(/\/gp\/product\/([A-Z0-9]{10})/i);
+    if (match) parsedId = match[1];
+  } else if (url.includes('/p/itm') || url.includes('pid=')) {
+    const match = url.match(/pid=([A-Z0-9]{16})/i) || url.match(/\/p\/(itm[a-f0-9]{12,16})/i);
+    if (match) parsedId = match[1];
+  } else if (url.match(/\/itm\/(\d+)/)) {
+    const match = url.match(/\/itm\/(\d+)/);
+    if (match) parsedId = match[1];
+  }
+
+  const name = realData.title;
+  const price = realData.price || 0;
+  const originalPrice = realData.price ? Math.round(realData.price * 1.2 * 100) / 100 : 0;
+  
+  return {
+    name,
+    brand: realData.brand || 'Generic',
+    description: name,
+    longDescription: name,
+    price,
+    originalPrice,
+    discount: realData.price ? 17 : 0,
+    currency,
+    images: realData.image ? [realData.image] : [],
+    rating: 0,
+    totalReviews: 0,
+    category: 'General',
+    variants: [],
+    inStock: true,
+    seller: providerId.includes('amazon') ? 'Amazon Retail' : 'Verified Merchant Partner',
+    affiliateLink: url,
+    gtin: parsedId, // Using parsedId as unique identifier
+    mpn: parsedId,
+    metadata: {
+      originalId: parsedId,
+      scrapedAt: new Date().toISOString(),
+      provider: providerId
+    }
+  };
 }
 
 // 1. Amazon India Provider
@@ -342,10 +282,7 @@ class AmazonInProvider implements IMarketplaceProvider {
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) {
-    return [
-      { userId: '1', rating: 5, title: 'Incredible purchase!', content: 'Build quality feels premium. Worth every rupee.', helpful: 24 },
-      { userId: '2', rating: 4, title: 'Very useful, but slow delivery', content: 'The product does exactly what it says. Very high-grade materials.', helpful: 6 }
-    ];
+    return [];
   }
   validateAffiliateLink(link: string) { return link.includes('amazon.in') && link.includes('tag='); }
   async synchronize(productId: string) { return { updated: true, timestamp: new Date() }; }
@@ -372,9 +309,7 @@ class AmazonUsProvider implements IMarketplaceProvider {
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) {
-    return [
-      { userId: '1', rating: 5, title: 'Amazing quality!', content: 'Absolutely perfect for my setup. Highly recommend.', helpful: 45 }
-    ];
+    return [];
   }
   validateAffiliateLink(link: string) { return link.includes('amazon.com') && link.includes('tag='); }
   async synchronize(productId: string) { return { updated: true, timestamp: new Date() }; }
@@ -474,7 +409,7 @@ class MeeshoProvider implements IMarketplaceProvider {
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
-  validateAffiliateLink(link: string) { return link.includes('meesho.com'); }
+  validateAffiliateLink(link: string) { return link.includes('meesho.com') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
 }
@@ -497,7 +432,7 @@ class MyntraProvider implements IMarketplaceProvider {
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
-  validateAffiliateLink(link: string) { return link.includes('myntra.com'); }
+  validateAffiliateLink(link: string) { return link.includes('myntra.com') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
 }
@@ -520,7 +455,7 @@ class AjioProvider implements IMarketplaceProvider {
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
-  validateAffiliateLink(link: string) { return link.includes('ajio.com'); }
+  validateAffiliateLink(link: string) { return link.includes('ajio.com') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
 }
@@ -543,7 +478,7 @@ class RelianceDigitalProvider implements IMarketplaceProvider {
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
-  validateAffiliateLink(link: string) { return link.includes('reliancedigital.in'); }
+  validateAffiliateLink(link: string) { return link.includes('reliancedigital.in') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
 }
@@ -566,7 +501,7 @@ class CromaProvider implements IMarketplaceProvider {
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
-  validateAffiliateLink(link: string) { return link.includes('croma.com'); }
+  validateAffiliateLink(link: string) { return link.includes('croma.com') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
 }
@@ -614,7 +549,7 @@ class AliExpressProvider implements IMarketplaceProvider {
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
-  validateAffiliateLink(link: string) { return link.includes('aliexpress.com'); }
+  validateAffiliateLink(link: string) { return link.includes('aliexpress.com') && (link.includes('aff_short_key=') || link.includes('af=')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
 }
@@ -637,7 +572,7 @@ class WalmartProvider implements IMarketplaceProvider {
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
-  validateAffiliateLink(link: string) { return link.includes('walmart.com'); }
+  validateAffiliateLink(link: string) { return link.includes('walmart.com') && (link.includes('veh=aff') || link.includes('aff_id=')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
 }
@@ -980,7 +915,7 @@ export class MarketplaceService {
       const affiliateProfile = await AffiliateProfilesModel.findOne({ providerId: provider.providerId });
       const affiliateCode = affiliateProfile?.affiliateId || 'partner-21';
 
-      // 2. Perform mock/simulated secure scraping extraction
+      // 2. Perform secure scraping extraction
       const extracted = await provider.extractProduct(url, affiliateCode);
       const latency = Date.now() - startTime;
 
@@ -988,105 +923,121 @@ export class MarketplaceService {
       const ProductModel = mongoose.model('Product');
       const CategoryModel = mongoose.model('Category');
 
-      // Resolve or find default Category slug/ID
-      let resolvedCategory;
-      if (categoryId) {
-        resolvedCategory = await CategoryModel.findById(categoryId);
-      }
-      if (!resolvedCategory) {
-        resolvedCategory = await CategoryModel.findOne({});
-      }
-      if (!resolvedCategory) {
-        // Fallback Category creation to prevent any strict validation crashes
-        resolvedCategory = new CategoryModel({
-          name: extracted.category || 'General',
-          slug: (extracted.category || 'general').toLowerCase().replace(/[^a-z0-9]/g, '-')
-        });
-        await resolvedCategory.save();
-      }
-
       // 4. Validate or merge duplicates
       const possibleDuplicates = await this.detectDuplicates(extracted);
-
-      let savedProduct;
+      
       const slugName = extracted.name.toLowerCase()
         .replace(/[^a-z0-9 ]/g, '')
         .replace(/\s+/g, '-');
-      const uniqueSlug = `${slugName}-${Math.floor(100 + 0.5 * 900)}`;
+      const uniqueSlug = `${slugName}-${Math.floor(Math.random() * 900) + 100}`;
 
-      if (possibleDuplicates.length > 0 && !forceUpdate) {
-        // Return duplicates info to trigger ui modal
-        return {
-          duplicateDetected: true,
-          duplicates: possibleDuplicates,
-          extractedData: extracted,
-          categoryId: resolvedCategory._id.toString()
-        };
-      }
+      let savedProduct;
 
-      // Check if product exists already with same URL
-      const existingProduct = await ProductModel.findOne({ affiliateLink: extracted.affiliateLink });
-      if (existingProduct) {
-        // Update price and metadata
-        existingProduct.price = extracted.price;
-        existingProduct.originalPrice = extracted.originalPrice;
-        existingProduct.discount = extracted.discount;
-        existingProduct.inStock = extracted.inStock;
-        existingProduct.lastPriceCheck = new Date();
-        await existingProduct.save();
-        savedProduct = existingProduct;
-      } else {
-        // Save new Product
-        savedProduct = new ProductModel({
-          name: extracted.name,
-          slug: uniqueSlug,
-          description: extracted.description,
-          longDescription: extracted.longDescription,
-          category: resolvedCategory._id,
-          brand: extracted.brand,
-          price: extracted.price,
-          originalPrice: extracted.originalPrice,
-          discount: extracted.discount,
-          images: extracted.images,
-          specifications: extracted.variants.length > 0 ? { 'sku-series': extracted.variants[0].sku } : {},
-          rating: extracted.rating,
-          totalReviews: extracted.totalReviews,
-          affiliateLink: extracted.affiliateLink,
-          affiliateCode: affiliateCode,
-          inStock: extracted.inStock,
-          sku: extracted.gtin || '',
-          tags: [extracted.brand || 'affiliate', provider.providerId],
-          publishingStatus: 'published'
-        });
-        await savedProduct.save();
-      }
+      // Wrap writes in a transaction
+      const session = await mongoose.startSession();
+      session.startTransaction();
 
-      // 5. Update Health Diagnostics
-      const healthScore = extracted.inStock ? 100 : 85;
-      await MarketplaceHealthModel.findOneAndUpdate(
-        { providerId: provider.providerId },
-        {
-          $set: {
-            status: 'online',
-            lastChecked: new Date()
+      try {
+        // Resolve or find default Category slug/ID
+        let resolvedCategory;
+        if (categoryId) {
+          resolvedCategory = await CategoryModel.findById(categoryId).session(session);
+        }
+        if (!resolvedCategory) {
+          resolvedCategory = await CategoryModel.findOne({}).session(session);
+        }
+        if (!resolvedCategory) {
+          // Fallback Category creation to prevent any strict validation crashes
+          resolvedCategory = new CategoryModel({
+            name: extracted.category || 'General',
+            slug: (extracted.category || 'general').toLowerCase().replace(/[^a-z0-9]/g, '-')
+          });
+          await resolvedCategory.save({ session });
+        }
+
+        if (possibleDuplicates.length > 0 && !forceUpdate) {
+          await session.abortTransaction();
+          session.endSession();
+          // Return duplicates info to trigger ui modal
+          return {
+            duplicateDetected: true,
+            duplicates: possibleDuplicates,
+            extractedData: extracted,
+            categoryId: resolvedCategory._id.toString()
+          };
+        }
+
+        // Check if product exists already with same URL
+        const existingProduct = await ProductModel.findOne({ affiliateLink: extracted.affiliateLink }).session(session);
+        if (existingProduct) {
+          // Update price and metadata
+          existingProduct.price = extracted.price;
+          existingProduct.originalPrice = extracted.originalPrice;
+          existingProduct.discount = extracted.discount;
+          existingProduct.inStock = extracted.inStock;
+          existingProduct.lastPriceCheck = new Date();
+          await existingProduct.save({ session });
+          savedProduct = existingProduct;
+        } else {
+          // Save new Product
+          savedProduct = new ProductModel({
+            name: extracted.name,
+            slug: uniqueSlug,
+            description: extracted.description,
+            longDescription: extracted.longDescription,
+            category: resolvedCategory._id,
+            brand: extracted.brand,
+            price: extracted.price,
+            originalPrice: extracted.originalPrice,
+            discount: extracted.discount,
+            images: extracted.images,
+            specifications: extracted.variants && extracted.variants.length > 0 ? { 'sku-series': extracted.variants[0].sku } : {},
+            rating: extracted.rating,
+            totalReviews: extracted.totalReviews,
+            affiliateLink: extracted.affiliateLink,
+            affiliateCode: affiliateCode,
+            inStock: extracted.inStock,
+            sku: extracted.gtin || '',
+            tags: [extracted.brand || 'affiliate', provider.providerId],
+            publishingStatus: 'published'
+          });
+          await savedProduct.save({ session });
+        }
+
+        // 5. Update Health Diagnostics
+        const healthScore = extracted.inStock ? 100 : 85;
+        await MarketplaceHealthModel.findOneAndUpdate(
+          { providerId: provider.providerId },
+          {
+            $set: {
+              status: 'online',
+              lastChecked: new Date()
+            },
+            $inc: {
+              averageLatencyMs: latency,
+              importSuccessRate: 1
+            }
           },
-          $inc: {
-            averageLatencyMs: latency,
-            importSuccessRate: 1
-          }
-        },
-        { upsert: true }
-      );
+          { upsert: true, session }
+        );
 
-      // Log success trace
-      await new ProviderLogsModel({
-        providerId: provider.providerId,
-        action: 'extract',
-        status: 'success',
-        message: `Imported product: ${extracted.name} at price: ${extracted.price} ${extracted.currency}`,
-        latencyMs: latency,
-        details: { productId: savedProduct._id }
-      }).save();
+        // Log success trace
+        await new ProviderLogsModel({
+          providerId: provider.providerId,
+          action: 'extract',
+          status: 'success',
+          message: `Imported product: ${extracted.name} at price: ${extracted.price} ${extracted.currency}`,
+          latencyMs: latency,
+          details: { productId: savedProduct._id }
+        }).save({ session });
+
+        await session.commitTransaction();
+      } catch (txnErr) {
+        await session.abortTransaction();
+        throw txnErr;
+      } finally {
+        session.endSession();
+      }
 
       // Trigger metric update
       await this.updateAnalyticsMetrics(provider.providerId);

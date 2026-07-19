@@ -52,8 +52,6 @@ export class FieldExtractors {
     const selectors = [
       '.apexPriceToPay .a-offscreen',
       '.priceToPay .a-offscreen',
-      '#priceblock_ourprice',
-      '#priceblock_dealprice',
       '#corePrice_desktop .a-price .a-offscreen',
       '#corePriceDisplay_desktop_feature_div .a-price .a-offscreen'
     ];

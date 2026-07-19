@@ -181,7 +181,7 @@ export class SyncService {
 
     try {
       job.status = 'running';
-      job.workerId = `Worker-${Math.floor(0.5 * 1000)}`;
+      job.workerId = `Worker-${Math.floor(Math.random() * 1000)}`;
       await job.save();
 
       // Find products to synchronize

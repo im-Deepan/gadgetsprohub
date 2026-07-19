@@ -15,7 +15,7 @@ class LoggerService {
         if (areaName === 'local' && changes.gph_settings) {
           const newVal = changes.gph_settings.newValue;
           if (newVal) {
-            this.isDebugEnabled = newVal.debugMode !== false;
+            this.isDebugEnabled = (newVal as any).debugMode !== false;
           }
         }
       });
@@ -24,9 +24,9 @@ class LoggerService {
 
   private updateDebugFlag() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get('gph_settings', (res) => {
+      chrome.storage.local.get('gph_settings', (res: any) => {
         if (res?.gph_settings) {
-          this.isDebugEnabled = res.gph_settings.debugMode !== false;
+          this.isDebugEnabled = (res.gph_settings as any).debugMode !== false;
         }
       });
     }

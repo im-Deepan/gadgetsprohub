@@ -19,7 +19,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "types": ["chrome"],
+    "types": ["chrome", "vite/client"],
 
     "paths": {
       "@/*": ["./src/*"]

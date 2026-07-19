@@ -1,5 +1,6 @@
 import { logger } from '../services/logger';
 import { extensionStorage } from '../services/storage';
+import { CONFIG } from '../config';
 
 export interface QueueJob {
   jobId: string;
@@ -46,7 +47,7 @@ class QueueManager {
   }
 
   public async restoreJob() {
-    const data = await chrome.storage.local.get('currentBulkJob');
+    const data = await chrome.storage.local.get('currentBulkJob') as any;
     if (data.currentBulkJob && data.currentBulkJob.status === 'running') {
       this.currentJob = data.currentBulkJob;
       this.isProcessing = true;
@@ -205,6 +206,19 @@ class QueueManager {
 
   private scrapeViaTab(url: string): Promise<any> {
     return new Promise((resolve, reject) => {
+      try {
+        const parsedUrl = new URL(url);
+        const hostname = parsedUrl.hostname.toLowerCase();
+        const isSupported = CONFIG.SUPPORTED_AMAZON_DOMAINS.some(domain => 
+          hostname === domain || hostname.endsWith('.' + domain)
+        );
+        if (!isSupported) {
+          return reject(new Error(`Domain ${hostname} is not supported or is unvalidated`));
+        }
+      } catch (e) {
+        return reject(new Error("Invalid URL format"));
+      }
+
       chrome.tabs.create({ url, active: false }, (tab) => {
         if (!tab.id) return reject(new Error("Failed to create tab"));
         
@@ -224,7 +238,7 @@ class QueueManager {
         };
         chrome.runtime.onMessage.addListener(listener);
 
-        const checkTabStatus = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+        const checkTabStatus = (updatedTabId: number, changeInfo: any) => {
           if (updatedTabId === tabId && changeInfo.status === 'complete') {
             chrome.tabs.onUpdated.removeListener(checkTabStatus);
             // Tab finished loading, tell it to scrape

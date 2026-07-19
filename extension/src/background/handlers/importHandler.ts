@@ -60,7 +60,7 @@ export async function handleProductImport(
       success: false,
       error: {
         code: err.code || 'IMPORT_FAILED',
-        message: err.message || 'Failed to complete product import',
+        message: 'Failed to complete product import',
         details: err.details
       }
     };

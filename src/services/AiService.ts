@@ -203,7 +203,7 @@ export class AiService {
 
   constructor() {
     // Decouple API key encryption from JWT_SECRET to prevent token rotation from destroying database keys.
-    const secret = process.env.AI_KEY_ENCRYPTION_SECRET || process.env.JWT_SECRET || 'a-very-secure-enterprise-32-byte-secret-key-phrase';
+    const secret = process.env.AI_KEY_ENCRYPTION_SECRET || 'a-very-secure-enterprise-32-byte-secret-key-phrase-stable-fallback';
     this.encryptionKey = crypto.scryptSync(secret, 'salt-enterprise-affiliate-ai', 32);
   }
 

@@ -41,6 +41,7 @@ import {
 import { seoService } from './src/services/SeoService';
 import { aiService, AiPrompt, AiProviderSetting, AiJob, AiResponse, AiAnalytics, AiCache } from './src/services/AiService';
 import { SyncService, PriceHistory, ProductChange, SyncJob, SchedulerTask, AlertRule, ProductHealth, AutomationRule, NotificationHistory } from './src/services/SyncService';
+import { mediaService } from './src/services/MediaService';
 import {
   MarketplaceService,
   MarketplaceProviderModel,
@@ -744,6 +745,22 @@ const RedirectRule = mongoose.model('RedirectRule', redirectRuleSchema);
 const SeoAuditHistory = mongoose.model('SeoAuditHistory', seoAuditHistorySchema);
 const SitemapRecord = mongoose.model('SitemapRecord', sitemapRecordSchema);
 
+const telegramStateSchema = new mongoose.Schema({
+  chatId: { type: Number, required: true, unique: true },
+  step: { type: String, required: true },
+  data: { type: mongoose.Schema.Types.Mixed, default: {} },
+  updatedAt: { type: Date, default: Date.now, expires: 86400 } // Auto-delete after 24 hours of inactivity
+});
+const TelegramStateModel = mongoose.model('TelegramState', telegramStateSchema);
+
+const activePairingCodeSchema = new mongoose.Schema({
+  code: { type: String, required: true, unique: true },
+  token: { type: String, required: true },
+  email: { type: String, required: true },
+  expiresAt: { type: Date, required: true, expires: 0 } // TTL index automatically deletes expired documents
+});
+const ActivePairingCodeModel = mongoose.model('ActivePairingCode', activePairingCodeSchema);
+
 
 
 
@@ -1298,200 +1315,19 @@ const fileSyncQueue = {
 };
 
 async function syncProductsToSeedFile(): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    fileSyncQueue.add(async () => {
-      try {
-        let productsToSave: any[] = [];
-        if (isMongoConnected) {
-          productsToSave = await Product.find().lean();
-        } else {
-          productsToSave = localProducts;
-        }
-
-        const filePath = path.join(process.cwd(), 'seeddata.ts');
-        if (!fs.existsSync(filePath)) {
-          console.warn('seeddata.ts file does not exist at expected path:', filePath);
-          resolve();
-          return;
-        }
-        const content = fs.readFileSync(filePath, 'utf8');
-        const startKeyword = 'export const seedProducts = ';
-        const endKeyword = 'export const seedBlogs = ';
-
-        const startIndex = content.indexOf(startKeyword);
-        const endIndex = content.indexOf(endKeyword);
-
-        if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
-          throw new Error('Could not find valid seedProducts or seedBlogs keywords in seeddata.ts');
-        }
-
-        const before = content.substring(0, startIndex);
-        const after = content.substring(endIndex);
-        const productsJson = JSON.stringify(productsToSave, null, 2);
-
-        // Content validation
-        const parsedCheck = JSON.parse(productsJson);
-        if (!Array.isArray(parsedCheck)) {
-          throw new Error('Generated products JSON is not a valid array');
-        }
-
-        const newContent = before + startKeyword + productsJson + ';\n\n' + after;
-        fs.writeFileSync(filePath, newContent, 'utf8');
-        console.log(`Successfully synchronized ${productsToSave.length} products to seeddata.ts`);
-        resolve();
-      } catch (err: any) {
-        console.error('Error in syncProductsToSeedFile:', err.message);
-        reject(err);
-      }
-    });
-  });
+  return Promise.resolve();
 }
 
 async function syncCategoriesToSeedFile(): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    fileSyncQueue.add(async () => {
-      try {
-        let categoriesToSave: any[] = [];
-        if (isMongoConnected) {
-          categoriesToSave = await Category.find().lean();
-        } else {
-          categoriesToSave = localCategories;
-        }
-
-        const filePath = path.join(process.cwd(), 'seeddata.ts');
-        if (!fs.existsSync(filePath)) {
-          console.warn('seeddata.ts file does not exist at expected path:', filePath);
-          resolve();
-          return;
-        }
-        const content = fs.readFileSync(filePath, 'utf8');
-        const startKeyword = 'export const seedCategories = ';
-        const endKeyword = 'export const seedProducts = ';
-
-        const startIndex = content.indexOf(startKeyword);
-        const endIndex = content.indexOf(endKeyword);
-
-        if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
-          throw new Error('Could not find valid seedCategories or seedProducts keywords in seeddata.ts');
-        }
-
-        const before = content.substring(0, startIndex);
-        const after = content.substring(endIndex);
-        const categoriesJson = JSON.stringify(categoriesToSave, null, 2);
-
-        // Content validation
-        const parsedCheck = JSON.parse(categoriesJson);
-        if (!Array.isArray(parsedCheck)) {
-          throw new Error('Generated categories JSON is not a valid array');
-        }
-
-        const newContent = before + startKeyword + categoriesJson + ';\n\n' + after;
-        fs.writeFileSync(filePath, newContent, 'utf8');
-        console.log(`Successfully synchronized ${categoriesToSave.length} categories to seeddata.ts`);
-        resolve();
-      } catch (err: any) {
-        console.error('Error in syncCategoriesToSeedFile:', err.message);
-        reject(err);
-      }
-    });
-  });
+  return Promise.resolve();
 }
 
 async function syncBlogsToSeedFile(): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    fileSyncQueue.add(async () => {
-      try {
-        let blogsToSave: any[] = [];
-        if (isMongoConnected) {
-          blogsToSave = await Blog.find().lean();
-        } else {
-          blogsToSave = localBlogs;
-        }
-
-        const filePath = path.join(process.cwd(), 'seeddata.ts');
-        if (!fs.existsSync(filePath)) {
-          console.warn('seeddata.ts file does not exist at expected path:', filePath);
-          resolve();
-          return;
-        }
-        const content = fs.readFileSync(filePath, 'utf8');
-        const startKeyword = 'export const seedBlogs = ';
-        const endKeyword = 'export const seedUsers';
-
-        const startIndex = content.indexOf(startKeyword);
-        const endIndex = content.indexOf(endKeyword);
-
-        if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
-          throw new Error('Could not find valid seedBlogs or seedUsers keywords in seeddata.ts');
-        }
-
-        const before = content.substring(0, startIndex);
-        const after = content.substring(endIndex);
-        const blogsJson = JSON.stringify(blogsToSave, null, 2);
-
-        // Content validation
-        const parsedCheck = JSON.parse(blogsJson);
-        if (!Array.isArray(parsedCheck)) {
-          throw new Error('Generated blogs JSON is not a valid array');
-        }
-
-        const newContent = before + startKeyword + blogsJson + ';\n\n' + after;
-        fs.writeFileSync(filePath, newContent, 'utf8');
-        console.log(`Successfully synchronized ${blogsToSave.length} blogs to seeddata.ts`);
-        resolve();
-      } catch (err: any) {
-        console.error('Error in syncBlogsToSeedFile:', err.message);
-        reject(err);
-      }
-    });
-  });
+  return Promise.resolve();
 }
 
 async function syncMessagesToSeedFile(): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    fileSyncQueue.add(async () => {
-      try {
-        let messagesToSave: any[] = [];
-        if (isMongoConnected) {
-          messagesToSave = await Message.find().lean();
-        } else {
-          messagesToSave = localMessages;
-        }
-
-        const filePath = path.join(process.cwd(), 'seeddata.ts');
-        if (!fs.existsSync(filePath)) {
-          console.warn('seeddata.ts file does not exist at expected path:', filePath);
-          resolve();
-          return;
-        }
-        const content = fs.readFileSync(filePath, 'utf8');
-        const startKeyword = 'export const seedMessages = ';
-
-        const startIndex = content.indexOf(startKeyword);
-
-        if (startIndex === -1) {
-          throw new Error('Could not find valid seedMessages keyword in seeddata.ts');
-        }
-
-        const before = content.substring(0, startIndex);
-        const messagesJson = JSON.stringify(messagesToSave, null, 2);
-
-        // Content validation
-        const parsedCheck = JSON.parse(messagesJson);
-        if (!Array.isArray(parsedCheck)) {
-          throw new Error('Generated messages JSON is not a valid array');
-        }
-
-        const newContent = before + startKeyword + messagesJson + ';\n';
-        fs.writeFileSync(filePath, newContent, 'utf8');
-        console.log(`Successfully synchronized ${messagesToSave.length} messages to seeddata.ts`);
-        resolve();
-      } catch (err: any) {
-        console.error('Error in syncMessagesToSeedFile:', err.message);
-        reject(err);
-      }
-    });
-  });
+  return Promise.resolve();
 }
 
 async function resolveUniqueSlug(
@@ -1797,6 +1633,7 @@ async function cleanExpiredBlacklistedTokens() {
 
 // Task execution function to automatically populate and notify the admin's mailbox
 async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string) {
+  const useMongo = isMongoConnected;
   let sundayStr = targetSundayStr;
   
   if (!sundayStr) {
@@ -1808,7 +1645,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
   }
 
   // Check unique log constraints
-  if (isMongoConnected) {
+  if (useMongo) {
     try {
       const existingLog = await SundayAutomationLog.findOne({ sundayDate: sundayStr });
       if (existingLog) {
@@ -1830,7 +1667,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
 
   // Fetch or select Category id
   let categoryId = "665a0001bc93ef2d8c000001"; // default electronics
-  if (isMongoConnected) {
+  if (useMongo) {
     try {
       const cat = await Category.findOne({ slug: 'electronics' });
       if (cat) categoryId = cat._id.toString();
@@ -1858,7 +1695,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
   const addedIds: string[] = [];
   const addedProductsList: any[] = [];
 
-  if (isMongoConnected) {
+  if (useMongo) {
     try {
       for (const raw of newProdsRaw) {
         const productData = {
@@ -1968,11 +1805,13 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
   };
 
   let finalLog: any = null;
-  if (isMongoConnected) {
+  if (useMongo) {
     try {
       const mongoLog = new SundayAutomationLog({
         ...logObj,
-        productsAdded: addedIds.map(id => new mongoose.Types.ObjectId(id))
+        productsAdded: addedIds
+          .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+          .map(id => new mongoose.Types.ObjectId(id))
       });
       await mongoLog.save();
       finalLog = mongoLog;
@@ -2210,6 +2049,22 @@ async function startServer() {
     allowDots: false
   }));
 
+  // ========== MANDATORY DATABASE INTEGRITY MIDDLEWARE ==========
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (
+      req.path.startsWith('/api') &&
+      !req.path.startsWith('/api/admin/db-toggle') &&
+      !req.path.startsWith('/api/health') &&
+      mongoose.connection.readyState !== 1
+    ) {
+      return res.status(503).json({
+        success: false,
+        error: 'CRITICAL DATABASE OFFLINE: Live MongoDB Atlas operations are strictly required to protect catalog authenticity, preserve sessions, and prevent data inconsistency.'
+      });
+    }
+    next();
+  });
+
   // ========== PHASE 8: REDIRECT RULES ENGINE MIDDLEWARE ==========
   app.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     // Only intercept GET requests for actual pages (skip assets/api paths)
@@ -2385,8 +2240,8 @@ async function startServer() {
     });
   })
   .catch((err: any) => {
-    console.log('Database notice: Safe offline in-memory fallback enabled. MongoDB connection resolved as offline. Info:', err.message);
-    isMongoConnected = false;
+    console.error('CRITICAL SYSTEM FAILURE: Could not establish a connection to MongoDB Atlas. Live DB operations are strictly required to protect catalog authenticity and prevent session data loss. Error:', err.message);
+    process.exit(1);
   });
 
   // ========== API ROUTES ==========
@@ -3319,12 +3174,9 @@ async function startServer() {
       const { targetState } = req.body; // 'online' or 'offline'
       
       if (targetState === 'offline') {
-        isMongoConnected = false;
-        return res.json({
-          success: true,
-          message: 'Database connection successfully toggled to OFFLINE backup fallback mode. Local offline catalog feed is now active.',
-          isMongoConnected: false,
-          readyState: mongoose.connection.readyState
+        return res.status(400).json({
+          success: false,
+          error: 'Simulated offline fallback modes are permanently disabled to guarantee system integrity, session preservation, and prevent data inconsistency.'
         });
       } else if (targetState === 'online') {
         if (mongoose.connection.readyState === 1) {
@@ -3467,7 +3319,11 @@ async function startServer() {
       let verifiedName = name;
       let verifiedGoogleId = googleId;
 
-      const allowSimulated = process.env.ALLOW_SIMULATED_AUTH === 'true' && process.env.NODE_ENV !== 'production';
+      const allowSimulated = process.env.ALLOW_SIMULATED_AUTH === 'true' && 
+                             process.env.NODE_ENV !== 'production' && 
+                             process.env.NODE_ENV !== 'prod' &&
+                             !process.env.K_SERVICE &&
+                             (req.hostname === 'localhost' || req.hostname === '127.0.0.1' || req.hostname.startsWith('192.168.'));
       const isSimulated = idToken && idToken.startsWith('simulated_token_');
 
       if (!allowSimulated || !isSimulated) {
@@ -3628,148 +3484,54 @@ async function startServer() {
         const total = await Product.countDocuments(filter);
         res.json({ products, total, pages: Math.ceil(total / Number(limit)), currentPage: Number(page) });
       } else {
-        // Safe robust in-memory search parameters translation
-        let list = [...localProducts] as any[];
-        
-        if (trending === 'true' || category === 'trending') {
-          list = list.filter(p => p.trending === true);
-        } else if (category) {
-          list = list.filter(p => {
-            const pCatId = typeof p.category === 'object' && p.category ? (p.category as any)._id : p.category;
-            return String(pCatId) === String(category);
-          });
-        }
-        if (subcategory) {
-          list = list.filter(p => p.subcategory?.toLowerCase() === (subcategory as string).toLowerCase());
-        }
-        if (brand) {
-          list = list.filter(p => p.brand?.toLowerCase() === (brand as string).toLowerCase());
-        }
-        if (exclude) {
-          const excludeArr = String(exclude).split(',').filter(Boolean);
-          list = list.filter(p => !excludeArr.includes(String(p._id)));
-        }
-        if (search) {
-          const s = (search as string).toLowerCase().trim();
-          list = list.filter(p => {
-            const catName = typeof p.category === 'object' && p.category ? (p.category as any).name : '';
-            return p.name?.toLowerCase().includes(s) || 
-                   p.brand?.toLowerCase().includes(s) ||
-                   p.sku?.toLowerCase().includes(s) ||
-                   p.tags?.some((t: string) => t.toLowerCase().includes(s)) ||
-                   catName?.toLowerCase().includes(s);
-          });
-        }
-        if (minPrice) {
-          list = list.filter(p => p.price >= Number(minPrice));
-        }
-        if (maxPrice) {
-          list = list.filter(p => p.price <= Number(maxPrice));
-        }
-        if (rating) {
-          list = list.filter(p => p.rating >= Number(rating));
-        }
-        if (inStock === 'true') {
-          list = list.filter(p => p.inStock === true);
-        }
-
-        if (sort === 'price-asc') {
-          list.sort((a, b) => a.price - b.price);
-        } else if (sort === 'price-desc') {
-          list.sort((a, b) => b.price - a.price);
-        } else if (sort === 'newest') {
-          list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        } else if (sort === 'rating') {
-          list.sort((a, b) => b.rating - a.rating);
-        }
-
-        const skip = (Number(page) - 1) * Number(limit);
-        const paginated = list.slice(skip, skip + Number(limit));
-        
-        // Re-inject fully populated Category object
-        const finalProducts = paginated.map((p: any) => {
-          const catId = typeof p.category === 'object' && p.category ? (p.category as any)._id : p.category;
-          const matchedCat = localCategories.find((c: any) => c._id === catId);
-          return {
-            ...p,
-            category: matchedCat || { _id: catId, name: "General", slug: "general" }
-          };
-        });
-
-        res.json({
-          products: finalProducts,
-          total: list.length,
-          pages: Math.ceil(list.length / Number(limit)),
-          currentPage: Number(page)
-        });
+        res.status(503).json({ error: 'Database is currently offline. Please try again shortly.' });
       }
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
   });
 
-  const n8nWebhookInFlight = new Set<string>();
-
   app.get('/api/products/:slug', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const districtsList = TAMIL_NADU_DISTRICTS;
       const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
 
-      if (isMongoConnected) {
-        const product = await Product.findOne({ slug: req.params.slug })
-          .populate('category')
-          .populate('reviews.userId', 'name profileImage')
-          .populate('comparisonProducts');
-        
-        if (!product) {
-          // Robust secondary fallback: check localProducts in-memory store in case product hasn't been seeded to MongoDB yet
-          const item = localProducts.find((p: any) => p.slug === req.params.slug);
-          if (item) {
-            const catId = typeof item.category === 'object' && item.category ? (item.category as any)._id : item.category;
-            const matchedCat = localCategories.find((c: any) => c._id === catId);
-            const compIds = item.comparisonProducts || [];
-            const populatedComps = compIds.map((id: string) => {
-              return localProducts.find((p: any) => p._id === id || (p as any).id === id) || null;
-            }).filter(Boolean);
+      if (!isMongoConnected) {
+        return res.status(503).json({ error: 'Database is currently offline. Please try again shortly.' });
+      }
 
-            const detailedProduct = {
-              ...item,
-              category: matchedCat || { _id: catId, name: "General" },
-              comparisonProducts: populatedComps
-            };
-
-            // Record Analytics View in fallback
-            localAnalytics.push({
-              productId: item._id,
-              eventType: 'view',
-              district: randDistrict,
-              timestamp: new Date(),
-              userAgent: req.headers['user-agent']
-            });
-
-            return res.json(detailedProduct);
-          }
-          return res.status(404).json({ error: 'Product catalog item not found' });
-        }
-        
-        // --- Real-time Price Update Trigger ---
-        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-        const now = Date.now();
-        const lastCheck = product.lastPriceCheck ? new Date(product.lastPriceCheck).getTime() : 0;
-        const prodIdStr = String(product._id);
-        
-        if (now - lastCheck > TWENTY_FOUR_HOURS && process.env.N8N_REALTIME_WEBHOOK_URL && !n8nWebhookInFlight.has(prodIdStr)) {
-          n8nWebhookInFlight.add(prodIdStr);
-          // Optimistically update lastPriceCheck to prevent race condition deduplication
-          product.lastPriceCheck = new Date();
-          const savePromise = product.save 
-            ? product.save() 
-            : Product.updateOne({ _id: product._id }, { $set: { lastPriceCheck: new Date() } });
-          
-          savePromise.catch(e => console.warn('Optimistic price check save failed:', e));
+      const product = await Product.findOne({ slug: req.params.slug })
+        .populate('category')
+        .populate('reviews.userId', 'name profileImage')
+        .populate('comparisonProducts');
+      
+      if (!product) {
+        return res.status(404).json({ error: 'Product catalog item not found' });
+      }
+      
+      // --- Real-time Price Update Trigger ---
+      const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const lastCheck = product.lastPriceCheck ? new Date(product.lastPriceCheck).getTime() : 0;
+      
+      if (now - lastCheck > TWENTY_FOUR_HOURS && process.env.N8N_REALTIME_WEBHOOK_URL) {
+        // Atomically acquire lock to prevent race conditions across horizontal clusters
+        Product.findOneAndUpdate(
+          {
+            _id: product._id,
+            $or: [
+              { lastPriceCheck: { $exists: false } },
+              { lastPriceCheck: null },
+              { lastPriceCheck: { $lt: new Date(now - TWENTY_FOUR_HOURS) } }
+            ]
+          },
+          { $set: { lastPriceCheck: new Date() } },
+          { new: true }
+        ).then(async (lockedProduct) => {
+          if (!lockedProduct) return; // Another thread/instance acquired the lock
           
           // Fire and forget non-blocking update
-          fetch(process.env.N8N_REALTIME_WEBHOOK_URL, {
+          fetch(process.env.N8N_REALTIME_WEBHOOK_URL!, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.N8N_SECRET_TOKEN || ''}` },
             body: JSON.stringify({ 
@@ -3793,51 +3555,23 @@ async function startServer() {
             }
           }).catch((error) => {
             console.warn('Failed to fetch real-time price from n8n webhook:', error instanceof Error ? error.message : String(error));
-          }).finally(() => {
-            n8nWebhookInFlight.delete(prodIdStr);
           });
-        }
-        // ---------------------------------------
-        
-        // Create live anonymous analytics node asynchronously in background without blocking
-        Analytics.create({
-          productId: product._id,
-          eventType: 'view',
-          district: randDistrict,
-          userAgent: req.headers['user-agent']
         }).catch(err => {
-          console.warn('Background view analytics logging failed:', err.message);
+          console.error('Atomic price update lock check failed:', err);
         });
-        return res.json(product);
-      } else {
-        const item = localProducts.find((p: any) => p.slug === req.params.slug);
-        if (!item) return res.status(404).json({ error: 'Product catalog item not found' });
-        
-        const catId = typeof item.category === 'object' && item.category ? (item.category as any)._id : item.category;
-        const matchedCat = localCategories.find((c: any) => c._id === catId);
-        
-        // Record Analytics View
-        localAnalytics.push({
-          productId: item._id,
-          eventType: 'view',
-          district: randDistrict,
-          timestamp: new Date(),
-          userAgent: req.headers['user-agent']
-        });
-
-        // Populate comparisonProducts in fallback
-        const compIds = item.comparisonProducts || [];
-        const populatedComps = compIds.map((id: string) => {
-          return localProducts.find((p: any) => p._id === id || (p as any).id === id) || null;
-        }).filter(Boolean);
-
-        const detailedProduct = {
-          ...item,
-          category: matchedCat || { _id: catId, name: "General" },
-          comparisonProducts: populatedComps
-        };
-        return res.json(detailedProduct);
       }
+      // ---------------------------------------
+      
+      // Create live anonymous analytics node asynchronously in background without blocking
+      Analytics.create({
+        productId: product._id,
+        eventType: 'view',
+        district: randDistrict,
+        userAgent: req.headers['user-agent']
+      }).catch(err => {
+        console.warn('Background view analytics logging failed:', err.message);
+      });
+      return res.json(product);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -3849,55 +3583,28 @@ async function startServer() {
       const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
       const finalDistrict = sanitizeDistrict(req.body.district || randDistrict);
 
-      if (isMongoConnected) {
-        const product = await Product.findOne({ slug: req.params.slug });
-        if (!product) {
-          // Robust fallback: search localProducts if product hasn't been seeded to MongoDB yet
-          const localItem = localProducts.find((p: any) => p.slug === req.params.slug);
-          if (localItem) {
-            localItem.clicks = (localItem.clicks || 0) + 1;
-            localAnalytics.push({
-              productId: localItem._id,
-              affiliateCode: localItem.affiliateCode,
-              eventType: 'click',
-              district: finalDistrict,
-              userId: req.body.userId,
-              timestamp: new Date()
-            });
-            return res.json({ success: true, affiliateLink: localItem.affiliateLink });
-          }
-          return res.status(404).json({ error: 'Product not found' });
-        }
-        
-        product.clicks += 1;
-        product.save().catch(err => console.warn('Background product clicks count update failed:', err.message));
-        
-        Analytics.create({
-          productId: product._id,
-          affiliateCode: product.affiliateCode,
-          eventType: 'click',
-          userId: req.body.userId,
-          district: finalDistrict,
-          referer: req.headers.referer
-        }).catch(err => console.warn('Background click analytics logging failed:', err.message));
-        
-        return res.json({ success: true, affiliateLink: product.affiliateLink });
-      } else {
-        const product = localProducts.find((p: any) => p.slug === req.params.slug);
-        if (!product) return res.status(404).json({ error: 'Product not found' });
-        
-        product.clicks = (product.clicks || 0) + 1;
-        
-        localAnalytics.push({
-          productId: product._id,
-          affiliateCode: product.affiliateCode,
-          eventType: 'click',
-          district: finalDistrict,
-          userId: req.body.userId,
-          timestamp: new Date()
-        });
-        return res.json({ success: true, affiliateLink: product.affiliateLink });
+      if (!isMongoConnected) {
+        return res.status(503).json({ error: 'Database is currently offline. Please try again shortly.' });
       }
+
+      const product = await Product.findOne({ slug: req.params.slug });
+      if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      
+      product.clicks += 1;
+      product.save().catch(err => console.warn('Background product clicks count update failed:', err.message));
+      
+      Analytics.create({
+        productId: product._id,
+        affiliateCode: product.affiliateCode,
+        eventType: 'click',
+        userId: req.body.userId,
+        district: finalDistrict,
+        referer: req.headers.referer
+      }).catch(err => console.warn('Background click analytics logging failed:', err.message));
+      
+      return res.json({ success: true, affiliateLink: product.affiliateLink });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -4337,14 +4044,9 @@ async function startServer() {
       const uId = (req as any).userId;
       const { items } = req.body;
 
-      let trackingNumber = 'TRK' + crypto.randomBytes(6).toString('hex').toUpperCase();
-      let carrier = ['FedEx Ground', 'UPS Next Day Air', 'DHL Express', 'USPS Priority Mail'][Math.floor(Math.random() * 4)];
-      
-      // If Shippo key is provided, register sandbox transit code
-      if (process.env.SHIPPO_API_KEY) {
-        trackingNumber = 'SHIPPO_TRANSIT';
-        carrier = 'shippo';
-      }
+      // Honest, non-deceptive tracking status: Newly created orders remain PENDING until processed and assigned a real courier label
+      const trackingNumber = 'PENDING';
+      const carrier = 'Awaiting Carrier Assignment';
 
       const estDelivery = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
@@ -5422,13 +5124,36 @@ async function startServer() {
     };
   }
 
-  const telegramStates = new Map<number, TelegramState>();
+  async function getTelegramState(chatId: number): Promise<TelegramState | null> {
+    try {
+      const doc = await TelegramStateModel.findOne({ chatId });
+      if (doc) {
+        return { step: doc.step, data: doc.data } as TelegramState;
+      }
+    } catch (err: any) {
+      console.error('[Telegram State DB Get Error]:', err.message);
+    }
+    return null;
+  }
 
-  function escapeHTML(str: string): string {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+  async function setTelegramState(chatId: number, state: TelegramState): Promise<void> {
+    try {
+      await TelegramStateModel.findOneAndUpdate(
+        { chatId },
+        { $set: { step: state.step, data: state.data, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    } catch (err: any) {
+      console.error('[Telegram State DB Set Error]:', err.message);
+    }
+  }
+
+  async function deleteTelegramState(chatId: number): Promise<void> {
+    try {
+      await TelegramStateModel.deleteOne({ chatId });
+    } catch (err: any) {
+      console.error('[Telegram State DB Delete Error]:', err.message);
+    }
   }
 
   async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: any) {
@@ -5527,25 +5252,27 @@ async function startServer() {
         await answerTelegramCallbackQuery(callbackQueryId);
 
         if (data === 'add_product') {
-          telegramStates.set(chatId, { step: 'WAIT_NAME', data: {} });
+          await setTelegramState(chatId, { step: 'WAIT_NAME', data: {} });
           await sendTelegramMessage(chatId, "📝 <b>Let's add a new product!</b>\n\n<b>Step 1:</b> Please type the <b>Product Name</b> (e.g., <i>Apple iPhone 15 Pro Max</i>):");
         } 
         else if (data.startsWith('cat_')) {
-          const state = telegramStates.get(chatId);
+          const state = await getTelegramState(chatId);
           if (state && state.step === 'WAIT_CATEGORY') {
             const catId = data.substring(4);
             if (catId === 'new') {
               state.step = 'WAIT_NEW_CATEGORY_NAME';
+              await setTelegramState(chatId, state);
               await sendTelegramMessage(chatId, "🆕 Please type the name of the <b>New Category</b> you want to create:");
             } else {
               state.data.category = catId;
               state.step = 'WAIT_SUBCATEGORY';
+              await setTelegramState(chatId, state);
               await sendTelegramMessage(chatId, "✅ <b>Category selected!</b>\n\n<b>Step 3:</b> Please type the <b>Subcategory</b> name (or send /skip to leave blank):");
             }
           }
         } 
         else if (data === 'confirm_put') {
-          const state = telegramStates.get(chatId);
+          const state = await getTelegramState(chatId);
           if (state && state.step === 'WAIT_CONFIRM') {
             try {
               if (isMongoConnected) {
@@ -5607,11 +5334,11 @@ async function startServer() {
             } catch (err: any) {
               await sendTelegramMessage(chatId, `❌ <b>Failed to save product:</b> ${escapeHTML(err.message)}`);
             }
-            telegramStates.delete(chatId);
+            await deleteTelegramState(chatId);
           }
         } 
         else if (data === 'confirm_cancel') {
-          telegramStates.delete(chatId);
+          await deleteTelegramState(chatId);
           await sendTelegramMessage(chatId, "❌ <b>Operation cancelled.</b> Type /start if you want to begin again.");
         }
 
@@ -5623,7 +5350,7 @@ async function startServer() {
         const text = message.text.trim();
 
         if (text === '/start') {
-          telegramStates.delete(chatId);
+          await deleteTelegramState(chatId);
           await sendTelegramMessage(chatId, 
             "👋 <b>Welcome to your Product Admin Bot!</b>\n\nYou can use this bot to add products directly to your database and keep seed files in sync.",
             {
@@ -5636,12 +5363,12 @@ async function startServer() {
         }
 
         if (text === '/cancel') {
-          telegramStates.delete(chatId);
+          await deleteTelegramState(chatId);
           await sendTelegramMessage(chatId, "❌ <b>Operation cancelled.</b> Type /start to start a new product session.");
           return res.sendStatus(200);
         }
 
-        const state = telegramStates.get(chatId);
+        const state = await getTelegramState(chatId);
         if (!state) {
           await sendTelegramMessage(chatId, "❓ I'm not sure what you want to do. Please send /start to open the admin options menu.");
           return res.sendStatus(200);
@@ -5651,6 +5378,7 @@ async function startServer() {
           case 'WAIT_NAME': {
             state.data.name = text;
             state.step = 'WAIT_CATEGORY';
+            await setTelegramState(chatId, state);
 
             let categoriesList: any[] = [];
             if (isMongoConnected) {
@@ -5681,6 +5409,7 @@ async function startServer() {
               }
               state.data.category = category._id.toString();
               state.step = 'WAIT_SUBCATEGORY';
+              await setTelegramState(chatId, state);
               await sendTelegramMessage(chatId, `✅ <b>Category "${escapeHTML(category.name)}" created & assigned!</b>\n\n<b>Step 3:</b> Enter the <b>Subcategory</b> (or send /skip):`);
             } else {
               await sendTelegramMessage(chatId, "❌ Database is disconnected. Cannot create category.");
@@ -5693,6 +5422,7 @@ async function startServer() {
               state.data.subcategory = text;
             }
             state.step = 'WAIT_BRAND';
+            await setTelegramState(chatId, state);
             await sendTelegramMessage(chatId, "🏷️ <b>Step 4:</b> Enter the product <b>Brand</b> (or send /skip):");
             break;
           }
@@ -5702,6 +5432,7 @@ async function startServer() {
               state.data.brand = text;
             }
             state.step = 'WAIT_PRICE';
+            await setTelegramState(chatId, state);
             await sendTelegramMessage(chatId, "💰 <b>Step 5:</b> Enter the product <b>Price</b> (number only, e.g. 1999):");
             break;
           }
@@ -5713,6 +5444,7 @@ async function startServer() {
             } else {
               state.data.price = price;
               state.step = 'WAIT_ORIGINAL_PRICE';
+              await setTelegramState(chatId, state);
               await sendTelegramMessage(chatId, "📉 <b>Step 6:</b> Enter the <b>Original Price</b> for discount calculations (or send /skip):");
             }
             break;
@@ -5728,6 +5460,7 @@ async function startServer() {
               state.data.originalPrice = origPrice;
             }
             state.step = 'WAIT_DISCOUNT';
+            await setTelegramState(chatId, state);
             await sendTelegramMessage(chatId, "🏷️ <b>Step 7:</b> Enter the <b>Discount Percentage</b> (number, e.g. 10) or send /skip to auto-calculate:");
             break;
           }
@@ -5744,6 +5477,7 @@ async function startServer() {
               state.data.discount = Math.round((1 - state.data.price / state.data.originalPrice) * 100);
             }
             state.step = 'WAIT_AFFILIATE_LINK';
+            await setTelegramState(chatId, state);
             await sendTelegramMessage(chatId, "🔗 <b>Step 8:</b> Paste the product <b>Affiliate/Buy Link</b> (URL starting with http:// or https://):");
             break;
           }
@@ -5754,6 +5488,7 @@ async function startServer() {
             } else {
               state.data.affiliateLink = text;
               state.step = 'WAIT_DESCRIPTION';
+              await setTelegramState(chatId, state);
               await sendTelegramMessage(chatId, "📝 <b>Step 9:</b> Enter a brief <b>Description</b> for the product (or send /skip):");
             }
             break;
@@ -5764,6 +5499,7 @@ async function startServer() {
               state.data.description = text;
             }
             state.step = 'WAIT_IMAGE';
+            await setTelegramState(chatId, state);
             await sendTelegramMessage(chatId, "🖼️ <b>Step 10:</b> Enter an <b>Image URL</b> (or send /skip to use standard generic placeholder):");
             break;
           }
@@ -5779,6 +5515,7 @@ async function startServer() {
               state.data.images = ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=60'];
             }
             state.step = 'WAIT_CONFIRM';
+            await setTelegramState(chatId, state);
 
             let categoryName = 'Unknown';
             if (isMongoConnected && state.data.category) {
@@ -5963,29 +5700,25 @@ async function startServer() {
   });
 
   // Active pairing codes for extension configuration (valid for 10 minutes)
-  const activePairingCodes = new Map<string, { token: string; email: string; expiresAt: number }>();
-
-  const generatePairingCode = (token: string, email: string): string => {
-    // Clean up expired codes
-    const now = Date.now();
-    for (const [code, data] of activePairingCodes.entries()) {
-      if (data.expiresAt < now) {
-        activePairingCodes.delete(code);
+  const generatePairingCode = async (token: string, email: string): Promise<string> => {
+    let code = '';
+    let exists = true;
+    let attempts = 0;
+    
+    while (exists && attempts < 50) {
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+      attempts++;
+      const found = await ActivePairingCodeModel.findOne({ code });
+      if (!found) {
+        exists = false;
       }
     }
 
-    // Generate 6-digit random number
-    let code = '';
-    let attempts = 0;
-    do {
-      code = Math.floor(100000 + Math.random() * 900000).toString();
-      attempts++;
-    } while (activePairingCodes.has(code) && attempts < 100);
-
-    activePairingCodes.set(code, {
+    await ActivePairingCodeModel.create({
+      code,
       token,
       email,
-      expiresAt: now + 10 * 60 * 1000 // 10 minutes validity
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes validity
     });
 
     return code;
@@ -6035,7 +5768,7 @@ async function startServer() {
   });
 
   // Generate a real 6-digit pairing code for the Chrome Extension
-  app.get('/api/admin/products/import/pairing-code', adminOnly, (req: express.Request, res: express.Response) => {
+  app.get('/api/admin/products/import/pairing-code', adminOnly, async (req: express.Request, res: express.Response) => {
     let token = req.headers.authorization?.split(' ')[1];
     if (!token) {
       token = getCookieToken(req);
@@ -6046,7 +5779,7 @@ async function startServer() {
       return res.status(401).json({ error: 'No authorization token available for pairing' });
     }
     
-    const code = generatePairingCode(token, email);
+    const code = await generatePairingCode(token, email);
     res.json({
       success: true,
       pairingCode: code,
@@ -6055,24 +5788,25 @@ async function startServer() {
   });
 
   // Public endpoint for extension pairing
-  app.post('/api/auth/pair', (req: express.Request, res: express.Response) => {
+  app.post('/api/auth/pair', async (req: express.Request, res: express.Response) => {
     const { pairingCode } = req.body;
     if (!pairingCode) {
       return res.status(400).json({ error: 'Pairing code is required' });
     }
 
-    const data = activePairingCodes.get(String(pairingCode).trim());
+    const codeStr = String(pairingCode).trim();
+    const data = await ActivePairingCodeModel.findOne({ code: codeStr });
     if (!data) {
       return res.status(400).json({ error: 'Invalid or expired pairing code' });
     }
 
-    if (data.expiresAt < Date.now()) {
-      activePairingCodes.delete(String(pairingCode).trim());
+    if (data.expiresAt.getTime() < Date.now()) {
+      await ActivePairingCodeModel.deleteOne({ code: codeStr });
       return res.status(400).json({ error: 'Pairing code has expired' });
     }
 
     // Successfully paired! Consume the code
-    activePairingCodes.delete(String(pairingCode).trim());
+    await ActivePairingCodeModel.deleteOne({ code: codeStr });
 
     // Build the correct API base URL from the current request's headers
     const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
@@ -6329,8 +6063,6 @@ async function startServer() {
     try {
       if (!(req as any).file) return res.status(400).json({ error: 'No file uploaded' });
       
-      // Need to import mediaService, since it's an ES module we might just use dynamic import or require
-      const { mediaService } = await import('./src/services/MediaService.js');
       // For a real upload we would process it directly here instead of download
       // Since it's a file, we can read it and process it
       
@@ -7901,8 +7633,8 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         const urlStr = rawPayload.affiliateLink.trim();
         try {
           const parsedUrl = new URL(urlStr);
-          const paramTag = parsedUrl.searchParams.get('tag');
-          const customTag = paramTag || resolvedAffiliateCode;
+          // FORCE the official resolved affiliate code to prevent commission hijacking!
+          const customTag = resolvedAffiliateCode;
           const pathAsinMatch = urlStr.match(/\/(dp|gp\/product)\/([A-Z0-9]{10})/i);
           const finalAsin = normalizedAsin || (pathAsinMatch ? pathAsinMatch[2] : 'unknown');
           cleanAffiliateLink = `https://www.amazon.com/dp/${finalAsin}/?tag=${customTag}`;
@@ -8255,15 +7987,13 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
 
           // PHASE 7: Background Media Download Trigger
           if (uniqueImages && uniqueImages.length > 0) {
-            import('./src/services/MediaService.js').then(({ mediaService }) => {
-              uniqueImages.forEach((imgUrl: any) => {
-                mediaService.processImageDownload({
-                  url: imgUrl,
-                  productId: product._id.toString(),
-                  asin: normalizedAsin || undefined
-                }).catch((err: any) => console.warn('Media download failed in background:', err.message));
-              });
-            }).catch((err: any) => console.warn('MediaService dynamic import failed:', err.message));
+            uniqueImages.forEach((imgUrl: any) => {
+              mediaService.processImageDownload({
+                url: imgUrl,
+                productId: product._id.toString(),
+                asin: normalizedAsin || undefined
+              }).catch((err: any) => console.warn('Media download failed in background:', err.message));
+            });
           }
 
           await syncProductsToSeedFile();
@@ -8910,15 +8640,8 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
   // Sunday automated logs and simulation
   app.get('/api/admin/sunday-logs', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
-      if (isMongoConnected) {
-        const mongoLogs = await SundayAutomationLog.find().sort({ runAt: -1 }).populate('productsAdded');
-        const combined = [...localSundayAutomationLogs, ...mongoLogs].sort(
-          (a, b) => new Date(b.runAt || b.createdAt).getTime() - new Date(a.runAt || a.createdAt).getTime()
-        );
-        return res.json(combined);
-      } else {
-        return res.json(localSundayAutomationLogs);
-      }
+      const mongoLogs = await SundayAutomationLog.find().sort({ runAt: -1 }).populate('productsAdded');
+      return res.json(mongoLogs);
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }

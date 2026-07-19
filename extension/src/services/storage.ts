@@ -1,6 +1,7 @@
 /**
- * Secure wrapper around chrome.storage.local APIs.
+ * Secure wrapper around chrome.storage APIs.
  * Ensures consistent serialization, standard fallbacks, and typed key management.
+ * Sensitive tokens are stored in memory-only session storage.
  */
 
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, EXTENSION_VERSION } from '../config/environments';
@@ -8,15 +9,27 @@ import { ExtensionSettings } from '../types';
 import { logger } from './logger';
 
 const SETTINGS_KEY = 'gph_settings';
+const AUTH_TOKEN_KEY = 'gph_auth_token';
 
 class StorageService {
   /**
-   * Write data to chrome.storage.local
+   * Write data to chrome storage.
    */
   public async set(key: string, value: any): Promise<void> {
-    return new Promise((resolve, reject) => {
+    let finalValue = value;
+    let authTokenToSave = null;
+
+    if (key === SETTINGS_KEY && value && typeof value === 'object') {
+      finalValue = { ...value };
+      if ('authToken' in finalValue) {
+        authTokenToSave = finalValue.authToken;
+        finalValue.authToken = null; // Never persist tokens to local disk
+      }
+    }
+
+    const localPromise = new Promise<void>((resolve, reject) => {
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.set({ [key]: value }, () => {
+        chrome.storage.local.set({ [key]: finalValue }, () => {
           if (chrome.runtime.lastError) {
             logger.error(`Storage write failed for key: ${key}`, chrome.runtime.lastError);
             reject(chrome.runtime.lastError);
@@ -25,24 +38,45 @@ class StorageService {
           }
         });
       } else {
-        // Fallback for non-extension environments (local preview/testing)
         try {
-          localStorage.setItem(key, JSON.stringify(value));
+          localStorage.setItem(key, JSON.stringify(finalValue));
           resolve();
         } catch (e) {
           reject(e);
         }
       }
     });
+
+    const sessionPromises: Promise<void>[] = [];
+    if (key === SETTINGS_KEY && authTokenToSave !== null) {
+      sessionPromises.push(
+        new Promise<void>((resolve) => {
+          if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.session) {
+            chrome.storage.session.set({ [AUTH_TOKEN_KEY]: authTokenToSave }, () => resolve());
+          } else {
+            try {
+              if (authTokenToSave) {
+                sessionStorage.setItem(AUTH_TOKEN_KEY, authTokenToSave);
+              } else {
+                sessionStorage.removeItem(AUTH_TOKEN_KEY);
+              }
+            } catch (e) { /* ignore fallback errors */ }
+            resolve();
+          }
+        })
+      );
+    }
+
+    await Promise.all([localPromise, ...sessionPromises]);
   }
 
   /**
-   * Retrieve data from chrome.storage.local
+   * Retrieve data from chrome storage.
    */
   public async get<T = any>(key: string, defaultValue: T | null = null): Promise<T | null> {
-    return new Promise((resolve) => {
+    const localVal = await new Promise<any>((resolve) => {
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get([key], (result) => {
+        chrome.storage.local.get([key], (result: any) => {
           if (chrome.runtime.lastError) {
             logger.warn(`Storage read failed for key: ${key}. Returning default.`, chrome.runtime.lastError);
             resolve(defaultValue);
@@ -51,23 +85,41 @@ class StorageService {
           }
         });
       } else {
-        // Fallback for local preview/testing
         const item = localStorage.getItem(key);
-        if (item === null) {
-          resolve(defaultValue);
-        } else {
+        if (item === null) resolve(defaultValue);
+        else {
           try {
-            resolve(JSON.parse(item) as T);
+            resolve(JSON.parse(item));
           } catch {
-            resolve(item as unknown as T);
+            resolve(item);
           }
         }
       }
     });
+
+    if (key === SETTINGS_KEY && localVal && typeof localVal === 'object') {
+      const mergedVal = { ...localVal };
+      mergedVal.authToken = await new Promise<string | null>((resolve) => {
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.session) {
+          chrome.storage.session.get([AUTH_TOKEN_KEY], (result) => {
+            resolve((result[AUTH_TOKEN_KEY] as string) || null);
+          });
+        } else {
+          try {
+            resolve(sessionStorage.getItem(AUTH_TOKEN_KEY) || null);
+          } catch {
+            resolve(null);
+          }
+        }
+      });
+      return mergedVal as unknown as T;
+    }
+
+    return localVal as T;
   }
 
   /**
-   * Delete data from chrome.storage.local
+   * Delete data from chrome storage.
    */
   public async remove(key: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -137,15 +189,7 @@ class StorageService {
         };
         await this.set(SETTINGS_KEY, settings);
         
-        // Backup legacy keys in case of any schema / migration issues
-        await this.set('backup_legacy_keys', {
-          authToken: legacyToken || null,
-          adminEmail: legacyEmail || null,
-          customApiUrl: legacyUrl || null,
-          migratedAt: new Date().toISOString()
-        });
-        
-        // Clean up legacy keys
+        // Clean up legacy keys (removed plaintext backup)
         await this.remove('authToken');
         await this.remove('adminEmail');
         await this.remove('customApiUrl');

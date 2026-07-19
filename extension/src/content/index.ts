@@ -23,7 +23,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender: chrome
         status: "ALIVE", 
         url: window.location.href,
         title: document.title,
-        isAmazon: /amazon\.(com|in|co\.uk|ca)$/.test(window.location.hostname) || window.location.hostname.includes("amazon")
+        isAmazon: /amazon\.(com|in|co\.uk|ca)$/.test(window.location.hostname)
       }
     });
   } else if (action === "SCRAPE_AMAZON_PRODUCT") {

@@ -19,7 +19,7 @@ export async function handleSessionVerification(): Promise<ExtensionResponse> {
       success: false,
       error: {
         code: 'SESSION_CHECK_FAILED',
-        message: err.message || 'Failed to verify auth session'
+        message: 'Failed to verify auth session'
       }
     };
   }
@@ -48,7 +48,7 @@ export async function handleSessionTokenUpdate(payload: { token: string | null; 
       success: false,
       error: {
         code: 'TOKEN_SET_FAILED',
-        message: err.message || 'Failed to write session token'
+        message: 'Failed to write session token'
       }
     };
   }
@@ -102,7 +102,7 @@ export async function handleLogin(payload: { email?: string; password?: string }
       success: false,
       error: {
         code: 'LOGIN_FAILED',
-        message: err.message || 'Authentication failed. Please verify credentials.'
+        message: 'Authentication failed. Please verify credentials.'
       }
     };
   }
@@ -129,7 +129,7 @@ export async function handleLogout(): Promise<ExtensionResponse> {
       success: false,
       error: {
         code: 'LOGOUT_FAILED',
-        message: err.message || 'Failed to sign out'
+        message: 'Failed to sign out'
       }
     };
   }

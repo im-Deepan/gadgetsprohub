@@ -178,7 +178,16 @@ export default function Popup() {
           });
 
           const activeUrl = data.url || "";
-          if (activeUrl.includes('.run.app') || activeUrl.includes('localhost:3000') || activeUrl.includes('.onrender.com')) {
+          const activeTitle = data.title || "";
+          const isPortal = activeUrl.includes('.run.app') || 
+                           activeUrl.includes('localhost:3000') || 
+                           activeUrl.includes('.onrender.com') ||
+                           activeUrl.includes('aistudio.google') ||
+                           activeUrl.includes('cloudworkstations.dev') ||
+                           activeTitle.includes('Affiliate Portal') ||
+                           activeTitle.includes('GadgetsProHub');
+          
+          if (isPortal && !data.isAmazon && activeUrl.startsWith('http')) {
             try {
               const origin = new URL(activeUrl).origin;
               extensionStorage.updateSettings({ apiBaseUrl: origin });
@@ -246,9 +255,17 @@ export default function Popup() {
         }
       });
     } else {
-      // Offline fallback
-      setIsAuthenticated(true);
-      setAdminEmail('admin@gadgetsprohub.com');
+      // Standalone web preview or test mode: dynamically read the secure persisted settings
+      extensionStorage.getSettings().then((settings) => {
+        if (settings.authToken && settings.adminEmail) {
+          setIsAuthenticated(true);
+          setAdminEmail(settings.adminEmail);
+        } else {
+          setIsAuthenticated(false);
+        }
+      }).catch(() => {
+        setIsAuthenticated(false);
+      });
     }
   };
 
@@ -396,18 +413,38 @@ export default function Popup() {
         }
       });
     } else {
-      // Simulation mode (Only active in non-extension local development previews)
-      setTimeout(() => {
+      // In standalone web preview or test mode, perform direct authentication against the real API
+      fetch(`${apiUrl.replace(/\/$/, '')}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      })
+      .then(res => res.json())
+      .then(async (data) => {
         setLoginLoading(false);
-        const isMockAdmin = email === 'admin@gadgetsprohub.com' || (email.startsWith('admin@') && email.endsWith('.com'));
-        if (isMockAdmin) {
+        if (data && data.success && data.user?.role === 'admin') {
           setIsAuthenticated(true);
-          setAdminEmail(email);
-          setStatusMessage({ type: 'success', text: 'Logged in successfully (Simulation Mode).' });
+          setAdminEmail(data.user.email);
+          setAuthToken(data.token || '');
+          await extensionStorage.updateSettings({
+            authToken: data.token,
+            adminEmail: data.user.email
+          });
+          setStatusMessage({ type: 'success', text: 'Successfully logged in as administrator!' });
+          setEmail('');
+          setPassword('');
         } else {
-          setStatusMessage({ type: 'error', text: 'Access denied: Please use admin@gadgetsprohub.com for local simulation.' });
+          const errorMsg = data?.error || (data?.user?.role !== 'admin' ? 'Access denied: User is not an administrator.' : 'Invalid credentials.');
+          setStatusMessage({ type: 'error', text: errorMsg });
         }
-      }, 1000);
+      })
+      .catch((err) => {
+        setLoginLoading(false);
+        setStatusMessage({ type: 'error', text: 'Connection failed: ' + (err.message || 'Check your portal URL and network status.') });
+      });
     }
   };
 
@@ -425,10 +462,16 @@ export default function Popup() {
         }
       });
     } else {
-      // Simulation
+      // Direct offline clearing
       setIsAuthenticated(false);
       setAdminEmail('');
-      setStatusMessage({ type: 'success', text: 'Logged out successfully (Simulation Mode).' });
+      setAuthToken('');
+      extensionStorage.updateSettings({
+        authToken: null,
+        adminEmail: null
+      }).then(() => {
+        setStatusMessage({ type: 'success', text: 'Successfully logged out.' });
+      });
     }
   };
 
