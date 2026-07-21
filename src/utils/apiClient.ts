@@ -79,6 +79,42 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
     ...fetchOptions
   } = options;
 
+  // Copy and handle headers to inject Authorization Bearer token from localStorage if available
+  const originalHeaders = fetchOptions.headers;
+  let headersObj: any;
+  if (originalHeaders instanceof Headers) {
+    headersObj = new Headers(originalHeaders);
+  } else if (Array.isArray(originalHeaders)) {
+    headersObj = [...originalHeaders];
+  } else if (originalHeaders && typeof originalHeaders === 'object') {
+    headersObj = { ...originalHeaders };
+  } else {
+    headersObj = {};
+  }
+
+  let hasAuthHeader = false;
+  if (headersObj instanceof Headers) {
+    hasAuthHeader = headersObj.has('Authorization') || headersObj.has('authorization');
+  } else if (Array.isArray(headersObj)) {
+    hasAuthHeader = headersObj.some(([k]) => k.toLowerCase() === 'authorization');
+  } else if (typeof headersObj === 'object') {
+    hasAuthHeader = Object.keys(headersObj).some(k => k.toLowerCase() === 'authorization');
+  }
+
+  if (!hasAuthHeader) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (token) {
+      if (headersObj instanceof Headers) {
+        headersObj.set('Authorization', `Bearer ${token}`);
+      } else if (Array.isArray(headersObj)) {
+        headersObj.push(['Authorization', `Bearer ${token}`]);
+      } else if (typeof headersObj === 'object') {
+        headersObj['Authorization'] = `Bearer ${token}`;
+      }
+    }
+  }
+  fetchOptions.headers = headersObj;
+
   const requestKey = getRequestKey(url, options);
   const isGet = !options.method || options.method.toUpperCase() === 'GET';
 

@@ -2247,9 +2247,9 @@ async function startServer() {
   // ========== API ROUTES ==========
 
   // Public dynamic Sitemap XML endpoint
-  app.get('/sitemap.xml', async (_req: express.Request, res: express.Response) => {
+  app.get('/sitemap.xml', async (req: express.Request, res: express.Response) => {
     try {
-      const xml = await seoService.buildXmlSitemap();
+      const xml = await seoService.buildXmlSitemap(req, localProducts, localBlogs);
       res.header('Content-Type', 'application/xml');
       res.send(xml);
     } catch (err: any) {
@@ -2259,7 +2259,7 @@ async function startServer() {
   });
 
   // Diagnostic endpoint for Product Collection
-  app.get('/api/diagnostic/products', async (req: express.Request, res: express.Response) => {
+  app.get('/api/diagnostic/products', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
         const count = await Product.countDocuments();
@@ -2363,102 +2363,6 @@ async function startServer() {
   app.get('/security.txt', (_req: express.Request, res: express.Response) => {
     res.type('text/plain');
     res.send('Contact: mailto:security@gadgetsprohub.com\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en');
-  });
-
-  app.get('/sitemap.xml', async (req: express.Request, res: express.Response) => {
-    // Dynamically resolve base URL to support both Render fallback domain and custom domains
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const host = req.get('host') || 'gadgetsprohub.com';
-    const baseUrl = `${protocol}://${host}`;
-
-    let productsList: { slug: string; updatedAt?: any; createdAt?: any }[] = [];
-    let blogsList: { slug: string; updatedAt?: any; createdAt?: any }[] = [];
-
-    try {
-      if (isMongoConnected) {
-        productsList = await Product.find({}, 'slug updatedAt createdAt').lean() as any[];
-        blogsList = await Blog.find({ published: true }, 'slug updatedAt createdAt').lean() as any[];
-      } else {
-        productsList = (localProducts || []).map((p: any) => ({
-          slug: p.slug,
-          updatedAt: p.updatedAt || p.createdAt,
-        }));
-        blogsList = (localBlogs || []).map((b: any) => ({
-          slug: b.slug,
-          updatedAt: b.updatedAt || b.createdAt,
-        }));
-      }
-    } catch (e) {
-      captureError(e, { context: 'Sitemap production/blog query error' });
-    }
-
-    const staticUrls = [
-      { path: '', changefreq: 'daily', priority: '1.0' },
-      { path: 'products', changefreq: 'daily', priority: '0.9' },
-      { path: 'blogs', changefreq: 'weekly', priority: '0.8' },
-      { path: 'contact', changefreq: 'monthly', priority: '0.6' },
-      { path: 'about-us', changefreq: 'monthly', priority: '0.5' },
-      { path: 'privacy-policy', changefreq: 'monthly', priority: '0.4' },
-      { path: 'terms-conditions', changefreq: 'monthly', priority: '0.4' },
-      { path: 'disclaimer', changefreq: 'monthly', priority: '0.4' },
-    ];
-
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-
-    // Static pages
-    const todayStr = new Date().toISOString().split('T')[0];
-    for (const item of staticUrls) {
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/${item.path}</loc>\n`;
-      xml += `    <lastmod>${todayStr}</lastmod>\n`;
-      xml += `    <changefreq>${item.changefreq}</changefreq>\n`;
-      xml += `    <priority>${item.priority}</priority>\n`;
-      xml += `  </url>\n`;
-    }
-
-    // Dynamic products
-    for (const prod of productsList) {
-      if (!prod.slug) continue;
-      const dateVal = prod.updatedAt || prod.createdAt || new Date();
-      let dateStr = todayStr;
-      try {
-        dateStr = new Date(dateVal).toISOString().split('T')[0];
-      } catch (err) {
-        captureError(err, { context: 'Sitemap Product Date Format', dateVal });
-        dateStr = todayStr;
-      }
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/product-detail/${prod.slug}</loc>\n`;
-      xml += `    <lastmod>${dateStr}</lastmod>\n`;
-      xml += `    <changefreq>weekly</changefreq>\n`;
-      xml += `    <priority>0.8</priority>\n`;
-      xml += `  </url>\n`;
-    }
-
-    // Dynamic blogs
-    for (const blog of blogsList) {
-      if (!blog.slug) continue;
-      const dateVal = blog.updatedAt || blog.createdAt || new Date();
-      let dateStr = todayStr;
-      try {
-        dateStr = new Date(dateVal).toISOString().split('T')[0];
-      } catch (err) {
-        captureError(err, { context: 'Sitemap Blog Date Format', dateVal });
-        dateStr = todayStr;
-      }
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/blog-detail/${blog.slug}</loc>\n`;
-      xml += `    <lastmod>${dateStr}</lastmod>\n`;
-      xml += `    <changefreq>weekly</changefreq>\n`;
-      xml += `    <priority>0.7</priority>\n`;
-      xml += `  </url>\n`;
-    }
-
-    xml += `</urlset>`;
-
-    res.type('application/xml');
-    res.send(xml);
   });
 
   // Auth Routes
@@ -2904,6 +2808,11 @@ async function startServer() {
       if (isMongoConnected) {
         const found = await AuthCode.findOne({ code: authCode });
         if (!found) {
+          return res.status(400).json({ error: 'Invalid or expired authorization code' });
+        }
+        const ageInMs = Date.now() - new Date(found.createdAt).getTime();
+        if (ageInMs > 60000) {
+          await AuthCode.deleteOne({ _id: found._id });
           return res.status(400).json({ error: 'Invalid or expired authorization code' });
         }
         await AuthCode.deleteOne({ _id: found._id });
@@ -6393,7 +6302,7 @@ async function startServer() {
   // 9. Manual sitemap rebuild
   app.post('/api/admin/seo/sitemap/generate', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      const xml = await seoService.buildXmlSitemap();
+      const xml = await seoService.buildXmlSitemap(req, localProducts, localBlogs);
       res.json({
         success: true,
         message: 'Sitemap rebuilt successfully',
@@ -6417,16 +6326,9 @@ async function startServer() {
       if (!product) return res.status(404).json({ error: 'Product not found' });
 
       if (stream) {
-        // Set SSE Headers
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.flushHeaders?.();
-
         const promptDoc = await AiPrompt.findOne({ key: promptKey || 'product_long_description' });
         if (!promptDoc) {
-          res.write(`data: ${JSON.stringify({ error: 'Prompt template not found' })}\n\n`);
-          return res.end();
+          return res.status(404).json({ error: 'Prompt template not found' });
         }
 
         let finalPrompt = promptDoc.promptText;
@@ -6440,8 +6342,15 @@ async function startServer() {
         };
 
         for (const k of Object.keys(vars)) {
-          finalPrompt = finalPrompt.replace(new RegExp(`{${k}}`, 'g'), vars[k]);
+          const escapedK = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          finalPrompt = finalPrompt.replace(new RegExp(`{${escapedK}}`, 'g'), vars[k]);
         }
+
+        // Set SSE Headers only after prompt and replacement validations complete
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders?.();
 
         try {
           await aiService.executeGeneration({
@@ -6463,6 +6372,13 @@ async function startServer() {
         res.json({ success: true, data: responseDoc });
       }
     } catch (err: any) {
+      if (res.headersSent) {
+        if (!res.writableEnded) {
+          res.write(`data: ${JSON.stringify({ error: err.message || 'Content generation failed' })}\n\n`);
+          res.end();
+        }
+        return;
+      }
       res.status(500).json({ error: err.message || 'Content generation failed' });
     }
   });
@@ -7903,7 +7819,8 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             }
           }
           if (!categoryId) {
-            let cat = await Category.findOne({ name: { $regex: new RegExp(`^${resolvedCategoryInput}$`, 'i') } });
+            const escapedCategory = resolvedCategoryInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            let cat = await Category.findOne({ name: { $regex: new RegExp(`^${escapedCategory}$`, 'i') } });
             if (!cat) {
               const categorySlug = resolvedCategoryInput.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
               cat = new Category({
@@ -9049,10 +8966,13 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
   }
 
   // Centralized Error Handling Middleware to prevent raw database/internal system details leak (Information Disclosure)
-  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
     captureError(err, { context: 'Centralized Express Error Handler' });
     console.error('Unhandled Server Error:', err);
     
+    if (res.headersSent) {
+      return next(err);
+    }
     res.status(err.status || 500).json({
       error: 'An internal server error occurred. Please try again later.'
     });

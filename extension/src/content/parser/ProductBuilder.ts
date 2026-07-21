@@ -1,9 +1,15 @@
-import { ProductPayload } from '../../types';
+import { ProductPayload, ExtensionSettings } from '../../types';
 import { FieldExtractors } from './FieldExtractors';
 import { DataNormalizer } from './DataNormalizer';
 
 export class ProductBuilder {
-  constructor(private log: (msg: string) => void) {}
+  private affiliateTag: string;
+  private supportedDomains: string[];
+
+  constructor(private log: (msg: string) => void, settings?: ExtensionSettings) {
+    this.affiliateTag = settings?.affiliateTag || 'gadgetspro-20';
+    this.supportedDomains = settings?.supportedDomains || ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca'];
+  }
 
   public build(): Partial<ProductPayload> {
     const title = FieldExtractors.getTitle();
@@ -44,7 +50,7 @@ export class ProductBuilder {
     
     // Determine the current Amazon domain dynamically
     let domain = 'amazon.com';
-    const supportedDomains = ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca'];
+    const supportedDomains = this.supportedDomains;
     for (const d of supportedDomains) {
       if (hostname === d || hostname.endsWith('.' + d)) {
         domain = d;
@@ -52,7 +58,7 @@ export class ProductBuilder {
       }
     }
 
-    const tag = 'gadgetspro-20'; // Centralized official affiliate tag
+    const tag = this.affiliateTag; // Centralized official affiliate tag
     urlObj.search = '';
     const productUrl = urlObj.toString();
 

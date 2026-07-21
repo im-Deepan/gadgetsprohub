@@ -28,11 +28,19 @@ class QueueManager {
   }
 
   public async startJob(jobId: string, items: any[], concurrency: number, maxRetries: number, conflictStrategy: string, options: any) {
+    const sanitizedConcurrency = isNaN(concurrency) ? 3 : Math.max(1, concurrency);
+    const sanitizedMaxRetries = isNaN(maxRetries) ? 3 : Math.max(0, maxRetries);
+    const initializedItems = items.map(item => ({
+      ...item,
+      status: item.status || 'pending',
+      retryCount: typeof item.retryCount === 'number' ? item.retryCount : 0
+    }));
+
     this.currentJob = {
       jobId,
-      items,
-      concurrency,
-      maxRetries,
+      items: initializedItems,
+      concurrency: sanitizedConcurrency,
+      maxRetries: sanitizedMaxRetries,
       conflictStrategy,
       status: 'running',
       options
@@ -50,6 +58,18 @@ class QueueManager {
     const data = await chrome.storage.local.get('currentBulkJob') as any;
     if (data.currentBulkJob && data.currentBulkJob.status === 'running') {
       this.currentJob = data.currentBulkJob;
+      if (this.currentJob && this.currentJob.items) {
+        let updated = false;
+        this.currentJob.items.forEach(item => {
+          if (item.status === 'running') {
+            item.status = 'pending';
+            updated = true;
+          }
+        });
+        if (updated) {
+          await chrome.storage.local.set({ currentBulkJob: this.currentJob });
+        }
+      }
       this.isProcessing = true;
       chrome.alarms.create(this.alarmName, { periodInMinutes: 0.25 });
       this.processQueue();
@@ -104,7 +124,8 @@ class QueueManager {
         return;
       }
 
-      const availableSlots = this.currentJob.concurrency - this.runningTasks;
+      const concurrency = isNaN(this.currentJob.concurrency) ? 3 : Math.max(1, this.currentJob.concurrency);
+      const availableSlots = concurrency - this.runningTasks;
       if (availableSlots > 0 && pendingItems.length > 0) {
         const itemsToStart = pendingItems.slice(0, availableSlots);
         
@@ -135,7 +156,7 @@ class QueueManager {
     const asin = item.asin || this.extractAsin(item.url);
     const url = item.url || `https://www.amazon.com/dp/${asin}`;
 
-    while (item.retryCount <= maxRetries && !success) {
+    while (item.retryCount < maxRetries && !success) {
       if (!this.isProcessing || !this.currentJob || this.currentJob.status !== 'running') {
         this.runningTasks--;
         item.status = 'pending';
@@ -173,7 +194,7 @@ class QueueManager {
       }
     }
 
-    if (!success && item.retryCount > maxRetries) {
+    if (!success) {
       finalStatus = 'failed';
     }
 
@@ -223,10 +244,24 @@ class QueueManager {
         if (!tab.id) return reject(new Error("Failed to create tab"));
         
         const tabId = tab.id;
+        let cleanedUp = false;
+
+        const cleanup = () => {
+          if (cleanedUp) return;
+          cleanedUp = true;
+          clearTimeout(timeout);
+          chrome.tabs.onUpdated.removeListener(checkTabStatus);
+          chrome.runtime.onMessage.removeListener(listener);
+        };
         
         // Timeout
         const timeout = setTimeout(() => {
-          chrome.tabs.remove(tabId);
+          cleanup();
+          chrome.tabs.remove(tabId, () => {
+            if (chrome.runtime.lastError) {
+              // Ignore if tab already removed
+            }
+          });
           reject(new Error("Scraping timeout"));
         }, 30000); // 30s timeout
 
@@ -240,13 +275,15 @@ class QueueManager {
 
         const checkTabStatus = (updatedTabId: number, changeInfo: any) => {
           if (updatedTabId === tabId && changeInfo.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(checkTabStatus);
             // Tab finished loading, tell it to scrape
             setTimeout(() => {
               chrome.tabs.sendMessage(tabId, { action: "SCRAPE_AMAZON_PRODUCT" }, (response: any) => {
-                clearTimeout(timeout);
-                chrome.runtime.onMessage.removeListener(listener);
-                chrome.tabs.remove(tabId);
+                cleanup();
+                chrome.tabs.remove(tabId, () => {
+                  if (chrome.runtime.lastError) {
+                    // Ignore if tab already removed
+                  }
+                });
                 
                 if (chrome.runtime.lastError || !response) {
                   return reject(new Error(chrome.runtime.lastError?.message || "No response from tab"));

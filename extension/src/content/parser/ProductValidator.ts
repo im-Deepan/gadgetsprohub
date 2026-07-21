@@ -6,7 +6,7 @@ export class ProductValidator {
     const warnings: string[] = [];
 
     if (!data.name && !(data as any).title) errors.push('Product title is missing');
-    if (!data.asin || data.asin.length < 8 || data.asin.length > 15) errors.push(`Invalid or missing ASIN: ${data.asin}`);
+    if (!data.asin) errors.push('ASIN is missing');
     if (!data.productUrl) errors.push('Product URL is missing');
     
     if (!data.images || data.images.length === 0) {

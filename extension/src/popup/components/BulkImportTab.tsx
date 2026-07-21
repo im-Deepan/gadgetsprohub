@@ -45,7 +45,7 @@ export function BulkImportTab() {
     if (rawItems.length === 0) return alert("Please enter at least one ASIN or URL.");
     
     // Parse and Validate
-    const items: { asin: string; url: string }[] = [];
+    const items: { asin: string; url: string; status?: string; retryCount?: number }[] = [];
     const seen = new Set();
     const asinRegex = /^[A-Z0-9]{10}$/;
     let errors = 0;
@@ -73,13 +73,15 @@ export function BulkImportTab() {
       if (seen.has(asin)) continue; // duplicate row
       seen.add(asin);
 
-      items.push({ asin, url: url || '' });
+      items.push({ asin, url: url || '', status: 'pending', retryCount: 0 });
     }
     
     if (items.length === 0) return alert("No valid ASINs found.");
     if (errors > 0) alert(`Skipped ${errors} invalid or malformed items.`);
 
     const jobId = 'job_' + Date.now();
+    const sanitizedConcurrency = isNaN(concurrency) ? 3 : Math.max(1, concurrency);
+    const sanitizedMaxRetries = isNaN(maxRetries) ? 3 : Math.max(0, maxRetries);
     
     // First, register with backend
     const startBackendJob = async () => {
@@ -92,7 +94,7 @@ export function BulkImportTab() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token || ''}`
           },
-          body: JSON.stringify({ items, concurrency, maxRetries, conflictStrategy })
+          body: JSON.stringify({ jobId, items, concurrency: sanitizedConcurrency, maxRetries: sanitizedMaxRetries, conflictStrategy })
         });
       } catch (e) {
         console.error("Backend bulk start fail (will proceed locally)", e);
@@ -102,7 +104,7 @@ export function BulkImportTab() {
     startBackendJob().then(() => {
       chrome.runtime.sendMessage({
         action: 'BULK_IMPORT_START',
-        payload: { jobId, items, concurrency, maxRetries, conflictStrategy, options: {} }
+        payload: { jobId, items, concurrency: sanitizedConcurrency, maxRetries: sanitizedMaxRetries, conflictStrategy, options: {} }
       }, (res) => {
         if (res && res.success) fetchStatus();
       });

@@ -203,8 +203,13 @@ export class AiService {
 
   constructor() {
     // Decouple API key encryption from JWT_SECRET to prevent token rotation from destroying database keys.
-    const secret = process.env.AI_KEY_ENCRYPTION_SECRET || 'a-very-secure-enterprise-32-byte-secret-key-phrase-stable-fallback';
-    this.encryptionKey = crypto.scryptSync(secret, 'salt-enterprise-affiliate-ai', 32);
+    // If dedicated AI_KEY_ENCRYPTION_SECRET is unset, fall back to JWT_SECRET to keep it unique per-deployment.
+    const secret = process.env.AI_KEY_ENCRYPTION_SECRET || process.env.JWT_SECRET;
+    if (!secret) {
+      console.warn('[SECURITY WARNING] AI_KEY_ENCRYPTION_SECRET and JWT_SECRET are both unset. Falling back to default static key.');
+    }
+    const finalSecret = secret || 'a-very-secure-enterprise-32-byte-secret-key-phrase-stable-fallback';
+    this.encryptionKey = crypto.scryptSync(finalSecret, 'salt-enterprise-affiliate-ai', 32);
   }
 
   // ==========================================

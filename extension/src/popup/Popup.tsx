@@ -29,6 +29,7 @@ import { CONFIG } from '../config';
 import { ENVIRONMENTS } from '../config/environments';
 import { extensionStorage } from '../services/storage';
 import { logger } from '../services/logger';
+import { apiService, decodeTokenExpiration } from '../services/api';
 import { BulkImportTab } from './components/BulkImportTab';
 
 interface TabInfo {
@@ -54,10 +55,16 @@ export default function Popup() {
   const [showToken, setShowToken] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [adminEmail, setAdminEmail] = useState<string>('');
-  const [environment, setEnvironment] = useState<'Development' | 'Staging' | 'Production' | 'Custom'>('Staging');
+  const [environment, setEnvironment] = useState<'Development' | 'Staging' | 'Production' | 'Custom'>('Production');
   const [debugMode, setDebugMode] = useState<boolean>(true);
   const [extVersion, setExtVersion] = useState<string>('1.0.0');
   const [features, setFeatures] = useState<any>({});
+  
+  // Customization States
+  const [affiliateTag, setAffiliateTag] = useState<string>('gadgetspro-20');
+  const [supportedDomains, setSupportedDomains] = useState<string>('amazon.com, amazon.in, amazon.co.uk, amazon.ca');
+  const [popupWidth, setPopupWidth] = useState<number>(360);
+  const [popupHeight, setPopupHeight] = useState<number>(420);
   const [showSettings, setShowSettings] = useState(false);
   const [showDevMode, setShowDevMode] = useState(false);
   const [showHealthCheck, setShowHealthCheck] = useState(false);
@@ -150,6 +157,9 @@ export default function Popup() {
     if (timeLeft <= 0) {
       setExpiryWarning('Your login session has expired. Please log in again.');
       setIsAuthenticated(false);
+      setAuthToken('');
+      setTokenExpiresAt(null);
+      extensionStorage.updateSettings({ authToken: null, tokenExpiresAt: null });
     } else if (timeLeft < 5 * 60 * 1000) {
       const minutesLeft = Math.ceil(timeLeft / 60000);
       setExpiryWarning(`Your login session will expire in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''}. Please log in again soon.`);
@@ -176,27 +186,6 @@ export default function Popup() {
             isAmazon: data.isAmazon || false,
             contentScriptLoaded: data.contentScriptLoaded !== false
           });
-
-          const activeUrl = data.url || "";
-          const activeTitle = data.title || "";
-          const isPortal = activeUrl.includes('.run.app') || 
-                           activeUrl.includes('localhost:3000') || 
-                           activeUrl.includes('.onrender.com') ||
-                           activeUrl.includes('aistudio.google') ||
-                           activeUrl.includes('cloudworkstations.dev') ||
-                           activeTitle.includes('Affiliate Portal') ||
-                           activeTitle.includes('GadgetsProHub');
-          
-          if (isPortal && !data.isAmazon && activeUrl.startsWith('http')) {
-            try {
-              const origin = new URL(activeUrl).origin;
-              extensionStorage.updateSettings({ apiBaseUrl: origin });
-              setApiUrl(origin);
-              logger.debug(`Detected active Portal tab! Automatically updated apiBaseUrl to: ${origin}`);
-            } catch (e) {
-              console.warn("Could not parse active tab url:", e);
-            }
-          }
         } else {
           setTabInfo({
             url: "",
@@ -235,10 +224,30 @@ export default function Popup() {
     setTokenExpiresAt(settings.tokenExpiresAt || null);
     checkTokenExpiry(settings.tokenExpiresAt || null);
 
+    // Load custom configuration fields
+    setAffiliateTag(settings.affiliateTag || 'gadgetspro-20');
+    setSupportedDomains((settings.supportedDomains || ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca']).join(', '));
+    setPopupWidth(settings.popupWidth || 360);
+    setPopupHeight(settings.popupHeight || 420);
+
     if (settings.authToken) {
       verifyRemoteSession();
     }
   };
+
+  useEffect(() => {
+    if (popupWidth) {
+      document.documentElement.style.width = `${popupWidth}px`;
+      document.body.style.width = `${popupWidth}px`;
+    }
+  }, [popupWidth]);
+
+  useEffect(() => {
+    if (popupHeight) {
+      document.documentElement.style.minHeight = `${popupHeight}px`;
+      document.body.style.minHeight = `${popupHeight}px`;
+    }
+  }, [popupHeight]);
 
   const verifyRemoteSession = () => {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
@@ -273,7 +282,8 @@ export default function Popup() {
     setShowHealthCheck(true);
     setHealthStatus({ status: 'checking' });
     try {
-      const response = await fetch(`${apiUrl}/api/health-check`);
+      const sanitizedUrl = apiUrl ? apiUrl.replace(/\/$/, '') : '';
+      const response = await fetch(`${sanitizedUrl}/api/health-check`);
       if (response.ok) {
         const data = await response.json();
         setHealthStatus({ status: 'ok', backendVersion: data.version || 'Unknown', env: environment });
@@ -289,24 +299,29 @@ export default function Popup() {
     initSession();
     checkCurrentTab();
 
-    const handleStorageChange = (changes: any, areaName: string) => {
-      if (areaName === 'local' && changes.gph_settings) {
-        const newSettings = changes.gph_settings.newValue;
-        if (newSettings) {
-          setApiUrl(newSettings.apiBaseUrl);
-          setAuthToken(newSettings.authToken || '');
-          setAdminEmail(newSettings.adminEmail || '');
-          setEnvironment(newSettings.environment);
-          setDebugMode(newSettings.debugMode);
-          setExtVersion(newSettings.version);
-          setFeatures(newSettings.features || {});
-          setTokenExpiresAt(newSettings.tokenExpiresAt || null);
-          checkTokenExpiry(newSettings.tokenExpiresAt || null);
+    const handleStorageChange = async (changes: any, areaName: string) => {
+      if ((areaName === 'local' && changes.gph_settings) || (areaName === 'session' && changes.gph_auth_token)) {
+        const settings = await extensionStorage.getSettings();
+        if (settings) {
+          setApiUrl(settings.apiBaseUrl);
+          setAuthToken(settings.authToken || '');
+          setAdminEmail(settings.adminEmail || '');
+          setEnvironment(settings.environment);
+          setDebugMode(settings.debugMode);
+          setExtVersion(settings.version);
+          setFeatures(settings.features || {});
+          setTokenExpiresAt(settings.tokenExpiresAt || null);
+          checkTokenExpiry(settings.tokenExpiresAt || null);
           
-          // Verify session if token changed
-          const oldToken = changes.gph_settings.oldValue?.authToken;
-          if (newSettings.authToken !== oldToken) {
+          setAffiliateTag(settings.affiliateTag || 'gadgetspro-20');
+          setSupportedDomains((settings.supportedDomains || ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca']).join(', '));
+          setPopupWidth(settings.popupWidth || 360);
+          setPopupHeight(settings.popupHeight || 420);
+
+          if (settings.authToken) {
             verifyRemoteSession();
+          } else {
+            setIsAuthenticated(false);
           }
         }
       }
@@ -334,7 +349,7 @@ export default function Popup() {
         setShowCommandPalette(false);
       }
 
-      // Quick tab switching: Alt + 1, 2, 3, 4
+      // Quick tab switching: Alt + 1, 2, 3, 4 (3 & 4 gated on auth)
       if (e.altKey && e.key === '1') {
         e.preventDefault();
         setActiveTab('scraper');
@@ -345,11 +360,11 @@ export default function Popup() {
       }
       if (e.altKey && e.key === '3') {
         e.preventDefault();
-        setActiveTab('history');
+        if (isAuthenticated) setActiveTab('history');
       }
       if (e.altKey && e.key === '4') {
         e.preventDefault();
-        setActiveTab('analytics');
+        if (isAuthenticated) setActiveTab('analytics');
       }
 
       // Toggle Theme: Alt + T
@@ -413,37 +428,31 @@ export default function Popup() {
         }
       });
     } else {
-      // In standalone web preview or test mode, perform direct authentication against the real API
-      fetch(`${apiUrl.replace(/\/$/, '')}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      })
-      .then(res => res.json())
-      .then(async (data) => {
+      // Standalone web preview or test mode: perform direct API login
+      apiService.login(email, password).then(async (session) => {
         setLoginLoading(false);
-        if (data && data.success && data.user?.role === 'admin') {
-          setIsAuthenticated(true);
-          setAdminEmail(data.user.email);
-          setAuthToken(data.token || '');
-          await extensionStorage.updateSettings({
-            authToken: data.token,
-            adminEmail: data.user.email
-          });
-          setStatusMessage({ type: 'success', text: 'Successfully logged in as administrator!' });
-          setEmail('');
-          setPassword('');
-        } else {
-          const errorMsg = data?.error || (data?.user?.role !== 'admin' ? 'Access denied: User is not an administrator.' : 'Invalid credentials.');
-          setStatusMessage({ type: 'error', text: errorMsg });
+        if (session.user?.role !== 'admin') {
+          setStatusMessage({ type: 'error', text: 'Access denied: Only administrators are authorized to use the importer extension.' });
+          return;
         }
-      })
-      .catch((err) => {
+        const token = session.token;
+        const tokenExpiresAt = token ? decodeTokenExpiration(token) : null;
+        await extensionStorage.updateSettings({
+          authToken: token,
+          adminEmail: session.user.email,
+          tokenExpiresAt
+        });
+        setIsAuthenticated(true);
+        setAdminEmail(session.user.email);
+        setAuthToken(token);
+        setTokenExpiresAt(tokenExpiresAt);
+        checkTokenExpiry(tokenExpiresAt);
+        setStatusMessage({ type: 'success', text: 'Successfully logged in as administrator!' });
+        setEmail('');
+        setPassword('');
+      }).catch((err) => {
         setLoginLoading(false);
-        setStatusMessage({ type: 'error', text: 'Connection failed: ' + (err.message || 'Check your portal URL and network status.') });
+        setStatusMessage({ type: 'error', text: err.message || 'Authentication failed.' });
       });
     }
   };
@@ -488,13 +497,22 @@ export default function Popup() {
   // Update token or api url dynamically
   const saveSettings = async () => {
     try {
+      const domainsArray = supportedDomains
+        .split(',')
+        .map(d => d.trim().toLowerCase())
+        .filter(d => d.length > 0);
+
       const updatedSettings = await extensionStorage.updateSettings({
         apiBaseUrl: apiUrl,
         authToken: authToken.trim() ? authToken : null,
         adminEmail: adminEmail.trim() ? adminEmail : null,
         environment: environment,
         debugMode: debugMode,
-        version: extVersion
+        version: extVersion,
+        affiliateTag: affiliateTag.trim() || 'gadgetspro-20',
+        supportedDomains: domainsArray,
+        popupWidth: Number(popupWidth) || 360,
+        popupHeight: Number(popupHeight) || 420
       });
       
       if (typeof chrome !== 'undefined' && chrome.runtime) {
@@ -1122,6 +1140,60 @@ export default function Popup() {
                 <label htmlFor="debugMode" className="text-[10px] font-medium text-slate-500 uppercase tracking-wider select-none cursor-pointer">
                   Debug Mode {environment !== 'Custom' && <span className="text-[9px] text-slate-400 font-normal italic lowercase">(Locked by Env)</span>}
                 </label>
+              </div>
+
+              <div className="border-t border-slate-150 pt-3 mt-3 space-y-3">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Tag size={12} className="text-slate-400" />
+                  Customization
+                </h4>
+
+                <div>
+                  <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Affiliate Tag</label>
+                  <input 
+                    type="text" 
+                    value={affiliateTag}
+                    onChange={(e) => setAffiliateTag(e.target.value)}
+                    placeholder="gadgetspro-20"
+                    className="w-full px-2.5 py-1.5 rounded border border-slate-200 text-[11px] bg-white text-slate-800 focus:outline-none focus:border-violet-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Supported Amazon Domains</label>
+                  <input 
+                    type="text" 
+                    value={supportedDomains}
+                    onChange={(e) => setSupportedDomains(e.target.value)}
+                    placeholder="amazon.com, amazon.in, amazon.co.uk, amazon.ca"
+                    className="w-full px-2.5 py-1.5 rounded border border-slate-200 text-[11px] bg-white text-slate-800 focus:outline-none focus:border-violet-500 transition-colors"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Popup Width (px)</label>
+                    <input 
+                      type="number" 
+                      min={300}
+                      max={800}
+                      value={popupWidth}
+                      onChange={(e) => setPopupWidth(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 rounded border border-slate-200 text-[11px] bg-white text-slate-800 focus:outline-none focus:border-violet-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Popup Height (px)</label>
+                    <input 
+                      type="number" 
+                      min={300}
+                      max={600}
+                      value={popupHeight}
+                      onChange={(e) => setPopupHeight(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 rounded border border-slate-200 text-[11px] bg-white text-slate-800 focus:outline-none focus:border-violet-500 transition-colors"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

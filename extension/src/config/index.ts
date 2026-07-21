@@ -2,9 +2,11 @@
  * Centralized Configuration for GadgetsProHub Chrome Extension
  */
 
+import { ENVIRONMENTS, DEFAULT_ENVIRONMENT } from "./environments";
+
 export const CONFIG = {
   // Default development environment endpoint (can be overridden by Chrome storage)
-  API_BASE_URL: "https://gadgetsprohub.onrender.com",
+  API_BASE_URL: ENVIRONMENTS[DEFAULT_ENVIRONMENT].apiBaseUrl,
   
   // Storage Keys
   STORAGE_KEYS: {

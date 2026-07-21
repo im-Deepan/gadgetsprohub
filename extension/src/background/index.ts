@@ -49,6 +49,30 @@ chrome.runtime.onStartup.addListener(() => {
   restoreSessionOnStartup();
 });
 
+// Listen for extension action click to open a persistent floating window
+chrome.action.onClicked.addListener(() => {
+  logger.info('Extension icon clicked. Locating or opening floating window.');
+  chrome.windows.getAll({ populate: true }, (windows) => {
+    const existingWindow = windows.find(win => {
+      if (win.type !== 'popup') return false;
+      return win.tabs?.some(t => t.url && t.url.includes(chrome.runtime.getURL('popup.html')));
+    });
+
+    if (existingWindow && existingWindow.id !== undefined) {
+      logger.info('Focusing existing floating window.');
+      chrome.windows.update(existingWindow.id, { focused: true });
+    } else {
+      logger.info('Creating a new floating window.');
+      chrome.windows.create({
+        url: chrome.runtime.getURL("popup.html"),
+        type: "popup",
+        width: 420,
+        height: 600
+      });
+    }
+  });
+});
+
 // Register our unified messaging router to process all runtime extension commands
 chrome.runtime.onMessage.addListener(
   (

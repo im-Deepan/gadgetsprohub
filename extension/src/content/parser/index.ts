@@ -2,6 +2,7 @@ import { ParserResult } from '../../types';
 import { PageValidator } from './PageValidator';
 import { ProductBuilder } from './ProductBuilder';
 import { ProductValidator } from './ProductValidator';
+import { extensionStorage } from '../../services/storage';
 
 export class AmazonParser {
   public static async parse(): Promise<ParserResult> {
@@ -32,7 +33,8 @@ export class AmazonParser {
 
       // 2. Build Product Data
       log('Extracting product fields...');
-      const builder = new ProductBuilder(log);
+      const settings = await extensionStorage.getSettings();
+      const builder = new ProductBuilder(log, settings);
       const data = builder.build();
 
       // 3. Validate Product Data

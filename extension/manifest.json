@@ -15,8 +15,9 @@
     "https://*.amazon.in/*",
     "https://*.amazon.co.uk/*",
     "https://*.amazon.ca/*",
-    "https://*/*",
-    "http://localhost/*"
+    "https://gadgetsprohub.onrender.com/*",
+    "https://ais-pre-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app/*",
+    "http://localhost:3000/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -43,7 +44,6 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Import to GadgetsProHub",
     "default_icon": {
       "16": "icons/icon16.png",

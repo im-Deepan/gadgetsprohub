@@ -121,6 +121,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshProfile().catch(() => {});
   }, [refreshProfile]);
 
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
+  }, [token]);
+
   const fallbackBackendLogin = async (email: string, password: string) => {
       setLoading(true);
       try {

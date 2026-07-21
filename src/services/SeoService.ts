@@ -69,7 +69,7 @@ export class SeoService {
    * Generates a slug from standard text (e.g., product name).
    * Removes standard English stop words for SEO.
    */
-  public generateSeoSlog(text: string): string {
+  public generateSeoSlug(text: string): string {
     const stopWords = new Set([
       'a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'to', 'from',
       'by', 'with', 'in', 'out', 'of', 'about', 'is', 'am', 'are', 'was', 'were', 'be', 'been'
@@ -330,7 +330,7 @@ export class SeoService {
    * Generates Schema.org JSON-LD Structured Data
    */
   public generateStructuredData(product: any, categoryName: string = ''): Record<string, any> {
-    const siteUrl = process.env.SITE_URL || 'https://amazon-affiliate-shop.local';
+    const siteUrl = process.env.SITE_URL || 'https://gadgetsprohub.com';
     const productUrl = `${siteUrl}/product/${product.slug}`;
     const images = (product.images || []).map((img: string) => img.startsWith('http') ? img : `${siteUrl}${img}`);
 
@@ -389,7 +389,7 @@ export class SeoService {
         '@type': 'ListItem',
         'position': 2,
         'name': categoryName,
-        'item': `${siteUrl}/category/${this.generateSeoSlog(categoryName)}`
+        'item': `${siteUrl}/category/${this.generateSeoSlug(categoryName)}`
       });
     }
 
@@ -511,7 +511,7 @@ export class SeoService {
   }> {
     if (!this.ai) {
       // Fallback simple mock generator if GEMINI_API_KEY is not configured
-      const focus = this.generateSeoSlog(payload.productName).split('-').slice(0, 3).join(' ');
+      const focus = this.generateSeoSlug(payload.productName).split('-').slice(0, 3).join(' ');
       return {
         seoTitle: `Best ${payload.productName} Review & Guide (${new Date().getFullYear()})`,
         seoDescription: `Read our comprehensive hands-on expert analysis of the ${payload.productName} by ${payload.brand || 'experts'}. Check the latest pricing, benefits, and specifications here!`,
@@ -646,63 +646,154 @@ export class SeoService {
   /**
    * Generates a standard XML sitemap file with incremental additions.
    */
-  public async buildXmlSitemap(): Promise<string> {
-    const Product = mongoose.model('Product');
-    const Category = mongoose.model('Category');
-    const SitemapRecord = mongoose.model('SitemapRecord');
+  public async buildXmlSitemap(req?: any, localProducts?: any[], localBlogs?: any[]): Promise<string> {
+    const isMongoConnected = mongoose.connection.readyState === 1;
+    let productsList: any[] = [];
+    let blogsList: any[] = [];
+    let categoriesList: any[] = [];
 
-    const siteUrl = process.env.SITE_URL || 'https://amazon-affiliate-shop.local';
+    const siteUrl = process.env.SITE_URL || (req ? `${req.headers['x-forwarded-proto'] || req.protocol || 'https'}://${req.get('host') || 'gadgetsprohub.com'}` : 'https://gadgetsprohub.com');
 
-    // Clear and rebuild sitemap index cache
-    await SitemapRecord.deleteMany({});
+    if (isMongoConnected) {
+      try {
+        const Product = mongoose.model('Product');
+        const Category = mongoose.model('Category');
+        const Blog = mongoose.model('Blog');
+        
+        productsList = await Product.find({}, 'slug updatedAt createdAt').lean();
+        blogsList = await Blog.find({ published: true }, 'slug updatedAt createdAt').lean();
+        categoriesList = await Category.find({}, 'slug').lean();
 
-    // 1. Static pages
-    const staticPages = ['', '/about', '/contact', '/blog'];
-    for (const url of staticPages) {
-      await SitemapRecord.create({
-        loc: `${siteUrl}${url}`,
-        priority: url === '' ? 1.0 : 0.5,
-        changefreq: 'weekly',
-        type: 'static'
+        // Also update SitemapRecord cache if we want to retain it
+        const SitemapRecord = mongoose.model('SitemapRecord');
+        await SitemapRecord.deleteMany({});
+        // Rebuild cache for records
+        for (const url of ['', '/about', '/contact', '/blog']) {
+          await SitemapRecord.create({
+            loc: `${siteUrl}${url}`,
+            priority: url === '' ? 1.0 : 0.5,
+            changefreq: 'weekly',
+            type: 'static'
+          });
+        }
+        for (const cat of categoriesList) {
+          await SitemapRecord.create({
+            loc: `${siteUrl}/category/${cat.slug}`,
+            priority: 0.7,
+            changefreq: 'daily',
+            type: 'category'
+          });
+        }
+        for (const p of productsList) {
+          await SitemapRecord.create({
+            loc: `${siteUrl}/product/${p.slug}`,
+            priority: 0.8,
+            changefreq: 'daily',
+            lastmod: p.updatedAt || p.createdAt,
+            type: 'product'
+          });
+        }
+        for (const b of blogsList) {
+          await SitemapRecord.create({
+            loc: `${siteUrl}/blog/${b.slug}`,
+            priority: 0.7,
+            changefreq: 'weekly',
+            lastmod: b.updatedAt || b.createdAt,
+            type: 'blog'
+          });
+        }
+      } catch (err: any) {
+        console.warn('Failed to sync SitemapRecord cache:', err.message);
+      }
+    } else {
+      // Local fallbacks
+      productsList = (localProducts || []).map((p: any) => ({
+        slug: p.slug,
+        updatedAt: p.updatedAt || p.createdAt || new Date(),
+      }));
+      blogsList = (localBlogs || []).map((b: any) => ({
+        slug: b.slug,
+        updatedAt: b.updatedAt || b.createdAt || new Date(),
+      }));
+      // Let's get categories from products or a default list
+      const catsSet = new Set<string>();
+      (localProducts || []).forEach((p: any) => {
+        if (p.categorySlug) catsSet.add(p.categorySlug);
+        else if (p.category?.slug) catsSet.add(p.category.slug);
       });
+      categoriesList = Array.from(catsSet).map(slug => ({ slug }));
     }
 
-    // 2. Active categories
-    const categories = await Category.find({});
-    for (const cat of categories) {
-      await SitemapRecord.create({
-        loc: `${siteUrl}/category/${cat.slug}`,
-        priority: 0.7,
-        changefreq: 'daily',
-        type: 'category'
-      });
-    }
-
-    // 3. Published products
-    const products = await Product.find({ publishingStatus: 'published' });
-    for (const p of products) {
-      await SitemapRecord.create({
-        loc: `${siteUrl}/product/${p.slug}`,
-        priority: 0.8,
-        changefreq: 'daily',
-        lastmod: p.updatedAt || p.createdAt,
-        type: 'product'
-      });
-    }
-
-    // Re-fetch all and output XML
-    const records = await SitemapRecord.find({}).sort({ priority: -1 });
+    const staticUrls = [
+      { path: '', changefreq: 'daily', priority: '1.0' },
+      { path: 'products', changefreq: 'daily', priority: '0.9' },
+      { path: 'blogs', changefreq: 'weekly', priority: '0.8' },
+      { path: 'contact', changefreq: 'monthly', priority: '0.6' },
+      { path: 'about-us', changefreq: 'monthly', priority: '0.5' },
+      { path: 'privacy-policy', changefreq: 'monthly', priority: '0.4' },
+      { path: 'terms-conditions', changefreq: 'monthly', priority: '0.4' },
+      { path: 'disclaimer', changefreq: 'monthly', priority: '0.4' },
+    ];
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
-    for (const rec of records) {
-      const lastModDate = new Date(rec.lastmod).toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Static pages
+    for (const item of staticUrls) {
       xml += `  <url>\n`;
-      xml += `    <loc>${rec.loc}</loc>\n`;
-      xml += `    <lastmod>${lastModDate}</lastmod>\n`;
-      xml += `    <changefreq>${rec.changefreq}</changefreq>\n`;
-      xml += `    <priority>${rec.priority}</priority>\n`;
+      xml += `    <loc>${siteUrl}/${item.path}</loc>\n`;
+      xml += `    <lastmod>${todayStr}</lastmod>\n`;
+      xml += `    <changefreq>${item.changefreq}</changefreq>\n`;
+      xml += `    <priority>${item.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Dynamic Categories
+    for (const cat of categoriesList) {
+      if (!cat.slug) continue;
+      xml += `  <url>\n`;
+      xml += `    <loc>${siteUrl}/category/${cat.slug}</loc>\n`;
+      xml += `    <lastmod>${todayStr}</lastmod>\n`;
+      xml += `    <changefreq>daily</changefreq>\n`;
+      xml += `    <priority>0.7</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Dynamic products
+    for (const prod of productsList) {
+      if (!prod.slug) continue;
+      const dateVal = prod.updatedAt || prod.createdAt || new Date();
+      let dateStr = todayStr;
+      try {
+        dateStr = new Date(dateVal).toISOString().split('T')[0];
+      } catch (err) {
+        dateStr = todayStr;
+      }
+      xml += `  <url>\n`;
+      xml += `    <loc>${siteUrl}/product-detail/${prod.slug}</loc>\n`;
+      xml += `    <lastmod>${dateStr}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.8</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Dynamic blogs
+    for (const blog of blogsList) {
+      if (!blog.slug) continue;
+      const dateVal = blog.updatedAt || blog.createdAt || new Date();
+      let dateStr = todayStr;
+      try {
+        dateStr = new Date(dateVal).toISOString().split('T')[0];
+      } catch (err) {
+        dateStr = todayStr;
+      }
+      xml += `  <url>\n`;
+      xml += `    <loc>${siteUrl}/blog-detail/${blog.slug}</loc>\n`;
+      xml += `    <lastmod>${dateStr}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.7</priority>\n`;
       xml += `  </url>\n`;
     }
 

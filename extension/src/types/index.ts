@@ -50,6 +50,10 @@ export interface ExtensionSettings {
   debugMode: boolean;
   version: string;
   features: FeatureFlags;
+  popupWidth?: number;
+  popupHeight?: number;
+  affiliateTag?: string;
+  supportedDomains?: string[];
 }
 
 export interface ParserMetrics {
