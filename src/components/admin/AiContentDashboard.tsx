@@ -142,12 +142,12 @@ export default function AiContentDashboard({ showNotice }: AiContentDashboardPro
 
     if (useStreaming) {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken');
         const response = await fetch('/api/admin/ai/generate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token || ''}`
           },
           body: JSON.stringify({
             productId: selectedProductId,
@@ -383,6 +383,7 @@ export default function AiContentDashboard({ showNotice }: AiContentDashboardPro
     try {
       const res = await apiFetch('/api/admin/ai/providers', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: pKey,
           ...payload
@@ -1107,7 +1108,9 @@ export default function AiContentDashboard({ showNotice }: AiContentDashboardPro
                 </div>
                 <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 text-center">
                   <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Success Rate</p>
-                  <p className="text-xl font-bold text-green-400 mt-1">{analytics.successRate}%</p>
+                  <p className="text-xl font-bold text-green-400 mt-1">
+                    {analytics.totalRequests > 0 ? `${analytics.successRate}%` : 'N/A'}
+                  </p>
                 </div>
                 <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 text-center">
                   <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Total Tokens</p>

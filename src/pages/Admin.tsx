@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Product, Category, Blog, Message, User } from '../types';
-import { Plus, Edit, Trash2, MailOpen, MailCheck, Coins, MousePointerClick, Mail, RefreshCcw, Database, TrendingUp, Globe, Users, ChevronDown, ChevronUp, Instagram, Linkedin } from 'lucide-react';
+import { Plus, Edit, Trash2, MailOpen, MailCheck, Coins, MousePointerClick, Mail, RefreshCcw, Database, TrendingUp, Globe, Users, ChevronDown, ChevronUp, Instagram, Linkedin, Download } from 'lucide-react';
 import { useDeviceType } from '../hooks/useDeviceType';
 import { TabErrorView } from '../components/admin/TabErrorView';
 import { getDistrictEmoji } from '../utils/emoji';
@@ -569,6 +569,104 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     }
   };
 
+  const handleExportAnalyticsCSV = () => {
+    if (!analyticsData || analyticsData.length === 0) {
+      triggerAlert('Export Notice', 'No analytics or traffic log data is available to export.');
+      return;
+    }
+
+    const headers = [
+      'Record ID',
+      'ISO Timestamp',
+      'Formatted Date',
+      'Event Type',
+      'Visitor Name',
+      'Visitor Email',
+      'District / Location',
+      'Target Page / Product',
+      'Time Spent (seconds)',
+      'Browser',
+      'Device Type',
+      'IP Address'
+    ];
+
+    const escapeCsv = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = analyticsData.map((item, idx) => {
+      const recordId = item._id || `log_${idx + 1}`;
+      const timestampIso = item.timestamp ? new Date(item.timestamp).toISOString() : new Date().toISOString();
+      const formattedDate = item.timestamp ? new Date(item.timestamp).toLocaleString() : new Date().toLocaleString();
+      
+      let eventTypeLabel = item.eventType || 'page_visit';
+      if (eventTypeLabel === 'page_visit') eventTypeLabel = 'Page View';
+      else if (eventTypeLabel === 'click') eventTypeLabel = 'Store Link Click';
+      else if (eventTypeLabel === 'conversion') eventTypeLabel = 'Affiliate Exit';
+      else if (eventTypeLabel === 'view') eventTypeLabel = 'Product View';
+
+      const visitorName = item.userId ? (item.userId.name || 'Explorer Member') : 'Guest Visitor';
+      const visitorEmail = item.userId ? (item.userId.email || 'N/A') : 'N/A';
+      const location = item.district || 'Chennai';
+      const target = item.eventType === 'page_visit' 
+        ? (item.pageUrl || 'Home') 
+        : (item.productId?.name || item.pageUrl || 'Product Item');
+      
+      const timeSpent = typeof item.timeSpent === 'number' 
+        ? item.timeSpent 
+        : (item.stayDuration || 0);
+      
+      const browser = item.browser || 'Chrome';
+      const device = item.device || 'Desktop';
+      const ip = item.ipAddress || '127.0.0.1';
+
+      return [
+        recordId,
+        timestampIso,
+        formattedDate,
+        eventTypeLabel,
+        visitorName,
+        visitorEmail,
+        location,
+        target,
+        timeSpent,
+        browser,
+        device,
+        ip
+      ].map(escapeCsv).join(',');
+    });
+
+    const summaryHeader = [
+      'ANALYTICS SUMMARY',
+      `Total Visitors: ${stats.totalVisitors}`,
+      `Total Clicks: ${stats.totalClicks}`,
+      `Total Conversions: ${stats.totalConversions}`,
+      `Estimated Earnings: ₹${stats.estimatedEarnings}`,
+      `Export Date: ${new Date().toLocaleString()}`
+    ].map(escapeCsv).join(',');
+
+    const csvContent = [
+      summaryHeader,
+      '',
+      headers.join(','),
+      ...rows
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `analytics-report-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    triggerAlert('Report Exported Successfully', `Downloaded ${analyticsData.length} analytics records as a CSV report.`);
+  };
+
   useEffect(() => {
     const controller = new AbortController();
     if (token) {
@@ -1030,14 +1128,24 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         {/* Box 2: Click & Regional Interest Analytics */}
         <div className="rounded-3xl border border-slate-100/60 bg-white p-6 dark:border-slate-700 dark:bg-slate-800 shadow-xs flex flex-col justify-between">
           <div className="space-y-4 col-span-1">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-500">
-                <TrendingUp className="h-5 w-5 shrink-0 text-emerald-500 dark:text-emerald-300" />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-500">
+                  <TrendingUp className="h-5 w-5 shrink-0 text-emerald-500 dark:text-emerald-300" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-white">Click & Regional Interest Analytics</h3>
+                  <p className="text-[11px] text-slate-300">Track which product links have been clicked, alongside regional interest distribution.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white">Click & Regional Interest Analytics</h3>
-                <p className="text-[11px] text-slate-300">Track which product links have been clicked, alongside regional interest distribution.</p>
-              </div>
+              <button
+                type="button"
+                onClick={handleExportAnalyticsCSV}
+                className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-800/80 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+              >
+                <Download className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Export Report</span>
+              </button>
             </div>
 
             {/* Region of Interest Tracker */}
@@ -2607,6 +2715,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 <p className="text-[11px] text-slate-300 mt-0.5 font-sans font-medium">Real-time record of visitor page views, time spent, browser type, and district location.</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleExportAnalyticsCSV}
+                  className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                >
+                  <Download className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>Export Report (CSV)</span>
+                </button>
                 <button
                   type="button"
                   onClick={handleReloadTraffic}

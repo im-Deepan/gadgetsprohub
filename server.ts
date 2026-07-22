@@ -5113,20 +5113,23 @@ async function startServer() {
   app.post('/api/webhooks/telegram', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        console.warn('[Telegram Bot] Webhook received but TELEGRAM_BOT_TOKEN is not configured.');
+        return res.status(403).json({ error: 'Telegram Bot is not configured on this server' });
+      }
+
       const secretHeader = req.headers['x-telegram-bot-api-secret-token'];
-      if (botToken) {
-        const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET || 
-          crypto.createHash('sha256').update(botToken).digest('hex');
-          
-        const providedSecret = String(secretHeader || '');
-        if (
-          !secretHeader ||
-          providedSecret.length !== expectedSecret.length ||
-          !crypto.timingSafeEqual(Buffer.from(providedSecret), Buffer.from(expectedSecret))
-        ) {
-          console.warn('[Telegram Bot] Unauthorized webhook call received (secret token mismatch or missing)');
-          return res.status(403).send('Unauthorized webhook request');
-        }
+      const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET || 
+        crypto.createHash('sha256').update(botToken).digest('hex');
+        
+      const providedSecret = String(secretHeader || '');
+      if (
+        !secretHeader ||
+        providedSecret.length !== expectedSecret.length ||
+        !crypto.timingSafeEqual(Buffer.from(providedSecret), Buffer.from(expectedSecret))
+      ) {
+        console.warn('[Telegram Bot] Unauthorized webhook call received (secret token mismatch or missing)');
+        return res.status(403).send('Unauthorized webhook request');
       }
 
       const update = req.body;
@@ -5509,22 +5512,72 @@ async function startServer() {
   app.post('/api/webhooks/n8n/update-product', authenticateN8N, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { productId, price, originalPrice, discount, inStock } = req.body;
-      if (!productId || typeof price !== 'number') {
-        return res.status(400).json({ error: 'productId and price (number) are required' });
+      if (!productId || typeof price !== 'number' || isNaN(price) || price <= 0 || price > 1000000) {
+        return res.status(400).json({ error: 'productId and a valid positive price (up to 1,000,000) are required' });
+      }
+
+      if (typeof originalPrice === 'number') {
+        if (isNaN(originalPrice) || originalPrice < price || originalPrice > 1000000) {
+          return res.status(400).json({ error: 'Invalid originalPrice: must be a valid number >= price and <= 1,000,000' });
+        }
+      }
+
+      if (typeof discount === 'number') {
+        if (isNaN(discount) || discount < 0 || discount > 99) {
+          return res.status(400).json({ error: 'Invalid discount percentage: must be between 0 and 99' });
+        }
+      }
+
+      if (typeof inStock !== 'undefined' && typeof inStock !== 'boolean') {
+        return res.status(400).json({ error: 'inStock must be a boolean' });
       }
 
       if (isMongoConnected) {
         const product = await Product.findById(productId);
         if (!product) return res.status(404).json({ error: 'Product not found' });
 
+        // Sanity check against existing price to prevent scraper glitches
+        if (product.price && product.price > 0) {
+          const ratio = price / product.price;
+          // Reject if price drops below 5% of current price or jumps over 10x
+          if (ratio < 0.05 || ratio > 10.0) {
+            console.warn(`[N8N Webhook] Rejected suspicious price update for product ${productId}: Current=${product.price}, New=${price}`);
+            return res.status(400).json({ 
+              error: `Price change anomaly detected: proposed price (${price}) deviates excessively from current price (${product.price}). Update rejected to protect product catalog integrity.` 
+            });
+          }
+        }
+
         product.price = price;
-        if (typeof originalPrice === 'number') product.originalPrice = originalPrice;
-        if (typeof discount === 'number') product.discount = discount;
+        if (typeof originalPrice === 'number') {
+          product.originalPrice = originalPrice;
+        } else if (product.originalPrice && product.originalPrice < price) {
+          product.originalPrice = price;
+        }
+
+        if (typeof discount === 'number') {
+          product.discount = discount;
+        } else if (typeof originalPrice === 'number' && originalPrice > price) {
+          product.discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+        } else if (product.originalPrice && product.originalPrice > price) {
+          product.discount = Math.round(((product.originalPrice - price) / product.originalPrice) * 100);
+        }
+
         if (typeof inStock === 'boolean') product.inStock = inStock;
         product.lastPriceCheck = new Date();
 
         await product.save();
-        return res.json({ success: true, product: { _id: product._id, price: product.price, lastPriceCheck: product.lastPriceCheck } });
+        return res.json({ 
+          success: true, 
+          product: { 
+            _id: product._id, 
+            price: product.price, 
+            originalPrice: product.originalPrice,
+            discount: product.discount,
+            inStock: product.inStock,
+            lastPriceCheck: product.lastPriceCheck 
+          } 
+        });
       } else {
         return res.json({ success: false, error: 'Database not connected' });
       }
@@ -6342,8 +6395,7 @@ async function startServer() {
         };
 
         for (const k of Object.keys(vars)) {
-          const escapedK = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          finalPrompt = finalPrompt.replace(new RegExp(`{${escapedK}}`, 'g'), vars[k]);
+          finalPrompt = finalPrompt.split(`{${k}}`).join(String(vars[k] ?? ''));
         }
 
         // Set SSE Headers only after prompt and replacement validations complete
@@ -6438,6 +6490,17 @@ async function startServer() {
   });
 
   // E. Provider Configuration
+  const maskApiKey = (key: string): string => {
+    if (!key) return '';
+    const len = key.length;
+    if (len <= 5) return '••••';
+    const maxRevealedEachSide = Math.min(4, Math.floor((len - 4) / 2));
+    if (maxRevealedEachSide <= 0) return '••••';
+    const prefix = key.substring(0, maxRevealedEachSide);
+    const suffix = key.substring(len - maxRevealedEachSide);
+    return `${prefix}••••${suffix}`;
+  };
+
   app.get('/api/admin/ai/providers', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const providers: any[] = [];
@@ -6448,7 +6511,7 @@ async function startServer() {
         const setts = await aiService.getProviderSettings(key);
         // Mask API Key for safe frontend delivery
         if (setts.apiKey) {
-          setts.apiKey = setts.apiKey.substring(0, 4) + '...' + setts.apiKey.substring(setts.apiKey.length - 4);
+          setts.apiKey = maskApiKey(setts.apiKey);
         }
         providers.push(setts);
       }
@@ -6465,10 +6528,20 @@ async function startServer() {
 
       // Handle raw key updates vs masked/empty inputs
       let keyToSave = apiKey;
-      if (apiKey && apiKey.includes('...')) {
+      if (apiKey && (apiKey.includes('...') || apiKey.includes('•'))) {
         // Did not edit key
         const oldSettings = await aiService.getProviderSettings(provider);
         keyToSave = oldSettings.apiKey || '';
+      }
+
+      // Mandatory API Key Length Check (Minimum 20 characters)
+      const isLocalProvider = provider === 'ollama' || provider === 'lmstudio';
+      if (keyToSave && typeof keyToSave === 'string' && keyToSave.trim().length > 0) {
+        if (keyToSave.trim().length < 20) {
+          return res.status(400).json({ error: 'API key must be at least 20 characters long' });
+        }
+      } else if (isActive && !isLocalProvider) {
+        return res.status(400).json({ error: 'A valid API key (minimum 20 characters) is required to activate cloud providers' });
       }
 
       const updated = await aiService.saveProviderSettings(provider, {
@@ -6583,7 +6656,7 @@ async function startServer() {
         success: true,
         data: {
           totalRequests,
-          successRate: totalRequests ? Number(((successCount / totalRequests) * 100).toFixed(1)) : 100,
+          successRate: totalRequests ? Number(((successCount / totalRequests) * 100).toFixed(1)) : 0,
           failureRate: totalRequests ? Number(((failedCount / totalRequests) * 100).toFixed(1)) : 0,
           totalPromptTokens: metrics.totalPromptTokens,
           totalCompletionTokens: metrics.totalCompletionTokens,
@@ -7160,10 +7233,22 @@ async function startServer() {
 
   app.get('/api/admin/marketplace/currencies', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      const rates = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+      let rates = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+      if (!rates || !rates.lastUpdated || (Date.now() - new Date(rates.lastUpdated).getTime() > 24 * 3600 * 1000)) {
+        rates = await marketplaceService.refreshExchangeRates().catch(() => null) || rates;
+      }
       res.json({ success: true, data: rates });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to retrieve currency rates' });
+    }
+  });
+
+  app.post('/api/admin/marketplace/currencies/refresh', adminOnly, async (_req: express.Request, res: express.Response) => {
+    try {
+      const rates = await marketplaceService.refreshExchangeRates(true);
+      res.json({ success: true, message: 'Exchange rates refreshed successfully', data: rates });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to refresh currency rates' });
     }
   });
 
@@ -7819,7 +7904,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             }
           }
           if (!categoryId) {
-            const escapedCategory = resolvedCategoryInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedCategory = escapeRegExp(resolvedCategoryInput);
             let cat = await Category.findOne({ name: { $regex: new RegExp(`^${escapedCategory}$`, 'i') } });
             if (!cat) {
               const categorySlug = resolvedCategoryInput.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');

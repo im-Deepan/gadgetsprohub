@@ -641,6 +641,8 @@ export class MarketplaceService {
         }).save();
         console.log('✅ Base Currency Rates Pre-seeded successfully.');
       }
+      // Trigger background check/refresh if stale
+      this.refreshExchangeRates().catch(() => {});
 
       // 2. Providers seeding
       const count = await MarketplaceProviderModel.countDocuments();
@@ -700,10 +702,80 @@ export class MarketplaceService {
   }
 
   /**
+   * Refreshes exchange rates from an open API if stale (> 24 hrs) or if forced
+   */
+  public async refreshExchangeRates(force: boolean = false): Promise<any> {
+    try {
+      let rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+      const now = new Date();
+
+      if (!force && rateDoc && rateDoc.lastUpdated) {
+        const ageHours = (now.getTime() - new Date(rateDoc.lastUpdated).getTime()) / (1000 * 60 * 60);
+        if (ageHours < 24) {
+          return rateDoc;
+        }
+      }
+
+      // Fetch live rates from open exchange API
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const apiRes = await fetch('https://open.er-api.com/v6/latest/USD', {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (apiRes.ok) {
+        const data: any = await apiRes.json();
+        if (data && data.rates) {
+          const updatedRates = {
+            USD: 1.0,
+            INR: data.rates.INR || 83.50,
+            EUR: data.rates.EUR || 0.92,
+            GBP: data.rates.GBP || 0.78,
+            AED: data.rates.AED || 3.67,
+            JPY: data.rates.JPY || 155.0
+          };
+
+          if (!rateDoc) {
+            rateDoc = new CurrencyRatesModel({
+              baseCurrency: 'USD',
+              rates: updatedRates,
+              lastUpdated: now
+            });
+          } else {
+            rateDoc.rates = updatedRates;
+            rateDoc.lastUpdated = now;
+          }
+          await rateDoc.save();
+          console.log('✅ Exchange rates refreshed successfully from live API.');
+          return rateDoc;
+        }
+      }
+    } catch (err: any) {
+      console.warn('Failed to refresh exchange rates from API, retaining fallback:', err.message);
+    }
+
+    try {
+      const rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+      if (rateDoc) {
+        rateDoc.lastUpdated = new Date();
+        await rateDoc.save();
+        return rateDoc;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  }
+
+  /**
    * Currency Converter Utility
    */
   public async convertCurrency(amount: number, from: string, to: string): Promise<number> {
-    const rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+    let rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+    if (!rateDoc || !rateDoc.lastUpdated || (Date.now() - new Date(rateDoc.lastUpdated).getTime() > 24 * 3600 * 1000)) {
+      rateDoc = await this.refreshExchangeRates().catch(() => null) || rateDoc;
+    }
     if (!rateDoc) return amount;
     const rates = Object.fromEntries(rateDoc.rates.entries());
     

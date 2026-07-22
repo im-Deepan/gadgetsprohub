@@ -206,9 +206,9 @@ export class AiService {
     // If dedicated AI_KEY_ENCRYPTION_SECRET is unset, fall back to JWT_SECRET to keep it unique per-deployment.
     const secret = process.env.AI_KEY_ENCRYPTION_SECRET || process.env.JWT_SECRET;
     if (!secret) {
-      console.warn('[SECURITY WARNING] AI_KEY_ENCRYPTION_SECRET and JWT_SECRET are both unset. Falling back to default static key.');
+      console.warn('[SECURITY WARNING] AI_KEY_ENCRYPTION_SECRET and JWT_SECRET are both unset. Using machine-derived deployment secret.');
     }
-    const finalSecret = secret || 'a-very-secure-enterprise-32-byte-secret-key-phrase-stable-fallback';
+    const finalSecret = secret || crypto.createHash('sha256').update(process.cwd() + (process.env.HOSTNAME || 'gadgetsprohub-system')).digest('hex');
     this.encryptionKey = crypto.scryptSync(finalSecret, 'salt-enterprise-affiliate-ai', 32);
   }
 
@@ -264,6 +264,15 @@ export class AiService {
   }
 
   public async saveProviderSettings(provider: AiProviderType, data: any): Promise<any> {
+    const isLocalProvider = provider === 'ollama' || provider === 'lmstudio';
+    if (data.apiKey && typeof data.apiKey === 'string' && data.apiKey.trim().length > 0) {
+      if (data.apiKey.trim().length < 20) {
+        throw new Error('API key must be at least 20 characters long');
+      }
+    } else if (data.isActive && !isLocalProvider) {
+      throw new Error('API key is required and must be at least 20 characters long for active cloud providers');
+    }
+
     const updateData: any = {
       model: data.model || this.defaultModelMap[provider],
       baseUrl: data.baseUrl,
@@ -866,7 +875,7 @@ export class AiService {
     };
 
     for (const key of Object.keys(vars)) {
-      finalPrompt = finalPrompt.replace(new RegExp(`{${key}}`, 'g'), vars[key]);
+      finalPrompt = finalPrompt.split(`{${key}}`).join(String(vars[key] ?? ''));
     }
 
     const result = await this.executeGeneration({

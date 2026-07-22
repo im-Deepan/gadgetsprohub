@@ -29,7 +29,6 @@ import { CONFIG } from '../config';
 import { ENVIRONMENTS } from '../config/environments';
 import { extensionStorage } from '../services/storage';
 import { logger } from '../services/logger';
-import { apiService, decodeTokenExpiration } from '../services/api';
 import { BulkImportTab } from './components/BulkImportTab';
 
 interface TabInfo {
@@ -408,7 +407,7 @@ export default function Popup() {
     setLoginLoading(true);
     setStatusMessage(null);
 
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
       chrome.runtime.sendMessage({
         action: 'EXECUTE_LOGIN',
         payload: { email, password }
@@ -428,32 +427,8 @@ export default function Popup() {
         }
       });
     } else {
-      // Standalone web preview or test mode: perform direct API login
-      apiService.login(email, password).then(async (session) => {
-        setLoginLoading(false);
-        if (session.user?.role !== 'admin') {
-          setStatusMessage({ type: 'error', text: 'Access denied: Only administrators are authorized to use the importer extension.' });
-          return;
-        }
-        const token = session.token;
-        const tokenExpiresAt = token ? decodeTokenExpiration(token) : null;
-        await extensionStorage.updateSettings({
-          authToken: token,
-          adminEmail: session.user.email,
-          tokenExpiresAt
-        });
-        setIsAuthenticated(true);
-        setAdminEmail(session.user.email);
-        setAuthToken(token);
-        setTokenExpiresAt(tokenExpiresAt);
-        checkTokenExpiry(tokenExpiresAt);
-        setStatusMessage({ type: 'success', text: 'Successfully logged in as administrator!' });
-        setEmail('');
-        setPassword('');
-      }).catch((err) => {
-        setLoginLoading(false);
-        setStatusMessage({ type: 'error', text: err.message || 'Authentication failed.' });
-      });
+      setLoginLoading(false);
+      setStatusMessage({ type: 'error', text: 'Chrome extension runtime environment is required for administrator login.' });
     }
   };
 

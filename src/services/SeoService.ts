@@ -89,6 +89,10 @@ export class SeoService {
     return resultWords.slice(0, 8).join('-'); // Limit to 8 words for slug simplicity
   }
 
+  public generateSeoSlog(text: string): string {
+    return this.generateSeoSlug(text);
+  }
+
   /**
    * Creates a 301 Redirect Rule if the product's slug has changed.
    */
@@ -652,7 +656,7 @@ export class SeoService {
     let blogsList: any[] = [];
     let categoriesList: any[] = [];
 
-    const siteUrl = process.env.SITE_URL || (req ? `${req.headers['x-forwarded-proto'] || req.protocol || 'https'}://${req.get('host') || 'gadgetsprohub.com'}` : 'https://gadgetsprohub.com');
+    const siteUrl = process.env.SITE_URL || process.env.APP_URL || (req ? `${req.headers['x-forwarded-proto'] || req.protocol || 'https'}://${req.get('host') || 'gadgetsprohub.com'}` : 'https://gadgetsprohub.com');
 
     if (isMongoConnected) {
       try {
@@ -705,17 +709,21 @@ export class SeoService {
       } catch (err: any) {
         console.warn('Failed to sync SitemapRecord cache:', err.message);
       }
-    } else {
-      // Local fallbacks
+    }
+    
+    if (productsList.length === 0 && (localProducts || []).length > 0) {
       productsList = (localProducts || []).map((p: any) => ({
         slug: p.slug,
         updatedAt: p.updatedAt || p.createdAt || new Date(),
       }));
+    }
+    if (blogsList.length === 0 && (localBlogs || []).length > 0) {
       blogsList = (localBlogs || []).map((b: any) => ({
         slug: b.slug,
         updatedAt: b.updatedAt || b.createdAt || new Date(),
       }));
-      // Let's get categories from products or a default list
+    }
+    if (categoriesList.length === 0) {
       const catsSet = new Set<string>();
       (localProducts || []).forEach((p: any) => {
         if (p.categorySlug) catsSet.add(p.categorySlug);

@@ -102,7 +102,9 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
   }
 
   if (!hasAuthHeader) {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = typeof window !== 'undefined'
+      ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken'))
+      : null;
     if (token) {
       if (headersObj instanceof Headers) {
         headersObj.set('Authorization', `Bearer ${token}`);
@@ -113,6 +115,26 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
       }
     }
   }
+
+  let hasContentType = false;
+  if (headersObj instanceof Headers) {
+    hasContentType = headersObj.has('Content-Type') || headersObj.has('content-type');
+  } else if (Array.isArray(headersObj)) {
+    hasContentType = headersObj.some(([k]) => k.toLowerCase() === 'content-type');
+  } else if (typeof headersObj === 'object') {
+    hasContentType = Object.keys(headersObj).some(k => k.toLowerCase() === 'content-type');
+  }
+
+  if (!hasContentType && fetchOptions.body && typeof fetchOptions.body === 'string') {
+    if (headersObj instanceof Headers) {
+      headersObj.set('Content-Type', 'application/json');
+    } else if (Array.isArray(headersObj)) {
+      headersObj.push(['Content-Type', 'application/json']);
+    } else if (typeof headersObj === 'object') {
+      headersObj['Content-Type'] = 'application/json';
+    }
+  }
+
   fetchOptions.headers = headersObj;
 
   const requestKey = getRequestKey(url, options);
