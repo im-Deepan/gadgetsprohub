@@ -140,8 +140,13 @@ const extractAsin = (input: string): string => {
   return trimmed.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 };
 
-export function ExtensionImporter() {
-  const { user } = useAuth();
+interface ExtensionImporterProps {
+  token?: string;
+}
+
+export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
+  const { user, token: authContextToken } = useAuth();
+  const effectiveToken = token || authContextToken || (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken')) : '') || '';
   
   // Importer Mode Navigation
   const [activeTab, setActiveTab] = useState<'live' | 'simulator' | 'devtools'>('simulator');
@@ -460,13 +465,18 @@ export function ExtensionImporter() {
         requestId: currentCorrelationId // Pass our fixed correlation ID for idempotency protection!
       };
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Correlation-ID': currentCorrelationId,
+        'X-Extension-Version': extensionVersionInput
+      };
+      if (effectiveToken) {
+        headers['Authorization'] = `Bearer ${effectiveToken}`;
+      }
+
       const res = await apiFetch('/api/admin/products/import', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Correlation-ID': currentCorrelationId,
-          'X-Extension-Version': extensionVersionInput
-        },
+        headers,
         body: JSON.stringify(payload)
       });
 
@@ -483,22 +493,69 @@ export function ExtensionImporter() {
             await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt - 2)));
           }
 
-          const response = await executeImportRequest(attempt);
-          
+          const res = await executeImportRequest(attempt);
+
+          let responseData: any = {};
+          try {
+            responseData = await res.json();
+          } catch (e) {
+            responseData = { error: `Server returned HTTP ${res.status} ${res.statusText}` };
+          }
+
+          if (!res.ok || responseData.success === false) {
+            const isRateLimit = res.status === 429;
+            const is401 = res.status === 401;
+            const is409 = res.status === 409 || responseData.code === 'DUPLICATE_ASIN';
+
+            if (attempt <= maxRetries && isRateLimit) {
+              continue;
+            }
+
+            setImporting(false);
+
+            if (is401) {
+              setResult({
+                success: false,
+                message: 'Authentication failure',
+                error: responseData.error || 'Your authorization token has expired or is invalid. Please sign out and sign in again to obtain a fresh admin security token.',
+                code: 'AUTH_EXPIRED',
+                requestId: currentCorrelationId
+              });
+            } else if (is409) {
+              setResult({
+                success: false,
+                message: 'Duplicate Product Detected',
+                error: responseData.error || `A product with ASIN '${scrapedProduct.asin}' already exists in your curated collections.`,
+                code: 'DUPLICATE_ASIN',
+                requestId: currentCorrelationId
+              });
+            } else {
+              setResult({
+                success: false,
+                message: responseData.message || 'Import process failed',
+                error: responseData.error || responseData.message || `An unexpected server error occurred (HTTP ${res.status}).`,
+                code: responseData.code || `HTTP_${res.status}`,
+                requestId: responseData.requestId || currentCorrelationId,
+                details: responseData.details
+              });
+            }
+            return;
+          }
+
           setImporting(false);
           setResult({
-            success: response.success !== false,
-            message: response.message || 'Product successfully synchronized with catalog',
-            product: response.data || response.product,
-            requestId: response.requestId || currentCorrelationId,
-            details: response.details
+            success: true,
+            message: responseData.message || 'Product successfully synchronized with catalog',
+            product: responseData.data || responseData.product,
+            requestId: responseData.requestId || currentCorrelationId,
+            details: responseData.details
           });
           return;
 
         } catch (err: any) {
           console.warn(`Attempt ${attempt} failed:`, err.message);
           
-          const isNetworkError = err.message.includes('fetch') || err.message.includes('network') || err.message.includes('NetworkError');
+          const isNetworkError = err.message && (err.message.includes('fetch') || err.message.includes('network') || err.message.includes('NetworkError'));
           const isRateLimit = err.status === 429;
           
           if (attempt <= maxRetries && (isNetworkError || isRateLimit)) {
@@ -509,7 +566,7 @@ export function ExtensionImporter() {
           // Non-transient errors or out of retries
           setImporting(false);
           
-          if (err.status === 401 || err.message.toLowerCase().includes('expired') || err.message.toLowerCase().includes('unauthorized')) {
+          if (err.status === 401 || (err.message && (err.message.toLowerCase().includes('expired') || err.message.toLowerCase().includes('unauthorized')))) {
             setResult({
               success: false,
               message: 'Authentication failure',

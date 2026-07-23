@@ -47,10 +47,13 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
   const [dbToggling, setDbToggling] = useState(false);
 
   // 2FA Flow
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean>(false);
   const [twoFactorSecret, setTwoFactorSecret] = useState('');
   const [qrCodePlaceholder, setQrCodePlaceholder] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [show2faSetup, setShow2faSetup] = useState(false);
+  const [showDisableForm, setShowDisableForm] = useState(false);
+  const [disableCode, setDisableCode] = useState('');
 
   // PAT Flow
   const [newPatName, setNewPatName] = useState('');
@@ -111,6 +114,15 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
       const res = await apiCall('/api/admin/config');
       if (res.success) {
         setFlags(res.flags || {});
+      }
+    } catch (e) {}
+  };
+
+  const fetch2faStatus = async () => {
+    try {
+      const res = await apiCall('/api/auth/2fa/status');
+      if (res.success) {
+        setTwoFactorEnabled(!!res.twoFactorEnabled);
       }
     } catch (e) {}
   };
@@ -226,6 +238,23 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
         triggerAlert('Success', 'Two-Factor Authentication (2FA) is now enabled for your account!');
         setVerificationCode('');
         setShow2faSetup(false);
+        fetch2faStatus();
+      }
+    } catch (e) {}
+  };
+
+  const handleDisable2fa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await apiCall('/api/auth/2fa/disable', {
+        method: 'POST',
+        body: JSON.stringify({ code: disableCode })
+      });
+      if (res.success) {
+        triggerAlert('Success', 'Two-Factor Authentication (2FA) has been disabled.');
+        setDisableCode('');
+        setShowDisableForm(false);
+        fetch2faStatus();
       }
     } catch (e) {}
   };
@@ -253,6 +282,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
     setRefreshing(true);
     if (activeSubTab === 'sessions') await fetchSessions();
     if (activeSubTab === 'pats') await fetchPats();
+    if (activeSubTab === '2fa') await fetch2faStatus();
     if (activeSubTab === 'metrics') await fetchMetrics();
     if (activeSubTab === 'flags') await fetchFlags();
     if (activeSubTab === 'database') await fetchDbStatus();
@@ -265,6 +295,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
     Promise.all([
       fetchSessions(),
       fetchPats(),
+      fetch2faStatus(),
       fetchMetrics(),
       fetchFlags(),
       fetchDbStatus()
@@ -464,7 +495,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                   <thead>
                     <tr className="bg-slate-50 dark:bg-zinc-900/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-zinc-800">
                       <th className="px-4 py-3">Token Name</th>
-                      <th className="px-4 py-3">Token Prefix</th>
+                      <th className="px-4 py-3">Token Hash (Tail)</th>
                       <th className="px-4 py-3">Created At</th>
                       <th className="px-4 py-3">Last Used At</th>
                       <th className="px-4 py-3 text-right">Actions</th>
@@ -484,7 +515,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                             {p.name}
                           </td>
                           <td className="px-4 py-3 font-mono text-slate-500">
-                            gph_pat_***{p.tokenHash.slice(-6)}
+                            Hash: ...{p.tokenHash ? p.tokenHash.slice(-8) : 'N/A'}
                           </td>
                           <td className="px-4 py-3 text-slate-500">
                             {new Date(p.createdAt).toLocaleDateString()}
@@ -523,78 +554,137 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                 Add an extra layer of protection to your administrative account. Every time you log in, you will be required to provide a dynamic 6-digit verification code from your authenticator app (Google Authenticator, Authy, etc.).
               </p>
 
-              <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-zinc-900 rounded-xl">
-                <Lock className="w-5 h-5 text-indigo-500" />
+              <div className={`flex items-center gap-3 p-4 rounded-xl border ${
+                twoFactorEnabled 
+                  ? 'bg-emerald-50 border-emerald-200/60 dark:bg-emerald-950/30 dark:border-emerald-800/50' 
+                  : 'bg-amber-50 border-amber-200/60 dark:bg-amber-950/30 dark:border-amber-800/50'
+              }`}>
+                {twoFactorEnabled ? (
+                  <Lock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <Unlock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                )}
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">2FA Guard Status:</h4>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    2FA Guard Status: <span className={twoFactorEnabled ? 'text-emerald-600 font-extrabold' : 'text-amber-600 font-extrabold'}>{twoFactorEnabled ? 'ENABLED' : 'DISABLED'}</span>
+                  </h4>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Multi-factor authentication is currently managed server-side and activated for security compliance.
+                    {twoFactorEnabled 
+                      ? 'Multi-factor authentication is active and protecting your administrator account.' 
+                      : 'Multi-factor authentication is currently inactive for your account.'}
                   </p>
                 </div>
               </div>
 
-              {!show2faSetup ? (
-                <button
-                  onClick={handleSetup2fa}
-                  className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition"
-                >
-                  Configure Two-Factor Authenticator
-                </button>
+              {!twoFactorEnabled ? (
+                !show2faSetup ? (
+                  <button
+                    onClick={handleSetup2fa}
+                    className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition"
+                  >
+                    Configure Two-Factor Authenticator
+                  </button>
+                ) : (
+                  <form onSubmit={handleEnable2fa} className="space-y-4 border-t border-slate-100 pt-4 dark:border-zinc-800">
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase">
+                      Setup instructions:
+                    </h4>
+                    <ol className="list-decimal list-inside text-xs text-slate-500 space-y-1.5 pl-1">
+                      <li>Open your mobile Authenticator App.</li>
+                      <li>Scan or enter the following base-32 secret key manually:</li>
+                    </ol>
+
+                    <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg flex items-center justify-between">
+                      <span className="font-mono text-xs text-emerald-400 font-bold tracking-widest select-all">
+                        {twoFactorSecret}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(twoFactorSecret)}
+                        className="text-[10px] font-semibold text-slate-400 hover:text-white"
+                      >
+                        Copy Secret
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Enter the 6-digit confirmation code:
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        pattern="\d{6}"
+                        placeholder="E.g., 123456"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                        className="w-full max-w-[150px] text-center px-4 py-2 font-mono text-sm tracking-widest bg-slate-50 border border-slate-200 rounded-lg focus:outline-none dark:bg-zinc-900 dark:border-zinc-700 text-slate-100"
+                      />
+                    </div>
+
+                    <div className="flex gap-2.5">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition"
+                      >
+                        Confirm and Enable 2FA
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShow2faSetup(false)}
+                        className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition dark:bg-zinc-800 dark:text-slate-300"
+                      >
+                        Cancel Setup
+                      </button>
+                    </div>
+                  </form>
+                )
               ) : (
-                <form onSubmit={handleEnable2fa} className="space-y-4 border-t border-slate-100 pt-4 dark:border-zinc-800">
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase">
-                    Setup instructions:
-                  </h4>
-                  <ol className="list-decimal list-inside text-xs text-slate-500 space-y-1.5 pl-1">
-                    <li>Open your mobile Authenticator App.</li>
-                    <li>Scan or enter the following base-32 secret key manually:</li>
-                  </ol>
-
-                  <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg flex items-center justify-between">
-                    <span className="font-mono text-xs text-emerald-400 font-bold tracking-widest select-all">
-                      {twoFactorSecret}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(twoFactorSecret)}
-                      className="text-[10px] font-semibold text-slate-400 hover:text-white"
-                    >
-                      Copy Secret
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Enter the 6-digit confirmation code:
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={6}
-                      pattern="\d{6}"
-                      placeholder="E.g., 123456"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      className="w-full max-w-[150px] text-center px-4 py-2 font-mono text-sm tracking-widest bg-slate-50 border border-slate-200 rounded-lg focus:outline-none dark:bg-zinc-900 dark:border-zinc-700 text-slate-100"
-                    />
-                  </div>
-
-                  <div className="flex gap-2.5">
-                    <button
-                      type="submit"
-                      className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition"
-                    >
-                      Confirm and Enable 2FA
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShow2faSetup(false)}
-                      className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition dark:bg-zinc-800 dark:text-slate-300"
-                    >
-                      Cancel Setup
-                    </button>
-                  </div>
-                </form>
+                !showDisableForm ? (
+                  <button
+                    onClick={() => setShowDisableForm(true)}
+                    className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition"
+                  >
+                    Disable Two-Factor Authentication
+                  </button>
+                ) : (
+                  <form onSubmit={handleDisable2fa} className="space-y-4 border-t border-slate-100 pt-4 dark:border-zinc-800">
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase">
+                      Disable 2FA Confirmation:
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      To disable 2FA, enter a current 6-digit verification code from your authenticator app.
+                    </p>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        pattern="\d{6}"
+                        placeholder="123456"
+                        value={disableCode}
+                        onChange={(e) => setDisableCode(e.target.value)}
+                        className="w-full max-w-[150px] text-center px-4 py-2 font-mono text-sm tracking-widest bg-slate-50 border border-slate-200 rounded-lg focus:outline-none dark:bg-zinc-900 dark:border-zinc-700 text-slate-100"
+                      />
+                    </div>
+                    <div className="flex gap-2.5">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition"
+                      >
+                        Confirm Disable 2FA
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowDisableForm(false)}
+                        className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition dark:bg-zinc-800 dark:text-slate-300"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )
               )}
             </div>
           )}

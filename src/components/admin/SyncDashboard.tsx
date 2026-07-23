@@ -6,19 +6,24 @@ import {
   BarChart2, HelpCircle, Coins
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
+import { useAuth } from '../../context/AuthContext';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, Cell 
 } from 'recharts';
 
 interface SyncDashboardProps {
-  showNotice: (type: 'success' | 'error' | 'info', message: string) => void;
+  token?: string;
+  showNotice?: (type: 'success' | 'error' | 'info', message: string) => void;
 }
 
-export default function SyncDashboard({ showNotice }: SyncDashboardProps) {
+export default function SyncDashboard({ token, showNotice = () => {} }: SyncDashboardProps) {
+  const { token: authContextToken } = useAuth();
+  const effectiveToken = token || authContextToken || (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken')) : '') || '';
+
   const [activeTab, setActiveTab] = useState<'overview' | 'scheduler' | 'health' | 'rules' | 'audits' | 'marketplace'>('overview');
   
   // Phase 11: Multi-Marketplace & Universal Import States
-  const [mAnalytics, setMAnalytics] = useState<any>({ totalProducts: 0, overallSuccessRate: 100, providersCount: 0, providers: [] });
+  const [mAnalytics, setMAnalytics] = useState<any>({ totalProducts: 0, overallSuccessRate: 0, providersCount: 0, providers: [] });
   const [mProviders, setMProviders] = useState<any[]>([]);
   const [mSettings, setMSettings] = useState<any[]>([]);
   const [mAffiliates, setMAffiliates] = useState<any[]>([]);
@@ -72,7 +77,7 @@ export default function SyncDashboard({ showNotice }: SyncDashboardProps) {
     totalProducts: 0,
     outOfStock: 0,
     synchronized: 0,
-    averageHealth: 100,
+    averageHealth: 0,
     jobsProcessed: 0,
     failedJobs: 0,
     recentPriceChangesCount: 0

@@ -9,6 +9,11 @@ describe('DataNormalizer', () => {
   it('parses price', () => {
     expect(DataNormalizer.parsePrice('$1,234.56')).toBe(1234.56);
     expect(DataNormalizer.parsePrice('£99.99')).toBe(99.99);
+    expect(DataNormalizer.parsePrice('$12.99 - $15.99')).toBe(12.99);
+    expect(DataNormalizer.parsePrice('$19.99 (List: $24.99)')).toBe(19.99);
+    expect(DataNormalizer.parsePrice('12.9915.99')).toBe(12.99);
+    expect(DataNormalizer.parsePrice(null)).toBe(0);
+    expect(DataNormalizer.parsePrice('FREE')).toBe(0);
   });
 
   it('parses rating', () => {

@@ -6,9 +6,33 @@ import { useDeviceType } from '../hooks/useDeviceType';
 import { TabErrorView } from '../components/admin/TabErrorView';
 import { getDistrictEmoji } from '../utils/emoji';
 import { mapErrorToFriendly } from '../utils/errorMapper';
-import { apiFetch } from '../utils/apiClient';
+import { apiFetch, clearApiCache } from '../utils/apiClient';
 import { parseSpecificationsString } from '../utils/specParser';
 import { generateSlug } from '../utils/slug';
+
+const DEFAULT_AFFILIATE_CODE = 'AFFIL_HUB_26';
+const BLANK_PROD_FORM = {
+  name: '',
+  slug: '',
+  brand: '',
+  price: '',
+  originalPrice: '',
+  discount: '',
+  category: '',
+  subcategory: '',
+  description: '',
+  longDescription: '',
+  affiliateLink: '',
+  affiliateCode: DEFAULT_AFFILIATE_CODE,
+  images: '',
+  features: '',
+  specKeyVal: '',
+  pros: '',
+  cons: '',
+  inStock: true,
+  trending: false,
+  featured: false
+};
 
 import { AlertDialog } from '../components/admin/AlertDialog';
 import { ConfirmDialog } from '../components/admin/ConfirmDialog';
@@ -171,23 +195,38 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [socialClicks, setSocialClicks] = useState({ instagram: 0, linkedin: 0 });
 
   const resolvedProducts = useMemo(() => {
-    return products.map(p => {
-      const clickEvents = analyticsData.filter(a => {
-        if (a?.eventType !== 'click') return false;
-        const aProdId = (a?.productId as { _id?: string })?._id || a?.productId;
-        const targetId = typeof aProdId === 'object' && aProdId !== null ? (aProdId as { _id?: string })._id : aProdId;
-        return targetId?.toString() === p?._id?.toString();
-      });
-      const convEvents = analyticsData.filter(a => {
-        if (a?.eventType !== 'conversion') return false;
-        const aProdId = (a?.productId as { _id?: string })?._id || a?.productId;
-        const targetId = typeof aProdId === 'object' && aProdId !== null ? (aProdId as { _id?: string })._id : aProdId;
-        return targetId?.toString() === p?._id?.toString();
-      });
+    if (!analyticsData || analyticsData.length === 0) {
+      return products.map(p => ({
+        ...p,
+        clicks: p?.clicks || 0,
+        conversions: p?.conversions || 0
+      }));
+    }
 
-      const hasAnalytics = analyticsData.length > 0;
-      const dynamicClicks = hasAnalytics ? clickEvents.length : (p?.clicks || 0);
-      const dynamicConversions = hasAnalytics ? convEvents.length : (p?.conversions || 0);
+    const clicksMap = new Map<string, number>();
+    const convsMap = new Map<string, number>();
+
+    for (let i = 0; i < analyticsData.length; i++) {
+      const a = analyticsData[i];
+      if (!a) continue;
+      const aProdId = (a.productId as { _id?: string })?._id || a.productId;
+      const targetId = typeof aProdId === 'object' && aProdId !== null ? (aProdId as { _id?: string })._id : aProdId;
+      if (!targetId) continue;
+      const idStr = String(targetId);
+
+      if (a.eventType === 'click') {
+        clicksMap.set(idStr, (clicksMap.get(idStr) || 0) + 1);
+      } else if (a.eventType === 'conversion') {
+        convsMap.set(idStr, (convsMap.get(idStr) || 0) + 1);
+      }
+    }
+
+    const hasAnalytics = analyticsData.length > 0;
+
+    return products.map(p => {
+      const pIdStr = p?._id ? String(p._id) : '';
+      const dynamicClicks = hasAnalytics ? (clicksMap.get(pIdStr) || 0) : (p?.clicks || 0);
+      const dynamicConversions = hasAnalytics ? (convsMap.get(pIdStr) || 0) : (p?.conversions || 0);
 
       return {
         ...p,
@@ -206,28 +245,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [isSubcatDropdownOpen, setIsSubcatDropdownOpen] = useState(false);
 
   // Form Fields for Products
-  const [prodForm, setProdForm] = useState({
-    name: '',
-    slug: '',
-    brand: '',
-    price: '',
-    originalPrice: '',
-    discount: '',
-    category: '',
-    subcategory: '',
-    description: '',
-    longDescription: '',
-    affiliateLink: 'https://amazon.com/dp/B501...',
-    affiliateCode: 'AFFIL_HUB_26',
-    images: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500',
-    features: 'High Performance, Ergonimic build, Sweat Resistant',
-    specKeyVal: 'Driver=50mm;Frequency=20-20kHz;Weight=290g;Battery=30 Hours',
-    pros: 'Exceptional depth, Safe battery life, Active ANC',
-    cons: 'Premium cost, Lacks audio wire jack',
-    inStock: true,
-    trending: false,
-    featured: false
-  });
+  const [prodForm, setProdForm] = useState(BLANK_PROD_FORM);
 
   // Slug Checking state
   const [slugChecking, setSlugChecking] = useState(false);
@@ -243,7 +261,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     }
 
     const proposed = generateSlug(rawVal);
-    if (!proposed || proposed === 'noise-cancelling-pro-anc') {
+    if (!proposed) {
       setSlugCheckError('');
       setSuggestedSlug('');
       return;
@@ -351,7 +369,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
     // 1. Fetch Catalog Specs
     try {
-      const res = await apiFetch('/api/products?limit=100', { signal });
+      const res = await apiFetch('/api/products?limit=5000', { signal });
       if (signal?.aborted) return;
       if (res.ok) {
         const d = await res.json();
@@ -410,15 +428,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
     // 4. Fetch Message Inquiries
     try {
-      const msgRes = await fetch('/api/admin/messages', { 
-        headers: { 'Authorization': `Bearer ${token}` },
-        signal
-      });
+      const msgRes = await apiFetch('/api/admin/messages', { signal });
       if (signal?.aborted) return;
       if (msgRes.ok) {
         mData = await msgRes.json();
         if (signal?.aborted) return;
-        setMessages(mData);
+        setMessages(Array.isArray(mData) ? mData : []);
       } else {
         const errJson = await msgRes.json().catch(() => ({}));
         if (signal?.aborted) return;
@@ -432,10 +447,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
     // 5. Fetch Traffic Logs Telemetry
     try {
-      const analyticsRes = await fetch('/api/admin/analytics', { 
-        headers: { 'Authorization': `Bearer ${token}` },
-        signal
-      });
+      const analyticsRes = await apiFetch('/api/admin/analytics', { signal });
       if (signal?.aborted) return;
       if (analyticsRes.ok) {
         const aData = await analyticsRes.json();
@@ -465,10 +477,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     // 6. Fetch User Accounts Sourcing
     try {
       if (token) {
-        const usersRes = await fetch('/api/admin/users', {
-          headers: { 'Authorization': `Bearer ${token}` },
-          signal
-        });
+        const usersRes = await apiFetch('/api/admin/users', { signal });
         if (signal?.aborted) return;
         if (usersRes.ok) {
           const uData = await usersRes.json();
@@ -489,15 +498,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     // 7. Fetch Sunday Automation Logs
     try {
       if (token) {
-        const logsRes = await fetch('/api/admin/sunday-logs', {
-          headers: { 'Authorization': `Bearer ${token}` },
-          signal
-        });
+        const logsRes = await apiFetch('/api/admin/sunday-logs', { signal });
         if (signal?.aborted) return;
         if (logsRes.ok) {
           const logsData = await logsRes.json();
           if (signal?.aborted) return;
-          setSundayLogs(logsData);
+          setSundayLogs(Array.isArray(logsData) ? logsData : (logsData?.logs || []));
         } else {
           const errData = await logsRes.json().catch(() => ({}));
           if (signal?.aborted) return;
@@ -513,10 +519,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     // 8. Fetch Security Logs (Audit Trail)
     try {
       if (token) {
-        const secRes = await fetch('/api/admin/security-logs', {
-          headers: { 'Authorization': `Bearer ${token}` },
-          signal
-        });
+        const secRes = await apiFetch('/api/admin/security-logs', { signal });
         if (signal?.aborted) return;
         if (secRes.ok) {
           const secData = await secRes.json();
@@ -534,10 +537,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       setSecurityLogsError(errorObj.message || 'Failed code connection for security logs.');
     }
 
-    // Calculate aggregates safely with whichever metrics loaded successfully
+    // Calculate aggregates safely with real recorded metrics
     try {
       const clicks = (telemetryClicks !== undefined && telemetryClicks !== null) ? telemetryClicks : pData.reduce((acc, p) => acc + (p?.clicks || 0), 0);
-      const conversions = (telemetryConversions !== undefined && telemetryConversions !== null) ? telemetryConversions : (pData.reduce((acc, p) => acc + (p?.conversions || 0), 0) || Math.round(clicks * 0.12));
+      const conversions = (telemetryConversions !== undefined && telemetryConversions !== null) ? telemetryConversions : pData.reduce((acc, p) => acc + (p?.conversions || 0), 0);
       const estimated = Number((clicks * 0.08 + conversions * 4.5).toFixed(2));
       const unreads = mData.filter(m => !m?.read).length;
 
@@ -547,7 +550,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         totalConversions: conversions,
         estimatedEarnings: estimated,
         unreadMessages: unreads,
-        totalVisitors: visitors || Math.round(clicks * 0.9) + 1
+        totalVisitors: visitors || 0
       });
     } catch (aggErr) {
       console.warn('Silent aggregate metrics loading warning:', aggErr);
@@ -675,18 +678,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     return () => {
       controller.abort();
     };
-  }, [token, activeTab]);
+  }, [token]);
 
   // Handle Mark Message read
   const handleMarkRead = async (msgId: string) => {
     try {
-      const res = await fetch(`/api/admin/messages/read/${msgId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const res = await apiFetch(`/api/admin/messages/read/${msgId}`, { method: 'POST' });
       if (res.ok) {
+        clearApiCache();
         setMessages(prev => prev.map(m => m?._id === msgId ? { ...m, read: true } : m));
         setStats(prev => ({ ...prev, unreadMessages: Math.max(prev.unreadMessages - 1, 0) }));
       }
@@ -707,15 +706,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     payload: any,
     onSuccess: () => void
   ) => {
-    const response = await fetch(url, {
+    clearApiCache();
+    const response = await apiFetch(url, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify(payload)
     });
     if (response.ok) {
+      clearApiCache();
       onSuccess();
     }
     return response;
@@ -725,6 +722,16 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!prodForm.name || prodForm.name.trim().length === 0) {
+      triggerAlert("Validation Error", "A valid product name is required.");
+      return;
+    }
+
+    if (!prodForm.affiliateLink || !prodForm.affiliateLink.startsWith('http') || prodForm.affiliateLink.includes('B501...')) {
+      triggerAlert("Validation Error", "A valid, resolvable affiliate link starting with http:// or https:// is required.");
+      return;
+    }
+
     const parsedPrice = parseFloat(prodForm.price);
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
       triggerAlert("Validation Error", "A valid positive price is required.");
@@ -741,17 +748,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     
     // Construct specifications map
     const specificationsObj = parseSpecs(prodForm.specKeyVal);
-    const featuresList = prodForm.features.split(',').map(f => f.trim());
-    const prosList = prodForm.pros.split(',').map(p => p.trim());
-    const consList = prodForm.cons.split(',').map(c => c.trim());
+    const featuresList = prodForm.features.split(',').map(f => f.trim()).filter(Boolean);
+    const prosList = prodForm.pros.split(',').map(p => p.trim()).filter(Boolean);
+    const consList = prodForm.cons.split(',').map(c => c.trim()).filter(Boolean);
     const imagesList = prodForm.images
       .split(/[\n,;]+/)
       .map(img => img.trim())
       .filter(img => img.length > 0);
-    
-    if (imagesList.length === 0) {
-      imagesList.push('https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500');
-    }
     
     const slugCalculated = generateSlug(prodForm.slug || prodForm.name);
 
@@ -778,7 +781,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       pros: prosList,
       cons: consList,
       affiliateLink: prodForm.affiliateLink,
-      affiliateCode: prodForm.affiliateCode,
+      affiliateCode: prodForm.affiliateCode || DEFAULT_AFFILIATE_CODE,
       inStock: prodForm.inStock !== false,
       trending: prodForm.trending,
       featured: prodForm.featured
@@ -844,26 +847,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setEditingProduct(null);
     setModalFormTab('basics');
     setProdForm({
-      name: 'Noise Cancellation Headset',
-      slug: 'noise-cancelling-pro-anc',
-      brand: 'Bose',
-      price: '199',
-      originalPrice: '249',
-      discount: '20',
-      category: categories?.[0]?._id || '',
-      subcategory: '',
-      description: 'Dynamic wireless over-ear noise-control headset.',
-      longDescription: 'Engineered with full range ANC microphones, premium leather earcups, and dual drivers setup. Delivers premium low registers and 30 hours of continuous playing time.',
-      affiliateLink: 'https://amazon.com/dp/B501...',
-      affiliateCode: 'AFFIL_HUB_26',
-      images: 'https://images.unsplash.com/photo-1005740420928-5e560c06d30e?w=500',
-      features: 'Full Range ANC, Comfortable leather caps, 30h Long life',
-      specKeyVal: 'Driver=40mm;ANC=Active Dual Mode;Bluetooth=V5.3;Weight=260g',
-      pros: 'Exceptional isolation, Comfortable wear, Good battery',
-      cons: 'Premium cost, Slightly heavy',
-      inStock: true,
-      trending: false,
-      featured: false
+      ...BLANK_PROD_FORM,
+      category: categories?.[0]?._id || ''
     });
     setShowProductModal(true);
   };
@@ -901,7 +886,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       description: p.description,
       longDescription: p.longDescription || '',
       affiliateLink: p?.affiliateLink,
-      affiliateCode: p.affiliateCode || '',
+      affiliateCode: p.affiliateCode || DEFAULT_AFFILIATE_CODE,
       images: Array.isArray(p.images) ? p.images.join("\n") : "",
       features: Array.isArray(p.features) ? p.features.join(', ') : '',
       specKeyVal: specStr,
@@ -921,12 +906,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       "Are you sure you want to remove this catalog product entry from the storefront database?",
       async () => {
         try {
-          const res = await fetch(`/api/admin/products/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+          clearApiCache();
+          const res = await apiFetch(`/api/admin/products/${id}`, {
+            method: 'DELETE'
           });
           if (res.ok) {
+            clearApiCache();
             setProducts(prev => prev.filter(p => p?._id !== id));
+            await loadAdminMetrics();
           } else {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Deletion Failed", err.error || "The server rejected the deletion request.");
@@ -949,12 +936,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       const url = editingCategory ? `/api/admin/categories/${editingCategory._id}` : '/api/admin/categories';
       const method = editingCategory ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      clearApiCache();
+      const res = await apiFetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           name: catName,
           slug: generateSlug(catSlug || catName),
@@ -965,6 +949,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         })
       });
       if (res.ok) {
+        clearApiCache();
         const nameSaved = catName;
         setCatName('');
         setCatIcon('📦');
@@ -1010,14 +995,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       "Are you sure you want to delete this Category/Classifier? Products under this category might remain set but won't belong to an active category.",
       async () => {
         try {
-          const res = await fetch(`/api/admin/categories/${id}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+          clearApiCache();
+          const res = await apiFetch(`/api/admin/categories/${id}`, {
+            method: 'DELETE'
           });
           if (res.ok) {
-            loadAdminMetrics();
+            clearApiCache();
+            await loadAdminMetrics();
           } else {
             const err = await res.json().catch(() => ({}));
             triggerAlert("Deletion Failed", err.error || "The server rejected the category deletion request.");
@@ -1034,15 +1018,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const handleSimulateSunday = async (targetSundayStr?: string, forceEmail?: boolean) => {
     setSimulatingSunday(true);
     try {
-      const res = await fetch('/api/admin/sunday-logs/simulate', {
+      clearApiCache();
+      const res = await apiFetch('/api/admin/sunday-logs/simulate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({ targetSundayStr, forceEmail })
       });
       if (res.ok) {
+        clearApiCache();
         const bodyObj = await res.json();
         triggerAlert("Simulation Completed", `Sunday automated scheduler event completed! Added ${bodyObj.log?.productsAdded?.length || 0} product items.`);
         await loadAdminMetrics();
@@ -2684,11 +2666,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           ) : activeTab === 'media' ? (
             <MediaLibrary token={token} />
           ) : activeTab === 'importer' ? (
-            <ExtensionImporter />
+            <ExtensionImporter token={token || ''} />
           ) : activeTab === 'ai-content' ? (
-            <AiContentDashboard showNotice={(type, message) => triggerAlert(type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Info', message)} />
+            <AiContentDashboard token={token || ''} showNotice={(type, message) => triggerAlert(type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Info', message)} />
           ) : activeTab === 'sync-dashboard' ? (
-            <SyncDashboard showNotice={(type, message) => triggerAlert(type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Info', message)} />
+            <SyncDashboard token={token || ''} showNotice={(type, message) => triggerAlert(type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Info', message)} />
           ) : activeTab === 'security-console' ? (
             <SecurityConsole token={token} triggerAlert={triggerAlert} />
           ) : (

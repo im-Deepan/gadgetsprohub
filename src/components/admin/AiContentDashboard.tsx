@@ -5,16 +5,21 @@ import {
   Settings, Key, Trash2, ChevronRight, Save, Copy, FileText, ArrowRight, Eye
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
+import { useAuth } from '../../context/AuthContext';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
   BarChart, Bar, Cell, Legend
 } from 'recharts';
 
 interface AiContentDashboardProps {
-  showNotice: (type: 'success' | 'error' | 'info', message: string) => void;
+  token?: string;
+  showNotice?: (type: 'success' | 'error' | 'info', message: string) => void;
 }
 
-export default function AiContentDashboard({ showNotice }: AiContentDashboardProps) {
+export default function AiContentDashboard({ token, showNotice = () => {} }: AiContentDashboardProps) {
+  const { token: authContextToken } = useAuth();
+  const effectiveToken = token || authContextToken || (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken')) : '') || '';
+
   const [activeTab, setActiveTab] = useState<'assistant' | 'prompts' | 'queue' | 'analytics' | 'settings'>('assistant');
 
   // Loading states

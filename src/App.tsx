@@ -31,7 +31,8 @@ const mapToTamilNaduCity = (rawName: string): string => {
   if (!rawName) {
     return "Chennai";
   }
-  const name = rawName.trim().toLowerCase();
+  const raw = rawName.trim();
+  const name = raw.toLowerCase();
   
   if (name.includes("trichy") || name.includes("tiruchirappalli") || name.includes("tiruchirapalli")) {
     return "Tiruchirappalli";
@@ -45,9 +46,6 @@ const mapToTamilNaduCity = (rawName: string): string => {
     return "Salem";
   } else if (name.includes("nellai") || name.includes("tirunelveli")) {
     return "Tirunelveli";
-  } else if (name.includes("ashburn") || name.includes("montreal") || name.includes("bueren") || name.includes("virginia")) {
-    // Return a random stable major Tamil Nadu city based on hashing
-    return "Chennai";
   }
 
   const matched = TAMIL_NADU_CITIES.find(
@@ -55,14 +53,8 @@ const mapToTamilNaduCity = (rawName: string): string => {
   );
   if (matched) return matched;
 
-  // Stably map other names via hash to one of the major cities
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash << 5) - hash + name.charCodeAt(i);
-    hash |= 0;
-  }
-  const index = Math.abs(hash) % TAMIL_NADU_CITIES.length;
-  return TAMIL_NADU_CITIES[index];
+  // Return original detected city name
+  return raw;
 };
 
 // Static allowed view definitions (exhaustively checked at compile time)
@@ -858,10 +850,25 @@ const setupGlobalErrorTracking = () => {
   });
 
   window.addEventListener('unhandledrejection', (event) => {
-    if (!event.reason || event.reason.name === 'AbortError' || event.reason.message?.includes('abort') || event.reason.message?.includes('canceled')) {
+    const reason = event.reason;
+    if (
+      !reason ||
+      reason.name === 'AbortError' ||
+      reason.name === 'CanceledError' ||
+      (typeof reason === 'string' && (reason.includes('abort') || reason.includes('canceled') || reason.includes('cancelled'))) ||
+      (reason && typeof reason === 'object' && (
+        reason.name === 'AbortError' ||
+        String(reason.message || '').toLowerCase().includes('abort') ||
+        String(reason.message || '').toLowerCase().includes('canceled') ||
+        String(reason.message || '').toLowerCase().includes('cancelled') ||
+        String(reason.message || '').toLowerCase().includes('failed to fetch') ||
+        String(reason.message || '').toLowerCase().includes('networkerror') ||
+        String(reason.message || '').toLowerCase().includes('load failed')
+      ))
+    ) {
       return;
     }
-    captureError(event.reason, {
+    captureError(reason, {
       context: 'Unhandled promise rejection',
     });
   });

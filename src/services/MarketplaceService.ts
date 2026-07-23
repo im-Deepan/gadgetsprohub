@@ -1180,7 +1180,7 @@ export class MarketplaceService {
       const successLogs = await ProviderLogsModel.countDocuments({ providerId, status: 'success' });
       const errorLogs = await ProviderLogsModel.countDocuments({ providerId, status: 'error' });
       const totalLogs = successLogs + errorLogs;
-      const importSuccessRate = totalLogs > 0 ? Math.round((successLogs / totalLogs) * 100) : 100;
+      const importSuccessRate = totalLogs > 0 ? Math.round((successLogs / totalLogs) * 100) : 0;
 
       await MarketplaceAnalyticsModel.findOneAndUpdate(
         { providerId },
@@ -1191,7 +1191,7 @@ export class MarketplaceService {
           revenuePotential: productsCount * 45, // simulated potential metric value
           averageDiscount: 15,
           failedImports: errorLogs,
-          syncCoverage: 100
+          syncCoverage: productsCount > 0 ? 100 : 0
         },
         { upsert: true }
       );
@@ -1208,7 +1208,7 @@ export class MarketplaceService {
     const healthStatus = await MarketplaceHealthModel.find({});
     
     const providersSummary = this.providers.map(p => {
-      const metric = analytics.find(a => a.providerId === p.providerId) || { productsCount: 0, revenuePotential: 0, importSuccessRate: 100, failedImports: 0 };
+      const metric = analytics.find(a => a.providerId === p.providerId) || { productsCount: 0, revenuePotential: 0, importSuccessRate: 0, failedImports: 0 };
       const health = healthStatus.find(h => h.providerId === p.providerId) || { status: 'online', averageLatencyMs: 350 };
       return {
         providerId: p.providerId,
@@ -1216,7 +1216,7 @@ export class MarketplaceService {
         currency: p.currency,
         productsCount: metric.productsCount || 0,
         revenue: metric.revenuePotential || 0,
-        successRate: metric.importSuccessRate || 100,
+        successRate: typeof metric.importSuccessRate === 'number' ? metric.importSuccessRate : 0,
         failedImports: metric.failedImports || 0,
         status: health.status || 'online',
         latency: health.averageLatencyMs || 350
@@ -1224,9 +1224,10 @@ export class MarketplaceService {
     });
 
     const totalProducts = providersSummary.reduce((acc, curr) => acc + curr.productsCount, 0);
-    const overallSuccessRate = providersSummary.length > 0
-      ? Math.round(providersSummary.reduce((acc, curr) => acc + curr.successRate, 0) / providersSummary.length)
-      : 100;
+    const activeProviders = providersSummary.filter(p => p.productsCount > 0);
+    const overallSuccessRate = activeProviders.length > 0
+      ? Math.round(activeProviders.reduce((acc, curr) => acc + curr.successRate, 0) / activeProviders.length)
+      : 0;
 
     return {
       totalProducts,

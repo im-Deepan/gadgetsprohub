@@ -16,22 +16,25 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     message = 'message' in error ? String((error as any).message) : String(error);
     stack = 'stack' in error ? String((error as any).stack) : undefined;
   } else {
-    message = String(error);
+    message = String(error || '');
   }
 
-  const normalizedMessage = message.toLowerCase();
-  const normalizedName = name.toLowerCase();
+  const normalizedMessage = (message || '').toLowerCase();
+  const normalizedName = (name || '').toLowerCase();
   const normalizedStack = (stack || '').toLowerCase();
+  const normalizedContext = context?.context ? String(context.context).toLowerCase() : '';
 
-  // Suppress expected/normal request cancellation, abort error, and third-party iframe sandbox noise (such as Google AdSense/adtrafficquality)
+  // Suppress expected/normal request cancellation, abort error, and third-party iframe sandbox noise
   if (
     normalizedName === 'aborterror' ||
     normalizedName === 'abort' ||
+    normalizedName === 'cancelederror' ||
     normalizedMessage === 'canceled' ||
     normalizedMessage === 'undefined' ||
     normalizedMessage === 'null' ||
     normalizedMessage === 'error' ||
     normalizedMessage === '[object promise]' ||
+    normalizedMessage === '[object object]' ||
     normalizedMessage.includes('abort') ||
     normalizedMessage.includes('canceled') ||
     normalizedMessage.includes('cancelled') ||
@@ -62,6 +65,8 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     message === '' ||
     message === 'Error' ||
     message === '[object Object]' ||
+    // Suppress unhandled promise rejection with empty/generic error or no stack
+    (normalizedContext === 'unhandled promise rejection' && (!message || message === 'Error' || message === '[object Object]' || (normalizedName === 'error' && !stack))) ||
     // Third-party AdSense / Doubleclick / Google adtrafficquality sandbox noise
     normalizedMessage.includes('adsbygoogle') ||
     normalizedMessage.includes('adsense') ||

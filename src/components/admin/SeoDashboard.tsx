@@ -5,9 +5,10 @@ import {
   ArrowRight, Share2, Code, HelpCircle, Activity, Save, Edit
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
+import { useAuth } from '../../context/AuthContext';
 
 interface SeoDashboardProps {
-  token: string;
+  token?: string;
 }
 
 interface ProductSeo {
@@ -41,6 +42,9 @@ interface RedirectRule {
 }
 
 export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
+  const { token: authContextToken } = useAuth();
+  const effectiveToken = token || authContextToken || (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken')) : '') || '';
+
   const [products, setProducts] = useState<ProductSeo[]>([]);
   const [redirects, setRedirects] = useState<RedirectRule[]>([]);
   const [loading, setLoading] = useState(true);

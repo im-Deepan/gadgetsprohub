@@ -137,12 +137,17 @@ export class MediaService {
 
       // Optimize
       let pipeline = sharp(buffer);
-      if (format === 'jpeg') {
+      const fmt = (format || '').toString().toLowerCase();
+      if (fmt === 'jpeg' || fmt === 'jpg') {
         pipeline = pipeline.jpeg({ quality: 80, progressive: true });
-      } else if (format === 'png') {
+      } else if (fmt === 'png') {
         pipeline = pipeline.png({ quality: 80, compressionLevel: 8 });
-      } else if (format === 'webp') {
+      } else if (fmt === 'webp') {
         pipeline = pipeline.webp({ quality: 80 });
+      } else if (fmt === 'avif') {
+        pipeline = pipeline.avif({ quality: 80 });
+      } else if (fmt === 'gif') {
+        pipeline = pipeline.gif();
       }
 
       const optimizedBuffer = await pipeline.toBuffer();
@@ -224,8 +229,27 @@ export class MediaService {
     
     for (const job of claimedJobs) {
       try {
-        // Here we would do actual async processing
-        // For example if type is 'optimize'
+        if (job.url) {
+          await this.processImageDownload({
+            url: job.url,
+            asin: job.asin,
+            productId: job.productId
+          });
+        } else if (job.assetId) {
+          const MediaAsset = getMediaAssetModel();
+          const asset = await MediaAsset.findById(job.assetId);
+          if (asset && asset.localPath) {
+            const fullPath = path.join(process.cwd(), 'public', asset.localPath);
+            if (fs.existsSync(fullPath)) {
+              const buf = await fs.promises.readFile(fullPath);
+              const meta = await sharp(buf).metadata();
+              asset.width = meta.width;
+              asset.height = meta.height;
+              asset.optimizationStatus = 'completed';
+              await asset.save();
+            }
+          }
+        }
         
         job.status = 'completed';
         job.completedAt = new Date();
@@ -233,7 +257,7 @@ export class MediaService {
         job.status = 'failed';
         job.error = err.message;
         job.attempts = (job.attempts || 0) + 1;
-        if (job.attempts < job.maxAttempts) {
+        if (job.attempts < (job.maxAttempts || 3)) {
           job.status = 'waiting';
         }
       }

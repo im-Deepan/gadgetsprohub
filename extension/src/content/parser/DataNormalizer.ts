@@ -5,9 +5,20 @@ export class DataNormalizer {
   }
 
   public static parsePrice(priceStr: string | null | undefined): number {
-    if (!priceStr) return 0;
-    const clean = priceStr.replace(/[^0-9.]/g, '');
-    return parseFloat(clean) || 0;
+    if (!priceStr || !priceStr.trim()) return 0;
+    // Extract first valid monetary amount (e.g. $1,234.56, £99.99, $12.99 - $15.99, $19.99 (List: $24.99))
+    const match = priceStr.match(/\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?/);
+    if (!match) return 0;
+
+    let cleaned = match[0];
+    if (!cleaned.includes('.') && priceStr.includes(',') && /^\d+,\d{1,2}$/.test(cleaned)) {
+      cleaned = cleaned.replace(',', '.');
+    } else {
+      cleaned = cleaned.replace(/,/g, '');
+    }
+
+    const val = parseFloat(cleaned);
+    return isNaN(val) ? 0 : val;
   }
 
   public static parseRating(ratingStr: string | null | undefined): number {

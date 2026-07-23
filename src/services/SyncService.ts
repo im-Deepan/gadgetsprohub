@@ -544,7 +544,7 @@ export class SyncService {
     const healths = await ProductHealth.find({});
     const averageHealth = healths.length > 0 
       ? Math.round(healths.reduce((acc, curr) => acc + curr.healthScore, 0) / healths.length)
-      : 100;
+      : 0;
 
     // Failures count
     const failedJobs = await SyncJob.countDocuments({ status: 'failed' });

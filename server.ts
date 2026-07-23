@@ -2130,6 +2130,18 @@ async function startServer() {
   app.use('/api/auth/login', loginLimiter);
   app.use('/api/auth/google', loginLimiter);
 
+  // Dedicated rate limiter for extension pairing (max 5 attempts / 10 mins)
+  const pairLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 5,
+    message: { error: 'Too many pairing attempts from this IP. Please try again in 10 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: getSecureClientIp,
+    validate: { xForwardedForHeader: false, default: false }
+  });
+  app.use('/api/auth/pair', pairLimiter);
+
   // General Auth activity rate limiter
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -2976,6 +2988,19 @@ async function startServer() {
   });
 
   // 3. TOTP 2FA Endpoints
+  app.get('/api/auth/2fa/status', authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const user = await User.findById((req as any).userId);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      res.json({
+        success: true,
+        twoFactorEnabled: !!(user as any).twoFactorEnabled
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post('/api/auth/2fa/setup', authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const secret = TotpService.generateSecret();
@@ -3334,7 +3359,7 @@ async function startServer() {
       await cleanExpiredTrendingProducts();
       const { category, subcategory, brand, minPrice, maxPrice, search, rating, sort, inStock, exclude, trending } = req.query;
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 12));
+      const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit as string) || 12));
       
       if (isMongoConnected) {
         const filter: any = {};
@@ -4277,25 +4302,42 @@ async function startServer() {
       "Viluppuram", "Virudhunagar"
     ];
 
-    const mapToTamilNaduDistrict = (cityName: string): string => {
-      if (!cityName) return "Chennai";
+    const mapToTamilNaduDistrict = (cityName: string): { city: string; isTamilNadu: boolean } => {
+      if (!cityName) return { city: "Chennai", isTamilNadu: true };
       const formatted = cityName.trim();
+      const lower = formatted.toLowerCase();
+
+      // Check standard aliases
+      if (lower.includes("trichy") || lower.includes("tiruchirappalli") || lower.includes("tiruchirapalli")) {
+        return { city: "Tiruchirappalli", isTamilNadu: true };
+      }
+      if (lower.includes("chennai") || lower.includes("madras")) {
+        return { city: "Chennai", isTamilNadu: true };
+      }
+      if (lower.includes("coimbatore") || lower.includes("kovai")) {
+        return { city: "Coimbatore", isTamilNadu: true };
+      }
+      if (lower.includes("madurai")) {
+        return { city: "Madurai", isTamilNadu: true };
+      }
+      if (lower.includes("salem")) {
+        return { city: "Salem", isTamilNadu: true };
+      }
+      if (lower.includes("nellai") || lower.includes("tirunelveli")) {
+        return { city: "Tirunelveli", isTamilNadu: true };
+      }
+
       const found = TAMIL_NADU_DISTRICTS.find(
-        d => d.toLowerCase() === formatted.toLowerCase()
+        d => d.toLowerCase() === lower || lower === d.toLowerCase()
       );
       if (found) {
-        return found;
+        return { city: found, isTamilNadu: true };
       }
-      let hash = 0;
-      for (let i = 0; i < formatted.length; i++) {
-        hash = (hash << 5) - hash + formatted.charCodeAt(i);
-        hash |= 0;
-      }
-      const index = Math.abs(hash) % TAMIL_NADU_DISTRICTS.length;
-      return TAMIL_NADU_DISTRICTS[index];
+
+      // Return actual detected city without hashing into a fake TN district
+      return { city: formatted, isTamilNadu: false };
     };
 
-    let detectedCity = 'Chennai';
     let clientIp = (_req.headers['x-forwarded-for'] || _req.socket.remoteAddress || '').toString().split(',')[0].trim();
     if (clientIp.startsWith('::ffff:')) clientIp = clientIp.substring(7);
 
@@ -4306,8 +4348,8 @@ async function startServer() {
       if (response.ok) {
         const data = await response.json();
         if (data && data.city) {
-          detectedCity = mapToTamilNaduDistrict(data.city);
-          res.json({ city: detectedCity });
+          const loc = mapToTamilNaduDistrict(data.city);
+          res.json({ city: loc.city, isTamilNadu: loc.isTamilNadu, region: data.region, country: data.country_name });
           return;
         }
       }
@@ -4322,8 +4364,8 @@ async function startServer() {
       if (response.ok) {
         const data = await response.json();
         if (data && data.cityName) {
-          detectedCity = mapToTamilNaduDistrict(data.cityName);
-          res.json({ city: detectedCity });
+          const loc = mapToTamilNaduDistrict(data.cityName);
+          res.json({ city: loc.city, isTamilNadu: loc.isTamilNadu, region: data.regionName, country: data.countryName });
           return;
         }
       }
@@ -4331,8 +4373,8 @@ async function startServer() {
       console.warn('Proxy freeipapi.com failed');
     }
     
-    // Final fallback to Chennai instead of failing
-    res.json({ city: 'Chennai' });
+    // Final default fallback
+    res.json({ city: 'Chennai', isTamilNadu: true });
   });
 
   // Footer Social Clicks Tracking Endpoint
@@ -5511,7 +5553,7 @@ async function startServer() {
   // Endpoint for N8N to update a specific product's price
   app.post('/api/webhooks/n8n/update-product', authenticateN8N, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const { productId, price, originalPrice, discount, inStock } = req.body;
+      const { productId, price, originalPrice, discount, inStock, stock, stockCount } = req.body;
       if (!productId || typeof price !== 'number' || isNaN(price) || price <= 0 || price > 1000000) {
         return res.status(400).json({ error: 'productId and a valid positive price (up to 1,000,000) are required' });
       }
@@ -5530,6 +5572,13 @@ async function startServer() {
 
       if (typeof inStock !== 'undefined' && typeof inStock !== 'boolean') {
         return res.status(400).json({ error: 'inStock must be a boolean' });
+      }
+
+      const rawStock = typeof stock === 'number' ? stock : (typeof stockCount === 'number' ? stockCount : undefined);
+      if (typeof rawStock === 'number') {
+        if (isNaN(rawStock) || rawStock < 0 || rawStock > 100000) {
+          return res.status(400).json({ error: 'Invalid stock value: must be between 0 and 100,000' });
+        }
       }
 
       if (isMongoConnected) {
@@ -5564,6 +5613,12 @@ async function startServer() {
         }
 
         if (typeof inStock === 'boolean') product.inStock = inStock;
+        if (typeof rawStock === 'number') {
+          (product as any).stock = rawStock;
+          if (typeof inStock === 'undefined') {
+            product.inStock = rawStock > 0;
+          }
+        }
         product.lastPriceCheck = new Date();
 
         await product.save();
@@ -6033,20 +6088,37 @@ async function startServer() {
       
       const hash = crypto.createHash('sha256').update(buffer).digest('hex');
       const originalMetadata = await sharp(buffer).metadata();
-      const format = originalMetadata.format || 'jpg';
-      const fileName = `${hash}.${format}`;
+      const rawFormat = (originalMetadata.format || 'jpg').toLowerCase();
+      let extension = rawFormat === 'jpeg' ? 'jpg' : rawFormat;
+      
+      let sharpPipeline = sharp(buffer);
+      if (rawFormat === 'png') {
+        sharpPipeline = sharpPipeline.png({ quality: 80, compressionLevel: 8 });
+      } else if (rawFormat === 'webp') {
+        sharpPipeline = sharpPipeline.webp({ quality: 80 });
+      } else if (rawFormat === 'avif') {
+        sharpPipeline = sharpPipeline.avif({ quality: 80 });
+      } else if (rawFormat === 'gif') {
+        // GIF - keep format
+        sharpPipeline = sharpPipeline.gif();
+      } else {
+        sharpPipeline = sharpPipeline.jpeg({ quality: 80, mozjpeg: true });
+        extension = 'jpg';
+      }
+
+      const fileName = `${hash}.${extension}`;
       const relativePath = `/uploads/media/${fileName}`;
       const destPath = path.join(process.cwd(), 'public', 'uploads', 'media', fileName);
       
-      // optimize
-      const optimizedBuffer = await sharp(buffer).jpeg({ quality: 80 }).toBuffer(); // Simplify
+      // optimize while preserving image format & transparency
+      const optimizedBuffer = await sharpPipeline.toBuffer();
       fs.writeFileSync(destPath, optimizedBuffer);
       fs.unlinkSync(file.path); // cleanup temp
       
       const asset = new MediaAsset({
         fileName,
         localPath: relativePath,
-        mimeType: `image/${format}`,
+        mimeType: `image/${extension}`,
         width: originalMetadata.width,
         height: originalMetadata.height,
         aspectRatio: originalMetadata.width && originalMetadata.height ? (originalMetadata.width / originalMetadata.height) : 1,
@@ -7306,6 +7378,14 @@ app.post('/api/admin/products/bulk/:jobId/action', adminOnly, async (req: expres
 
         if (itemIndex >= 0 && itemIndex < job.items.length) {
           const item = job.items[itemIndex];
+          
+          if (status === 'success') {
+            const product = await Product.findOne({ asin: item.asin });
+            if (!product) {
+              return res.status(400).json({ error: `Cannot mark success: No Product document exists in database for ASIN "${item.asin}"` });
+            }
+          }
+
           const oldStatus = item.status;
           item.status = status;
           if (error) item.error = error;
@@ -7336,6 +7416,14 @@ app.post('/api/admin/products/bulk/:jobId/action', adminOnly, async (req: expres
 
         if (itemIndex >= 0 && itemIndex < job.items.length) {
           const item = job.items[itemIndex];
+
+          if (status === 'success') {
+            const product = localProducts.find((p: any) => p.asin === item.asin);
+            if (!product) {
+              return res.status(400).json({ error: `Cannot mark success: No Product document exists in local database for ASIN "${item.asin}"` });
+            }
+          }
+
           const oldStatus = item.status;
           item.status = status;
           if (error) item.error = error;

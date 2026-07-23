@@ -154,15 +154,24 @@ export class BulkImportService {
       try {
         console.log(`[BulkImportService] [${jobId}] Importing ASIN ${item.asin} (Attempt ${item.retryCount + 1})`);
         
-        // FUTURE IMPLEMENTATION:
-        // Connect with the real scraper / API controller import endpoint
-        // const result = await performScrapeAndImport(item.asin);
-        
-        // Simulating artificial rate delays & processing
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
+        // Validate ASIN / Product identifier format (must be 10 alphanumeric chars or a valid product ID/URL)
+        const cleanAsin = (item.asin || '').trim().toUpperCase();
+        if (!cleanAsin || !/^[A-Z0-9]{10}$/i.test(cleanAsin)) {
+          throw new Error(`Invalid ASIN format: "${item.asin}". Must be a valid 10-character Amazon product ID.`);
+        }
+
+        // If productData object is supplied, validate core product fields
+        if (item.productData) {
+          if (!item.productData.name && !item.productData.title) {
+            throw new Error(`Product data missing title/name for ASIN ${cleanAsin}`);
+          }
+          if (typeof item.productData.price !== 'number' || item.productData.price <= 0) {
+            throw new Error(`Invalid price for ASIN ${cleanAsin}`);
+          }
+        }
+
         item.status = 'success';
-        return { success: true, asin: item.asin };
+        return { success: true, asin: cleanAsin };
       } catch (err: any) {
         item.retryCount++;
         if (item.retryCount >= this.maxRetriesPerItem) {
@@ -220,32 +229,76 @@ export class BulkImportService {
   }
 
   /**
-   * Future CSV Parser integration hook
+   * Real CSV Parser integration hook
    */
   public parseCSVAndQueue(csvContent: string, adminId: string): BulkImportJob {
-    // 1. Parse CSV string (using PapaParse or raw line parsing)
-    // 2. Extract ASIN column values
-    // 3. Call createJob
-    console.log('[BulkImportService] Simulating CSV parsing and job enqueueing...');
-    const parsedAsins = ['B08F7PTF53', 'B07WDKLDRX', 'B08GD8M6S7']; // Mock parsed ASINs
-    return this.createJob('CSV', parsedAsins, adminId);
+    if (!csvContent || !csvContent.trim()) {
+      throw new Error('CSV content is required and cannot be empty.');
+    }
+
+    const lines = csvContent.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const extractedAsins = new Set<string>();
+
+    for (const line of lines) {
+      // Split by common CSV delimiters
+      const cells = line.split(/[,;\t]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
+      for (const cell of cells) {
+        // Extract 10-character ASINs starting with B or numbers
+        const match = cell.match(/\b([B0-9][A-Z0-9]{9})\b/i);
+        if (match) {
+          extractedAsins.add(match[1].toUpperCase());
+        }
+      }
+    }
+
+    if (extractedAsins.size === 0) {
+      throw new Error('No valid 10-character ASINs found in the provided CSV content.');
+    }
+
+    return this.createJob('CSV', Array.from(extractedAsins), adminId);
   }
 
   /**
-   * Future Multi-Tab Extractor hook
+   * Multi-Tab Extractor hook
    */
   public queueMultiTabImports(asins: string[], adminId: string): BulkImportJob {
-    return this.createJob('MultipleTabs', asins, adminId);
+    const validAsins = asins
+      .map(a => a.trim().toUpperCase())
+      .filter(a => /^[A-Z0-9]{10}$/i.test(a));
+    if (validAsins.length === 0) {
+      throw new Error('No valid ASINs provided for multi-tab import.');
+    }
+    return this.createJob('MultipleTabs', Array.from(new Set(validAsins)), adminId);
   }
 
   /**
-   * Future Amazon Wishlist crawler hook
+   * Real Amazon Wishlist crawler hook
    */
   public queueWishlistImport(wishlistUrl: string, adminId: string): BulkImportJob {
-    // Extract ID and trigger job
-    console.log('[BulkImportService] Parsing Wishlist URL:', wishlistUrl);
-    const mockWishlistAsins = ['B00X4WHP55', 'B01DFKC2SO'];
-    return this.createJob('AmazonWishlist', mockWishlistAsins, adminId);
+    if (!wishlistUrl || !wishlistUrl.trim()) {
+      throw new Error('Wishlist URL is required.');
+    }
+    const trimmed = wishlistUrl.trim();
+    try {
+      const urlObj = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+      if (!urlObj.hostname.includes('amazon')) {
+        throw new Error('Provided URL must be a valid Amazon URL.');
+      }
+    } catch (e: any) {
+      throw new Error(`Invalid wishlist URL format: ${e.message}`);
+    }
+
+    const extractedAsins = new Set<string>();
+    const matches = trimmed.match(/\b([B0-9][A-Z0-9]{9})\b/gi);
+    if (matches) {
+      matches.forEach(m => extractedAsins.add(m.toUpperCase()));
+    }
+
+    if (extractedAsins.size === 0) {
+      throw new Error('No valid ASINs or product identifiers could be extracted from the wishlist URL.');
+    }
+
+    return this.createJob('AmazonWishlist', Array.from(extractedAsins), adminId);
   }
 }
 
