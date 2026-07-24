@@ -236,6 +236,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         } else {
           console.error('[ProductDetail] Invalid product response format:', data);
           showToast(data?.error || 'Product not found or database is offline.', 'error', 4000, 'System Error');
+          if (!signal?.aborted) setLoading(false);
           return;
         }
         
@@ -663,16 +664,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const nextProduct = currentIdx !== -1 && currentIdx < allProductsSequence.length - 1 ? allProductsSequence[currentIdx + 1] : null;
 
   // Specifications fields map with exhaustive, safe, multi-format parsing
-  let specMap: Record<string, string> = {};
-  if (product.specifications) {
-    if (product.specifications instanceof Map) {
-      specMap = Object.fromEntries((product.specifications as Map<any, any>).entries());
-    } else if (typeof product.specifications === 'object') {
-      specMap = { ...product.specifications };
-    } else if (typeof product.specifications === 'string') {
-      specMap = parseSpecificationsString(product.specifications);
-    }
-  }
+  let specMap: Record<string, string> = parseSpecificationsString(product?.specifications);
 
   // Resolve dynamic URL based on current host origin
   const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';

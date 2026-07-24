@@ -265,12 +265,15 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
     return returnedPromise;
   }
 
-  // If deduplication is not needed (e.g. POST/PUT/DELETE mutations), run directly
+  // If deduplication is not needed (e.g. POST/PUT/DELETE/PATCH mutations), run directly
+  if (!isGet) {
+    clearApiCache();
+  }
   const p = executeFetchWithRetry();
   p.catch(() => {}); // Prevent unhandled rejection of original promise
   const returnedPromise = p.then(res => {
-    // Invalidate the entire GET cache on any successful non-GET mutation
-    if (res.ok && options.method && options.method.toUpperCase() !== 'GET') {
+    // Invalidate the entire GET cache on any non-GET mutation response
+    if (options.method && options.method.toUpperCase() !== 'GET') {
       clearApiCache();
     }
     return res;

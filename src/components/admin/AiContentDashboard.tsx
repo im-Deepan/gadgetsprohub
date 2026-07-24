@@ -148,7 +148,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
     if (useStreaming) {
       try {
         const token = localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken');
-        const response = await fetch('/api/admin/ai/generate', {
+        const response = await apiFetch('/api/admin/ai/generate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -12,8 +12,41 @@ export class FieldExtractors {
   }
 
   public static getTitle(): string {
-    const selectors = ['#productTitle', '#title', 'h1.a-size-large'];
-    return DataNormalizer.cleanText(this.getTextContent(selectors));
+    const primaryContainers = [
+      '#titleSection',
+      '#title_feature_div',
+      '#productTitle_feature_div',
+      '#centerCol',
+      '#ppd',
+      '#dp-container'
+    ];
+    const childTitleSelectors = [
+      '#productTitle',
+      '#title',
+      'h1.a-size-large',
+      'h1 span#productTitle',
+      'h1'
+    ];
+
+    // 1. Search inside primary title/center-col containers first
+    for (const containerSel of primaryContainers) {
+      const container = document.querySelector(containerSel);
+      if (container) {
+        for (const childSel of childTitleSelectors) {
+          const el = container.querySelector(childSel);
+          if (el && el.textContent) {
+            const clean = DataNormalizer.cleanText(el.textContent);
+            if (clean && clean.length > 2) {
+              return clean;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Fallback to global document-wide selectors
+    const globalSelectors = ['#productTitle', '#title', 'h1.a-size-large', 'h1'];
+    return DataNormalizer.cleanText(this.getTextContent(globalSelectors));
   }
 
   public static getBrand(): string {
@@ -49,21 +82,141 @@ export class FieldExtractors {
   }
 
   public static getPriceString(): string | null {
-    const selectors = [
+    const buyboxSelectors = [
+      '#corePriceDisplay_desktop_feature_div',
+      '#corePrice_desktop',
+      '#apex_desktop',
+      '#buybox',
+      '#price',
+      '#desktop_buybox',
+      '#centerCol',
+      '#combinedBuyBox'
+    ];
+
+    const priceChildSelectors = [
+      '.a-price.priceToPay .a-offscreen',
       '.apexPriceToPay .a-offscreen',
       '.priceToPay .a-offscreen',
-      '#corePrice_desktop .a-price .a-offscreen',
-      '#corePriceDisplay_desktop_feature_div .a-price .a-offscreen'
+      '.a-price[data-a-size="xl"] .a-offscreen',
+      '.a-price[data-a-size="b"] .a-offscreen',
+      '.a-price .a-offscreen',
+      '#priceblock_ourprice',
+      '#priceblock_dealprice',
+      '#priceblock_saleprice',
+      '.a-color-price'
     ];
-    return this.getTextContent(selectors);
+
+    const isValidNumericPrice = (str: string): boolean => {
+      const parsed = DataNormalizer.parsePrice(str);
+      return typeof parsed === 'number' && !isNaN(parsed) && parsed > 0;
+    };
+
+    // 1. Search inside primary buybox containers
+    for (const boxSel of buyboxSelectors) {
+      const container = document.querySelector(boxSel);
+      if (container) {
+        for (const childSel of priceChildSelectors) {
+          const el = container.querySelector(childSel);
+          if (el && el.textContent) {
+            const text = el.textContent.trim();
+            if (text && isValidNumericPrice(text)) {
+              return text;
+            }
+          }
+        }
+
+        const wholeEl = container.querySelector('.a-price-whole');
+        const fractionEl = container.querySelector('.a-price-fraction');
+        if (wholeEl && wholeEl.textContent) {
+          const whole = wholeEl.textContent.replace(/[^0-9]/g, '');
+          const fraction = fractionEl ? fractionEl.textContent?.replace(/[^0-9]/g, '') || '00' : '00';
+          if (whole) {
+            const constructed = `${whole}.${fraction}`;
+            if (isValidNumericPrice(constructed)) {
+              return constructed;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Fallback to document-wide selectors
+    for (const childSel of priceChildSelectors) {
+      const el = document.querySelector(childSel);
+      if (el && el.textContent) {
+        const text = el.textContent.trim();
+        if (text && isValidNumericPrice(text)) {
+          return text;
+        }
+      }
+    }
+
+    // 3. Global whole + fraction fallback
+    const globalWhole = document.querySelector('.a-price-whole');
+    const globalFraction = document.querySelector('.a-price-fraction');
+    if (globalWhole && globalWhole.textContent) {
+      const whole = globalWhole.textContent.replace(/[^0-9]/g, '');
+      const fraction = globalFraction ? globalFraction.textContent?.replace(/[^0-9]/g, '') || '00' : '00';
+      if (whole) {
+        const constructed = `${whole}.${fraction}`;
+        if (isValidNumericPrice(constructed)) {
+          return constructed;
+        }
+      }
+    }
+
+    return null;
   }
 
   public static getOriginalPriceString(): string | null {
-    const selectors = [
-      '.basisPrice .a-offscreen',
-      'span.a-text-strike'
+    const buyboxSelectors = [
+      '#corePriceDisplay_desktop_feature_div',
+      '#corePrice_desktop',
+      '#apex_desktop',
+      '#buybox',
+      '#price',
+      '#centerCol'
     ];
-    return this.getTextContent(selectors);
+
+    const strikeChildSelectors = [
+      '.basisPrice .a-offscreen',
+      '.a-text-price .a-offscreen',
+      'span.a-text-strike',
+      '.a-price[data-a-strike="true"] .a-offscreen',
+      '#priceblock_listprice'
+    ];
+
+    const isValidNumericPrice = (str: string): boolean => {
+      const parsed = DataNormalizer.parsePrice(str);
+      return typeof parsed === 'number' && !isNaN(parsed) && parsed > 0;
+    };
+
+    for (const boxSel of buyboxSelectors) {
+      const container = document.querySelector(boxSel);
+      if (container) {
+        for (const childSel of strikeChildSelectors) {
+          const el = container.querySelector(childSel);
+          if (el && el.textContent) {
+            const text = el.textContent.trim();
+            if (text && isValidNumericPrice(text)) {
+              return text;
+            }
+          }
+        }
+      }
+    }
+
+    for (const childSel of strikeChildSelectors) {
+      const el = document.querySelector(childSel);
+      if (el && el.textContent) {
+        const text = el.textContent.trim();
+        if (text && isValidNumericPrice(text)) {
+          return text;
+        }
+      }
+    }
+
+    return null;
   }
 
   public static getRatingString(): string | null {

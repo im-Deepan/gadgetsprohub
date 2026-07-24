@@ -10,7 +10,7 @@ import { apiFetch, clearApiCache } from '../utils/apiClient';
 import { parseSpecificationsString } from '../utils/specParser';
 import { generateSlug } from '../utils/slug';
 
-const DEFAULT_AFFILIATE_CODE = 'AFFIL_HUB_26';
+const DEFAULT_AFFILIATE_CODE = '';
 const BLANK_PROD_FORM = {
   name: '',
   slug: '',
@@ -23,7 +23,7 @@ const BLANK_PROD_FORM = {
   description: '',
   longDescription: '',
   affiliateLink: '',
-  affiliateCode: DEFAULT_AFFILIATE_CODE,
+  affiliateCode: '',
   images: '',
   features: '',
   specKeyVal: '',
@@ -62,6 +62,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [expandedVisitorId, setExpandedVisitorId] = useState<string | null>(null);
   const [logsPage, setLogsPage] = useState(1);
   const [productPage, setProductPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   
   // Security audit trail States
   const [securityLogs, setSecurityLogs] = useState<Array<{ _id?: string; date?: string; userId?: string; user?: { name?: string; email?: string }; action?: string; ipAddress?: string; location?: string; details?: string; timestamp?: string | Date; adminEmail?: string; targetId?: string; userAgent?: string; id?: string }>>([]);
@@ -321,6 +323,16 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     }
   }, [token, user, authLoading]);
 
+  // Fetch tab-specific data whenever activeTab, productPage, or token changes
+  useEffect(() => {
+    if (!token) return;
+    const controller = new AbortController();
+    loadAdminMetrics(controller.signal);
+    return () => {
+      controller.abort();
+    };
+  }, [token, activeTab, productPage]);
+
 
 
   // Polling for general user list synchronization
@@ -345,215 +357,229 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     return () => clearInterval(pollInterval);
   }, [token, activeTab]);
 
-  const loadAdminMetrics = async (signal?: AbortSignal) => {
-    setLoading(true);
-    if (signal?.aborted) return;
-    
-    // Reset all tab errors
-    setProductsError(null);
-    setCategoriesError(null);
-    setBlogsError(null);
-    setMessagesError(null);
-    setTelemetryError(null);
-    setSundayLogsError(null);
-    setUsersError(null);
-    setSecurityLogsError(null);
-
-    let pData: Product[] = [];
-    let cData: Category[] = [];
-    let bData: Blog[] = [];
-    let mData: Message[] = [];
-    let visitors = 0;
-    let telemetryClicks = 0;
-    let telemetryConversions = 0;
-
-    // 1. Fetch Catalog Specs
+  // Tab-specific modular data fetchers for optimal network performance
+  const fetchOverviewData = async (signal?: AbortSignal) => {
     try {
-      const res = await apiFetch('/api/products?limit=5000', { signal });
+      const [analyticsRes, msgRes, catRes] = await Promise.all([
+        apiFetch('/api/admin/analytics', { signal }).catch(() => null),
+        apiFetch('/api/admin/messages', { signal }).catch(() => null),
+        apiFetch('/api/categories', { signal }).catch(() => null)
+      ]);
+
       if (signal?.aborted) return;
+
+      if (analyticsRes && analyticsRes.ok) {
+        const aData = await analyticsRes.json();
+        setAnalyticsData(aData.analytics || []);
+        if (aData.socialClicks) setSocialClicks(aData.socialClicks);
+        if (aData.districts) setDistrictStats(prev => ({ ...prev, ...(aData.districts || {}) }));
+
+        const visitors = aData.summary?.visitors || 0;
+        const clicks = aData.summary?.clicks || 0;
+        const conversions = aData.summary?.conversions || 0;
+        const estimated = (clicks > 0 || conversions > 0) ? Number((clicks * 0.08 + conversions * 4.5).toFixed(2)) : 0;
+
+        setStats(prev => ({
+          ...prev,
+          totalVisitors: visitors,
+          totalClicks: clicks,
+          totalConversions: conversions,
+          estimatedEarnings: estimated
+        }));
+      }
+
+      if (msgRes && msgRes.ok) {
+        const mData = await msgRes.json();
+        const msgList = Array.isArray(mData) ? mData : [];
+        setMessages(msgList);
+        const unreads = msgList.filter((m: any) => !m?.read).length;
+        setStats(prev => ({ ...prev, unreadMessages: unreads }));
+      }
+
+      if (catRes && catRes.ok) {
+        const cData = await catRes.json();
+        setCategories(Array.isArray(cData) ? cData : []);
+      }
+    } catch (err) {
+      console.warn('Overview data fetch error:', err);
+    }
+  };
+
+  const fetchProductsTabData = async (page: number, signal?: AbortSignal) => {
+    setProductsError(null);
+    try {
+      const [res, catRes] = await Promise.all([
+        apiFetch(`/api/products?page=${page}&limit=10`, { signal }),
+        apiFetch('/api/categories', { signal }).catch(() => null)
+      ]);
+      if (signal?.aborted) return;
+
       if (res.ok) {
         const d = await res.json();
         if (signal?.aborted) return;
-        pData = d.products || [];
+        const pData = d.products || [];
         setProducts(Array.isArray(pData) ? pData : []);
+        setTotalProducts(d.total || (Array.isArray(pData) ? pData.length : 0));
+        setTotalPages(d.pages || 1);
       } else {
         const errJson = await res.json().catch(() => ({}));
         if (signal?.aborted) return;
         setProductsError(errJson.error || `Failed to fetch Catalog: Status ${res.status}`);
+      }
+
+      if (catRes && catRes.ok) {
+        const cData = await catRes.json();
+        setCategories(Array.isArray(cData) ? cData : []);
       }
     } catch (e: unknown) {
       if (signal?.aborted) return;
       const errorObj = e as { message?: string };
       setProductsError(errorObj.message || "Failed to connect to Catalog server.");
     }
+  };
 
-    // 2. Fetch Classification Categories
+  const fetchCategoriesTabData = async (signal?: AbortSignal) => {
+    setCategoriesError(null);
     try {
       const res = await apiFetch('/api/categories', { signal });
       if (signal?.aborted) return;
       if (res.ok) {
-        cData = await res.json();
-        if (signal?.aborted) return;
+        const cData = await res.json();
         setCategories(Array.isArray(cData) ? cData : []);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        if (signal?.aborted) return;
-        setCategoriesError(errJson.error || `Failed to fetch Classifications: Status ${res.status}`);
+        setCategoriesError(errJson.error || `Failed to fetch Categories: Status ${res.status}`);
       }
     } catch (e: unknown) {
       if (signal?.aborted) return;
-      const errorObj = e as { message?: string };
-      setCategoriesError(errorObj.message || "Failed to connect to Classifications server.");
+      setCategoriesError((e as any).message || "Failed to connect to Categories server.");
     }
+  };
 
-    // 3. Fetch Blog Guide Manuals
+  const fetchBlogsTabData = async (signal?: AbortSignal) => {
+    setBlogsError(null);
     try {
       const res = await apiFetch('/api/blogs', { signal });
       if (signal?.aborted) return;
       if (res.ok) {
         const d = await res.json();
-        if (signal?.aborted) return;
-        bData = d.blogs || [];
-        setBlogs(Array.isArray(bData) ? bData : []);
+        setBlogs(Array.isArray(d.blogs) ? d.blogs : (Array.isArray(d) ? d : []));
       } else {
         const errJson = await res.json().catch(() => ({}));
-        if (signal?.aborted) return;
         setBlogsError(errJson.error || `Failed to fetch Manual Guides: Status ${res.status}`);
       }
     } catch (e: unknown) {
       if (signal?.aborted) return;
-      const errorObj = e as { message?: string };
-      setBlogsError(errorObj.message || "Failed to connect to Manual Guides server.");
+      setBlogsError((e as any).message || "Failed to connect to Manual Guides server.");
     }
+  };
 
-    // 4. Fetch Message Inquiries
+  const fetchMessagesTabData = async (signal?: AbortSignal) => {
+    setMessagesError(null);
     try {
-      const msgRes = await apiFetch('/api/admin/messages', { signal });
+      const res = await apiFetch('/api/admin/messages', { signal });
       if (signal?.aborted) return;
-      if (msgRes.ok) {
-        mData = await msgRes.json();
-        if (signal?.aborted) return;
-        setMessages(Array.isArray(mData) ? mData : []);
+      if (res.ok) {
+        const mData = await res.json();
+        const msgList = Array.isArray(mData) ? mData : [];
+        setMessages(msgList);
+        setStats(prev => ({ ...prev, unreadMessages: msgList.filter((m: any) => !m?.read).length }));
       } else {
-        const errJson = await msgRes.json().catch(() => ({}));
-        if (signal?.aborted) return;
-        setMessagesError(errJson.error || `Failed to fetch Help Inquiries: Status ${msgRes.status}`);
+        const errJson = await res.json().catch(() => ({}));
+        setMessagesError(errJson.error || `Failed to fetch Messages: Status ${res.status}`);
       }
     } catch (e: unknown) {
       if (signal?.aborted) return;
-      const errorObj = e as { message?: string };
-      setMessagesError(errorObj.message || "Failed to connect to Help Inquiries server.");
+      setMessagesError((e as any).message || "Failed to connect to Messages server.");
     }
+  };
 
-    // 5. Fetch Traffic Logs Telemetry
+  const fetchAnalyticsTabData = async (signal?: AbortSignal) => {
+    setTelemetryError(null);
     try {
-      const analyticsRes = await apiFetch('/api/admin/analytics', { signal });
+      const res = await apiFetch('/api/admin/analytics', { signal });
       if (signal?.aborted) return;
-      if (analyticsRes.ok) {
-        const aData = await analyticsRes.json();
-        if (signal?.aborted) return;
+      if (res.ok) {
+        const aData = await res.json();
         setAnalyticsData(aData.analytics || []);
-        visitors = aData.summary?.visitors || 0;
-        telemetryClicks = aData.summary?.clicks || 0;
-        telemetryConversions = aData.summary?.conversions || 0;
-        if (aData.socialClicks) {
-          setSocialClicks(aData.socialClicks);
-        }
-        setDistrictStats(prev => ({
-          ...prev,
-          ...(aData?.districts || {})
-        }));
+        if (aData.socialClicks) setSocialClicks(aData.socialClicks);
+        if (aData.districts) setDistrictStats(prev => ({ ...prev, ...(aData.districts || {}) }));
       } else {
-        const errJson = await analyticsRes.json().catch(() => ({}));
-        if (signal?.aborted) return;
-        setTelemetryError(errJson.error || `Failed to fetch Traffic logs: Status ${analyticsRes.status}`);
+        const errJson = await res.json().catch(() => ({}));
+        setTelemetryError(errJson.error || `Failed to fetch Traffic logs: Status ${res.status}`);
       }
     } catch (e: unknown) {
       if (signal?.aborted) return;
-      const errorObj = e as { message?: string };
-      setTelemetryError(errorObj.message || "Failed to connect to Traffic Analytics server.");
+      setTelemetryError((e as any).message || "Failed to connect to Traffic Analytics server.");
     }
+  };
 
-    // 6. Fetch User Accounts Sourcing
+  const fetchUsersTabData = async (signal?: AbortSignal) => {
+    setUsersError(null);
     try {
-      if (token) {
-        const usersRes = await apiFetch('/api/admin/users', { signal });
-        if (signal?.aborted) return;
-        if (usersRes.ok) {
-          const uData = await usersRes.json();
-          if (signal?.aborted) return;
-          setUsers(Array.isArray(uData) ? uData : (uData?.users || []));
-        } else {
-          const errData = await usersRes.json().catch(() => ({}));
-          if (signal?.aborted) return;
-          setUsersError(errData.error || `Failed to fetch User Accounts: status ${usersRes.status}`);
-        }
+      const res = await apiFetch('/api/admin/users', { signal });
+      if (signal?.aborted) return;
+      if (res.ok) {
+        const uData = await res.json();
+        setUsers(Array.isArray(uData) ? uData : (uData?.users || []));
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setUsersError(errData.error || `Failed to fetch User Accounts: status ${res.status}`);
       }
     } catch (e: unknown) {
       if (signal?.aborted) return;
-      const errorObj = e as { message?: string };
-      setUsersError(errorObj.message || "Failed to connect to User Accounts server.");
+      setUsersError((e as any).message || "Failed to connect to User Accounts server.");
     }
+  };
 
-    // 7. Fetch Sunday Automation Logs
+  const fetchSundayLogsTabData = async (signal?: AbortSignal) => {
+    setSundayLogsError(null);
     try {
-      if (token) {
-        const logsRes = await apiFetch('/api/admin/sunday-logs', { signal });
-        if (signal?.aborted) return;
-        if (logsRes.ok) {
-          const logsData = await logsRes.json();
-          if (signal?.aborted) return;
-          setSundayLogs(Array.isArray(logsData) ? logsData : (logsData?.logs || []));
-        } else {
-          const errData = await logsRes.json().catch(() => ({}));
-          if (signal?.aborted) return;
-          setSundayLogsError(errData.error || `Failed to fetch Sunday Logs: status ${logsRes.status}`);
-        }
+      const res = await apiFetch('/api/admin/sunday-logs', { signal });
+      if (signal?.aborted) return;
+      if (res.ok) {
+        const logsData = await res.json();
+        setSundayLogs(Array.isArray(logsData) ? logsData : (Array.isArray(logsData?.logs) ? logsData.logs : []));
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setSundayLogsError(errData.error || `Failed to fetch Sunday Logs: status ${res.status}`);
       }
     } catch (err: unknown) {
       if (signal?.aborted) return;
-      const errorObj = err as { message?: string };
-      setSundayLogsError(errorObj.message || 'Failed code connection for automated scheduler logs.');
+      setSundayLogsError((err as any).message || 'Failed code connection for automated scheduler logs.');
     }
+  };
 
-    // 8. Fetch Security Logs (Audit Trail)
+  const fetchSecurityLogsTabData = async (signal?: AbortSignal) => {
+    setSecurityLogsError(null);
     try {
-      if (token) {
-        const secRes = await apiFetch('/api/admin/security-logs', { signal });
-        if (signal?.aborted) return;
-        if (secRes.ok) {
-          const secData = await secRes.json();
-          if (signal?.aborted) return;
-          setSecurityLogs(Array.isArray(secData) ? secData : (secData?.logs || secData?.data || []));
-        } else {
-          const errData = await secRes.json().catch(() => ({}));
-          if (signal?.aborted) return;
-          setSecurityLogsError(errData.error || `Failed to fetch Security Logs: status ${secRes.status}`);
-        }
+      const res = await apiFetch('/api/admin/security-logs', { signal });
+      if (signal?.aborted) return;
+      if (res.ok) {
+        const secData = await res.json();
+        setSecurityLogs(Array.isArray(secData) ? secData : (Array.isArray(secData?.logs) ? secData.logs : (Array.isArray(secData?.data) ? secData.data : [])));
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setSecurityLogsError(errData.error || `Failed to fetch Security Logs: status ${res.status}`);
       }
     } catch (err: unknown) {
       if (signal?.aborted) return;
-      const errorObj = err as { message?: string };
-      setSecurityLogsError(errorObj.message || 'Failed code connection for security logs.');
+      setSecurityLogsError((err as any).message || 'Failed code connection for security logs.');
     }
+  };
 
-    // Calculate aggregates safely with real recorded metrics
+  const loadAdminMetrics = async (signal?: AbortSignal) => {
+    setLoading(true);
     try {
-      const clicks = (telemetryClicks !== undefined && telemetryClicks !== null) ? telemetryClicks : pData.reduce((acc, p) => acc + (p?.clicks || 0), 0);
-      const conversions = (telemetryConversions !== undefined && telemetryConversions !== null) ? telemetryConversions : pData.reduce((acc, p) => acc + (p?.conversions || 0), 0);
-      const estimated = Number((clicks * 0.08 + conversions * 4.5).toFixed(2));
-      const unreads = mData.filter(m => !m?.read).length;
-
-      if (signal?.aborted) return;
-      setStats({
-        totalClicks: clicks,
-        totalConversions: conversions,
-        estimatedEarnings: estimated,
-        unreadMessages: unreads,
-        totalVisitors: visitors || 0
-      });
-    } catch (aggErr) {
-      console.warn('Silent aggregate metrics loading warning:', aggErr);
+      await fetchOverviewData(signal);
+      if (activeTab === 'products') await fetchProductsTabData(productPage, signal);
+      else if (activeTab === 'categories') await fetchCategoriesTabData(signal);
+      else if (activeTab === 'blogs') await fetchBlogsTabData(signal);
+      else if (activeTab === 'messages') await fetchMessagesTabData(signal);
+      else if (activeTab === 'telemetry') await fetchAnalyticsTabData(signal);
+      else if (activeTab === 'scheduler') await fetchSundayLogsTabData(signal);
+      else if (activeTab === 'users') await fetchUsersTabData(signal);
+      else if (activeTab === 'security-logs') await fetchSecurityLogsTabData(signal);
     } finally {
       if (!signal?.aborted) {
         setLoading(false);
@@ -564,7 +590,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const handleReloadTraffic = async () => {
     setRefreshingTraffic(true);
     try {
-      await loadAdminMetrics();
+      await fetchAnalyticsTabData();
+      await fetchOverviewData();
     } catch (err: unknown) {
       console.warn('Silent metrics reload error:', err);
     } finally {
@@ -671,14 +698,35 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   };
 
   useEffect(() => {
+    if (!token) return;
     const controller = new AbortController();
-    if (token) {
-      loadAdminMetrics(controller.signal).catch(() => {});
+    const signal = controller.signal;
+
+    // Fetch overview statistics + current tab data
+    fetchOverviewData(signal);
+
+    if (activeTab === 'products') {
+      fetchProductsTabData(productPage, signal);
+    } else if (activeTab === 'categories') {
+      fetchCategoriesTabData(signal);
+    } else if (activeTab === 'blogs') {
+      fetchBlogsTabData(signal);
+    } else if (activeTab === 'messages') {
+      fetchMessagesTabData(signal);
+    } else if (activeTab === 'telemetry') {
+      fetchAnalyticsTabData(signal);
+    } else if (activeTab === 'scheduler') {
+      fetchSundayLogsTabData(signal);
+    } else if (activeTab === 'users') {
+      fetchUsersTabData(signal);
+    } else if (activeTab === 'security-logs') {
+      fetchSecurityLogsTabData(signal);
     }
+
     return () => {
       controller.abort();
     };
-  }, [token]);
+  }, [token, activeTab, productPage]);
 
   // Handle Mark Message read
   const handleMarkRead = async (msgId: string) => {
@@ -727,8 +775,18 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       return;
     }
 
-    if (!prodForm.affiliateLink || !prodForm.affiliateLink.startsWith('http') || prodForm.affiliateLink.includes('B501...')) {
-      triggerAlert("Validation Error", "A valid, resolvable affiliate link starting with http:// or https:// is required.");
+    if (!prodForm.affiliateLink || (!prodForm.affiliateLink.startsWith('http://') && !prodForm.affiliateLink.startsWith('https://'))) {
+      triggerAlert("Validation Error", "A valid affiliate URL starting with http:// or https:// is required.");
+      return;
+    }
+
+    if (prodForm.affiliateLink.includes('B501...') || prodForm.affiliateLink.includes('example.com') || prodForm.affiliateLink.toLowerCase().includes('placeholder')) {
+      triggerAlert("Validation Error", "Placeholder sample affiliate URLs are not allowed. Please enter a real product link.");
+      return;
+    }
+
+    if (prodForm.affiliateCode === 'AFFIL_HUB_26') {
+      triggerAlert("Validation Error", "Placeholder affiliate code AFFIL_HUB_26 is not allowed. Please enter a custom affiliate tracking code.");
       return;
     }
 
@@ -1220,7 +1278,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 ) : (
                   [...resolvedProducts].filter(p => (p?.clicks || 0) > 0).sort((a,b) => (b?.clicks || 0) - (a?.clicks || 0)).slice(0, 4).map((p, index) => {
                     const clickCount = p.clicks || 0;
-                    const convRating = p.conversions || Math.round(clickCount * 0.12);
+                    const convRating = p.conversions || 0;
                     return (
                       <div key={p?._id} className="py-2 flex items-center justify-between gap-4">
                         <div className="truncate max-w-[180px] sm:max-w-[260px]">
@@ -1507,10 +1565,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 onRetry={loadAdminMetrics} 
               />
             ) : (() => {
-              const totalProductPages = Math.ceil(resolvedProducts.length / 10) || 1;
-              const currentProductPage = Math.min(productPage, totalProductPages);
+              const totalProductPages = totalPages || 1;
+              const currentProductPage = productPage;
+              const totalCount = totalProducts || resolvedProducts.length;
               const startIndex = (currentProductPage - 1) * 10;
-              const paginatedProducts = resolvedProducts.slice(startIndex, startIndex + 10);
+              const paginatedProducts = resolvedProducts;
               const catMap = new Map<string, string>();
               categories.forEach(c => catMap.set(String(c?._id), c?.name));
 
@@ -1639,9 +1698,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         <p className="text-[11px] text-slate-400 dark:text-slate-300 font-medium">
                           Showing <span className="font-extrabold text-slate-800 dark:text-white font-mono">{startIndex + 1}</span> to{' '}
                           <span className="font-extrabold text-slate-800 dark:text-white font-mono">
-                            {Math.min(startIndex + 10, resolvedProducts.length)}
+                            {Math.min(startIndex + paginatedProducts.length, totalCount)}
                           </span>{' '}
-                          of <span className="font-extrabold text-slate-800 dark:text-white font-mono">{resolvedProducts.length}</span> curation specs
+                          of <span className="font-extrabold text-slate-800 dark:text-white font-mono">{totalCount}</span> curation specs
                         </p>
                       </div>
                       <div className="flex items-center gap-2">

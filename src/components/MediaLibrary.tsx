@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Upload, Trash2, Search, Image as ImageIcon, BarChart2, RefreshCw } from 'lucide-react';
+import { apiFetch } from '../utils/apiClient';
 
 export function MediaLibrary({ token }: { token: string | null }) {
   const [media, setMedia] = useState<any[]>([]);
@@ -9,7 +10,7 @@ export function MediaLibrary({ token }: { token: string | null }) {
   const fetchMedia = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/media', {
+      const res = await apiFetch('/api/admin/media', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -17,7 +18,7 @@ export function MediaLibrary({ token }: { token: string | null }) {
         setMedia(data.data);
       }
       
-      const statsRes = await fetch('/api/admin/media/analytics', {
+      const statsRes = await apiFetch('/api/admin/media/analytics', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const statsData = await statsRes.json();
@@ -36,7 +37,7 @@ export function MediaLibrary({ token }: { token: string | null }) {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this media asset?')) return;
-    await fetch(`/api/admin/media/${id}`, {
+    await apiFetch(`/api/admin/media/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -50,7 +51,7 @@ export function MediaLibrary({ token }: { token: string | null }) {
     const formData = new FormData();
     formData.append('file', file);
     
-    await fetch('/api/admin/media/upload', {
+    await apiFetch('/api/admin/media/upload', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: formData

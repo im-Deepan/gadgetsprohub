@@ -406,7 +406,16 @@ export const validateAdminProduct = [
     .withMessage('Affiliate link is required and must be a string')
     .trim()
     .isLength({ max: 2048 })
-    .withMessage('Affiliate link must be under 2048 characters'),
+    .withMessage('Affiliate link must be under 2048 characters')
+    .custom((val: string) => {
+      if (!val.startsWith('http://') && !val.startsWith('https://')) {
+        throw new Error('Affiliate link must be a valid URL starting with http:// or https://');
+      }
+      if (val.includes('B501...') || val.includes('example.com') || val.toLowerCase().includes('placeholder')) {
+        throw new Error('Placeholder sample affiliate URLs are not allowed. Please enter a real product link.');
+      }
+      return true;
+    }),
   body('description')
     .optional()
     .isString()
@@ -448,7 +457,13 @@ export const validateAdminProduct = [
     .withMessage('Affiliate code must be a string')
     .trim()
     .isLength({ max: 128 })
-    .withMessage('Affiliate code must be under 128 characters'),
+    .withMessage('Affiliate code must be under 128 characters')
+    .custom((val: string) => {
+      if (val === 'AFFIL_HUB_26') {
+        throw new Error('Placeholder affiliate code AFFIL_HUB_26 is not allowed. Please enter a custom affiliate code.');
+      }
+      return true;
+    }),
   body('sku')
     .optional()
     .isString()

@@ -476,7 +476,16 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               </button>
             )}
             <button
-              className="hidden md:block rounded-lg bg-indigo-50 border border-indigo-50 hover:bg-indigo-50 text-[10px] font-bold text-indigo-600 py-1.5 px-2.5 cursor-pointer dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-200 transition-colors"
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setSpecModalProduct(p); }}
+              className="rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 py-1.5 px-2.5 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors"
+            >
+              Specs
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onNavigate('product-detail', p.slug); }}
+              className="rounded-lg bg-indigo-50 border border-indigo-50 hover:bg-indigo-100 text-[10px] font-bold text-indigo-600 py-1.5 px-2.5 cursor-pointer dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-200 transition-colors"
             >
               See Details
             </button>
@@ -1119,16 +1128,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
                 {/* Tabular Specifications Map */}
                 {(() => {
-                  let modalSpecMap: Record<string, string> = {};
-                  if (specModalProduct.specifications) {
-                    if (specModalProduct.specifications instanceof Map) {
-                      modalSpecMap = Object.fromEntries((specModalProduct.specifications as Map<any, any>).entries());
-                    } else if (typeof specModalProduct.specifications === 'object') {
-                      modalSpecMap = { ...specModalProduct.specifications };
-                    } else if (typeof specModalProduct.specifications === 'string') {
-                      modalSpecMap = parseSpecificationsString(specModalProduct.specifications);
-                    }
-                  }
+                  const modalSpecMap = parseSpecificationsString(specModalProduct?.specifications);
                   return (
                     <div className="space-y-2">
                       <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300 dark:text-slate-400">Technical Specifications</h4>

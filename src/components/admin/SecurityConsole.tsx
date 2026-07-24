@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../../utils/apiClient';
 import { 
   Shield, 
   Key, 
@@ -68,7 +69,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
         'Authorization': `Bearer ${token}`,
         ...options.headers
       };
-      const res = await fetch(url, { ...options, headers });
+      const res = await apiFetch(url, { ...options, headers });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'API call failed');

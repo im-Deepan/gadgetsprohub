@@ -173,36 +173,77 @@ async function fetchRealMarketplaceData(url: string): Promise<any> {
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5'
       }
     });
     clearTimeout(timeoutId);
     if (!res.ok) return null;
     const html = await res.text();
     
-    // Extract OpenGraph / Meta title
-    const titleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i) || 
-                       html.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i) ||
-                       html.match(/<title>([^<]+)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').trim() : null;
+    // Extract Title (including Amazon productTitle span)
+    let title: string | null = null;
+    const amazonTitleMatch = html.match(/<span\s+id=["']productTitle["'][^>]*>\s*([^<]+)\s*<\/span>/i);
+    if (amazonTitleMatch) {
+      title = amazonTitleMatch[1].trim();
+    } else {
+      const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i) || 
+                           html.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i) ||
+                           html.match(/<title>([^<]+)<\/title>/i);
+      if (ogTitleMatch) {
+        title = ogTitleMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/^Amazon\.[a-z\.]+:\s*/i, '').trim();
+      }
+    }
 
-    // Extract OpenGraph Image
-    const imageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i) ||
-                       html.match(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']+)["']/i);
-    const image = imageMatch ? imageMatch[1] : null;
+    // Extract Image (including Amazon landingImage)
+    let image: string | null = null;
+    const amazonImageMatch = html.match(/<img[^>]*id=["']landingImage["'][^>]*src=["']([^"']+)["']/i) ||
+                             html.match(/data-old-hires=["']([^"']+)["']/i) ||
+                             html.match(/data-a-dynamic-image=["']\{&quot;(https:\/\/[^&"]+)&quot;/i);
+    if (amazonImageMatch) {
+      image = amazonImageMatch[1];
+    } else {
+      const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i) ||
+                           html.match(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']+)["']/i);
+      if (ogImageMatch) {
+        image = ogImageMatch[1];
+      }
+    }
 
-    // Extract standard OpenGraph price amount
-    const priceMatch = html.match(/<meta\s+property=["']og:price:amount["']\s+content=["']([^"']+)["']/i) ||
-                       html.match(/<meta\s+property=["']product:price:amount["']\s+content=["']([^"']+)["']/i) ||
-                       html.match(/["']price["']\s*:\s*["']?(\d+(?:\.\d{1,2})?)["']?/i);
-    const price = priceMatch ? parseFloat(priceMatch[1]) : null;
+    // Extract Price (including Amazon price classes)
+    let price: number | null = null;
+    const priceWholeMatch = html.match(/<span\s+class=["']a-price-whole["'][^>]*>([\d\.,]+)/i);
+    const priceFracMatch = html.match(/<span\s+class=["']a-price-fraction["'][^>]*>(\d+)/i);
+    if (priceWholeMatch) {
+      const whole = priceWholeMatch[1].replace(/[^0-9]/g, '');
+      const frac = priceFracMatch ? priceFracMatch[1] : '00';
+      price = parseFloat(`${whole}.${frac}`);
+    } else {
+      const priceOffscreen = html.match(/<span\s+class=["']a-offscreen["'][^>]*>\s*[\$₹€£]?\s*([\d\.,]+)/i) ||
+                             html.match(/id=["']priceblock_[^"']+["'][^>]*>\s*[\$₹€£]?\s*([\d\.,]+)/i) ||
+                             html.match(/<meta\s+property=["']og:price:amount["']\s+content=["']([^"']+)["']/i) ||
+                             html.match(/["']price["']\s*:\s*["']?(\d+(?:\.\d{1,2})?)["']?/i);
+      if (priceOffscreen) {
+        price = parseFloat(priceOffscreen[1].replace(/,/g, ''));
+      }
+    }
 
     // Extract Brand
-    const brandMatch = html.match(/<meta\s+property=["']product:brand["']\s+content=["']([^"']+)["']/i) ||
-                       html.match(/<meta\s+name=["']brand["']\s+content=["']([^"']+)["']/i);
-    const brand = brandMatch ? brandMatch[1] : null;
+    let brand: string | null = null;
+    const amazonBrandMatch = html.match(/<a\s+id=["']bylineInfo["'][^>]*>(?:Brand:\s*|Visit the\s*)?([^<]+)<\/a>/i) ||
+                             html.match(/<tr\s+class=["']po-brand["'][^>]*>.*?<span[^>]*>([^<]+)<\/span>/is);
+    if (amazonBrandMatch) {
+      brand = amazonBrandMatch[1].replace(/^Visit the\s+/i, '').replace(/\s+Store$/i, '').trim();
+    } else {
+      const ogBrandMatch = html.match(/<meta\s+property=["']product:brand["']\s+content=["']([^"']+)["']/i) ||
+                           html.match(/<meta\s+name=["']brand["']\s+content=["']([^"']+)["']/i);
+      if (ogBrandMatch) {
+        brand = ogBrandMatch[1].trim();
+      }
+    }
 
-    if (title) {
+    if (title || price || image) {
       return { title, image, price, brand };
     }
   } catch (err) {
