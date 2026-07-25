@@ -1262,7 +1262,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold uppercase tracking-wider font-mono">Affiliate Tag Active</span>
               <h3 className="text-sm font-bold text-slate-800 mt-1 dark:text-white">Redirecting to Partner Store...</h3>
               <p className="text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed dark:text-slate-300">
-                Opening authorized outlet for <span className="font-bold text-slate-700 dark:text-slate-50">{product.name}</span>. The discount coupon <span className="font-bold text-indigo-500 font-mono">{product.affiliateCode || 'HUB_DEAL_2026'}</span> checks active on landing.
+                Opening authorized partner store for <span className="font-bold text-slate-700 dark:text-slate-50">{product.name}</span> with affiliate referral tracking enabled.
               </p>
             </div>
 

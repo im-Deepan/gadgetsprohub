@@ -16,8 +16,7 @@
     "https://*.amazon.co.uk/*",
     "https://*.amazon.ca/*",
     "https://gadgetsprohub.onrender.com/*",
-    "https://ais-pre-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app/*",
-    "http://localhost:3000/*"
+    "https://ais-pre-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app/*"
   ],
   "background": {
     "service_worker": "background.js",

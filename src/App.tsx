@@ -840,16 +840,16 @@ const AppContent: React.FC = () => {
 // queryClient is now imported from './utils/queryClient'
 
 const setupGlobalErrorTracking = () => {
-  window.addEventListener('error', (event) => {
-    captureError(event.error || new Error(event.message), {
+  const handleError = (event: ErrorEvent) => {
+    captureError(event.error || new Error(event.message || 'Global error'), {
       context: 'Global error handler',
       filename: event.filename,
       lineno: event.lineno,
       colno: event.colno,
     });
-  });
+  };
 
-  window.addEventListener('unhandledrejection', (event) => {
+  const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
     const reason = event.reason;
     if (
       !reason ||
@@ -858,6 +858,7 @@ const setupGlobalErrorTracking = () => {
       (typeof reason === 'string' && (reason.includes('abort') || reason.includes('canceled') || reason.includes('cancelled'))) ||
       (reason && typeof reason === 'object' && (
         reason.name === 'AbortError' ||
+        reason.name === 'CanceledError' ||
         String(reason.message || '').toLowerCase().includes('abort') ||
         String(reason.message || '').toLowerCase().includes('canceled') ||
         String(reason.message || '').toLowerCase().includes('cancelled') ||
@@ -871,12 +872,21 @@ const setupGlobalErrorTracking = () => {
     captureError(reason, {
       context: 'Unhandled promise rejection',
     });
-  });
+  };
+
+  window.addEventListener('error', handleError);
+  window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+  return () => {
+    window.removeEventListener('error', handleError);
+    window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+  };
 };
 
 export default function App() {
   useEffect(() => {
-    setupGlobalErrorTracking();
+    const cleanup = setupGlobalErrorTracking();
+    return cleanup;
   }, []);
 
   return (

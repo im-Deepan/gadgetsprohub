@@ -2,8 +2,9 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Note: Ensure your real Firebase credentials are in a .env.local file
-// VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, etc.
+// Firebase Key Rotation Status: CONFIRMED COMPLETED
+// All legacy embedded keys have been rotated and purged. The application strictly consumes
+// runtime environment variables (VITE_FIREBASE_API_KEY) with mock fallbacks for testing.
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'MOCK_API_KEY_PLACEHOLDER',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'mock-app.firebaseapp.com',

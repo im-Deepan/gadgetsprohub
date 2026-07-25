@@ -12,15 +12,7 @@ import {
   Clock, ArrowRight, RefreshCw
 } from 'lucide-react';
 
-const TAMIL_NADU_DISTRICTS = [
-  "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
-  "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
-  "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris",
-  "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivagangai",
-  "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli",
-  "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore",
-  "Viluppuram", "Virudhunagar"
-];
+import { TAMIL_NADU_DISTRICTS } from '../utils/districts';
 
 interface ProfileProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -105,7 +97,15 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
         body: JSON.stringify({ newEmail: trimmedEmail })
       });
       const data = await res.json();
-      if (res.ok) {
+      if (data.smtpError) {
+        const smtpErrMsg = `SMTP Email Delivery Failure: ${data.smtpError}`;
+        const friendly = mapErrorToFriendly(smtpErrMsg, 'request email update');
+        setEmailUpdateStatus({ type: 'error', message: friendly.message });
+        showToast(friendly.message, 'error');
+        if (data.verificationUrlSimulated) {
+          setSimulatedEmailUrl(data.verificationUrlSimulated);
+        }
+      } else if (res.ok) {
         setEmailUpdateStatus({
           type: 'success',
           message: data.message || 'A verification link has been sent to your new email address.'

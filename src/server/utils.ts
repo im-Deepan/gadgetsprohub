@@ -41,6 +41,57 @@ export const isAdminEmail = (email: string | undefined): boolean => {
   return envAdmins.includes(normalized) || normalized === 'deepan20060609@gmail.com';
 };
 
+export const TAMIL_NADU_DISTRICTS = [
+  "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
+  "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
+  "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris",
+  "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivagangai",
+  "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli",
+  "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore",
+  "Viluppuram", "Virudhunagar"
+];
+
+export const sanitizeDistrict = (name: string): string => {
+  if (!name) return "Chennai";
+  const formatted = name.trim().toLowerCase();
+  
+  if (formatted.includes("trichy") || formatted.includes("tiruchirappalli") || formatted.includes("tiruchirapalli")) {
+    return "Tiruchirappalli";
+  }
+  if (formatted.includes("chennai") || formatted.includes("madras")) return "Chennai";
+  if (formatted.includes("coimbatore") || formatted.includes("kovai")) return "Coimbatore";
+  if (formatted.includes("madurai")) return "Madurai";
+  if (formatted.includes("salem")) return "Salem";
+  if (formatted.includes("nellai") || formatted.includes("tirunelveli")) return "Tirunelveli";
+  
+  if (
+    formatted.includes("ashburn") || 
+    formatted.includes("montreal") || 
+    formatted.includes("virginia") || 
+    formatted.includes("canada") || 
+    formatted.includes("bueren") || 
+    formatted.includes("zuerich") ||
+    formatted.includes("zurich") ||
+    formatted.includes("seattle") ||
+    formatted.includes("dublin") ||
+    formatted.includes("london") ||
+    formatted.includes("california") ||
+    formatted.includes("oregon") ||
+    formatted.includes("united states")
+  ) {
+    return "Chennai";
+  }
+
+  const found = TAMIL_NADU_DISTRICTS.find(
+    d => d.toLowerCase() === formatted || formatted.includes(d.toLowerCase())
+  );
+  if (found) {
+    return found;
+  }
+  
+  // Strictly fall back to a validated whitelisted district
+  return "Chennai";
+};
 export const getStorageEmail = (email: unknown): string | undefined => {
   if (typeof email !== 'string') return undefined;
   const trimmed = email.toLowerCase().trim();

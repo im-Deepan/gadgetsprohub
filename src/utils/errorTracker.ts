@@ -22,7 +22,10 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
   const normalizedMessage = (message || '').toLowerCase();
   const normalizedName = (name || '').toLowerCase();
   const normalizedStack = (stack || '').toLowerCase();
-  const normalizedContext = context?.context ? String(context.context).toLowerCase() : '';
+  const contextStr = typeof context === 'string' 
+    ? context 
+    : (context && typeof context === 'object' && 'context' in context ? String(context.context) : '');
+  const normalizedContext = contextStr.toLowerCase();
 
   // Suppress expected/normal request cancellation, abort error, and third-party iframe sandbox noise
   if (
@@ -65,8 +68,16 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     message === '' ||
     message === 'Error' ||
     message === '[object Object]' ||
-    // Suppress unhandled promise rejection with empty/generic error or no stack
-    (normalizedContext === 'unhandled promise rejection' && (!message || message === 'Error' || message === '[object Object]' || (normalizedName === 'error' && !stack))) ||
+    // Suppress unhandled promise rejection with empty/generic error
+    (normalizedContext === 'unhandled promise rejection' && (
+      !message || 
+      message === 'Error' || 
+      message === '[object Object]' || 
+      normalizedMessage === '' || 
+      normalizedMessage === 'error' ||
+      normalizedName === 'error' ||
+      normalizedName === ''
+    )) ||
     // Third-party AdSense / Doubleclick / Google adtrafficquality sandbox noise
     normalizedMessage.includes('adsbygoogle') ||
     normalizedMessage.includes('adsense') ||

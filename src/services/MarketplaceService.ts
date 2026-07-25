@@ -817,17 +817,24 @@ export class MarketplaceService {
     if (!rateDoc || !rateDoc.lastUpdated || (Date.now() - new Date(rateDoc.lastUpdated).getTime() > 24 * 3600 * 1000)) {
       rateDoc = await this.refreshExchangeRates().catch(() => null) || rateDoc;
     }
-    if (!rateDoc) return amount;
+    if (!rateDoc) throw new Error('Exchange rate data unavailable');
     const rates = Object.fromEntries(rateDoc.rates.entries());
     
     if (from === to) return amount;
     
+    if (from !== 'USD' && !rates[from]) {
+      throw new Error(`Unsupported source currency code: ${from}`);
+    }
+    if (to !== 'USD' && !rates[to]) {
+      throw new Error(`Unsupported target currency code: ${to}`);
+    }
+
     // Convert to USD (base)
-    const rateFrom = rates[from] || 1;
+    const rateFrom = from === 'USD' ? 1 : rates[from];
     const usdAmount = from === 'USD' ? amount : amount / rateFrom;
     
     // Convert from USD to target
-    const rateTo = rates[to] || 1;
+    const rateTo = to === 'USD' ? 1 : rates[to];
     return to === 'USD' ? usdAmount : usdAmount * rateTo;
   }
 
@@ -858,8 +865,9 @@ export class MarketplaceService {
       
       if (words.length > 1) {
         const queryWords = words.slice(0, 3).map(w => new RegExp(w, 'i'));
+        const escapedBrand = (productData.brand || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const matches = await ProductModel.find({
-          brand: { $regex: new RegExp(productData.brand || '', 'i') },
+          brand: { $regex: new RegExp(escapedBrand, 'i') },
           name: { $all: queryWords }
         }).limit(5);
 
@@ -879,6 +887,9 @@ export class MarketplaceService {
    * Merge primary and secondary products securely, combining specs and compiling comparisons
    */
   public async mergeProducts(primaryId: string, duplicateId: string, strategy: 'keep_primary' | 'keep_secondary' | 'combine'): Promise<any> {
+    if (String(primaryId) === String(duplicateId)) {
+      throw new Error('Self-merge guard: Cannot merge a product with itself.');
+    }
     const ProductModel = mongoose.model('Product');
     const primary = await ProductModel.findById(primaryId);
     const duplicate = await ProductModel.findById(duplicateId);

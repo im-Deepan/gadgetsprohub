@@ -2149,7 +2149,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                                 {sentReplySuccess === m?._id ? (
                                   <div className="text-[11px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-300 p-2.5 rounded-lg flex items-center gap-1.5">
-                                    <span>✓ Your email response has been simulated and marked sent!</span>
+                                    <span>✓ Email response sent successfully and marked read!</span>
                                   </div>
                                 ) : (
                                   <div className="flex gap-2 justify-end">
@@ -2161,21 +2161,33 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                           return;
                                         }
                                         
-                                        // Mark read automatically
-                                        if (!m?.read) {
-                                          await handleMarkRead(m?._id);
-                                        }
-
-                                        setSentReplySuccess(m?._id);
-                                        setTimeout(() => {
-                                          setSentReplySuccess(null);
-                                          setActiveReplyId(null);
-                                          setReplyTextMap(prev => {
-                                            const copy = { ...prev };
-                                            delete copy[m?._id];
-                                            return copy;
+                                        try {
+                                          const res = await apiFetch(`/api/admin/messages/reply/${m?._id}`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ replyText: replyText.trim() })
                                           });
-                                        }, 2500);
+
+                                          if (res.ok) {
+                                            clearApiCache();
+                                            setMessages(prev => prev.map(msg => msg?._id === m?._id ? { ...msg, read: true, replied: true } : msg));
+                                            setSentReplySuccess(m?._id);
+                                            setTimeout(() => {
+                                              setSentReplySuccess(null);
+                                              setActiveReplyId(null);
+                                              setReplyTextMap(prev => {
+                                                const copy = { ...prev };
+                                                delete copy[m?._id];
+                                                return copy;
+                                              });
+                                            }, 2500);
+                                          } else {
+                                            const errData = await res.json().catch(() => ({ error: 'Failed to send reply' }));
+                                            triggerAlert("Reply Error", errData.error || "Failed to send email reply.");
+                                          }
+                                        } catch (e: any) {
+                                          triggerAlert("Network Error", e.message || "Failed to reach server.");
+                                        }
                                       }}
                                       className="rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
                                     >

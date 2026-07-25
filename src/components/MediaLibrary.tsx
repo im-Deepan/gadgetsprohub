@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Upload, Trash2, Search, Image as ImageIcon, BarChart2, RefreshCw } from 'lucide-react';
 import { apiFetch } from '../utils/apiClient';
+import { ConfirmDialog } from './admin/ConfirmDialog';
 
 export function MediaLibrary({ token }: { token: string | null }) {
   const [media, setMedia] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const fetchMedia = async () => {
     setLoading(true);
@@ -35,8 +37,10 @@ export function MediaLibrary({ token }: { token: string | null }) {
     if (token) fetchMedia();
   }, [token]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this media asset?')) return;
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    const id = deleteConfirmId;
+    setDeleteConfirmId(null);
     await apiFetch(`/api/admin/media/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
@@ -130,7 +134,7 @@ export function MediaLibrary({ token }: { token: string | null }) {
                 <div className="aspect-square bg-slate-100 relative">
                   <img src={item.variants?.thumb || item.localPath} alt={item.fileName} className="w-full h-full object-cover" loading="lazy" />
                   <button 
-                    onClick={() => handleDelete(item._id)}
+                    onClick={() => setDeleteConfirmId(item._id)}
                     className="absolute top-2 right-2 p-1.5 bg-white text-rose-600 rounded-md opacity-0 group-hover:opacity-100 transition shadow-sm hover:bg-rose-50"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -144,6 +148,17 @@ export function MediaLibrary({ token }: { token: string | null }) {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        title="Delete Media Asset"
+        message="Are you sure you want to permanently delete this media asset? This action cannot be undone."
+        isDestructive={true}
+        cancelText="Cancel"
+        confirmText="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </div>
   );
 }

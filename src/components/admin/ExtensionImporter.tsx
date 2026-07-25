@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../utils/apiClient';
 import { useAuth } from '../../context/AuthContext';
+import { AlertDialog } from './AlertDialog';
 import { 
   Chrome, Search, CheckCircle2, AlertTriangle, RefreshCw, 
   Layers, Sparkles, Send, HelpCircle, History, Gauge, 
@@ -168,7 +169,8 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
   const [forceDbFailure, setForceDbFailure] = useState<boolean>(false);
   const [extensionVersionInput, setExtensionVersionInput] = useState<string>('1.0.4');
   
-  // Result states
+  // Result & Alert states
+  const [alertDialog, setAlertDialog] = useState<{ title: string; message: string } | null>(null);
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
@@ -373,7 +375,15 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
     e.preventDefault();
     const cleanAsin = extractAsin(targetAsin);
     if (!cleanAsin || cleanAsin.length < 8 || cleanAsin.length > 15) {
-      alert("Please enter a valid 8 to 15-character Amazon ASIN or URL to scrape!");
+      setAlertDialog({
+        title: 'ASIN Validation Error',
+        message: 'Please enter a valid 8 to 15-character Amazon ASIN or URL to scrape!'
+      });
+      setResult({
+        success: false,
+        message: 'ASIN Validation Error',
+        error: 'Please enter a valid 8 to 15-character Amazon ASIN or URL to scrape!'
+      });
       return;
     }
     
@@ -1369,6 +1379,13 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
           </div>
         </div>
       )}
+
+      <AlertDialog
+        isOpen={!!alertDialog}
+        title={alertDialog?.title || ''}
+        message={alertDialog?.message || ''}
+        onDismiss={() => setAlertDialog(null)}
+      />
     </div>
   );
 }

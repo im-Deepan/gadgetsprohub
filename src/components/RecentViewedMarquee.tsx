@@ -16,24 +16,21 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
   onClear,
   onPickLeftClick,
 }) => {
-  if (!recentViewed || recentViewed.length === 0) return null;
+  // We will display a row of slots depending on screen size
+  const [cycle, setCycle] = useState<number>(0);
 
-  // We will display a row of slots depending on screen size:
-  // On mobile: 2 slots (or 1 if list is extremely small)
-  // On tablet: 3 slots
-  // On desktop: 4 slots
-  const [slotCycles, setSlotCycles] = useState<number[]>([0, 1, 2, 3]);
-
-  // Handle auto-rotation. Every 4.5 seconds, we increment the indexes so they roll vertically!
+  // Handle auto-rotation. Every 4.5 seconds, we increment the index so they roll vertically!
   useEffect(() => {
-    if (recentViewed.length <= 1) return;
+    if (!recentViewed || recentViewed.length <= 1) return;
 
     const interval = setInterval(() => {
-      setSlotCycles((prev) => prev.map((val) => (val + 1) % recentViewed.length));
+      setCycle((prev) => (prev + 1) % recentViewed.length);
     }, 4505);
 
     return () => clearInterval(interval);
-  }, [recentViewed.length]);
+  }, [recentViewed?.length]);
+
+  if (!recentViewed || recentViewed.length === 0) return null;
 
   // Determine how many slots to render depending on size.
   // Instead of completely hiding slots using javascript client-side resize which can flicker,
@@ -72,8 +69,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
           // Slot 0 sees product: (cycle + 0) % len
           // Slot 1 sees product: (cycle + 1) % len
           // etc.
-          const currentCycle = slotCycles[slotIndex];
-          const productIndex = (currentCycle + slotIndex) % recentViewed.length;
+          const productIndex = (cycle + slotIndex) % recentViewed.length;
           const prod = recentViewed[productIndex];
 
           // Determine responsiveness classes:

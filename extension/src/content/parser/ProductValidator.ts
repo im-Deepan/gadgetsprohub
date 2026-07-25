@@ -37,8 +37,12 @@ export class ProductValidator {
 
     // 4. Current Price validation & normalization against schema
     if (typeof data.currentPrice !== 'number' || isNaN(data.currentPrice) || data.currentPrice < 0) {
-      data.currentPrice = 0;
-      warnings.push('Current price is missing or invalid (set to 0)');
+      if (typeof data.price === 'number' && !isNaN(data.price) && data.price >= 0) {
+        data.currentPrice = Math.round(data.price * 100) / 100;
+      } else {
+        data.currentPrice = 0;
+        warnings.push('Current price is missing or invalid (set to 0)');
+      }
     } else {
       data.currentPrice = Math.round(data.currentPrice * 100) / 100;
     }

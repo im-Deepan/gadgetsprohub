@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../utils/apiClient';
+import { ConfirmDialog } from './ConfirmDialog';
 import { 
   Shield, 
   Key, 
@@ -60,6 +61,14 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
   const [newPatName, setNewPatName] = useState('');
   const [generatedPat, setGeneratedPat] = useState('');
   const [copiedPat, setCopiedPat] = useState(false);
+
+  // Custom Confirm Dialog state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Fetch API helper
   const apiCall = async (url: string, options: RequestInit = {}) => {
@@ -173,18 +182,25 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
     }
   };
 
-  const handleRevokeSession = async (sessionId: string) => {
-    if (!window.confirm('Are you sure you want to terminate this active user session?')) return;
-    try {
-      const res = await apiCall('/api/auth/sessions/revoke', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId })
-      });
-      if (res.success) {
-        triggerAlert('Success', 'The selected session has been successfully revoked.');
-        fetchSessions();
+  const handleRevokeSession = (sessionId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Terminate Session',
+      message: 'Are you sure you want to terminate this active user session?',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const res = await apiCall('/api/auth/sessions/revoke', {
+            method: 'POST',
+            body: JSON.stringify({ sessionId })
+          });
+          if (res.success) {
+            triggerAlert('Success', 'The selected session has been successfully revoked.');
+            fetchSessions();
+          }
+        } catch (e) {}
       }
-    } catch (e) {}
+    });
   };
 
   const handleGeneratePat = async (e: React.FormEvent) => {
@@ -203,18 +219,25 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
     } catch (e) {}
   };
 
-  const handleRevokePat = async (patId: string) => {
-    if (!window.confirm('Are you sure you want to revoke this Personal Access Token? Programs using it will lose access immediately.')) return;
-    try {
-      const res = await apiCall('/api/auth/pats/revoke', {
-        method: 'POST',
-        body: JSON.stringify({ patId })
-      });
-      if (res.success) {
-        triggerAlert('Success', 'The access token was successfully revoked.');
-        fetchPats();
+  const handleRevokePat = (patId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Revoke Access Token',
+      message: 'Are you sure you want to revoke this Personal Access Token? Programs using it will lose access immediately.',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const res = await apiCall('/api/auth/pats/revoke', {
+            method: 'POST',
+            body: JSON.stringify({ patId })
+          });
+          if (res.success) {
+            triggerAlert('Success', 'The access token was successfully revoked.');
+            fetchPats();
+          }
+        } catch (e) {}
       }
-    } catch (e) {}
+    });
   };
 
   const handleSetup2fa = async () => {
@@ -941,6 +964,18 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
 
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title || ''}
+        message={confirmModal?.message || ''}
+        isDestructive={true}
+        cancelText="Cancel"
+        confirmText="Confirm"
+        onConfirm={confirmModal?.onConfirm || (() => {})}
+        onCancel={() => setConfirmModal(null)}
+      />
 
     </div>
   );

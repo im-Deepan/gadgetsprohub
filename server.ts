@@ -157,7 +157,7 @@ userSchema.pre('save', async function () {
 });
 
 const User = mongoose.model('User', userSchema);
-import { comparePasswords, hashHelper, isAdminEmail, getStorageEmail, validateAndCheckRealEmail } from './src/server/utils';
+import { comparePasswords, hashHelper, isAdminEmail, getStorageEmail, validateAndCheckRealEmail, TAMIL_NADU_DISTRICTS, sanitizeDistrict } from './src/server/utils';
 
 // Category Schema
 const sanitizeUser = (userObj: any) => {
@@ -309,57 +309,7 @@ const analyticsSchema = new mongoose.Schema({
 
 const Analytics = mongoose.model('Analytics', analyticsSchema);
 
-const TAMIL_NADU_DISTRICTS = [
-  "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
-  "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
-  "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris",
-  "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivagangai",
-  "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli",
-  "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore",
-  "Viluppuram", "Virudhunagar"
-];
 
-const sanitizeDistrict = (name: string): string => {
-  if (!name) return "Chennai";
-  const formatted = name.trim().toLowerCase();
-  
-  if (formatted.includes("trichy") || formatted.includes("tiruchirappalli") || formatted.includes("tiruchirapalli")) {
-    return "Tiruchirappalli";
-  }
-  if (formatted.includes("chennai") || formatted.includes("madras")) return "Chennai";
-  if (formatted.includes("coimbatore") || formatted.includes("kovai")) return "Coimbatore";
-  if (formatted.includes("madurai")) return "Madurai";
-  if (formatted.includes("salem")) return "Salem";
-  if (formatted.includes("nellai") || formatted.includes("tirunelveli")) return "Tirunelveli";
-  
-  if (
-    formatted.includes("ashburn") || 
-    formatted.includes("montreal") || 
-    formatted.includes("virginia") || 
-    formatted.includes("canada") || 
-    formatted.includes("bueren") || 
-    formatted.includes("zuerich") ||
-    formatted.includes("zurich") ||
-    formatted.includes("seattle") ||
-    formatted.includes("dublin") ||
-    formatted.includes("london") ||
-    formatted.includes("california") ||
-    formatted.includes("oregon") ||
-    formatted.includes("united states")
-  ) {
-    return "Chennai";
-  }
-
-  const found = TAMIL_NADU_DISTRICTS.find(
-    d => d.toLowerCase() === formatted || formatted.includes(d.toLowerCase())
-  );
-  if (found) {
-    return found;
-  }
-  
-  // Strictly fall back to a validated whitelisted district
-  return "Chennai";
-};
 
 // Visitor Schema (site visitors)
 const visitorSchema = new mongoose.Schema({
@@ -856,6 +806,7 @@ if (fs.existsSync(LOCAL_PRODUCTS_FILE)) {
 let localBlogs: any[] = structuredClone(seedBlogs);
 
 let localUsers: LocalUserType[] = structuredClone(seedUsers);
+let localPats: any[] = [];
 if (fs.existsSync(LOCAL_USERS_FILE)) {
   try {
     localUsers = JSON.parse(fs.readFileSync(LOCAL_USERS_FILE, 'utf8'));
@@ -2227,35 +2178,50 @@ async function startServer() {
     }
   }
 
-  // Database Connection with immediate Error Safety routing and fast timeout fallback
-  mongoose.connect(
-    process.env.MONGODB_URI || 'mongodb://localhost:27017/affiliate-store',
-    { serverSelectionTimeoutMS: 15000 }
-  )
-  .then(() => {
-    console.log('Successfully connected to MongoDB Cluster');
-    isMongoConnected = true;
+  // Database Connection with exponential retry/backoff and Error Safety routing
+  const connectWithRetry = async (maxRetries = 5, initialDelay = 2000): Promise<void> => {
+    let currentDelay = initialDelay;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await mongoose.connect(
+          process.env.MONGODB_URI || 'mongodb://localhost:27017/affiliate-store',
+          { serverSelectionTimeoutMS: 15000 }
+        );
+        console.log('Successfully connected to MongoDB Cluster');
+        isMongoConnected = true;
 
-    // Safely drop index sub_1 if it exists in the database
-    if (mongoose.connection.db) {
-      mongoose.connection.db.collection('users').dropIndex('sub_1')
-        .then(() => console.log('Successfully dropped stale sub_1 index.'))
-        .catch((err: any) => console.log('Stale index sub_1 dropped or not exists. Msg:', err.message));
+        // Safely drop index sub_1 if it exists in the database
+        if (mongoose.connection.db) {
+          mongoose.connection.db.collection('users').dropIndex('sub_1')
+            .then(() => console.log('Successfully dropped stale sub_1 index.'))
+            .catch((err: any) => console.log('Stale index sub_1 dropped or not exists. Msg:', err.message));
+        }
+
+        seedDatabase().catch((err: any) => {
+          console.error('Failed to auto-seed database:', err.message || err);
+        });
+        aiService.seedPrompts().then(() => {
+          console.log('Successfully seeded AI Prompt Templates');
+        }).catch((err: any) => {
+          console.error('Failed to seed AI Prompts:', err.message || err);
+        });
+
+        return; // Connected successfully
+      } catch (err: any) {
+        console.warn(`[DB Connection Attempt ${attempt}/${maxRetries}] Failed to connect to MongoDB: ${err.message || err}`);
+        if (attempt < maxRetries) {
+          console.log(`Retrying MongoDB connection in ${currentDelay / 1000}s...`);
+          await new Promise(res => setTimeout(res, currentDelay));
+          currentDelay *= 1.5;
+        } else {
+          console.error('CRITICAL SYSTEM FAILURE: Could not establish a connection to MongoDB Atlas after retries. Live DB operations are strictly required to protect catalog authenticity and prevent session data loss. Error:', err.message);
+          process.exit(1);
+        }
+      }
     }
+  };
 
-    seedDatabase().catch((err: any) => {
-      console.error('Failed to auto-seed database:', err.message || err);
-    });
-    aiService.seedPrompts().then(() => {
-      console.log('Successfully seeded AI Prompt Templates');
-    }).catch((err: any) => {
-      console.error('Failed to seed AI Prompts:', err.message || err);
-    });
-  })
-  .catch((err: any) => {
-    console.error('CRITICAL SYSTEM FAILURE: Could not establish a connection to MongoDB Atlas. Live DB operations are strictly required to protect catalog authenticity and prevent session data loss. Error:', err.message);
-    process.exit(1);
-  });
+  connectWithRetry();
 
   // ========== API ROUTES ==========
 
@@ -2354,8 +2320,16 @@ async function startServer() {
   // Global Error Tracking Endpoint
   app.post('/api/track-error', express.json({ limit: '100kb' }), (req: express.Request, res: express.Response) => {
     const errorDetails = req.body;
-    // Suppress unhandled promise rejection logs if they are not actionable
-    if (errorDetails?.context === 'Unhandled promise rejection' && errorDetails?.name === 'Error' && !errorDetails?.message) {
+    const contextVal = typeof errorDetails?.context === 'string'
+      ? errorDetails.context
+      : errorDetails?.context?.context;
+
+    // Suppress unhandled promise rejection logs if they are not actionable or generic
+    if (
+      (contextVal === 'Unhandled promise rejection' || !contextVal) &&
+      (errorDetails?.name === 'Error' || !errorDetails?.name) &&
+      (!errorDetails?.message || errorDetails?.message === 'Error' || errorDetails?.message === '[object Object]')
+    ) {
       return res.status(200).json({ success: true });
     }
     console.warn('[CentralizedTracker Server-Side]', JSON.stringify(errorDetails, null, 2));
@@ -2618,8 +2592,18 @@ async function startServer() {
         if (!user) {
           return res.status(400).send(`
             <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
-              <h2 style="color: #ef4444;">Verification Link Expired</h2>
+              <h2 style="color: #ef4444;">Verification Link Invalid</h2>
               <p style="color: #64748b;">This verification link is invalid or has already been used.</p>
+              <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+            </div>
+          `);
+        }
+
+        if ((user as any).pendingEmailTokenExpires && new Date((user as any).pendingEmailTokenExpires) < new Date()) {
+          return res.status(400).send(`
+            <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+              <h2 style="color: #ef4444;">Verification Link Expired</h2>
+              <p style="color: #64748b;">This verification link has expired (24 hour limit). Please request a new email update from your profile settings.</p>
               <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
             </div>
           `);
@@ -2628,6 +2612,7 @@ async function startServer() {
         user.email = user.pendingEmail || '';
         user.pendingEmail = null;
         user.pendingEmailToken = null;
+        (user as any).pendingEmailTokenExpires = null;
         await user.save();
 
         const authCode = await createPendingAuthCode(String(user._id));
@@ -2637,8 +2622,18 @@ async function startServer() {
         if (!user) {
           return res.status(400).send(`
             <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
-              <h2 style="color: #ef4444;">Verification Link Expired</h2>
+              <h2 style="color: #ef4444;">Verification Link Invalid</h2>
               <p style="color: #64748b;">This verification link is invalid or has already been used.</p>
+              <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
+            </div>
+          `);
+        }
+
+        if ((user as any).pendingEmailTokenExpires && new Date((user as any).pendingEmailTokenExpires) < new Date()) {
+          return res.status(400).send(`
+            <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
+              <h2 style="color: #ef4444;">Verification Link Expired</h2>
+              <p style="color: #64748b;">This verification link has expired (24 hour limit). Please request a new email update from your profile settings.</p>
               <a href="/" style="background-color: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 15px;">Go to Homepage</a>
             </div>
           `);
@@ -2647,6 +2642,7 @@ async function startServer() {
         user.email = user.pendingEmail || '';
         user.pendingEmail = undefined;
         user.pendingEmailToken = undefined;
+        (user as any).pendingEmailTokenExpires = undefined;
         saveLocalUsers();
 
         const authCode = await createPendingAuthCode(String(user._id));
@@ -2713,8 +2709,8 @@ async function startServer() {
 
         const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
         if (user.role !== calculatedRole) {
+          await User.updateOne({ _id: user._id }, { $set: { role: calculatedRole } }).catch(e => console.warn(e));
           user.role = calculatedRole;
-          await user.save().catch(e => console.warn(e));
         }
 
         // Two-factor authentication verification if enabled
@@ -2851,8 +2847,8 @@ async function startServer() {
         }
         const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
         if (user.role !== calculatedRole) {
+          await User.updateOne({ _id: user._id }, { $set: { role: calculatedRole } }).catch(e => console.warn(e));
           user.role = calculatedRole;
-          await user.save().catch(e => console.warn(e));
         }
         const token = signUserToken(user._id);
         res.cookie('token', token, {
@@ -2941,8 +2937,12 @@ async function startServer() {
   // 2. Personal Access Tokens (PATs) Endpoints
   app.get('/api/auth/pats', authenticate, async (req: express.Request, res: express.Response) => {
     try {
-      if (!isMongoConnected) return res.json({ success: true, pats: [], warning: 'Database disconnected.' });
-      const pats = await PersonalAccessToken.find({ userId: (req as any).userId, revoked: false });
+      const uId = (req as any).userId;
+      if (!isMongoConnected) {
+        const userPats = localPats.filter(p => p.userId === uId && !p.revoked);
+        return res.json({ success: true, pats: userPats });
+      }
+      const pats = await PersonalAccessToken.find({ userId: uId, revoked: false });
       res.json({ success: true, pats });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2954,11 +2954,30 @@ async function startServer() {
       const { name } = req.body;
       if (!name) return res.status(400).json({ error: 'Token name is required' });
 
+      const uId = (req as any).userId;
       const rawToken = 'gph_pat_' + crypto.randomBytes(24).toString('hex');
       const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
+      if (!isMongoConnected) {
+        const newPat = {
+          _id: 'pat_' + Math.random().toString(36).substr(2, 9),
+          userId: uId,
+          name,
+          tokenHash,
+          createdAt: new Date(),
+          revoked: false
+        };
+        localPats.push(newPat);
+        return res.json({
+          success: true,
+          message: 'Personal access token generated successfully. Copy it now, as it will not be shown again!',
+          token: rawToken,
+          pat: newPat
+        });
+      }
+
       const pat = await PersonalAccessToken.create({
-        userId: (req as any).userId,
+        userId: uId,
         name,
         tokenHash,
         createdAt: new Date()
@@ -2978,8 +2997,16 @@ async function startServer() {
   app.post('/api/auth/pats/revoke', authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const { patId } = req.body;
+      const uId = (req as any).userId;
+
+      if (!isMongoConnected) {
+        const pat = localPats.find(p => p._id === patId && p.userId === uId);
+        if (pat) pat.revoked = true;
+        return res.json({ success: true, message: 'Personal access token successfully revoked' });
+      }
+
       await PersonalAccessToken.updateOne(
-        { _id: patId, userId: (req as any).userId },
+        { _id: patId, userId: uId },
         { revoked: true }
       );
       res.json({ success: true, message: 'Personal access token successfully revoked' });
@@ -3051,8 +3078,14 @@ async function startServer() {
       const user = await User.findById((req as any).userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
-      const secret = (user as any).twoFactorSecret;
-      if (secret) {
+      if ((user as any).twoFactorEnabled) {
+        const secret = (user as any).twoFactorSecret;
+        if (!secret) {
+          return res.status(400).json({ error: '2FA state error: Secret missing. Please contact administrator.' });
+        }
+        if (!code) {
+          return res.status(400).json({ error: 'Verification code is required to disable 2FA.' });
+        }
         const isValid = TotpService.verifyToken(secret, code);
         if (!isValid) {
           return res.status(400).json({ error: 'Invalid verification code. 2FA remains active.' });
@@ -3168,7 +3201,7 @@ async function startServer() {
     });
   });
 
-  app.get('/api/metrics', authenticate, (req: express.Request, res: express.Response) => {
+  app.get('/api/metrics', adminOnly, (req: express.Request, res: express.Response) => {
     res.json({ success: true, metrics: MetricsService.getMetrics(), liveLogs: MetricsService.getLiveLogs() });
   });
 
@@ -3296,8 +3329,8 @@ async function startServer() {
         } else {
           const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
           if (user.role !== calculatedRole) {
+            await User.updateOne({ _id: user._id }, { $set: { role: calculatedRole } }).catch(e => console.warn(e));
             user.role = calculatedRole;
-            await user.save().catch(e => console.warn(e));
           }
         }
         const token = signUserToken(user._id);
@@ -3843,8 +3876,8 @@ async function startServer() {
         
         if (isAdminEmail(user.email)) {
           if (user.role !== 'admin') {
+            await User.updateOne({ _id: user._id }, { $set: { role: 'admin' } }).catch(e => console.warn(e));
             user.role = 'admin';
-            await user.save().catch(e => console.warn(e));
           }
         }
         const userObj = user?.toObject ? user.toObject() : user;
@@ -4064,10 +4097,22 @@ async function startServer() {
         if (order.userId.toString() !== uId.toString()) {
           return res.status(403).json({ error: 'Access denied: You can only advance your own orders.' });
         }
+
+        if (order.status === 'Delivered') {
+          return res.status(400).json({ error: 'Order is already delivered and cannot be advanced further.' });
+        }
         
         const currentIndex = statuses.indexOf(order.status as any);
         const nextIndex = Math.min(currentIndex + 1, statuses.length - 1);
         order.status = statuses[nextIndex];
+
+        if (!order.trackingNumber) {
+          order.trackingNumber = `TN-TRK-${Math.floor(100000 + Math.random() * 900000)}`;
+        }
+        if (!order.carrier) {
+          order.carrier = ['Blue Dart Express', 'DTDC Courier', 'FedEx India', 'Delhivery'][Math.floor(Math.random() * 4)];
+        }
+
         await order.save();
         const populated = await order.populate('items.product');
         return res.json(populated);
@@ -4078,10 +4123,22 @@ async function startServer() {
         if (order.userId !== uId) {
           return res.status(403).json({ error: 'Access denied: You can only advance your own orders.' });
         }
+
+        if (order.status === 'Delivered') {
+          return res.status(400).json({ error: 'Order is already delivered and cannot be advanced further.' });
+        }
         
         const currentIndex = statuses.indexOf(order.status);
         const nextIndex = Math.min(currentIndex + 1, statuses.length - 1);
         order.status = statuses[nextIndex];
+
+        if (!order.trackingNumber) {
+          order.trackingNumber = `TN-TRK-${Math.floor(100000 + Math.random() * 900000)}`;
+        }
+        if (!order.carrier) {
+          order.carrier = ['Blue Dart Express', 'DTDC Courier', 'FedEx India', 'Delhivery'][Math.floor(Math.random() * 4)];
+        }
+
         saveLocalOrders();
         
         const populatedItems = order.items.map((it: any) => {
@@ -4314,50 +4371,12 @@ async function startServer() {
 
   // Proxy for geolocation APIs to bypass CORS, with automatic regional mapping to Tamil Nadu districts
   app.get('/api/proxy/location', async (_req: express.Request, res: express.Response) => {
-    const TAMIL_NADU_DISTRICTS = [
-      "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
-      "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
-      "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris",
-      "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivagangai",
-      "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli",
-      "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore",
-      "Viluppuram", "Virudhunagar"
-    ];
-
     const mapToTamilNaduDistrict = (cityName: string): { city: string; isTamilNadu: boolean } => {
       if (!cityName) return { city: "Chennai", isTamilNadu: true };
       const formatted = cityName.trim();
-      const lower = formatted.toLowerCase();
-
-      // Check standard aliases
-      if (lower.includes("trichy") || lower.includes("tiruchirappalli") || lower.includes("tiruchirapalli")) {
-        return { city: "Tiruchirappalli", isTamilNadu: true };
-      }
-      if (lower.includes("chennai") || lower.includes("madras")) {
-        return { city: "Chennai", isTamilNadu: true };
-      }
-      if (lower.includes("coimbatore") || lower.includes("kovai")) {
-        return { city: "Coimbatore", isTamilNadu: true };
-      }
-      if (lower.includes("madurai")) {
-        return { city: "Madurai", isTamilNadu: true };
-      }
-      if (lower.includes("salem")) {
-        return { city: "Salem", isTamilNadu: true };
-      }
-      if (lower.includes("nellai") || lower.includes("tirunelveli")) {
-        return { city: "Tirunelveli", isTamilNadu: true };
-      }
-
-      const found = TAMIL_NADU_DISTRICTS.find(
-        d => d.toLowerCase() === lower || lower === d.toLowerCase()
-      );
-      if (found) {
-        return { city: found, isTamilNadu: true };
-      }
-
-      // Return actual detected city without hashing into a fake TN district
-      return { city: formatted, isTamilNadu: false };
+      const sanitized = sanitizeDistrict(formatted);
+      const isTN = TAMIL_NADU_DISTRICTS.some(d => d.toLowerCase() === sanitized.toLowerCase());
+      return { city: isTN ? sanitized : formatted, isTamilNadu: isTN };
     };
 
     let clientIp = (_req.headers['x-forwarded-for'] || _req.socket.remoteAddress || '').toString().split(',')[0].trim();
@@ -4671,8 +4690,10 @@ async function startServer() {
         }
 
         const pendingEmailToken = crypto.randomBytes(32).toString('hex');
+        const pendingEmailTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
         currentUser.pendingEmail = storageEmail;
         currentUser.pendingEmailToken = pendingEmailToken;
+        (currentUser as any).pendingEmailTokenExpires = pendingEmailTokenExpires;
         await currentUser.save();
 
         const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
@@ -4715,8 +4736,9 @@ async function startServer() {
 
         return res.json({
           success: true,
-          message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
-          smtpError: smtpErrorMsg
+          message: emailSent ? 'A verification link has been sent to your new email address. Please click it to confirm your update.' : 'Email transport not configured or failed. Use simulated verification link below.',
+          smtpError: smtpErrorMsg || (!transporter ? 'SMTP transporter not configured' : ''),
+          verificationUrlSimulated: verificationUrl
         });
       } else {
         const currentUser = localUsers.find(u => u._id === uId);
@@ -4733,8 +4755,10 @@ async function startServer() {
         }
 
         const pendingEmailToken = crypto.randomBytes(32).toString('hex');
+        const pendingEmailTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
         currentUser.pendingEmail = storageEmail;
         currentUser.pendingEmailToken = pendingEmailToken;
+        (currentUser as any).pendingEmailTokenExpires = pendingEmailTokenExpires;
         saveLocalUsers();
 
         const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
@@ -4777,8 +4801,9 @@ async function startServer() {
 
         return res.json({
           success: true,
-          message: 'A verification link has been sent to your new email address. Please click it to confirm your update.',
-          smtpError: smtpErrorMsg
+          message: emailSent ? 'A verification link has been sent to your new email address. Please click it to confirm your update.' : 'Email transport not configured or failed. Use simulated verification link below.',
+          smtpError: smtpErrorMsg || (!transporter ? 'SMTP transporter not configured' : ''),
+          verificationUrlSimulated: verificationUrl
         });
       }
     } catch (error: any) {
@@ -5745,7 +5770,7 @@ async function startServer() {
     let attempts = 0;
     
     while (exists && attempts < 50) {
-      code = Math.floor(100000 + Math.random() * 900000).toString();
+      code = crypto.randomInt(100000, 1000000).toString();
       attempts++;
       const found = await ActivePairingCodeModel.findOne({ code });
       if (!found) {
@@ -6999,25 +7024,30 @@ async function startServer() {
   app.post('/api/admin/sync/jobs/:jobId/action', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const { action } = req.body; // pause, resume, cancel, retry
+      if (!['pause', 'resume', 'cancel', 'retry'].includes(action)) {
+        return res.status(400).json({ error: 'Invalid action parameter. Allowed values: pause, resume, cancel, retry' });
+      }
+
       const job = await SyncJob.findById(req.params.jobId);
       if (!job) return res.status(404).json({ error: 'Job not found' });
 
       if (action === 'pause') job.status = 'paused';
-      else if (action === 'resume') {
-        job.status = 'running';
-        syncService.processJob(job._id.toString()).catch(e => console.error('Background Sync job resume failure:', e));
-      } else if (action === 'cancel') job.status = 'cancelled';
+      else if (action === 'resume') job.status = 'running';
+      else if (action === 'cancel') job.status = 'cancelled';
       else if (action === 'retry') {
         job.status = 'waiting';
         job.processedItems = 0;
         job.failedItems = 0;
         job.progress = 0;
         job.results = [];
-        await job.save();
-        syncService.processJob(job._id.toString()).catch(e => console.error('Background Sync job retry failure:', e));
       }
 
       await job.save();
+
+      if (action === 'resume' || action === 'retry') {
+        syncService.processJob(job._id.toString()).catch(e => console.error(`Background Sync job ${action} failure:`, e));
+      }
+
       res.json({ success: true, data: job });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to update job status' });
@@ -7051,12 +7081,14 @@ async function startServer() {
 
       syncService.processJob(job._id.toString()).then(async () => {
         const duration = Date.now() - startTime;
-        task.successCount += 1;
-        task.averageDurationMs = task.averageDurationMs === 0 ? duration : Math.round((task.averageDurationMs + duration) / 2);
-        await task.save();
+        const currentTask = await SchedulerTask.findById(req.params.taskId);
+        if (currentTask) {
+          currentTask.successCount += 1;
+          currentTask.averageDurationMs = currentTask.averageDurationMs === 0 ? duration : Math.round((currentTask.averageDurationMs + duration) / 2);
+          await currentTask.save();
+        }
       }).catch(async (e) => {
-        task.failCount += 1;
-        await task.save();
+        await SchedulerTask.updateOne({ _id: req.params.taskId }, { $inc: { failCount: 1 } });
         console.error('Scheduler spawned background job failed:', e);
       });
 
@@ -7081,19 +7113,8 @@ async function startServer() {
 
   app.get('/api/admin/sync/alerts', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      if (isMongoConnected) {
-        const alerts = await AlertRule.find({}).populate('productId', 'name');
-        res.json({ success: true, data: alerts });
-      } else {
-        const alerts = localAlertRules.map(alert => {
-          const prod = localProducts.find((p: any) => String(p._id || p.id) === String(alert.productId));
-          return {
-            ...alert,
-            productId: prod ? { _id: prod._id || prod.id, name: prod.name } : null
-          };
-        });
-        res.json({ success: true, data: alerts });
-      }
+      const alerts = await AlertRule.find({}).populate('productId', 'name');
+      res.json({ success: true, data: alerts });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch alert rules' });
     }
@@ -7102,41 +7123,14 @@ async function startServer() {
   app.post('/api/admin/sync/alerts', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const { _id, name, productId, triggerType, threshold, channels, active } = req.body;
-      if (isMongoConnected) {
-        let alert;
-        if (_id) {
-          alert = await AlertRule.findByIdAndUpdate(_id, { name, productId, triggerType, threshold, channels, active }, { new: true });
-        } else {
-          alert = new AlertRule({ name, productId: productId || null, triggerType, threshold, channels, active });
-          await alert.save();
-        }
-        res.json({ success: true, data: alert });
+      let alert;
+      if (_id) {
+        alert = await AlertRule.findByIdAndUpdate(_id, { name, productId, triggerType, threshold, channels, active }, { new: true });
       } else {
-        let alert;
-        if (_id) {
-          const index = localAlertRules.findIndex(a => String(a._id) === String(_id));
-          if (index !== -1) {
-            localAlertRules[index] = { ...localAlertRules[index], name, productId, triggerType, threshold, channels, active };
-            alert = localAlertRules[index];
-          } else {
-            return res.status(404).json({ error: 'Alert not found' });
-          }
-        } else {
-          alert = {
-            _id: "alert_" + Math.random().toString(36).substring(2, 9),
-            name,
-            productId: productId || null,
-            triggerType,
-            threshold,
-            channels,
-            active,
-            createdAt: new Date()
-          };
-          localAlertRules.unshift(alert);
-        }
-        saveLocalAlertRules();
-        res.json({ success: true, data: alert });
+        alert = new AlertRule({ name, productId: productId || null, triggerType, threshold, channels, active });
+        await alert.save();
       }
+      res.json({ success: true, data: alert });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to save alert rule' });
     }
@@ -7144,14 +7138,8 @@ async function startServer() {
 
   app.delete('/api/admin/sync/alerts/:id', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      if (isMongoConnected) {
-        await AlertRule.findByIdAndDelete(req.params.id);
-        res.json({ success: true });
-      } else {
-        localAlertRules = localAlertRules.filter(a => String(a._id) !== String(req.params.id));
-        saveLocalAlertRules();
-        res.json({ success: true });
-      }
+      await AlertRule.findByIdAndDelete(req.params.id);
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to delete alert rule' });
     }
@@ -7159,19 +7147,8 @@ async function startServer() {
 
   app.get('/api/admin/sync/health', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      if (isMongoConnected) {
-        const reports = await ProductHealth.find({}).populate('productId', 'name price lastPriceCheck');
-        res.json({ success: true, data: reports });
-      } else {
-        const reports = localProductHealth.map(report => {
-          const prod = localProducts.find((p: any) => String(p._id || p.id) === String(report.productId));
-          return {
-            ...report,
-            productId: prod ? { _id: prod._id || prod.id, name: prod.name, price: prod.price, lastPriceCheck: prod.lastPriceCheck || new Date() } : null
-          };
-        });
-        res.json({ success: true, data: reports });
-      }
+      const reports = await ProductHealth.find({}).populate('productId', 'name price lastPriceCheck');
+      res.json({ success: true, data: reports });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to retrieve product health details' });
     }
@@ -7179,12 +7156,8 @@ async function startServer() {
 
   app.get('/api/admin/sync/rules', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      if (isMongoConnected) {
-        const rules = await AutomationRule.find({});
-        res.json({ success: true, data: rules });
-      } else {
-        res.json({ success: true, data: localAutomationRules });
-      }
+      const rules = await AutomationRule.find({});
+      res.json({ success: true, data: rules });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch automation rules' });
     }
@@ -7193,40 +7166,14 @@ async function startServer() {
   app.post('/api/admin/sync/rules', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const { _id, name, triggerType, triggerThreshold, actions, active } = req.body;
-      if (isMongoConnected) {
-        let rule;
-        if (_id) {
-          rule = await AutomationRule.findByIdAndUpdate(_id, { name, triggerType, triggerThreshold, actions, active }, { new: true });
-        } else {
-          rule = new AutomationRule({ name, triggerType, triggerThreshold, actions, active });
-          await rule.save();
-        }
-        res.json({ success: true, data: rule });
+      let rule;
+      if (_id) {
+        rule = await AutomationRule.findByIdAndUpdate(_id, { name, triggerType, triggerThreshold, actions, active }, { new: true });
       } else {
-        let rule;
-        if (_id) {
-          const index = localAutomationRules.findIndex(r => String(r._id) === String(_id));
-          if (index !== -1) {
-            localAutomationRules[index] = { ...localAutomationRules[index], name, triggerType, triggerThreshold, actions, active };
-            rule = localAutomationRules[index];
-          } else {
-            return res.status(404).json({ error: 'Rule not found' });
-          }
-        } else {
-          rule = {
-            _id: "rule_" + Math.random().toString(36).substring(2, 9),
-            name,
-            triggerType,
-            triggerThreshold,
-            actions,
-            active,
-            createdAt: new Date()
-          };
-          localAutomationRules.unshift(rule);
-        }
-        saveLocalAutomationRules();
-        res.json({ success: true, data: rule });
+        rule = new AutomationRule({ name, triggerType, triggerThreshold, actions, active });
+        await rule.save();
       }
+      res.json({ success: true, data: rule });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to save automation rule' });
     }
@@ -7234,14 +7181,8 @@ async function startServer() {
 
   app.delete('/api/admin/sync/rules/:id', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      if (isMongoConnected) {
-        await AutomationRule.findByIdAndDelete(req.params.id);
-        res.json({ success: true });
-      } else {
-        localAutomationRules = localAutomationRules.filter(r => String(r._id) !== String(req.params.id));
-        saveLocalAutomationRules();
-        res.json({ success: true });
-      }
+      await AutomationRule.findByIdAndDelete(req.params.id);
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to delete automation rule' });
     }
@@ -7249,27 +7190,15 @@ async function startServer() {
 
   app.get('/api/admin/sync/timeline/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      if (isMongoConnected) {
-        const priceHistory = await PriceHistory.find({ productId: req.params.productId }).sort({ timestamp: -1 }).limit(30);
-        const changes = await ProductChange.find({ productId: req.params.productId }).sort({ timestamp: -1 }).limit(30);
-        res.json({
-          success: true,
-          data: {
-            priceHistory,
-            changes
-          }
-        });
-      } else {
-        const priceHistory = localPriceHistory.filter(h => String(h.productId) === String(req.params.productId)).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 30);
-        const changes = localProductChanges.filter(c => String(c.productId) === String(req.params.productId)).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 30);
-        res.json({
-          success: true,
-          data: {
-            priceHistory,
-            changes
-          }
-        });
-      }
+      const priceHistory = await PriceHistory.find({ productId: req.params.productId }).sort({ timestamp: -1 }).limit(30);
+      const changes = await ProductChange.find({ productId: req.params.productId }).sort({ timestamp: -1 }).limit(30);
+      res.json({
+        success: true,
+        data: {
+          priceHistory,
+          changes
+        }
+      });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch timeline and historical price series' });
     }
@@ -7343,7 +7272,41 @@ async function startServer() {
   app.get('/api/admin/marketplace/settings', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const settings = await MarketplaceSettingsModel.find({});
-      res.json({ success: true, data: settings });
+      const sanitized = settings.map(s => {
+        const obj = s.toObject ? s.toObject() : { ...s };
+        if (obj.apiKeys && typeof obj.apiKeys === 'object') {
+          const masked: Record<string, string> = {};
+          for (const [k, v] of Object.entries(obj.apiKeys)) {
+            masked[k] = typeof v === 'string' ? maskApiKey(v) : '••••';
+          }
+          obj.apiKeys = masked;
+        } else if (typeof obj.apiKeys === 'string') {
+          obj.apiKeys = maskApiKey(obj.apiKeys);
+        }
+
+        if (obj.sessionTokens && typeof obj.sessionTokens === 'object') {
+          const masked: Record<string, string> = {};
+          for (const [k, v] of Object.entries(obj.sessionTokens)) {
+            masked[k] = typeof v === 'string' ? maskApiKey(v) : '••••';
+          }
+          obj.sessionTokens = masked;
+        } else if (typeof obj.sessionTokens === 'string') {
+          obj.sessionTokens = maskApiKey(obj.sessionTokens);
+        }
+
+        if (obj.cookies && typeof obj.cookies === 'object') {
+          const masked: Record<string, string> = {};
+          for (const [k, v] of Object.entries(obj.cookies)) {
+            masked[k] = typeof v === 'string' ? maskApiKey(v) : '••••';
+          }
+          obj.cookies = masked;
+        } else if (typeof obj.cookies === 'string') {
+          obj.cookies = maskApiKey(obj.cookies);
+        }
+
+        return obj;
+      });
+      res.json({ success: true, data: sanitized });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch marketplace settings' });
     }
@@ -7475,8 +7438,14 @@ async function startServer() {
   app.post('/api/admin/marketplace/currencies/convert', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const { amount, from, to } = req.body;
-      const converted = await marketplaceService.convertCurrency(amount, from, to);
-      res.json({ success: true, data: { amount, from, to, converted } });
+      if (amount === undefined || amount === null || typeof amount !== 'number' || isNaN(amount)) {
+        return res.status(400).json({ error: 'Valid numeric amount is required' });
+      }
+      if (!from || typeof from !== 'string' || !to || typeof to !== 'string') {
+        return res.status(400).json({ error: 'Valid "from" and "to" currency codes are required' });
+      }
+      const converted = await marketplaceService.convertCurrency(amount, from.trim().toUpperCase(), to.trim().toUpperCase());
+      res.json({ success: true, data: { amount, from: from.trim().toUpperCase(), to: to.trim().toUpperCase(), converted } });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Currency conversion failed' });
     }
@@ -8783,6 +8752,93 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     }
   });
 
+  // Admin message reply via Nodemailer/SMTP
+  app.post('/api/admin/messages/reply/:id', adminOnly, async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      const msgId = req.params.id;
+      const { replyText } = req.body;
+
+      if (!replyText || typeof replyText !== 'string' || !replyText.trim()) {
+        return res.status(400).json({ error: 'Reply message text is required.' });
+      }
+
+      let message: any = null;
+      if (isMongoConnected) {
+        message = await Message.findById(msgId);
+      } else {
+        message = localMessages.find((m: any) => String(m._id || m.id) === String(msgId));
+      }
+
+      if (!message) {
+        return res.status(404).json({ error: 'Customer message not found.' });
+      }
+
+      const transporter = getMailTransport();
+      let emailSent = false;
+      let smtpErrorMsg = '';
+
+      if (transporter && message.email) {
+        try {
+          const sender = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'support@gadgetsprohub.com';
+          await transporter.sendMail({
+            from: `"GadgetsProHub Support" <${sender}>`,
+            to: message.email,
+            subject: `Re: ${message.subject || 'Inquiry Response'}`,
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                <h2 style="color: #4f46e5; margin-top: 0;">GadgetsProHub Customer Support</h2>
+                <p>Hello ${message.name || 'Valued Customer'},</p>
+                <p>Thank you for contacting us. Below is our response regarding <strong>"${message.subject || 'your inquiry'}"</strong>:</p>
+                <div style="padding: 16px; background-color: #f8fafc; border-left: 4px solid #4f46e5; margin: 16px 0; border-radius: 6px;">
+                  <p style="margin: 0; white-space: pre-wrap; color: #1e293b; font-size: 14px; line-height: 1.6;">${replyText.trim()}</p>
+                </div>
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                <p style="color: #64748b; font-size: 12px; margin-bottom: 4px;">Original Message from ${message.email}:</p>
+                <blockquote style="color: #94a3b8; font-size: 12px; margin-left: 0; padding-left: 12px; border-left: 2px solid #cbd5e1;">
+                  ${message.message || ''}
+                </blockquote>
+              </div>
+            `
+          });
+          emailSent = true;
+        } catch (sendErr: any) {
+          console.error('Failed to dispatch reply email:', sendErr.message);
+          smtpErrorMsg = sendErr.message;
+        }
+      }
+
+      if (isMongoConnected) {
+        message.read = true;
+        message.replied = true;
+        message.replyText = replyText.trim();
+        message.repliedAt = new Date();
+        await message.save();
+        await syncMessagesToSeedFile();
+      } else {
+        message.read = true;
+        message.replied = true;
+        message.replyText = replyText.trim();
+        message.repliedAt = new Date();
+        await syncMessagesToSeedFile();
+      }
+
+      await logSecurityAction(req, 'MESSAGE_REPLIED', msgId, {
+        recipient: message.email,
+        subject: message.subject,
+        emailSent
+      });
+
+      return res.json({
+        success: true,
+        emailSent,
+        smtpError: smtpErrorMsg || (!transporter ? 'SMTP transport not configured' : ''),
+        message
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to process message reply' });
+    }
+  });
+
   // Admin retrieve users
   app.get('/api/admin/users', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
@@ -9100,8 +9156,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         ]);
         
         distAggr.forEach(row => {
-          const distName = row._id.charAt(0).toUpperCase() + row._id.slice(1).toLowerCase();
-          const dist = TAMIL_NADU_DISTRICTS.includes(distName) ? distName : 'Chennai';
+          const dist = sanitizeDistrict(row._id || 'Chennai');
           if (districtCounts[dist] !== undefined) {
             districtCounts[dist] += row.count;
           } else {
