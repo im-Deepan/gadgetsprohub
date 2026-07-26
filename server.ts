@@ -39,6 +39,7 @@ import {
 } from './src/middleware/validation';
 
 import { seoService } from './src/services/SeoService';
+import { isMetadataSpecKey, cleanSpecificationsObj, parseSpecificationsString } from './src/utils/specParser';
 import { aiService, AiPrompt, AiProviderSetting, AiJob, AiResponse, AiAnalytics, AiCache } from './src/services/AiService';
 import { SyncService, PriceHistory, ProductChange, SyncJob, SchedulerTask, AlertRule, ProductHealth, AutomationRule, NotificationHistory } from './src/services/SyncService';
 import { mediaService } from './src/services/MediaService';
@@ -6039,13 +6040,12 @@ async function startServer() {
             imageUrl: Array.isArray(existingProduct.images) && existingProduct.images.length > 0 
               ? existingProduct.images[0] 
               : (existingProduct.imageUrl || ''),
+            images: existingProduct.images || (existingProduct.imageUrl ? [existingProduct.imageUrl] : []),
             affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20',
             features: Array.isArray(existingProduct.features) && existingProduct.features.length > 0 
               ? existingProduct.features 
               : [],
-            specifications: typeof existingProduct.specifications === 'object' && existingProduct.specifications 
-              ? existingProduct.specifications 
-              : { 'ASIN': cleanAsin },
+            specifications: cleanSpecificationsObj(parseSpecificationsString(existingProduct.specifications)),
             tags: Array.isArray(existingProduct.tags) ? existingProduct.tags : ['amazon']
           }
         });
@@ -6061,6 +6061,15 @@ async function startServer() {
       }
 
       if (scrapedDetails && scrapedDetails.name) {
+        const resolvedSpecs = (scrapedDetails.specifications && Object.keys(scrapedDetails.specifications).length > 0)
+          ? cleanSpecificationsObj(scrapedDetails.specifications)
+          : {
+              'Brand': scrapedDetails.brand || 'Amazon Merchant',
+              'Category': scrapedDetails.category || 'Electronics',
+              'Warranty': '1 Year Manufacturer Limited Warranty',
+              'Item Condition': 'New - Factory Sealed'
+            };
+
         return res.json({
           success: true,
           source: 'live_scraper',
@@ -6077,17 +6086,14 @@ async function startServer() {
             imageUrl: Array.isArray(scrapedDetails.images) && scrapedDetails.images.length > 0 
               ? scrapedDetails.images[0] 
               : '',
+            images: scrapedDetails.images || [],
             affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20',
             features: [
               `Official Amazon Item (${cleanAsin})`,
               'Full manufacturer warranty coverage',
               'Fast shipping and reliable customer support'
             ],
-            specifications: {
-              'ASIN': cleanAsin,
-              'Source': 'Amazon Live Scraping Parser',
-              'Currency': scrapedDetails.currency || 'USD'
-            },
+            specifications: resolvedSpecs,
             tags: ['amazon', 'imported', cleanAsin.toLowerCase()].filter(Boolean)
           }
         });
@@ -7305,9 +7311,39 @@ async function startServer() {
   app.post('/api/admin/marketplace/settings', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const { providerId, apiKeys, sessionTokens, cookies, importRules } = req.body;
+      const existing = await MarketplaceSettingsModel.findOne({ providerId });
+
+      const updatedApiKeys = { ...(existing?.apiKeys ? (existing.apiKeys instanceof Map ? Object.fromEntries(existing.apiKeys) : existing.apiKeys) : {}) };
+      if (apiKeys && typeof apiKeys === 'object') {
+        for (const [k, v] of Object.entries(apiKeys)) {
+          if (typeof v === 'string' && v.trim() && !v.includes('••••')) {
+            updatedApiKeys[k] = v;
+          }
+        }
+      }
+
+      const updatedSessionTokens = { ...(existing?.sessionTokens ? (existing.sessionTokens instanceof Map ? Object.fromEntries(existing.sessionTokens) : existing.sessionTokens) : {}) };
+      if (sessionTokens && typeof sessionTokens === 'object') {
+        for (const [k, v] of Object.entries(sessionTokens)) {
+          if (typeof v === 'string' && v.trim() && !v.includes('••••')) {
+            updatedSessionTokens[k] = v;
+          }
+        }
+      }
+
+      let updatedCookies = existing?.cookies || '';
+      if (typeof cookies === 'string' && cookies.trim() && !cookies.includes('••••')) {
+        updatedCookies = cookies;
+      }
+
       const settings = await MarketplaceSettingsModel.findOneAndUpdate(
         { providerId },
-        { apiKeys, sessionTokens, cookies, importRules },
+        {
+          apiKeys: updatedApiKeys,
+          sessionTokens: updatedSessionTokens,
+          cookies: updatedCookies,
+          importRules: importRules ?? existing?.importRules
+        },
         { new: true, upsert: true }
       );
       res.json({ success: true, data: settings });
@@ -7777,15 +7813,22 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       const cleanSpecs: Record<string, string> = {};
       if (specifications && typeof specifications === 'object') {
         Object.entries(specifications).forEach(([k, v]) => {
-          cleanSpecs[sanitizeInput(k)] = sanitizeInput(String(v));
+          const key = sanitizeInput(k);
+          if (key && !isMetadataSpecKey(key)) {
+            cleanSpecs[key] = sanitizeInput(String(v));
+          }
         });
       }
 
-      // Attach client-submitted extension version to specs for debugging & tracking compatibility
+      if (Object.keys(cleanSpecs).length === 0) {
+        cleanSpecs['Brand'] = cleanBrand || 'Standard Brand';
+        cleanSpecs['Category'] = categoryName || 'Electronics';
+        cleanSpecs['Warranty'] = '1 Year Manufacturer Limited Warranty';
+      }
+
       const extVersion = typeof rawPayload.extensionVersion === 'string' 
         ? sanitizeInput(rawPayload.extensionVersion) 
         : (typeof req.headers['x-extension-version'] === 'string' ? sanitizeInput(String(req.headers['x-extension-version'])) : '1.0.0');
-      cleanSpecs["Imported Via"] = `Curator Companion v${extVersion}`;
 
       // 6. Detect & Resolve Duplicate Products via ASIN with Custom Strategies
       const strategy = rawPayload.strategy || 'create';
@@ -7971,10 +8014,10 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
               updatedPayload.originalPrice = Number(rawPayload.originalPrice);
               updatedPayload.discount = Math.round(((Number(rawPayload.originalPrice) - Number(price)) / Number(rawPayload.originalPrice)) * 100);
             }
-            updatedPayload.specifications = {
+            updatedPayload.specifications = cleanSpecificationsObj({
               ...(duplicateProduct.specifications || {}),
               ...cleanSpecs
-            };
+            });
             const existingFeatures = duplicateProduct.features || [];
             const newFeatures = cleanFeatures.filter((f: string) => !existingFeatures.includes(f));
             updatedPayload.features = [...existingFeatures, ...newFeatures];
@@ -7991,10 +8034,10 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             if (!duplicateProduct.images || duplicateProduct.images.length === 0) {
               updatedPayload.images = uniqueImages;
             }
-            updatedPayload.specifications = {
+            updatedPayload.specifications = cleanSpecificationsObj({
               ...cleanSpecs,
               ...(duplicateProduct.specifications || {})
-            };
+            });
             const existingFeatures = duplicateProduct.features || [];
             const newFeatures = cleanFeatures.filter((f: string) => !existingFeatures.includes(f));
             updatedPayload.features = [...existingFeatures, ...newFeatures];
@@ -8141,6 +8184,25 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         const baseSlugForImport = rawPayload.slug || cleanName;
         const { finalSlug } = await resolveUniqueSlug(baseSlugForImport, 'product');
 
+        // Generate pros and cons via AI if missing
+        let finalPros = Array.isArray(rawPayload.pros) ? rawPayload.pros.filter((p: any) => typeof p === 'string') : [];
+        let finalCons = Array.isArray(rawPayload.cons) ? rawPayload.cons.filter((c: any) => typeof c === 'string') : [];
+        
+        if (finalPros.length === 0 && finalCons.length === 0) {
+          try {
+            const aiGenerated = await aiService.generateProsCons({
+              name: cleanName,
+              description: cleanDescription,
+              features: cleanFeatures,
+              specifications: cleanSpecs
+            });
+            if (aiGenerated.pros.length > 0) finalPros = aiGenerated.pros;
+            if (aiGenerated.cons.length > 0) finalCons = aiGenerated.cons;
+          } catch (aiErr) {
+            console.warn('AI Pros/Cons generation failed during import:', aiErr);
+          }
+        }
+
         // Create product payload
         const productPayload = {
           name: cleanName,
@@ -8167,8 +8229,8 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
           tags: Array.isArray(rawPayload.tags) ? rawPayload.tags.filter((t: any) => typeof t === 'string') : [],
           trending: !!rawPayload.trending,
           featured: !!rawPayload.featured,
-          pros: Array.isArray(rawPayload.pros) ? rawPayload.pros.filter((p: any) => typeof p === 'string') : [],
-          cons: Array.isArray(rawPayload.cons) ? rawPayload.cons.filter((c: any) => typeof c === 'string') : [],
+          pros: finalPros,
+          cons: finalCons,
           seoTitle: rawPayload.seoTitle || cleanName,
           seoDescription: rawPayload.seoDescription || cleanDescription
         };

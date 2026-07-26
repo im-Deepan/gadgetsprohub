@@ -4,7 +4,7 @@ import { auth, googleProvider, isFirebaseMock } from '../firebase';
 import { signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { useToast } from './ToastContext';
-import { apiFetch } from '../utils/apiClient';
+import { apiFetch, setGlobalAuthToken } from '../utils/apiClient';
 
 interface AuthContextType {
   user: User | null;
@@ -122,11 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [showToast, refreshProfile]);
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem('token', token);
-    } else {
-      localStorage.removeItem('token');
-    }
+    setGlobalAuthToken(token);
   }, [token]);
 
   const fallbackBackendLogin = async (email: string, password: string) => {

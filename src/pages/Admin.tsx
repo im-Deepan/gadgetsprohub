@@ -9,6 +9,7 @@ import { mapErrorToFriendly } from '../utils/errorMapper';
 import { apiFetch, clearApiCache } from '../utils/apiClient';
 import { parseSpecificationsString } from '../utils/specParser';
 import { generateSlug } from '../utils/slug';
+import { TAMIL_NADU_DISTRICTS } from '../utils/districts';
 
 const DEFAULT_AFFILIATE_CODE = '';
 const BLANK_PROD_FORM = {
@@ -179,15 +180,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
   const [districtStats, setDistrictStats] = useState<Record<string, number>>(() => {
     const stats: Record<string, number> = {};
-    [
-      "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
-      "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
-      "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris",
-      "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivagangai",
-      "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli",
-      "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore",
-      "Viluppuram", "Virudhunagar"
-    ].forEach(d => {
+    TAMIL_NADU_DISTRICTS.forEach(d => {
       stats[d] = 0;
     });
     return stats;
@@ -639,7 +632,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
       const visitorName = item.userId ? (item.userId.name || 'Explorer Member') : 'Guest Visitor';
       const visitorEmail = item.userId ? (item.userId.email || 'N/A') : 'N/A';
-      const location = item.district || 'Chennai';
+      const location = item.district || 'Unspecified';
       const target = item.eventType === 'page_visit' 
         ? (item.pageUrl || 'Home') 
         : (item.productId?.name || item.pageUrl || 'Product Item');
@@ -650,7 +643,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       
       const browser = item.browser || 'Chrome';
       const device = item.device || 'Desktop';
-      const ip = item.ipAddress || '127.0.0.1';
+      const ip = item.ipAddress || 'N/A';
 
       return [
         recordId,
@@ -1071,7 +1064,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       if (res.ok) {
         clearApiCache();
         const bodyObj = await res.json();
-        triggerAlert("Simulation Completed", `Sunday automated scheduler event completed! Added ${bodyObj.log?.productsAdded?.length || 0} product items.`);
+        triggerAlert("Simulation Completed", `Sunday automated scheduler event completed! Created ${bodyObj.log?.productsAdded?.length || 0} unpublished draft product items queued for review.`);
         await loadAdminMetrics();
       } else {
         const errJson = await res.json().catch(() => ({}));
@@ -2233,7 +2226,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <div className="bg-white/80 p-3 rounded-xl border border-indigo-50 dark:border-indigo-950/40 dark:bg-zinc-950/40 space-y-1.5">
                         <span className="font-bold text-slate-700 dark:text-emerald-200 block">📬 Automatic Weekly Notification</span>
                         <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
-                          Every Sunday, a detailed automation run is triggered. It appends **2 brand-new premium items** to the live stock list and automatically emails the designated administrator's mailbox with a complete status update.
+                          Every Sunday, a detailed automation run is triggered. It appends **2 brand-new premium items** as unpublished drafts queued for review and automatically emails the designated administrator's mailbox with a complete status update.
                         </p>
                       </div>
                     </div>
@@ -2504,8 +2497,8 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                   </td>
                                   <td className="py-3.5 px-4 font-medium text-slate-600 dark:text-zinc-300">
                                     <span className="inline-flex items-center gap-1 text-[11px]">
-                                      <span>{getDistrictEmoji(usr.district || 'Chennai')}</span>
-                                      <span>{usr.district || 'Chennai'}</span>
+                                      <span>{getDistrictEmoji(usr.district || 'Unspecified')}</span>
+                                      <span>{usr.district || 'Unspecified'}</span>
                                     </span>
                                   </td>
                                   <td className="py-3.5 px-4">
@@ -2669,7 +2662,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                     </span>
                                   </td>
                                   <td className="py-3.5 px-4 font-mono text-[10px] text-slate-400 dark:text-slate-400">
-                                    <div>IP: {log.ipAddress || '127.0.0.1'}</div>
+                                    <div>IP: {log.ipAddress || 'N/A'}</div>
                                     <div className="text-[9px] text-slate-300 dark:text-slate-500">UA: {(log.userAgent || '').substring(0, 20)}...</div>
                                   </td>
                                   <td className="py-3.5 px-4 font-mono text-[10px] text-slate-400">
@@ -2831,7 +2824,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       }
                     }
 
-                    const visitorPlace = a?.district || "Chennai";
+                    const visitorPlace = a?.district || "Unspecified";
                     const visitorName = a.userId ? (a.userId.name || 'Explorer Member') : 'Guest Visitor';
 
                     return (
@@ -2891,7 +2884,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               </div>
                               <div>
                                 <div className="text-slate-300 uppercase font-bold tracking-wider text-[8px]">IP Address</div>
-                                <div className="font-mono font-bold text-slate-600 dark:text-slate-200 mt-1">{a?.ipAddress || "127.0.0.1"}</div>
+                                <div className="font-mono font-bold text-slate-600 dark:text-slate-200 mt-1">{a?.ipAddress || "N/A"}</div>
                               </div>
                               <div className="col-span-2 pt-1">
                                 <div className="text-slate-300 uppercase font-bold tracking-wider text-[8px]">Action Type & Stay Time</div>
@@ -2905,7 +2898,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  triggerAlert("Diagnostic Registry Info", `Simulating diagnostic IP lookup for: ${a?.ipAddress || "127.0.0.1"}\n\nLocation: ${visitorPlace} District\nNetwork ISP Status: Verified Clean`);
+                                  triggerAlert("Host Diagnostic Info", `Recorded Host IP: ${a?.ipAddress || "N/A"}\nLocation: ${visitorPlace} District\nBrowser: ${a?.browser || "N/A"}\nDevice: ${a?.device || "N/A"}`);
                                 }}
                                 className="text-[9px] rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-500 font-bold px-2 py-1 transition-all dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 cursor-pointer"
                               >
@@ -2998,7 +2991,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             }
                           }
 
-                          const visitorPlace = a?.district || "Chennai";
+                          const visitorPlace = a?.district || "Unspecified";
                           const visitorName = a.userId ? (a.userId.name || 'Explorer Member') : 'Guest Visitor';
 
                           return (
@@ -3046,7 +3039,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                     {new Date(a?.timestamp || Date.now()).toLocaleString()}
                                   </span>
                                   <span className="text-xs font-mono font-black text-slate-700 dark:text-slate-300">
-                                    {a?.ipAddress || "127.0.0.1"}
+                                    {a?.ipAddress || "N/A"}
                                   </span>
                                 </td>
 
@@ -3145,7 +3138,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                               Hardware Group: {a.device || "Desktop Terminal"}
                                             </div>
                                             <div className="text-[10px] text-slate-300 leading-tight block">
-                                              Proxy Mask IP: {a?.ipAddress || "127.0.0.1"}
+                                              Proxy Mask IP: {a?.ipAddress || "N/A"}
                                             </div>
                                           </div>
                                         </div>
@@ -3171,14 +3164,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                       {/* Action Footnote with dynamic simulation button */}
                                       <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-50 dark:border-slate-700/85">
                                         <div className="flex items-center gap-1.5 text-[10px] text-slate-300">
-                                          <span className="text-green-400 font-bold">✓ Secure Sandbox</span>
-                                          <span>This session matches our integrity guidelines with zero artificial bot patterns detected.</span>
+                                          <span className="text-emerald-400 font-bold">✓ Logged Telemetry</span>
+                                          <span>Interaction record logged from client application session.</span>
                                         </div>
                                         <button
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            triggerAlert("Diagnostic Registry Info", `Simulating diagnostic IP lookup for: ${a?.ipAddress || "127.0.0.1"}\n\nLocation: ${visitorPlace} District\nNetwork ISP Status: Verified Clean`);
+                                            triggerAlert("Host Diagnostic Info", `Recorded Host IP: ${a?.ipAddress || "N/A"}\nLocation: ${visitorPlace} District\nBrowser: ${a?.browser || "N/A"}\nDevice: ${a?.device || "N/A"}`);
                                           }}
                                           className="text-[10px] rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-500 font-bold px-3 py-1.5 transition-all dark:border-slate-600 dark:text-slate-305 dark:hover:bg-slate-700 cursor-pointer"
                                         >
@@ -3398,7 +3391,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           )}
                         </div>
                       )}
-                      {!slugChecking && !slugCheckError && (prodForm.slug || prodForm.name) && (
+                      {!slugChecking && !slugCheckError && (prodForm.slug || prodForm.name).trim().length >= 3 && (
                         <p className="text-[10px] text-emerald-500 dark:text-emerald-400 font-bold mt-1 flex items-center gap-1">✓ Web Link Name is available!</p>
                       )}
                     </div>

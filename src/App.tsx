@@ -556,7 +556,7 @@ const AppContent: React.FC = () => {
           const res = await fetch(`/api/products/${selectedSlug}`, { signal: controller.signal });
           if (res.ok && active) {
             const product = await res.json();
-            const categoryName = typeof product.category === 'object' ? product.category.name : (product.category || 'Tech');
+            const categoryName = (typeof product.category === 'object' && product.category !== null) ? product.category.name : (product.category || 'Tech');
             const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
             const dynamicUrl = `${dynamicOrigin}/product-detail/${selectedSlug}`;
 

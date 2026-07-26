@@ -18,7 +18,6 @@ interface AiContentDashboardProps {
 
 export default function AiContentDashboard({ token, showNotice = () => {} }: AiContentDashboardProps) {
   const { token: authContextToken } = useAuth();
-  const effectiveToken = token || authContextToken || (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken')) : '') || '';
 
   const [activeTab, setActiveTab] = useState<'assistant' | 'prompts' | 'queue' | 'analytics' | 'settings'>('assistant');
 
@@ -147,12 +146,10 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
 
     if (useStreaming) {
       try {
-        const token = localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken');
         const response = await apiFetch('/api/admin/ai/generate', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token || ''}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             productId: selectedProductId,

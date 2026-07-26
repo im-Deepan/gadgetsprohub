@@ -202,10 +202,19 @@ export class AiService {
   };
 
   constructor() {
-    // Decouple API key encryption from JWT_SECRET to prevent token rotation from destroying database keys.
-    // Use dedicated AI_KEY_ENCRYPTION_SECRET or JWT_SECRET, or a stable default secret key for deployment persistence.
-    const secret = process.env.AI_KEY_ENCRYPTION_SECRET || process.env.JWT_SECRET || 'gadgetsprohub-stable-ai-encryption-key-v1';
+    const secret = this.getEncryptionSecret();
     this.encryptionKey = crypto.scryptSync(secret, 'salt-enterprise-affiliate-ai', 32);
+  }
+
+  private getEncryptionSecret(): string {
+    if (process.env.AI_KEY_ENCRYPTION_SECRET) {
+      return process.env.AI_KEY_ENCRYPTION_SECRET;
+    }
+    // Decouple from JWT_SECRET so token rotation does not break encrypted database keys.
+    // Derive a stable fallback from persistent server config (e.g. MONGODB_URI, APP_URL, GEMINI_API_KEY)
+    // rather than volatile container HOSTNAME or hardcoded secret literals in source code.
+    const persistentSeed = process.env.MONGODB_URI || process.env.APP_URL || process.env.GEMINI_API_KEY || '';
+    return crypto.createHash('sha256').update(`ai-key-encryption-seed:${persistentSeed}`).digest('hex');
   }
 
   // ==========================================
@@ -929,6 +938,36 @@ export class AiService {
       systemInstruction: 'You are a professional enterprise translator.'
     });
     return result.text;
+  }
+
+  // Pros & Cons Generation
+  public async generateProsCons(productInfo: { name: string, description: string, features: string[], specifications: Record<string, string> }): Promise<{ pros: string[], cons: string[] }> {
+    const prompt = `Based on the following product information, generate 3 to 5 realistic pros and 2 to 4 realistic cons.
+Format the output EXACTLY as a JSON object with two keys: "pros" (array of strings) and "cons" (array of strings). Do not include any other text or markdown formatting.
+
+Product Info:
+Name: ${productInfo.name}
+Description: ${productInfo.description}
+Features: ${(productInfo.features || []).join(', ')}
+Specifications: ${JSON.stringify(productInfo.specifications || {})}
+`;
+    try {
+      const result = await this.executeGeneration({
+        prompt,
+        systemInstruction: 'You are an objective product reviewer. Output only valid JSON. Do not include markdown code blocks like ```json.'
+      });
+      
+      const cleanJson = result.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      
+      return { 
+        pros: Array.isArray(parsed.pros) ? parsed.pros : [], 
+        cons: Array.isArray(parsed.cons) ? parsed.cons : [] 
+      };
+    } catch (e) {
+      console.warn('Failed to parse AI pros/cons generation:', e);
+      return { pros: [], cons: [] };
+    }
   }
 
   // ==========================================

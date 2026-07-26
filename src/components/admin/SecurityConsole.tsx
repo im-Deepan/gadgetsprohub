@@ -423,7 +423,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                             {s.userAgent}
                           </td>
                           <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">
-                            {s.ipAddress || '127.0.0.1'}
+                            {s.ipAddress || 'N/A'}
                           </td>
                           <td className="px-4 py-3 text-slate-500">
                             {new Date(s.createdAt).toLocaleString()}

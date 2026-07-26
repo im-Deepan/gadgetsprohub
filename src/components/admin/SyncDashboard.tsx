@@ -18,7 +18,6 @@ interface SyncDashboardProps {
 
 export default function SyncDashboard({ token, showNotice = () => {} }: SyncDashboardProps) {
   const { token: authContextToken } = useAuth();
-  const effectiveToken = token || authContextToken || (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken')) : '') || '';
 
   const [activeTab, setActiveTab] = useState<'overview' | 'scheduler' | 'health' | 'rules' | 'audits' | 'marketplace'>('overview');
   
@@ -184,7 +183,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
       const aRes = await apiFetch('/api/admin/marketplace/analytics');
       if (aRes.ok) {
         const json = await aRes.json();
-        setMAnalytics(json.data || { totalProducts: 0, overallSuccessRate: 100, providersCount: 0, providers: [] });
+        setMAnalytics(json.data || { totalProducts: 0, overallSuccessRate: 0, providersCount: 0, providers: [] });
       }
       const pRes = await apiFetch('/api/admin/marketplace/providers');
       if (pRes.ok) {
@@ -705,10 +704,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
   // Convert chart details
   const getChartData = () => {
     if (!productTimeline.priceHistory || productTimeline.priceHistory.length === 0) {
-      return [
-        { name: 'Initial', price: stats.totalProducts > 0 ? 99 : 0 },
-        { name: 'Latest', price: stats.totalProducts > 0 ? 89 : 0 }
-      ];
+      return [];
     }
     return [...productTimeline.priceHistory].reverse().map(h => ({
       name: new Date(h.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }),
@@ -1476,7 +1472,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                 <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Extraction Success Rate</p>
-                    <p className="text-2xl font-black text-emerald-400">{mAnalytics.overallSuccessRate || 100}%</p>
+                    <p className="text-2xl font-black text-emerald-400">{mAnalytics.overallSuccessRate ?? 0}%</p>
                     <p className="text-[10px] text-slate-500">Zero-error scraping pipelines</p>
                   </div>
                   <div className="p-2.5 bg-emerald-950/40 border border-emerald-900/30 rounded-lg text-emerald-400">
@@ -1487,7 +1483,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                 <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Scraping Latency</p>
-                    <p className="text-2xl font-black text-amber-400">420ms</p>
+                    <p className="text-2xl font-black text-amber-400">{mAnalytics.averageLatency ? `${mAnalytics.averageLatency}ms` : 'N/A'}</p>
                     <p className="text-[10px] text-slate-500">Average round-trip response</p>
                   </div>
                   <div className="p-2.5 bg-amber-950/40 border border-amber-900/30 rounded-lg text-amber-400">
@@ -1498,7 +1494,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                 <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Configured Providers</p>
-                    <p className="text-2xl font-black text-indigo-400">{mAnalytics.providersCount || 13}</p>
+                    <p className="text-2xl font-black text-indigo-400">{mAnalytics.providersCount ?? 0}</p>
                     <p className="text-[10px] text-slate-500">Multi-region regional outlets</p>
                   </div>
                   <div className="p-2.5 bg-indigo-950/40 border border-indigo-900/30 rounded-lg text-indigo-400">
@@ -1607,7 +1603,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                       >
                         <option value="">Default category placement (Autoselect)</option>
                         {products.length > 0 && Array.from(new Set(products.map(p => typeof p.category === 'object' ? p.category?.name : 'General'))).map((catName: any) => (
-                          <option key={catName} value="">{catName}</option>
+                          <option key={catName} value={catName}>{catName}</option>
                         ))}
                       </select>
                     </div>
@@ -1685,8 +1681,14 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                           onChange={(e) => {
                             setSelectedProvId(e.target.value);
                             const set = mSettings.find(s => s.providerId === e.target.value);
-                            setProvApiKey(set?.apiKeys?.get?.('apiKey') || '');
-                            setProvSessionToken(set?.sessionTokens?.get?.('token') || '');
+                            const getVal = (obj: any, key: string) => {
+                              if (!obj) return '';
+                              if (typeof obj.get === 'function') return obj.get(key) || '';
+                              if (typeof obj === 'object') return obj[key] || '';
+                              return '';
+                            };
+                            setProvApiKey(getVal(set?.apiKeys, 'apiKey'));
+                            setProvSessionToken(getVal(set?.sessionTokens, 'token'));
                             setProvCookies(set?.cookies || '');
                             setProvAutoPublish(set?.importRules?.autoPublish ?? true);
                             setProvSyncReviews(set?.importRules?.syncReviews ?? true);

@@ -648,7 +648,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   // Resolve dynamic URL based on current host origin
   const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
   const dynamicUrl = `${dynamicOrigin}/products/${product?.slug || ''}`;
-  const dynamicCategory = typeof product.category === 'object' ? product.category.name : (product.category || '');
+  const dynamicCategory = (typeof product.category === 'object' && product.category !== null) ? product.category.name : (product.category || '');
 
   return (
     <div className="w-full mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">

@@ -56,6 +56,12 @@ export async function diagnosticCheckProducts(): Promise<{
   }
 }
 
+let memoryToken: string | null = null;
+
+export function setGlobalAuthToken(token: string | null) {
+  memoryToken = token;
+}
+
 /**
  * Generates a unique deterministic key for a request to identify duplicates
  */
@@ -102,9 +108,7 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
   }
 
   if (!hasAuthHeader) {
-    const token = typeof window !== 'undefined'
-      ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken'))
-      : null;
+    const token = memoryToken;
     if (token) {
       if (headersObj instanceof Headers) {
         headersObj.set('Authorization', `Bearer ${token}`);

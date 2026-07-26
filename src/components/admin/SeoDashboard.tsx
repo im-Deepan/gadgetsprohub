@@ -43,7 +43,6 @@ interface RedirectRule {
 
 export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
   const { token: authContextToken } = useAuth();
-  const effectiveToken = token || authContextToken || (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken')) : '') || '';
 
   const [products, setProducts] = useState<ProductSeo[]>([]);
   const [redirects, setRedirects] = useState<RedirectRule[]>([]);
@@ -1035,7 +1034,7 @@ export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
             <label className="text-[10px] font-mono font-bold text-slate-400 uppercase">Source path</label>
             <input
               type="text"
-              placeholder="/product/old-slug"
+              placeholder="/product-detail/old-slug"
               value={newRedirect.sourceUrl}
               onChange={e => setNewRedirect({ ...newRedirect, sourceUrl: e.target.value })}
               className="w-full p-2.5 text-xs rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-800 text-slate-800 dark:text-slate-100 focus:outline-hidden"
@@ -1047,7 +1046,7 @@ export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
             <label className="text-[10px] font-mono font-bold text-slate-400 uppercase">Target path</label>
             <input
               type="text"
-              placeholder="/product/new-slug"
+              placeholder="/product-detail/new-slug"
               value={newRedirect.targetUrl}
               onChange={e => setNewRedirect({ ...newRedirect, targetUrl: e.target.value })}
               className="w-full p-2.5 text-xs rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-800 text-slate-800 dark:text-slate-100 focus:outline-hidden"

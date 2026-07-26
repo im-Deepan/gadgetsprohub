@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../utils/apiClient';
 import { useAuth } from '../../context/AuthContext';
+import { cleanSpecificationsObj } from '../../utils/specParser';
 import { AlertDialog } from './AlertDialog';
 import { 
   Chrome, Search, CheckCircle2, AlertTriangle, RefreshCw, 
@@ -19,6 +20,7 @@ interface ScrapedProduct {
   description: string;
   longDescription: string;
   imageUrl: string;
+  images?: string[];
   affiliateCode: string;
   features: string[];
   specifications: Record<string, string>;
@@ -149,7 +151,6 @@ interface ExtensionImporterProps {
 
 export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
   const { user, token: authContextToken } = useAuth();
-  const effectiveToken = token || authContextToken || (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken')) : '') || '';
   
   // Importer Mode Navigation
   const [activeTab, setActiveTab] = useState<'live' | 'simulator' | 'devtools'>('simulator');
@@ -426,7 +427,19 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
       if (scrapeRes.ok) {
         const data = await scrapeRes.json();
         if (data && data.success && data.data) {
-          setScrapedProduct(data.data);
+          const productData = data.data;
+          if (productData.specifications) {
+            productData.specifications = cleanSpecificationsObj(productData.specifications);
+          }
+          if (!productData.specifications || Object.keys(productData.specifications).length === 0) {
+            productData.specifications = {
+              "Brand": productData.brand || "Amazon Merchant",
+              "Category": productData.categoryName || "Electronics",
+              "Warranty": "1 Year Manufacturer Limited Warranty",
+              "Item Condition": "New - Factory Sealed"
+            };
+          }
+          setScrapedProduct(productData);
         } else {
           throw new Error(data?.error || 'Failed to parse product data');
         }
@@ -455,9 +468,10 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
           "High-performance design and premium build"
         ],
         specifications: {
-          "ASIN": asin,
-          "Import Link": targetUrl,
-          "Status": "Parsed & Validated"
+          "Brand": "Amazon Merchant",
+          "Category": "Electronics & Accessories",
+          "Warranty": "1 Year Manufacturer Limited Warranty",
+          "Item Condition": "New - Factory Sealed"
         },
         tags: ["imported", "amazon", asin.toLowerCase()]
       });
@@ -500,9 +514,6 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
         'X-Correlation-ID': currentCorrelationId,
         'X-Extension-Version': extensionVersionInput
       };
-      if (effectiveToken) {
-        headers['Authorization'] = `Bearer ${effectiveToken}`;
-      }
 
       const res = await apiFetch('/api/admin/products/import', {
         method: 'POST',
@@ -1167,21 +1178,34 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                     </div>
                   </div>
 
-                  {/* Image URL preview */}
+                  {/* Image URLs preview */}
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Main Product Image URL</label>
-                    <div className="flex gap-4 items-center">
-                      <img
-                        src={scrapedProduct.imageUrl}
-                        alt="Thumbnail Preview"
-                        referrerPolicy="no-referrer"
-                        className="w-12 h-12 rounded-lg border border-slate-100 bg-slate-50 object-cover shrink-0 dark:border-slate-800"
-                      />
-                      <input
-                        type="text"
-                        value={scrapedProduct.imageUrl}
-                        onChange={(e) => setScrapedProduct({ ...scrapedProduct, imageUrl: e.target.value })}
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Product Images</label>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                        {(scrapedProduct.images && scrapedProduct.images.length > 0 ? scrapedProduct.images : [scrapedProduct.imageUrl]).map((img, idx) => (
+                          <img
+                            key={idx}
+                            src={img}
+                            alt={`Thumbnail ${idx}`}
+                            referrerPolicy="no-referrer"
+                            className="w-12 h-12 rounded-lg border border-slate-100 bg-slate-50 object-cover shrink-0 dark:border-slate-800"
+                          />
+                        ))}
+                      </div>
+                      <textarea
+                        rows={2}
+                        value={(scrapedProduct.images && scrapedProduct.images.length > 0 ? scrapedProduct.images : [scrapedProduct.imageUrl]).join(',\n')}
+                        onChange={(e) => {
+                          const urls = e.target.value.split(',').map(u => u.trim()).filter(Boolean);
+                          setScrapedProduct({ 
+                            ...scrapedProduct, 
+                            images: urls,
+                            imageUrl: urls[0] || ''
+                          });
+                        }}
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/20 dark:bg-zinc-800/20 text-xs text-slate-850 dark:text-slate-100 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                        placeholder="Comma-separated image URLs"
                       />
                     </div>
                   </div>
