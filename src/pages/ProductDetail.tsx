@@ -957,9 +957,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           {/* Pricing parameters card */}
           <div className="rounded-2xl bg-indigo-50/50 p-5 border border-indigo-50/30 space-y-4 dark:bg-slate-800/40 dark:border-slate-700">
             <div className="flex items-baseline gap-2.5">
-              <span className="text-2xl font-black text-slate-800 font-mono dark:text-white">₹{product.price}</span>
+              <span className="text-2xl font-black text-slate-800 font-mono dark:text-white">${product.price}</span>
               {product.originalPrice && (
-                <span className="text-sm text-slate-300 line-through font-mono">₹{product.originalPrice}</span>
+                <span className="text-sm text-slate-300 line-through font-mono">${product.originalPrice}</span>
               )}
               {product.discount && (
                 <span className="bg-rose-50 text-rose-600 px-2 py-0.5 text-[9px] font-bold rounded-lg font-mono">
@@ -1218,7 +1218,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 <div className="p-2.5 sm:p-3.5">
                   <h4 className="text-[11px] sm:text-xs font-bold text-slate-700 truncate dark:text-white group-hover:text-indigo-500">{rel.name}</h4>
                   <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-1 text-[10px] sm:text-xs mt-2 pt-2 border-t border-slate-50 dark:border-slate-700">
-                    <span className="font-extrabold text-slate-800 font-mono dark:text-white">₹{rel.price}</span>
+                    <span className="font-extrabold text-slate-800 font-mono dark:text-white">${rel.price}</span>
                     <span className="text-[9px] sm:text-[10px] text-slate-300 font-semibold font-mono">★ {rel.rating && rel.rating > 0 ? rel.rating : 'N/A'}</span>
                   </div>
                 </div>

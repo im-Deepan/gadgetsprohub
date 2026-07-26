@@ -129,15 +129,12 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
                   </motion.div>
                 </AnimatePresence>
 
-                {/* Rating overlay badge at top right with baseline 4.5 fallback */}
-                {(() => {
-                  const ratingVal = typeof prod.rating === 'number' && prod.rating > 0 ? prod.rating : 4.5;
-                  return (
-                    <div className="absolute top-2 right-2 bg-slate-800/80 backdrop-blur-md text-white font-extrabold font-mono text-[9px] px-1.5 py-0.5 rounded shadow-sm z-10 dark:bg-slate-800/90">
-                      ★ {ratingVal.toFixed(1)}
-                    </div>
-                  );
-                })()}
+                {/* Rating overlay badge at top right */}
+                {typeof prod.rating === 'number' && prod.rating > 0 && (
+                  <div className="absolute top-2 right-2 bg-slate-800/80 backdrop-blur-md text-white font-extrabold font-mono text-[9px] px-1.5 py-0.5 rounded shadow-sm z-10 dark:bg-slate-800/90">
+                    ★ {prod.rating.toFixed(1)}
+                  </div>
+                )}
               </div>
 
               {/* Text, Brand, and title container */}
@@ -159,7 +156,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
                     className="w-full flex-grow flex flex-col justify-center"
                   >
                     <span className="text-[9px] font-black tracking-wider uppercase font-mono text-indigo-500 dark:text-indigo-300 leading-none truncate">
-                      {prod.brand || 'Elite Design'}
+                      {prod.brand || (typeof prod.category === 'object' ? prod.category?.name : prod.category) || 'Gadget'}
                     </span>
                     <h3 className="text-xs font-extrabold text-slate-700 dark:text-slate-100 line-clamp-1 group-hover:text-indigo-500 dark:group-hover:text-indigo-300 transition-colors tracking-tight leading-none mt-1">
                       {prod.name}

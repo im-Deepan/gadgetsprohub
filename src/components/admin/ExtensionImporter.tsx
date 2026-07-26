@@ -723,7 +723,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                     <span className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400 font-bold flex items-center justify-center shrink-0">2</span>
                     <div>
                       <h4 className="font-bold text-slate-800 dark:text-slate-200">Pair Portal Session</h4>
-                      <p className="mt-0.5">Open the extension popup and input the Portal URL: <code className="bg-slate-50 dark:bg-zinc-800 px-1 rounded">http://localhost:3000</code> along with your unique session pairing key.</p>
+                      <p className="mt-0.5">Open the extension popup and input the Portal URL: <code className="bg-slate-50 dark:bg-zinc-800 px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}</code> along with your unique session pairing key.</p>
                     </div>
                   </div>
 
@@ -761,7 +761,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                   <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
                   <p className="font-bold text-slate-200">Live Daemon Logs</p>
                 </div>
-                <span className="text-[10px] text-indigo-400">ws://localhost:3000</span>
+                <span className="text-[10px] text-indigo-400">{typeof window !== 'undefined' ? window.location.origin.replace(/^http/, 'ws') : 'ws://localhost:3000'}</span>
               </div>
 
               <div className="space-y-2 max-h-[250px] overflow-y-auto">

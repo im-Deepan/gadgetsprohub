@@ -3,12 +3,14 @@ import {
   Sparkles, RefreshCw, Play, Pause, Ban, AlertTriangle, Check, X, Bell, 
   Activity, Shield, List, TrendingDown, Heart, FileText, ChevronRight, 
   Settings, Clock, ArrowRight, Save, Trash2, Link2, Info, Compass, ShieldAlert,
-  BarChart2, HelpCircle, Coins
+  BarChart2, HelpCircle, Coins, Download, Zap, CheckCircle2, ArrowDownRight,
+  Layers, FileSpreadsheet, FileCode, RotateCcw, PieChart as PieChartIcon
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
 import { useAuth } from '../../context/AuthContext';
 import { 
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, Cell 
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, Cell,
+  PieChart, Pie, Legend
 } from 'recharts';
 
 interface SyncDashboardProps {
@@ -19,7 +21,27 @@ interface SyncDashboardProps {
 export default function SyncDashboard({ token, showNotice = () => {} }: SyncDashboardProps) {
   const { token: authContextToken } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'scheduler' | 'health' | 'rules' | 'audits' | 'marketplace'>('overview');
+  const [activeTab, setActiveTab] = useState<'scanner' | 'overview' | 'scheduler' | 'health' | 'rules' | 'audits' | 'marketplace'>('scanner');
+
+  // Descending Price Scanner (1:00 AM Flow) State
+  const [scannerState, setScannerState] = useState<any>({
+    isRunning: false,
+    isPaused: false,
+    lastRunStartTime: null,
+    lastScanCompletedTime: null,
+    nextScheduledRunTime: null,
+    fastMode: false,
+    intervalRangeMinutes: [5, 7],
+    totalProducts: 0,
+    productsChecked: 0,
+    productsRemaining: 0,
+    productsUpdated: 0,
+    productsUnchanged: 0,
+    productsFailed: 0,
+    currentlyScanning: null,
+    scannedProductIds: [],
+    logs: []
+  });
   
   // Phase 11: Multi-Marketplace & Universal Import States
   const [mAnalytics, setMAnalytics] = useState<any>({ totalProducts: 0, overallSuccessRate: 0, providersCount: 0, providers: [] });
@@ -221,6 +243,141 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
       }
     } catch {
       showNotice('error', 'Failed to retrieve multi-marketplace configurations.');
+    }
+  };
+
+  const fetchScannerStatus = async () => {
+    try {
+      const res = await apiFetch('/api/admin/price-scanner/status');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          setScannerState(json.data);
+        }
+      }
+    } catch {
+      // quiet
+    }
+  };
+
+  useEffect(() => {
+    fetchScannerStatus();
+    const interval = setInterval(() => {
+      fetchScannerStatus();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleStartScanner = async () => {
+    try {
+      const res = await apiFetch('/api/admin/price-scanner/start', { method: 'POST' });
+      if (res.ok) {
+        const json = await res.json();
+        setScannerState(json.data);
+        showNotice('success', '1:00 AM Daily price scanner flow started! Scanning products in descending price order ($High → $Low).');
+      }
+    } catch {
+      showNotice('error', 'Failed to start price scanner.');
+    }
+  };
+
+  const handlePauseScanner = async () => {
+    try {
+      const res = await apiFetch('/api/admin/price-scanner/pause', { method: 'POST' });
+      if (res.ok) {
+        const json = await res.json();
+        setScannerState(json.data);
+        showNotice('info', 'Price scan cycle paused.');
+      }
+    } catch {
+      showNotice('error', 'Failed to pause price scanner.');
+    }
+  };
+
+  const handleResumeScanner = async () => {
+    try {
+      const res = await apiFetch('/api/admin/price-scanner/resume', { method: 'POST' });
+      if (res.ok) {
+        const json = await res.json();
+        setScannerState(json.data);
+        showNotice('success', 'Price scan cycle resumed.');
+      }
+    } catch {
+      showNotice('error', 'Failed to resume price scanner.');
+    }
+  };
+
+  const handleResetScanner = async () => {
+    try {
+      const res = await apiFetch('/api/admin/price-scanner/reset', { method: 'POST' });
+      if (res.ok) {
+        const json = await res.json();
+        setScannerState(json.data);
+        showNotice('info', 'Price scanner progress reset to pending state.');
+      }
+    } catch {
+      showNotice('error', 'Failed to reset price scanner.');
+    }
+  };
+
+  const handleToggleFastMode = async (enabled: boolean) => {
+    try {
+      const res = await apiFetch('/api/admin/price-scanner/toggle-fast-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fastMode: enabled })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setScannerState(json.data);
+        showNotice('info', enabled ? 'Fast Demo Mode activated (5-second gap between price checks).' : 'Standard interval activated (5-7 minutes gap).');
+      }
+    } catch {
+      showNotice('error', 'Failed to toggle fast mode.');
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      showNotice('info', 'Generating CSV report of product details & price scan logs...');
+      const res = await apiFetch('/api/admin/price-scanner/export/csv');
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `product-price-scanner-report-${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        showNotice('success', 'CSV report downloaded successfully.');
+      } else {
+        showNotice('error', 'Failed to generate CSV export.');
+      }
+    } catch {
+      showNotice('error', 'CSV export encountered an error.');
+    }
+  };
+
+  const handleExportJSON = async () => {
+    try {
+      showNotice('info', 'Generating JSON export of product details & price scan logs...');
+      const res = await apiFetch('/api/admin/price-scanner/export/json');
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `product-price-scanner-data-${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        showNotice('success', 'JSON export downloaded successfully.');
+      } else {
+        showNotice('error', 'Failed to generate JSON export.');
+      }
+    } catch {
+      showNotice('error', 'JSON export encountered an error.');
     }
   };
 
@@ -788,6 +945,16 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
       {/* Tabs list selector */}
       <div className="flex border-b border-slate-800 pb-0.5 overflow-x-auto gap-2">
         <button
+          onClick={() => setActiveTab('scanner')}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all flex items-center gap-2 ${activeTab === 'scanner' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+        >
+          <PieChartIcon className="w-3.5 h-3.5" />
+          <span>1 AM Price Scanner (Descending)</span>
+          {scannerState.isRunning && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'overview' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
@@ -832,6 +999,383 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
         </div>
       ) : (
         <div className="min-h-[450px]">
+          {/* TAB 0: 1:00 AM DESCENDING PRICE SCANNER */}
+          {activeTab === 'scanner' && (
+            <div className="space-y-8 animate-fade-in">
+              {/* Header Banner & Controls */}
+              <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-900/40 rounded-2xl p-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                  <PieChartIcon className="w-64 h-64 text-indigo-400" />
+                </div>
+
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                  <div className="space-y-2 max-w-2xl">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="px-2.5 py-1 bg-indigo-950/80 border border-indigo-800 text-indigo-300 text-[10px] font-bold tracking-wider uppercase rounded-full flex items-center gap-1.5">
+                        <Clock className="w-3 h-3 text-indigo-400" />
+                        1:00 AM Daily Trigger Flow
+                      </span>
+                      {scannerState.isRunning && (
+                        <span className="px-2.5 py-1 bg-emerald-950/90 border border-emerald-800 text-emerald-400 text-[10px] font-bold tracking-wider uppercase rounded-full flex items-center gap-1.5 animate-pulse">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                          Scanning Active
+                        </span>
+                      )}
+                      {scannerState.isPaused && (
+                        <span className="px-2.5 py-1 bg-amber-950/90 border border-amber-800 text-amber-400 text-[10px] font-bold tracking-wider uppercase rounded-full flex items-center gap-1.5">
+                          <Pause className="w-3 h-3" />
+                          Paused
+                        </span>
+                      )}
+                      {!scannerState.isRunning && !scannerState.isPaused && (
+                        <span className="px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold tracking-wider uppercase rounded-full">
+                          Scheduled for 1:00 AM
+                        </span>
+                      )}
+                      <span className="px-2.5 py-1 bg-purple-950/60 border border-purple-800/40 text-purple-300 text-[10px] font-mono rounded-full">
+                        Order: Descending Price ($High → $Low)
+                      </span>
+                    </div>
+
+                    <h2 className="text-xl font-black text-white flex items-center gap-2">
+                      Automated Price Sync & Scraper Engine
+                      <span className="text-xs font-normal text-indigo-300 bg-indigo-900/40 px-2 py-0.5 rounded border border-indigo-800/40">No AI Models</span>
+                    </h2>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Scans products sorted strictly in <strong>descending price order</strong> starting at 1:00 AM daily. Scrapes live prices via direct HTTP affiliate queries, updates changed prices in real time, and logs change events with a 5–7 minute gap between items.
+                    </p>
+                  </div>
+
+                  {/* Actions & Controls */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    {!scannerState.isRunning ? (
+                      <button
+                        onClick={handleStartScanner}
+                        className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Play className="w-4 h-4 fill-current" />
+                        <span>Start Scan Cycle</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handlePauseScanner}
+                        className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-amber-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Pause className="w-4 h-4 fill-current" />
+                        <span>Pause Flow</span>
+                      </button>
+                    )}
+
+                    {scannerState.isPaused && (
+                      <button
+                        onClick={handleResumeScanner}
+                        className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Play className="w-4 h-4 fill-current" />
+                        <span>Resume</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleResetScanner}
+                      className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span>Reset</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Interval / Fast Demo Mode Bar */}
+                <div className="mt-6 pt-4 border-t border-indigo-900/30 flex flex-wrap items-center justify-between gap-4 text-xs">
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-400">Fetch Interval Gap:</span>
+                    <span className="font-mono font-bold text-indigo-300 bg-indigo-950 px-2 py-1 rounded border border-indigo-800/40">
+                      {scannerState.fastMode ? '5 Seconds (Fast Demo Mode)' : '5 - 7 Minutes (Production Standard)'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-slate-950/60 p-1.5 rounded-xl border border-slate-800">
+                    <span className="text-[11px] text-slate-400 font-medium px-2">Fast Demo Test Mode (5s gap):</span>
+                    <button
+                      onClick={() => handleToggleFastMode(!scannerState.fastMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${scannerState.fastMode ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${scannerState.fastMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 Core Data Metrics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Products</p>
+                    <h3 className="text-2xl font-black text-white">{scannerState.totalProducts || 0}</h3>
+                    <p className="text-[10px] text-slate-500">In descending price order</p>
+                  </div>
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-300">
+                    <Layers className="w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-slate-950/50 border border-emerald-900/30 rounded-xl p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Products Checked</p>
+                    <h3 className="text-2xl font-black text-emerald-300">{scannerState.productsChecked || 0}</h3>
+                    <p className="text-[10px] text-emerald-500/80">
+                      {scannerState.totalProducts > 0 
+                        ? `${Math.round((scannerState.productsChecked / scannerState.totalProducts) * 100)}% completed`
+                        : '0%'}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-emerald-950/40 border border-emerald-900/50 rounded-xl text-emerald-400">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-slate-950/50 border border-purple-900/30 rounded-xl p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Needs To Be Checked</p>
+                    <h3 className="text-2xl font-black text-purple-300">{scannerState.productsRemaining || 0}</h3>
+                    <p className="text-[10px] text-purple-400/80">Pending remaining items</p>
+                  </div>
+                  <div className="p-3 bg-purple-950/40 border border-purple-900/50 rounded-xl text-purple-400">
+                    <Clock className="w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-slate-950/50 border border-indigo-900/30 rounded-xl p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Price Updated / Changed</p>
+                    <h3 className="text-2xl font-black text-indigo-300">{scannerState.productsUpdated || 0}</h3>
+                    <p className="text-[10px] text-indigo-400/80">
+                      {scannerState.productsUnchanged || 0} verified unchanged
+                    </p>
+                  </div>
+                  <div className="p-3 bg-indigo-950/40 border border-indigo-900/50 rounded-xl text-indigo-400">
+                    <TrendingDown className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Pie Chart Visual & Active Scan Progress */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Pie Chart Visualization Card */}
+                <div className="lg:col-span-7 bg-slate-950/50 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                        <PieChartIcon className="w-4 h-4 text-indigo-400" />
+                        Price Scan Status Distribution (Pie Chart)
+                      </h3>
+                      <p className="text-[11px] text-slate-400">Proportion of verified, updated, pending, and failed products</p>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded border border-slate-800">
+                      Live Visualization
+                    </span>
+                  </div>
+
+                  <div className="h-[280px] w-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Checked (Unchanged)', value: scannerState.productsUnchanged || 0, color: '#10B981' },
+                            { name: 'Price Updated', value: scannerState.productsUpdated || 0, color: '#6366F1' },
+                            { name: 'Needs to be Checked', value: scannerState.productsRemaining || 0, color: '#8B5CF6' },
+                            { name: 'Errors / Failed', value: scannerState.productsFailed || 0, color: '#EF4444' }
+                          ].filter(d => d.value > 0 || (scannerState.totalProducts === 0 && d.name === 'Needs to be Checked'))}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={95}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {[
+                            { name: 'Checked (Unchanged)', value: scannerState.productsUnchanged || 0, color: '#10B981' },
+                            { name: 'Price Updated', value: scannerState.productsUpdated || 0, color: '#6366F1' },
+                            { name: 'Needs to be Checked', value: scannerState.productsRemaining || 0, color: '#8B5CF6' },
+                            { name: 'Errors / Failed', value: scannerState.productsFailed || 0, color: '#EF4444' }
+                          ].filter(d => d.value > 0 || (scannerState.totalProducts === 0 && d.name === 'Needs to be Checked')).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} stroke="#0f172a" strokeWidth={2} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc', fontSize: '12px' }}
+                          formatter={(val: any, name: any) => [`${val} Products`, name]}
+                        />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Right Side: Active Scanning Card & Export Panel */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Currently Scanning Box */}
+                  <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                      <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-indigo-400 animate-pulse" />
+                        Currently Scanning Item
+                      </h3>
+                      {scannerState.currentlyScanning && (
+                        <span className="px-2 py-0.5 bg-indigo-950 text-indigo-300 text-[10px] font-mono rounded border border-indigo-800/40">
+                          Rank #${scannerState.currentlyScanning.index} (Price Descending)
+                        </span>
+                      )}
+                    </div>
+
+                    {scannerState.currentlyScanning ? (
+                      <div className="bg-gradient-to-r from-indigo-950/40 to-slate-900 border border-indigo-900/50 rounded-xl p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-400">Target Product</span>
+                            <h4 className="text-sm font-bold text-white line-clamp-2">{scannerState.currentlyScanning.name}</h4>
+                            {scannerState.currentlyScanning.asin && (
+                              <p className="text-[10px] text-slate-400 font-mono">ASIN: {scannerState.currentlyScanning.asin}</p>
+                            )}
+                          </div>
+                          <div className="text-right whitespace-nowrap">
+                            <span className="text-[9px] uppercase text-slate-400 font-bold block">Catalog Price</span>
+                            <span className="text-lg font-black text-emerald-400">${scannerState.currentlyScanning.price.toFixed(2)}</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-indigo-900/40 flex items-center justify-between text-[11px] text-indigo-300">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
+                            Direct HTTP Scraper Fetching Live Price...
+                          </span>
+                          <span className="font-mono text-[10px] text-slate-400">No AI Used</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center space-y-2 bg-slate-900/40 rounded-xl border border-slate-800/60">
+                        <Clock className="w-8 h-8 text-slate-600 mx-auto" />
+                        <p className="text-xs text-slate-400 font-medium">Scanner is idle / waiting for cycle start.</p>
+                        <p className="text-[10px] text-slate-500">Next daily run scheduled for: {scannerState.nextScheduledRunTime ? new Date(scannerState.nextScheduledRunTime).toLocaleString() : '1:00 AM'}</p>
+                      </div>
+                    )}
+
+                    {/* Progress Bar */}
+                    <div className="space-y-1.5 pt-2">
+                      <div className="flex justify-between text-[11px] font-bold">
+                        <span className="text-slate-400">Scan Progress</span>
+                        <span className="text-indigo-400">
+                          {scannerState.totalProducts > 0 
+                            ? `${Math.round((scannerState.productsChecked / scannerState.totalProducts) * 100)}%`
+                            : '0%'}
+                        </span>
+                      </div>
+                      <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                        <div
+                          className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-500"
+                          style={{
+                            width: `${scannerState.totalProducts > 0 ? (scannerState.productsChecked / scannerState.totalProducts) * 100 : 0}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Export Product Details Section */}
+                  <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-6 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                        <Download className="w-4 h-4 text-emerald-400" />
+                        Export Product Details & Price Scan Reports
+                      </h3>
+                      <p className="text-[11px] text-slate-400">Download catalog dataset along with price scan status, last check timestamps, and price rankings.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        onClick={handleExportCSV}
+                        className="px-4 py-3 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/60 text-emerald-300 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-950/40"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                        <span>Export CSV</span>
+                      </button>
+
+                      <button
+                        onClick={handleExportJSON}
+                        className="px-4 py-3 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-800/60 text-indigo-300 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-indigo-950/40"
+                      >
+                        <FileCode className="w-4 h-4 text-indigo-400" />
+                        <span>Export JSON</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Audit Log Feed */}
+              <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                      <List className="w-4 h-4 text-indigo-400" />
+                      Live Price Scanner Execution Logs
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Real-time audit trace of price verification and update actions</p>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2.5 py-1 rounded border border-slate-800">
+                    {scannerState.logs?.length || 0} Events Recorded
+                  </span>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/80">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900/80 text-[10px] uppercase font-bold text-slate-400 sticky top-0 border-b border-slate-800">
+                      <tr>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Timestamp</th>
+                        <th className="p-3">Log Message</th>
+                        <th className="p-3 text-right">Old Price</th>
+                        <th className="p-3 text-right">New Price</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-mono">
+                      {scannerState.logs?.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-slate-500 font-sans">
+                            No scanner execution events logged yet. Click "Start Scan Cycle" to initiate!
+                          </td>
+                        </tr>
+                      ) : (
+                        scannerState.logs.map((log: any) => (
+                          <tr key={log.id} className="hover:bg-slate-900/40 transition-colors">
+                            <td className="p-3">
+                              <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold font-sans ${
+                                log.status === 'updated' 
+                                  ? 'bg-indigo-950 text-indigo-300 border border-indigo-800/60' 
+                                  : log.status === 'failed' 
+                                  ? 'bg-rose-950 text-rose-300 border border-rose-800/60'
+                                  : 'bg-slate-800 text-slate-300 border border-slate-700'
+                              }`}>
+                                {log.status}
+                              </span>
+                            </td>
+                            <td className="p-3 text-slate-400 text-[11px]">{log.timestamp}</td>
+                            <td className="p-3 text-slate-200 font-sans text-[11px]">{log.message}</td>
+                            <td className="p-3 text-right text-slate-400 font-bold">${log.oldPrice ? log.oldPrice.toFixed(2) : '0.00'}</td>
+                            <td className={`p-3 text-right font-bold ${log.oldPrice !== log.newPrice ? 'text-emerald-400' : 'text-slate-300'}`}>
+                              ${log.newPrice ? log.newPrice.toFixed(2) : '0.00'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: OVERVIEW & QUEUE */}
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

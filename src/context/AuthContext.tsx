@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: data.name,
           role: data.role,
           profileImage: data.profileImage,
-          district: data.district || 'Chennai',
+          district: data.district || '',
           wishlist: (data.wishlist ?? []).map((p: unknown) => typeof p === 'string' ? p : (p && typeof p === 'object' && '_id' in p ? (p as { _id?: string })._id ?? '' : '')).filter(Boolean),
           isVerified: data.isVerified ?? true,
           pendingEmail: data.pendingEmail

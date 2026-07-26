@@ -369,11 +369,11 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
             </span>
           )}
           <span className="text-xs font-black text-slate-800 dark:text-white">
-            ₹{currentProduct.price}
+            ${currentProduct.price}
           </span>
           {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
             <span className="text-[10px] text-slate-300 line-through dark:text-slate-500 font-medium">
-              ₹{currentProduct.originalPrice}
+              ${currentProduct.originalPrice}
             </span>
           )}
         </div>
@@ -589,7 +589,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
           {/* Brand/Model details */}
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold uppercase font-mono tracking-wider text-indigo-500 dark:text-indigo-300">
-              {currentProduct.brand || 'Elite Series'}
+              {currentProduct.brand || (typeof currentProduct.category === 'object' ? currentProduct.category?.name : currentProduct.category) || 'Gadget'}
             </span>
             {productDiscount > 0 && (
               <span className="text-[10px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 px-1.5 py-0.5 rounded-md font-mono">
@@ -614,11 +614,11 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             </span>
             <div className="flex items-baseline gap-1">
               <span className="text-sm font-black text-slate-800 dark:text-white">
-                ₹{currentProduct.price}
+                ${currentProduct.price}
               </span>
               {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
                 <span className="text-[10px] text-slate-300 line-through dark:text-slate-500">
-                  ₹{currentProduct.originalPrice}
+                  ${currentProduct.originalPrice}
                 </span>
               )}
             </div>

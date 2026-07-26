@@ -393,7 +393,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                 <div>
                   <h4 className="text-xs font-bold text-amber-800 dark:text-amber-300">Session Guarding Active</h4>
                   <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
-                    The platform verifies active tokens against registered hardware fingerprints. Revoking an active login immediately disconnects the user's tablet, mobile, or extension client.
+                    The platform verifies active tokens against registered session credentials and security tokens. Revoking an active login immediately disconnects the user's tablet, mobile, or extension client.
                   </p>
                 </div>
               </div>
@@ -767,7 +767,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                         {metrics.dbQueriesExecuted ?? 0}
                       </strong>
                       <span className="text-[10px] text-slate-400 block mt-0.5">
-                        Pool Latency: {metrics.dbLatencyAvgMs ?? 1.4} ms
+                        Pool Latency: {metrics.dbLatencyAvgMs ?? 0} ms
                       </span>
                     </div>
                   </div>

@@ -51,7 +51,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
 
   // Profile preferences sync states
   const [editName, setEditName] = useState(user?.name || '');
-  const [selectDistrict, setSelectDistrict] = useState(user?.district || 'Chennai');
+  const [selectDistrict, setSelectDistrict] = useState(user?.district || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState('');
 
@@ -65,7 +65,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
   useEffect(() => {
     if (user) {
       setEditName(user.name || '');
-      setSelectDistrict(user.district || 'Chennai');
+      setSelectDistrict(user.district || '');
     }
   }, [user]);
 
@@ -577,11 +577,11 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                         >
                           {p.name}
                         </h4>
-                        <p className="text-[10px] text-slate-300 font-mono font-bold mt-1 uppercase leading-none">{p.brand || 'Premium Line'}</p>
+                        <p className="text-[10px] text-slate-300 font-mono font-bold mt-1 uppercase leading-none">{p.brand || (typeof p.category === 'object' ? p.category?.name : p.category) || 'Gadget'}</p>
                       </div>
 
                       <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-700 pt-3">
-                        <span className="text-xs font-black font-mono text-slate-950 dark:text-white">₹{p.price}</span>
+                        <span className="text-xs font-black font-mono text-slate-950 dark:text-white">${p.price}</span>
                         <button
                           onClick={() => onNavigate('product-detail', p.slug)}
                           className="rounded bg-slate-50 hover:bg-slate-100 py-1 px-3.2 text-[10px] text-slate-600 font-bold dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 font-mono"

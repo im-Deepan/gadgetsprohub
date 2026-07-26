@@ -68,7 +68,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
 
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-300 mb-1">Price (₹)</label>
+              <label className="block text-[10px] font-bold uppercase text-slate-300 mb-1">Price ($/₹)</label>
               <input
                 type="number"
                 step="0.01"
@@ -81,7 +81,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-300 mb-1">Original Price (₹)</label>
+              <label className="block text-[10px] font-bold uppercase text-slate-300 mb-1">Original Price ($/₹)</label>
               <input
                 type="number"
                 step="0.01"

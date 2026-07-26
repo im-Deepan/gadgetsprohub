@@ -189,6 +189,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
           }
           break;
         case '?':
+        case 'k':
           e.preventDefault();
           setShowShortcutsModal(prev => !prev);
           break;
@@ -504,7 +505,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                             <p className="text-xs font-semibold truncate">{p.name}</p>
                             <p className="text-[10px] text-slate-300 font-mono truncate">{p.brand || 'Store Selection'}</p>
                           </div>
-                          <span className="text-xs font-bold text-indigo-500 dark:text-indigo-300 font-mono shrink-0">₹{p.price}</span>
+                          <span className="text-xs font-bold text-indigo-500 dark:text-indigo-300 font-mono shrink-0">${p.price}</span>
                         </button>
                       ))}
                     </div>
@@ -692,7 +693,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                               className="w-full flex items-center justify-between text-left rounded-xl p-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-50 cursor-pointer"
                             >
                               <p className="text-[11px] font-semibold truncate pr-2">{p.name}</p>
-                              <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-300 shrink-0">₹{p.price}</span>
+                              <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-300 shrink-0">${p.price}</span>
                             </button>
                           ))}
                         </div>

@@ -57,6 +57,8 @@ import {
   ComparisonHistoryModel
 } from './src/services/MarketplaceService';
 
+import { priceScannerService } from './src/services/PriceScannerService';
+
 const syncService = SyncService.getInstance();
 const marketplaceService = MarketplaceService.getInstance();
 
@@ -2674,6 +2676,42 @@ async function startServer() {
     }
   });
 
+  const failedLoginTracker = new Map<string, { count: number; lockUntil?: Date }>();
+
+  function checkBruteForceLockout(email: string): { isLocked: boolean; remainingMinutes?: number } {
+    if (!ConfigurationService.getFlag('enableBruteForceProtection')) {
+      return { isLocked: false };
+    }
+    const record = failedLoginTracker.get(email);
+    if (!record || !record.lockUntil) {
+      return { isLocked: false };
+    }
+    const now = new Date();
+    if (now < record.lockUntil) {
+      const remainingMs = record.lockUntil.getTime() - now.getTime();
+      const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+      return { isLocked: true, remainingMinutes };
+    } else {
+      failedLoginTracker.delete(email);
+      return { isLocked: false };
+    }
+  }
+
+  function recordFailedLoginAttempt(email: string): void {
+    if (!ConfigurationService.getFlag('enableBruteForceProtection')) return;
+    const record = failedLoginTracker.get(email) || { count: 0 };
+    record.count += 1;
+    if (record.count >= 5) {
+      record.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+      console.warn(`[BruteForceProtection] Account ${email} locked for 15 minutes after 5 consecutive failed login attempts.`);
+    }
+    failedLoginTracker.set(email, record);
+  }
+
+  function clearFailedLoginAttempts(email: string): void {
+    failedLoginTracker.delete(email);
+  }
+
   app.post('/api/auth/login', loginLimiter, validateLogin, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { email, password } = req.body;
@@ -2685,21 +2723,31 @@ async function startServer() {
         return res.status(401).json({ error: genericError });
       }
 
+      const lockStatus = checkBruteForceLockout(storageEmail);
+      if (lockStatus.isLocked) {
+        return res.status(429).json({
+          error: `Account temporarily locked due to 5 consecutive failed login attempts. Please try again in ${lockStatus.remainingMinutes} minute(s).`
+        });
+      }
+
       if (isMongoConnected) {
         const user = await User.findOne({ email: storageEmail });
         if (!user) {
           await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+          recordFailedLoginAttempt(storageEmail);
           return res.status(401).json({ error: genericError });
         }
 
         if (!user.password) {
           await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+          recordFailedLoginAttempt(storageEmail);
           return res.status(401).json({ error: genericError });
         }
 
         // Check password FIRST to prevent unverified bypasses
         const isMatch = await comparePasswords(password, user.password);
         if (!isMatch) {
+          recordFailedLoginAttempt(storageEmail);
           return res.status(401).json({ error: genericError });
         }
 
@@ -2741,10 +2789,12 @@ async function startServer() {
           }
           const isValid = TotpService.verifyToken((user as any).twoFactorSecret, code);
           if (!isValid) {
+            recordFailedLoginAttempt(storageEmail);
             return res.status(401).json({ error: 'Two-factor code verification failed. Please try again.' });
           }
         }
 
+        clearFailedLoginAttempts(storageEmail);
         const token = signUserToken(user._id);
 
         // Create active session in database
@@ -2769,17 +2819,20 @@ async function startServer() {
         const user = localUsers.find(u => u.email === storageEmail);
         if (!user) {
           await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+          recordFailedLoginAttempt(storageEmail);
           return res.status(401).json({ error: genericError });
         }
 
         if (!user.password) {
           await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+          recordFailedLoginAttempt(storageEmail);
           return res.status(401).json({ error: genericError });
         }
 
         // Check password FIRST to prevent unverified bypasses
         const isMatch = await comparePasswords(password, user.password);
         if (!isMatch) {
+          recordFailedLoginAttempt(storageEmail);
           return res.status(401).json({ error: genericError });
         }
 
@@ -2807,6 +2860,7 @@ async function startServer() {
           user.role = calculatedRoleLocal;
           saveLocalUsers();
         }
+        clearFailedLoginAttempts(storageEmail);
         const token = signUserToken(user._id);
         res.cookie('token', token, {
           httpOnly: true,
@@ -7372,6 +7426,162 @@ async function startServer() {
       res.json({ success: true, data: profile });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to save affiliate profile' });
+    }
+  });
+
+  // ==========================================
+  // DESCENDING PRICE SCANNER (1:00 AM FLOW)
+  // ==========================================
+
+  app.get('/api/admin/price-scanner/status', adminOnly, (req: express.Request, res: express.Response) => {
+    res.json({ success: true, data: priceScannerService.getState() });
+  });
+
+  app.post('/api/admin/price-scanner/start', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const state = await priceScannerService.startScanCycle();
+      res.json({ success: true, data: state });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to start price scanner' });
+    }
+  });
+
+  app.post('/api/admin/price-scanner/pause', adminOnly, (req: express.Request, res: express.Response) => {
+    const state = priceScannerService.pauseScanCycle();
+    res.json({ success: true, data: state });
+  });
+
+  app.post('/api/admin/price-scanner/resume', adminOnly, (req: express.Request, res: express.Response) => {
+    const state = priceScannerService.resumeScanCycle();
+    res.json({ success: true, data: state });
+  });
+
+  app.post('/api/admin/price-scanner/reset', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const state = await priceScannerService.resetScanCycle();
+      res.json({ success: true, data: state });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to reset price scanner' });
+    }
+  });
+
+  app.post('/api/admin/price-scanner/toggle-fast-mode', adminOnly, (req: express.Request, res: express.Response) => {
+    const { fastMode } = req.body;
+    const state = priceScannerService.toggleFastMode(fastMode);
+    res.json({ success: true, data: state });
+  });
+
+  app.get('/api/admin/price-scanner/export/csv', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      let products: any[] = [];
+      if (isMongoConnected) {
+        products = await Product.find({}).sort({ price: -1 }).populate('category').lean();
+      } else {
+        const { localProducts } = require('./src/services/SyncService');
+        products = Array.isArray(localProducts) ? [...localProducts].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0)) : [];
+      }
+
+      const state = priceScannerService.getState();
+      const scannedSet = new Set(state.scannedProductIds);
+
+      const headers = [
+        'Scan Rank (Price Desc)',
+        'Product ID',
+        'Product Name',
+        'ASIN',
+        'Brand',
+        'Category',
+        'Current Price ($)',
+        'Original Price ($)',
+        'Discount (%)',
+        'Stock Status',
+        'Last Price Check Timestamp',
+        'Scan Check Status',
+        'Affiliate Link'
+      ];
+
+      const rows = products.map((p, index) => {
+        const id = p._id ? p._id.toString() : p.id;
+        const isScanned = scannedSet.has(id);
+        const lastCheck = p.lastPriceCheck ? new Date(p.lastPriceCheck).toLocaleString() : 'Not Yet Checked';
+        const scanStatus = isScanned ? 'Checked & Verified' : 'Pending (Needs to be checked)';
+        const catName = typeof p.category === 'object' ? p.category?.name : (p.category || 'General');
+
+        return [
+          index + 1,
+          `"${id}"`,
+          `"${(p.name || '').replace(/"/g, '""')}"`,
+          `"${p.asin || ''}"`,
+          `"${(p.brand || '').replace(/"/g, '""')}"`,
+          `"${(catName || '').replace(/"/g, '""')}"`,
+          p.price ?? 0,
+          p.originalPrice ?? p.price ?? 0,
+          p.discount ?? 0,
+          p.inStock !== false ? 'In Stock' : 'Out of Stock',
+          `"${lastCheck}"`,
+          `"${scanStatus}"`,
+          `"${p.affiliateLink || ''}"`
+        ].join(',');
+      });
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="product-price-scanner-report-${Date.now()}.csv"`);
+      res.status(200).send(csvContent);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to generate CSV export' });
+    }
+  });
+
+  app.get('/api/admin/price-scanner/export/json', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      let products: any[] = [];
+      if (isMongoConnected) {
+        products = await Product.find({}).sort({ price: -1 }).populate('category').lean();
+      } else {
+        const { localProducts } = require('./src/services/SyncService');
+        products = Array.isArray(localProducts) ? [...localProducts].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0)) : [];
+      }
+
+      const state = priceScannerService.getState();
+      const scannedSet = new Set(state.scannedProductIds);
+
+      const exportedProducts = products.map((p, index) => {
+        const id = p._id ? p._id.toString() : p.id;
+        return {
+          scanRankPriceDesc: index + 1,
+          id,
+          name: p.name,
+          asin: p.asin,
+          brand: p.brand,
+          category: typeof p.category === 'object' ? p.category?.name : p.category,
+          price: p.price,
+          originalPrice: p.originalPrice,
+          discount: p.discount,
+          inStock: p.inStock,
+          lastPriceCheck: p.lastPriceCheck,
+          priceScanStatus: scannedSet.has(id) ? 'checked' : 'needs_to_be_checked',
+          affiliateLink: p.affiliateLink
+        };
+      });
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="product-price-scanner-data-${Date.now()}.json"`);
+      res.json({
+        exportTimestamp: new Date().toISOString(),
+        scannerSummary: {
+          totalProducts: state.totalProducts,
+          productsChecked: state.productsChecked,
+          productsRemaining: state.productsRemaining,
+          productsUpdated: state.productsUpdated,
+          productsUnchanged: state.productsUnchanged,
+          productsFailed: state.productsFailed,
+          nextScheduledRunTime: state.nextScheduledRunTime
+        },
+        products: exportedProducts
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to generate JSON export' });
     }
   });
 

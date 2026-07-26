@@ -156,22 +156,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
               ) : (
                 <>
                   <li>
-                    <button onClick={() => onNavigate('products', 'category-665a0001bc93ef2d8c000001')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
+                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
                       <span>📱</span> Electronics
                     </button>
                   </li>
                   <li>
-                    <button onClick={() => onNavigate('products', 'category-665a0001bc93ef2d8c000002')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
+                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
                       <span>👔</span> Fashion Wear
                     </button>
                   </li>
                   <li>
-                    <button onClick={() => onNavigate('products', 'category-665a0001bc93ef2d8c000003')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
+                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
                       <span>🏡</span> Home & Kitchen
                     </button>
                   </li>
                   <li>
-                    <button onClick={() => onNavigate('products', 'category-665a0001bc93ef2d8c000004')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
+                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
                       <span>⚽</span> Athletics Gear
                     </button>
                   </li>
@@ -186,7 +186,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
               Weekly Deals Feed
             </h4>
             <p className="text-[11px] text-slate-400 mb-3 leading-relaxed dark:text-slate-300">
-              Get honest product comparisons and valid discount codes directly in your inbox. Zero clutter.
+              Get honest product comparisons and buying guides directly in your inbox. Zero clutter.
             </p>
 
             <NewsletterSubscribe variant="minimal" />

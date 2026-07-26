@@ -949,9 +949,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                       {/* Pricing Tag and Details Trigger */}
                       <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-50 dark:border-slate-700/80">
                         <div className="flex items-baseline gap-1">
-                          <span className="text-xs sm:text-sm font-black text-indigo-500 dark:text-indigo-300 font-mono">₹{prod.price}</span>
+                          <span className="text-xs sm:text-sm font-black text-indigo-500 dark:text-indigo-300 font-mono">${prod.price}</span>
                           {prod.originalPrice && (
-                            <span className="text-[9px] sm:text-[10px] text-slate-300 line-through font-mono translate-y-[-0.5px]">₹{prod.originalPrice}</span>
+                            <span className="text-[9px] sm:text-[10px] text-slate-300 line-through font-mono translate-y-[-0.5px]">${prod.originalPrice}</span>
                           )}
                         </div>
 
