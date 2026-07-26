@@ -601,7 +601,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             <Sparkle className="h-6 w-6 text-indigo-400 shrink-0 animate-pulse mt-0.5" />
             <div className="view-details-block space-y-1">
               <h4 className="text-xs font-bold uppercase tracking-wider">MEMBER BENEFITS EXCLUSIVE</h4>
-              <p className="text-[11px] text-slate-400 dark:text-slate-300 leading-relaxed">Bookmarks of product collections and dynamic pricing alerts are securely logged to ensure 100% platform integrity and session security across all your devices.</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-300 leading-relaxed">Bookmarks of product collections and wishlist items are securely logged to ensure 100% platform integrity and session security across all your devices.</p>
             </div>
           </div>
 

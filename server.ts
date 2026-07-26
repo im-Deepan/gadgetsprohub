@@ -42,6 +42,7 @@ import { seoService } from './src/services/SeoService';
 import { aiService, AiPrompt, AiProviderSetting, AiJob, AiResponse, AiAnalytics, AiCache } from './src/services/AiService';
 import { SyncService, PriceHistory, ProductChange, SyncJob, SchedulerTask, AlertRule, ProductHealth, AutomationRule, NotificationHistory } from './src/services/SyncService';
 import { mediaService } from './src/services/MediaService';
+import { bulkImportService } from './src/services/BulkImportService';
 import {
   MarketplaceService,
   getProductDetails,
@@ -142,6 +143,7 @@ const userSchema = new mongoose.Schema({
   verificationExpiresAt: { type: Date, default: null },
   pendingEmail: { type: String, default: null },
   pendingEmailToken: { type: String, default: null },
+  pendingEmailTokenExpires: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -166,6 +168,7 @@ const sanitizeUser = (userObj: any) => {
   delete clean.password;
   delete clean.verificationToken;
   delete clean.pendingEmailToken;
+  delete clean.pendingEmailTokenExpires;
   delete clean.pendingEmail;
   return clean;
 };
@@ -927,6 +930,16 @@ export const importerMetrics = {
 // Store idempotency records. Map from request (correlation) ID to the success response data payload.
 export const processedImportsCache = new Map<string, any>();
 
+export function cacheProcessedImport(requestId: string, payload: any) {
+  if (processedImportsCache.size >= 1000) {
+    const oldestKey = processedImportsCache.keys().next().value;
+    if (oldestKey) {
+      processedImportsCache.delete(oldestKey);
+    }
+  }
+  processedImportsCache.set(requestId, payload);
+}
+
 export function logStructured(level: 'INFO' | 'WARN' | 'ERROR', event: string, metadata: Record<string, any>) {
   console.log(JSON.stringify({
     timestamp: new Date().toISOString(),
@@ -1017,13 +1030,22 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
 
     // Check if user session has been revoked
     if (isMongoConnected && ConfigurationService.getFlag('enableDeviceManagement')) {
-      const activeSession = await UserSession.findOne({ token, revoked: false });
-      if (!activeSession) {
-        // If device management is active, session must exist and not be revoked
-        const sessionCount = await UserSession.countDocuments({ userId: decoded.userId });
-        if (sessionCount > 0) {
+      const sessionCount = await UserSession.countDocuments({ userId: decoded.userId });
+      if (sessionCount > 0) {
+        const activeSession = await UserSession.findOne({ token, revoked: false });
+        if (!activeSession) {
+          // If device management is active, session must exist and not be revoked
           return res.status(401).json({ error: 'Session has been revoked or expired' });
         }
+      } else {
+        // Graceful fallback for legacy/untracked tokens when user has zero session records
+        await UserSession.create({
+          userId: decoded.userId,
+          token,
+          ipAddress: req.ip || req.socket.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          revoked: false
+        }).catch(() => {});
       }
     }
 
@@ -1215,7 +1237,7 @@ const SUNDAY_DUMMY_PRODUCTS_POOL = [
 function generateUniqueProduct(index: number, sundayStr: string): any {
   const template = SUNDAY_DUMMY_PRODUCTS_POOL[index % SUNDAY_DUMMY_PRODUCTS_POOL.length];
   const hashStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-  const name = `${template.name} [Sunday ${sundayStr} ${hashStr}]`;
+  const name = `${template.name} [Sunday Draft ${sundayStr} ${hashStr}]`;
   const slug = `${template.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${sundayStr.toLowerCase()}-${hashStr.toLowerCase()}`;
   
   return {
@@ -1223,22 +1245,15 @@ function generateUniqueProduct(index: number, sundayStr: string): any {
     name,
     slug,
     _id: "prod_sun_" + sundayStr.replace(/-/g, '') + "_" + hashStr,
-    clicks: 12 + Math.floor(Math.random() * 20),
-    conversions: 2 + Math.floor(Math.random() * 5),
-    rating: 4.5,
-    totalReviews: 2,
-    reviews: [
-      {
-        rating: 5,
-        title: "Spectacular Curation Item!",
-        content: "Outstanding performance. Perfect layout and build quality.",
-        helpful: 1,
-        createdAt: new Date()
-      }
-    ],
-    createdAt: new Date(),
-    trending: true,
-    trendingStartedAt: new Date()
+    clicks: 0,
+    conversions: 0,
+    rating: 0,
+    totalReviews: 0,
+    reviews: [],
+    publishingStatus: 'draft',
+    inStock: false,
+    trending: false,
+    createdAt: new Date()
   };
 }
 
@@ -1400,6 +1415,9 @@ function getMailTransport() {
 // Automatically trigger direct newsletter alerts for newly added products matching a "Pick Where You Left" category interest
 async function triggerProductAddedEmailNotifications(product: any) {
   try {
+    if (product.publishingStatus && product.publishingStatus !== 'published') {
+      return;
+    }
     const subcategoryName = (product.subcategory || '').toString().trim();
     if (!subcategoryName) return;
 
@@ -1661,20 +1679,16 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
         await product.save();
         addedIds.push(product._id.toString());
         addedProductsList.push(product);
-        // Trigger newsletter alerts
-        triggerProductAddedEmailNotifications(product).catch(err => console.warn('Newsletter trigger failed:', err.message));
       }
       await syncProductsToSeedFile();
     } catch (err) {
-      captureError(err, { context: 'saving automatic Sunday products' });
+      captureError(err, { context: 'saving automatic Sunday product drafts' });
     }
   } else {
     for (const raw of newProdsRaw) {
       localProducts.unshift(raw);
       addedIds.push(raw._id);
       addedProductsList.push(raw);
-      // Trigger newsletter alerts
-      triggerProductAddedEmailNotifications(raw).catch(err => console.warn('Newsletter trigger failed:', err.message));
     }
     await syncProductsToSeedFile().catch(e => console.warn(e));
   }
@@ -1683,22 +1697,22 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
   if (!authorEmail) {
     console.warn("AUTHOR_EMAIL not provided, skipping notification email.");
   }
-  const emailSubject = `🚨 Sunday Reminder: New Curation Products Auto-Added & Logged – ${sundayStr}`;
+  const emailSubject = `🚨 Sunday Reminder: New Curation Product Drafts Queued for Admin Review – ${sundayStr}`;
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; color: #1e293b;">
       <div style="text-align: center; margin-bottom: 25px;">
         <span style="font-size: 32px;">🕒</span>
-        <h2 style="color: #4f46e5; margin: 10px 0 5px 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Sunday Curation Active</h2>
-        <p style="color: #64748b; font-size: 13px; margin: 0;">Automated product sync & admin email tracking</p>
+        <h2 style="color: #4f46e5; margin: 10px 0 5px 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Sunday Draft Curation Active</h2>
+        <p style="color: #64748b; font-size: 13px; margin: 0;">Automated product candidate creation & admin review queue</p>
       </div>
 
       <p style="font-size: 14px; line-height: 1.6; color: #334155;">Hello Admin,</p>
       <p style="font-size: 14px; line-height: 1.6; color: #334155;">
-        Today is <strong>Sunday (${sundayStr})</strong>! Our automated curation engine has run and successfully populated the portal catalog with <strong>two brand-new premium tech products</strong>.
+        Today is <strong>Sunday (${sundayStr})</strong>! Our automated curation engine has run and queued <strong>two candidate product drafts</strong> in the admin review dashboard.
       </p>
 
       <div style="background-color: #f8fafc; border-left: 4px solid #4f46e5; padding: 15px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #1e293b;">🆕 Added Sunday Curation Products:</h3>
+        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #1e293b;">🆕 Queued Product Draft Candidates:</h3>
         <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #475569; line-height: 1.6;">
           ${addedProductsList.map(p => `
             <li style="margin-bottom: 10px;">
@@ -3039,7 +3053,7 @@ async function startServer() {
       res.json({
         success: true,
         secret,
-        qrCodePlaceholder: `otpauth://totp/GadgetsProHub:${user.email}?secret=${secret}&issuer=GadgetsProHub`
+        qrCodePlaceholder: `otpauth://totp/GadgetsProHub:${encodeURIComponent(user.email || 'user')}?secret=${secret}&issuer=GadgetsProHub&algorithm=SHA1&digits=6&period=30`
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -3482,8 +3496,8 @@ async function startServer() {
 
   app.get('/api/products/:slug', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const districtsList = TAMIL_NADU_DISTRICTS;
-      const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
+      const inputDistrict = (req.headers['x-user-district'] || req.query.district) as string;
+      const districtName = inputDistrict ? sanitizeDistrict(inputDistrict) : 'Unknown';
 
       if (!isMongoConnected) {
         return res.status(503).json({ error: 'Database is currently offline. Please try again shortly.' });
@@ -3555,7 +3569,7 @@ async function startServer() {
       Analytics.create({
         productId: product._id,
         eventType: 'view',
-        district: randDistrict,
+        district: districtName,
         userAgent: req.headers['user-agent']
       }).catch(err => {
         console.warn('Background view analytics logging failed:', err.message);
@@ -3568,9 +3582,7 @@ async function startServer() {
 
   app.post('/api/products/click/:slug', validateProductClick, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const districtsList = TAMIL_NADU_DISTRICTS;
-      const randDistrict = districtsList[Math.floor(Math.random() * districtsList.length)];
-      const finalDistrict = sanitizeDistrict(req.body.district || randDistrict);
+      const finalDistrict = req.body.district ? sanitizeDistrict(String(req.body.district)) : 'Unknown';
 
       if (!isMongoConnected) {
         return res.status(503).json({ error: 'Database is currently offline. Please try again shortly.' });
@@ -4084,19 +4096,15 @@ async function startServer() {
     }
   });
 
-  app.post('/api/user/orders/:orderId/advance', authenticate, validateOrderAdvance, async (req: express.Request, res: express.Response): Promise<any> => {
+  app.post('/api/user/orders/:orderId/advance', adminOnly, validateOrderAdvance, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
-      const uId = (req as any).userId;
       const { orderId } = req.params;
+      const { trackingNumber, carrier } = req.body;
       const statuses: ('Processing' | 'Shipped' | 'In Transit' | 'Delivered')[] = ['Processing', 'Shipped', 'In Transit', 'Delivered'];
       
       if (isMongoConnected) {
         const order = await Order.findById(orderId);
         if (!order) return res.status(404).json({ error: 'Order not found' });
-        
-        if (order.userId.toString() !== uId.toString()) {
-          return res.status(403).json({ error: 'Access denied: You can only advance your own orders.' });
-        }
 
         if (order.status === 'Delivered') {
           return res.status(400).json({ error: 'Order is already delivered and cannot be advanced further.' });
@@ -4106,11 +4114,16 @@ async function startServer() {
         const nextIndex = Math.min(currentIndex + 1, statuses.length - 1);
         order.status = statuses[nextIndex];
 
-        if (!order.trackingNumber) {
-          order.trackingNumber = `TN-TRK-${Math.floor(100000 + Math.random() * 900000)}`;
+        if (trackingNumber && typeof trackingNumber === 'string' && trackingNumber.trim()) {
+          order.trackingNumber = trackingNumber.trim();
+        } else if (!order.trackingNumber) {
+          order.trackingNumber = 'PENDING';
         }
-        if (!order.carrier) {
-          order.carrier = ['Blue Dart Express', 'DTDC Courier', 'FedEx India', 'Delhivery'][Math.floor(Math.random() * 4)];
+
+        if (carrier && typeof carrier === 'string' && carrier.trim()) {
+          order.carrier = carrier.trim();
+        } else if (!order.carrier) {
+          order.carrier = 'Awaiting Carrier Assignment';
         }
 
         await order.save();
@@ -4119,10 +4132,6 @@ async function startServer() {
       } else {
         const order = localOrders.find(o => o._id === orderId);
         if (!order) return res.status(404).json({ error: 'Order not found' });
-        
-        if (order.userId !== uId) {
-          return res.status(403).json({ error: 'Access denied: You can only advance your own orders.' });
-        }
 
         if (order.status === 'Delivered') {
           return res.status(400).json({ error: 'Order is already delivered and cannot be advanced further.' });
@@ -4132,11 +4141,16 @@ async function startServer() {
         const nextIndex = Math.min(currentIndex + 1, statuses.length - 1);
         order.status = statuses[nextIndex];
 
-        if (!order.trackingNumber) {
-          order.trackingNumber = `TN-TRK-${Math.floor(100000 + Math.random() * 900000)}`;
+        if (trackingNumber && typeof trackingNumber === 'string' && trackingNumber.trim()) {
+          order.trackingNumber = trackingNumber.trim();
+        } else if (!order.trackingNumber) {
+          order.trackingNumber = 'PENDING';
         }
-        if (!order.carrier) {
-          order.carrier = ['Blue Dart Express', 'DTDC Courier', 'FedEx India', 'Delhivery'][Math.floor(Math.random() * 4)];
+
+        if (carrier && typeof carrier === 'string' && carrier.trim()) {
+          order.carrier = carrier.trim();
+        } else if (!order.carrier) {
+          order.carrier = 'Awaiting Carrier Assignment';
         }
 
         saveLocalOrders();
@@ -6016,23 +6030,23 @@ async function startServer() {
             name: existingProduct.name,
             asin: existingProduct.asin || cleanAsin,
             brand: existingProduct.brand || 'Amazon Brand',
-            price: existingProduct.price || 99.99,
-            originalPrice: existingProduct.originalPrice || (existingProduct.price ? Math.round(existingProduct.price * 1.25 * 100) / 100 : 119.99),
+            price: existingProduct.price || 0,
+            originalPrice: existingProduct.originalPrice || existingProduct.price || 0,
             categoryName: typeof existingProduct.category === 'object' ? existingProduct.category?.name : (existingProduct.category || 'Electronics'),
             subcategory: 'General',
             description: existingProduct.description || existingProduct.name,
             longDescription: existingProduct.longDescription || existingProduct.description || existingProduct.name,
             imageUrl: Array.isArray(existingProduct.images) && existingProduct.images.length > 0 
               ? existingProduct.images[0] 
-              : (existingProduct.imageUrl || 'https://images.unsplash.com/photo-1547082299-de196ea013d6?w=800'),
-            affiliateCode: 'shopgear-20',
+              : (existingProduct.imageUrl || ''),
+            affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20',
             features: Array.isArray(existingProduct.features) && existingProduct.features.length > 0 
               ? existingProduct.features 
-              : ['Premium build quality and materials', 'Authentic curated product specification'],
+              : [],
             specifications: typeof existingProduct.specifications === 'object' && existingProduct.specifications 
               ? existingProduct.specifications 
-              : { 'ASIN': cleanAsin, 'Status': 'Verified in Portal' },
-            tags: Array.isArray(existingProduct.tags) ? existingProduct.tags : ['amazon', 'curated']
+              : { 'ASIN': cleanAsin },
+            tags: Array.isArray(existingProduct.tags) ? existingProduct.tags : ['amazon']
           }
         });
       }
@@ -6054,16 +6068,16 @@ async function startServer() {
             name: scrapedDetails.name,
             asin: cleanAsin || scrapedDetails.gtin || 'UNKNOWN',
             brand: scrapedDetails.brand || 'Amazon',
-            price: scrapedDetails.price || 99.99,
-            originalPrice: scrapedDetails.originalPrice || (scrapedDetails.price ? Math.round(scrapedDetails.price * 1.2 * 100) / 100 : 119.99),
+            price: scrapedDetails.price || 0,
+            originalPrice: scrapedDetails.originalPrice || scrapedDetails.price || 0,
             categoryName: scrapedDetails.category || 'Electronics',
             subcategory: 'Accessories',
             description: scrapedDetails.description || scrapedDetails.name,
             longDescription: scrapedDetails.longDescription || scrapedDetails.name,
             imageUrl: Array.isArray(scrapedDetails.images) && scrapedDetails.images.length > 0 
               ? scrapedDetails.images[0] 
-              : 'https://images.unsplash.com/photo-1547082299-de196ea013d6?w=800',
-            affiliateCode: 'shopgear-20',
+              : '',
+            affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20',
             features: [
               `Official Amazon Item (${cleanAsin})`,
               'Full manufacturer warranty coverage',
@@ -6074,39 +6088,15 @@ async function startServer() {
               'Source': 'Amazon Live Scraping Parser',
               'Currency': scrapedDetails.currency || 'USD'
             },
-            tags: ['amazon', 'imported', cleanAsin.toLowerCase()]
+            tags: ['amazon', 'imported', cleanAsin.toLowerCase()].filter(Boolean)
           }
         });
       }
 
-      // 3. Fallback: Clean structured extraction payload based on input ASIN / URL
-      return res.json({
-        success: true,
-        source: 'structured_parser',
-        data: {
-          name: `Amazon Curated Item (ASIN ${cleanAsin})`,
-          asin: cleanAsin,
-          brand: "Amazon Merchant",
-          price: 99.99,
-          originalPrice: 119.99,
-          categoryName: "Electronics",
-          subcategory: "Accessories",
-          description: `Extracted product specs for Amazon item ASIN ${cleanAsin}. Ready for affiliate curation.`,
-          longDescription: `This item was imported directly from Amazon (ASIN: ${cleanAsin}). The affiliate portal content parser extracted technical identifiers and structured data for curation.`,
-          imageUrl: "https://images.unsplash.com/photo-1547082299-de196ea013d6?w=800",
-          affiliateCode: "shopgear-20",
-          features: [
-            `Verified Amazon ASIN: ${cleanAsin}`,
-            "High-grade durability and ergonomic finish",
-            "Manufacturer warranty & customer satisfaction guarantee"
-          ],
-          specifications: {
-            "ASIN": cleanAsin,
-            "Import Link": inputUrl,
-            "Status": "Parsed & Validated"
-          },
-          tags: ["amazon", "imported", cleanAsin.toLowerCase()]
-        }
+      // 3. Fallback when live scraping and database lookup both fail
+      return res.status(400).json({
+        success: false,
+        error: `Failed to scrape product details for ASIN/URL "${cleanAsin || inputUrl}". The target page could not be accessed or parsed.`
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message || 'Scraping request failed' });
@@ -8221,7 +8211,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             }
           };
 
-          processedImportsCache.set(requestId, responsePayload);
+          cacheProcessedImport(requestId, responsePayload);
 
           const duration = Date.now() - startTime;
           importerMetrics.successfulImports++;
@@ -8272,7 +8262,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             }
           };
 
-          processedImportsCache.set(requestId, responsePayload);
+          cacheProcessedImport(requestId, responsePayload);
 
           const duration = Date.now() - startTime;
           importerMetrics.successfulImports++;
@@ -8787,15 +8777,15 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
                 <h2 style="color: #4f46e5; margin-top: 0;">GadgetsProHub Customer Support</h2>
-                <p>Hello ${message.name || 'Valued Customer'},</p>
-                <p>Thank you for contacting us. Below is our response regarding <strong>"${message.subject || 'your inquiry'}"</strong>:</p>
+                <p>Hello ${escapeHTML(message.name || 'Valued Customer')},</p>
+                <p>Thank you for contacting us. Below is our response regarding <strong>"${escapeHTML(message.subject || 'your inquiry')}"</strong>:</p>
                 <div style="padding: 16px; background-color: #f8fafc; border-left: 4px solid #4f46e5; margin: 16px 0; border-radius: 6px;">
-                  <p style="margin: 0; white-space: pre-wrap; color: #1e293b; font-size: 14px; line-height: 1.6;">${replyText.trim()}</p>
+                  <p style="margin: 0; white-space: pre-wrap; color: #1e293b; font-size: 14px; line-height: 1.6;">${escapeHTML(replyText.trim())}</p>
                 </div>
                 <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-                <p style="color: #64748b; font-size: 12px; margin-bottom: 4px;">Original Message from ${message.email}:</p>
+                <p style="color: #64748b; font-size: 12px; margin-bottom: 4px;">Original Message from ${escapeHTML(message.email || '')}:</p>
                 <blockquote style="color: #94a3b8; font-size: 12px; margin-left: 0; padding-left: 12px; border-left: 2px solid #cbd5e1;">
-                  ${message.message || ''}
+                  ${escapeHTML(message.message || '')}
                 </blockquote>
               </div>
             `
@@ -9095,16 +9085,6 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
 
   app.get('/api/admin/analytics', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
-      const TAMIL_NADU_DISTRICTS = [
-        "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
-        "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
-        "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris",
-        "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivagangai",
-        "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli",
-        "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore",
-        "Viluppuram", "Virudhunagar"
-      ];
-
       if (isMongoConnected) {
         // ALWAYS perform CastError-immune safe population of Analytics records in MongoDB to prevent Mongoose schema-casting from failing on guest/simulated user IDs
         const rawAnalytics = await Analytics.find()
@@ -9133,7 +9113,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
           const uIdStr = a.userId ? a.userId.toString() : '';
           return {
             ...a,
-            district: sanitizeDistrict(a.district || 'Chennai'),
+            district: a.district ? sanitizeDistrict(a.district) : 'Unknown',
             productId: productMap.get(pIdStr) || (a.productId ? { _id: a.productId, name: "Product Option" } : null),
             userId: userMap.get(uIdStr) || (a.userId && typeof a.userId === 'string' ? { _id: a.userId, name: "Guest (" + a.userId + ")", email: a.userId } : null)
           };
@@ -9397,6 +9377,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     runSundayAutomation().catch(err => console.error("Startup Sunday automation check error:", err));
     cleanExpiredTrendingProducts().catch(err => console.error("Startup trending expiration check error:", err));
     cleanExpiredBlacklistedTokens().catch(err => console.error("Startup blacklisted tokens purge error:", err));
+    mediaService.processQueue().catch(err => console.error("Startup media queue processing error:", err));
 
     // Schedule background check every 12 hours
     const backgroundTask = setInterval(() => {
@@ -9404,6 +9385,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       runSundayAutomation().catch(err => console.error("Scheduled Sunday automation error:", err));
       cleanExpiredTrendingProducts().catch(err => console.error("Scheduled trending expiration error:", err));
       cleanExpiredBlacklistedTokens().catch(err => console.error("Scheduled blacklisted tokens purge error:", err));
+      mediaService.processQueue().catch(err => console.error("Scheduled media queue processing error:", err));
     }, 12 * 60 * 60 * 1000);
 
     const gracefulShutdown = (signal: string) => {

@@ -52,7 +52,7 @@ export const TAMIL_NADU_DISTRICTS = [
 ];
 
 export const sanitizeDistrict = (name: string): string => {
-  if (!name) return "Chennai";
+  if (!name) return "Unknown";
   const formatted = name.trim().toLowerCase();
   
   if (formatted.includes("trichy") || formatted.includes("tiruchirappalli") || formatted.includes("tiruchirapalli")) {
@@ -63,24 +63,6 @@ export const sanitizeDistrict = (name: string): string => {
   if (formatted.includes("madurai")) return "Madurai";
   if (formatted.includes("salem")) return "Salem";
   if (formatted.includes("nellai") || formatted.includes("tirunelveli")) return "Tirunelveli";
-  
-  if (
-    formatted.includes("ashburn") || 
-    formatted.includes("montreal") || 
-    formatted.includes("virginia") || 
-    formatted.includes("canada") || 
-    formatted.includes("bueren") || 
-    formatted.includes("zuerich") ||
-    formatted.includes("zurich") ||
-    formatted.includes("seattle") ||
-    formatted.includes("dublin") ||
-    formatted.includes("london") ||
-    formatted.includes("california") ||
-    formatted.includes("oregon") ||
-    formatted.includes("united states")
-  ) {
-    return "Chennai";
-  }
 
   const found = TAMIL_NADU_DISTRICTS.find(
     d => d.toLowerCase() === formatted || formatted.includes(d.toLowerCase())
@@ -89,8 +71,9 @@ export const sanitizeDistrict = (name: string): string => {
     return found;
   }
   
-  // Strictly fall back to a validated whitelisted district
-  return "Chennai";
+  // Return title-cased name if provided, or 'Unknown'
+  const words = name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  return words.join(' ') || "Unknown";
 };
 export const getStorageEmail = (email: unknown): string | undefined => {
   if (typeof email !== 'string') return undefined;

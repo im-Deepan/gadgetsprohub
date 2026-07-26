@@ -34,6 +34,8 @@ export interface Product {
   category: string | Category; // Category ID or fully populated Category
   subcategory?: string;
   brand?: string;
+  seller?: string;
+  marketplace?: string;
   price: number;
   originalPrice?: number;
   discount?: number;

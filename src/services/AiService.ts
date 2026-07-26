@@ -192,7 +192,7 @@ export class AiService {
   private ivLength = 16;
   private defaultProvider: AiProviderType = 'gemini';
   private defaultModelMap: Record<AiProviderType, string> = {
-    gemini: 'gemini-3.5-flash',
+    gemini: 'gemini-2.5-flash',
     openai: 'gpt-4o-mini',
     anthropic: 'claude-3-5-haiku-latest',
     openrouter: 'meta-llama/llama-3-70b-instruct',
@@ -203,13 +203,9 @@ export class AiService {
 
   constructor() {
     // Decouple API key encryption from JWT_SECRET to prevent token rotation from destroying database keys.
-    // If dedicated AI_KEY_ENCRYPTION_SECRET is unset, fall back to JWT_SECRET to keep it unique per-deployment.
-    const secret = process.env.AI_KEY_ENCRYPTION_SECRET || process.env.JWT_SECRET;
-    if (!secret) {
-      console.warn('[SECURITY WARNING] AI_KEY_ENCRYPTION_SECRET and JWT_SECRET are both unset. Using machine-derived deployment secret.');
-    }
-    const finalSecret = secret || crypto.createHash('sha256').update(process.cwd() + (process.env.HOSTNAME || 'gadgetsprohub-system')).digest('hex');
-    this.encryptionKey = crypto.scryptSync(finalSecret, 'salt-enterprise-affiliate-ai', 32);
+    // Use dedicated AI_KEY_ENCRYPTION_SECRET or JWT_SECRET, or a stable default secret key for deployment persistence.
+    const secret = process.env.AI_KEY_ENCRYPTION_SECRET || process.env.JWT_SECRET || 'gadgetsprohub-stable-ai-encryption-key-v1';
+    this.encryptionKey = crypto.scryptSync(secret, 'salt-enterprise-affiliate-ai', 32);
   }
 
   // ==========================================
@@ -710,8 +706,8 @@ export class AiService {
   }
 
   private estimateCost(provider: string, model: string, inTokens: number, outTokens: number): number {
-    let rateIn = 0.00015; // default per 1K
-    let rateOut = 0.0006;  // default per 1K
+    let rateIn = 0.00015 / 1000; // default per token
+    let rateOut = 0.0006 / 1000;  // default per token
 
     if (provider === 'openai') {
       if (model.includes('gpt-4o-mini')) {
@@ -889,11 +885,12 @@ export class AiService {
     const evaluation = this.evaluateContent(result.text, productData.focusKeyword);
 
     // Save Response to database
+    const activeProviderInfo = await this.getActiveProvider();
     const aiResponse = await AiResponse.create({
       productId: productData._id,
       promptKey,
-      provider: (await this.getActiveProvider()).provider,
-      model: (await this.getActiveProvider()).model,
+      provider: activeProviderInfo.provider,
+      model: activeProviderInfo.model,
       promptUsed: finalPrompt,
       generatedText: result.text,
       qualityScore: evaluation.overallScore,
@@ -973,6 +970,12 @@ export class AiService {
         return;
       }
 
+      // Skip already successfully processed or handled products when resuming
+      const alreadyDone = refreshedJob.results.some((r: any) => r.productId && r.productId.toString() === prodId.toString() && r.status === 'completed');
+      if (alreadyDone) {
+        continue;
+      }
+
       try {
         const product = await ProductModel.findById(prodId).populate('category');
         if (product) {
@@ -999,13 +1002,16 @@ export class AiService {
         });
       }
 
-      refreshedJob.processed += 1;
+      refreshedJob.processed = refreshedJob.results.length;
       refreshedJob.progress = Math.round((refreshedJob.processed / refreshedJob.total) * 100);
       await refreshedJob.save();
     }
 
-    job.status = 'completed';
-    await job.save();
+    const finalJob = await AiJob.findById(jobId);
+    if (finalJob && finalJob.status === 'running') {
+      finalJob.status = 'completed';
+      await finalJob.save();
+    }
   }
 }
 

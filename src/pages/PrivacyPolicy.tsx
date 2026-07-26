@@ -67,7 +67,7 @@ export const PrivacyPolicy: React.FC = () => {
             <span>4. Advertising & Affiliate Links</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-200 leading-relaxed">
-            We utilize affiliate links for product recommendations. Clicking a link may redirect you to a third-party retailer, which may use its own tracking mechanisms and cookies to monitor your interaction and attribute any consequent purchases. Our advertising practices are limited to these transparent referral links; we do not display intrusive banner ads or serve third-party ad networks on this site.
+            We utilize affiliate links and verified advertising partners (such as Google AdSense) for product recommendations and site monetization. Clicking a link or ad may redirect you to a third-party merchant or partner, which may use cookies and tracking mechanisms in accordance with standard privacy policies to attribute interactions or serve contextual advertisements.
           </p>
         </section>
 

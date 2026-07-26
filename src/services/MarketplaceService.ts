@@ -274,7 +274,7 @@ export async function getProductDetails(url: string, providerId: string, currenc
 
   const name = realData.title;
   const price = realData.price || 0;
-  const originalPrice = realData.price ? Math.round(realData.price * 1.2 * 100) / 100 : 0;
+  const originalPrice = price;
   
   return {
     name,
@@ -283,14 +283,14 @@ export async function getProductDetails(url: string, providerId: string, currenc
     longDescription: name,
     price,
     originalPrice,
-    discount: realData.price ? 17 : 0,
+    discount: 0,
     currency,
     images: realData.image ? [realData.image] : [],
     rating: 0,
     totalReviews: 0,
     category: 'General',
     variants: [],
-    inStock: true,
+    inStock: price > 0,
     seller: providerId.includes('amazon') ? 'Amazon Retail' : 'Verified Merchant Partner',
     affiliateLink: url,
     gtin: parsedId, // Using parsedId as unique identifier

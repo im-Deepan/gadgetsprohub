@@ -770,7 +770,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                       >
                         {/* Rating Badge at the Top - Colorless style */}
                         <div className="absolute top-1.5 left-1.5 bg-white/95 text-slate-800 dark:bg-slate-800/95 dark:text-white font-extrabold font-mono text-[8px] sm:text-[9.5px] rounded-md px-1.5 py-0.5 flex items-center gap-0.5 shadow-sm z-10 border border-slate-100 dark:border-slate-700">
-                          ★ {prod.rating || '4.8'}
+                          ★ {prod.rating && prod.rating > 0 ? prod.rating : 'N/A'}
                         </div>
 
                         <div className="flex-grow flex items-center justify-center w-full min-h-0 pt-4">
@@ -923,7 +923,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                         className="absolute bottom-2 left-2 bg-amber-400 text-white font-extrabold font-mono text-[9px] rounded-lg px-2 py-1 flex items-center gap-1 shadow-md z-10 border-none select-none"
                         title="Rating"
                       >
-                        ★ {prod.rating || '4.8'}
+                        ★ {prod.rating && prod.rating > 0 ? prod.rating : 'N/A'}
                       </div>
                     </div>
 

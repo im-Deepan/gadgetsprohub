@@ -146,7 +146,7 @@ export class TotpService {
       tmp >>= 8;
     }
 
-    const hmac = crypto.createHmac('sha256', key);
+    const hmac = crypto.createHmac('sha1', key);
     hmac.update(buffer);
     const hmacResult = hmac.digest();
 
@@ -235,11 +235,11 @@ export class MetricsService {
   public static getMetrics() {
     const avgResponseTime = this.apiResponseTimes.length > 0
       ? Math.round(this.apiResponseTimesSum / this.apiResponseTimes.length)
-      : 45;
+      : 0;
 
     const avgDbLatency = this.dbLatencyCount > 0
       ? Number((this.dbLatencySum / this.dbLatencyCount).toFixed(2))
-      : 1.4;
+      : 0;
 
     return {
       uptime: process.uptime(),
@@ -369,7 +369,7 @@ export class WorkerService {
         const job = await JobQueue.findOneAndUpdate(
           { 
             status: { $in: ['pending', 'failed'] }, 
-            attempts: { $lt: 3 } // Safer query checking
+            $expr: { $lt: ["$attempts", "$maxAttempts"] }
           },
           { status: 'processing', $inc: { attempts: 1 }, updatedAt: new Date() },
           { new: true, sort: { createdAt: 1 } }

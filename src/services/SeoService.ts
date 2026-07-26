@@ -335,7 +335,7 @@ export class SeoService {
    */
   public generateStructuredData(product: any, categoryName: string = ''): Record<string, any> {
     const siteUrl = process.env.SITE_URL || 'https://gadgetsprohub.com';
-    const productUrl = `${siteUrl}/product/${product.slug}`;
+    const productUrl = `${siteUrl}/product-detail/${product.slug}`;
     const images = (product.images || []).map((img: string) => img.startsWith('http') ? img : `${siteUrl}${img}`);
 
     // Create the core Product Schema

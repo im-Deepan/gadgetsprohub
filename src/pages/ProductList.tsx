@@ -1088,7 +1088,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     
                     {/* Floating Rating overlay */}
                     <div className="absolute top-2.5 left-2.5 bg-amber-400 text-white font-extrabold font-mono text-[10px] rounded-lg px-2 py-0.5 flex items-center gap-0.5 shadow-sm z-10">
-                      ★ {specModalProduct.rating || '4.8'}
+                      ★ {specModalProduct.rating && specModalProduct.rating > 0 ? specModalProduct.rating : 'N/A'}
                     </div>
 
                     {specModalProduct.discount && specModalProduct.discount > 0 && (
@@ -1247,7 +1247,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white py-3 text-xs font-bold transition-all cursor-pointer shadow-md"
                 >
                   <ShoppingBag size={14} />
-                  <span>Shop on Amazon</span>
+                  <span>Shop on {specModalProduct.seller || specModalProduct.marketplace || 'Store'}</span>
                   <ExternalLink size={11} />
                 </button>
               </div>

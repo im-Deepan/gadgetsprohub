@@ -697,36 +697,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     triggerAlert('Report Exported Successfully', `Downloaded ${analyticsData.length} analytics records as a CSV report.`);
   };
 
-  useEffect(() => {
-    if (!token) return;
-    const controller = new AbortController();
-    const signal = controller.signal;
 
-    // Fetch overview statistics + current tab data
-    fetchOverviewData(signal);
-
-    if (activeTab === 'products') {
-      fetchProductsTabData(productPage, signal);
-    } else if (activeTab === 'categories') {
-      fetchCategoriesTabData(signal);
-    } else if (activeTab === 'blogs') {
-      fetchBlogsTabData(signal);
-    } else if (activeTab === 'messages') {
-      fetchMessagesTabData(signal);
-    } else if (activeTab === 'telemetry') {
-      fetchAnalyticsTabData(signal);
-    } else if (activeTab === 'scheduler') {
-      fetchSundayLogsTabData(signal);
-    } else if (activeTab === 'users') {
-      fetchUsersTabData(signal);
-    } else if (activeTab === 'security-logs') {
-      fetchSecurityLogsTabData(signal);
-    }
-
-    return () => {
-      controller.abort();
-    };
-  }, [token, activeTab, productPage]);
 
   // Handle Mark Message read
   const handleMarkRead = async (msgId: string) => {
@@ -803,16 +774,32 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         return;
       }
     }
+
+    const imagesList = prodForm.images
+      .split(/[\n,;]+/)
+      .map(img => img.trim())
+      .filter(img => img.length > 0);
+
+    if (imagesList.length === 0) {
+      triggerAlert("Validation Error", "At least one product image URL is required.");
+      return;
+    }
+
+    if (!prodForm.description || prodForm.description.trim().length === 0) {
+      triggerAlert("Validation Error", "Short description is required.");
+      return;
+    }
+
+    if (!prodForm.longDescription || prodForm.longDescription.trim().length === 0) {
+      triggerAlert("Validation Error", "Long editorial description is required.");
+      return;
+    }
     
     // Construct specifications map
     const specificationsObj = parseSpecs(prodForm.specKeyVal);
     const featuresList = prodForm.features.split(',').map(f => f.trim()).filter(Boolean);
     const prosList = prodForm.pros.split(',').map(p => p.trim()).filter(Boolean);
     const consList = prodForm.cons.split(',').map(c => c.trim()).filter(Boolean);
-    const imagesList = prodForm.images
-      .split(/[\n,;]+/)
-      .map(img => img.trim())
-      .filter(img => img.length > 0);
     
     const slugCalculated = generateSlug(prodForm.slug || prodForm.name);
 
@@ -1562,7 +1549,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               <TabErrorView 
                 title="Catalog Specifications Sourcing Error" 
                 message={productsError} 
-                onRetry={loadAdminMetrics} 
+                onRetry={() => loadAdminMetrics()} 
               />
             ) : (() => {
               const totalProductPages = totalPages || 1;
@@ -1760,7 +1747,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               <TabErrorView 
                 title="Classification Sourcing Error" 
                 message={categoriesError} 
-                onRetry={loadAdminMetrics} 
+                onRetry={() => loadAdminMetrics()} 
               />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1966,7 +1953,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               <TabErrorView 
                 title="Blog Manual Guides Sourcing Error" 
                 message={blogsError} 
-                onRetry={loadAdminMetrics} 
+                onRetry={() => loadAdminMetrics()} 
               />
             ) : (
               <div className="space-y-4">
@@ -2016,7 +2003,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               <TabErrorView 
                 title="Help Inquiries Sourcing Error" 
                 message={messagesError} 
-                onRetry={loadAdminMetrics} 
+                onRetry={() => loadAdminMetrics()} 
               />
             ) : (
               <div className="space-y-4">
@@ -2348,7 +2335,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               <TabErrorView 
                 title="Member Profiles Sourcing Error" 
                 message={usersError} 
-                onRetry={loadAdminMetrics} 
+                onRetry={() => loadAdminMetrics()} 
               />
             ) : (() => {
               const filteredUsers = users.filter(usr => {
@@ -2549,7 +2536,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               <TabErrorView 
                 title="Security Logs Sourcing Error" 
                 message={securityLogsError} 
-                onRetry={loadAdminMetrics} 
+                onRetry={() => loadAdminMetrics()} 
               />
             ) : (() => {
               const filteredLogs = securityLogs.filter(log => {
@@ -2751,7 +2738,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             <TabErrorView 
               title="Traffic Logs Sourcing Error" 
               message={telemetryError} 
-              onRetry={loadAdminMetrics} 
+              onRetry={() => loadAdminMetrics()} 
             />
           ) : (() => {
             const ITEMS_PER_PAGE = 10;
@@ -2798,7 +2785,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 <Globe className="h-10 w-10 text-indigo-400 dark:text-indigo-300 mx-auto mb-4 stroke-[1.5]" />
                 <h5 className="text-sm font-bold text-slate-700 dark:text-slate-100 mb-1">No Active Traffic Logs Captured</h5>
                 <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
-                  No page views, product clicks, or external Amazon affiliate redirects have been logged in the database yet. All organic traffic analytics capture runs live and real-time across devices.
+                  No page views, product clicks, or external store affiliate redirects have been logged in the database yet. All organic traffic analytics capture runs live and real-time across devices.
                 </p>
               </div>
             ) : (
@@ -3411,7 +3398,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           )}
                         </div>
                       )}
-                      {!slugChecking && !slugCheckError && (prodForm.slug || prodForm.name) && (prodForm.slug || prodForm.name).trim() !== 'noise-cancelling-pro-anc' && (
+                      {!slugChecking && !slugCheckError && (prodForm.slug || prodForm.name) && (
                         <p className="text-[10px] text-emerald-500 dark:text-emerald-400 font-bold mt-1 flex items-center gap-1">✓ Web Link Name is available!</p>
                       )}
                     </div>

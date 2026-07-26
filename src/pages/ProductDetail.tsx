@@ -193,27 +193,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const loadProductStats = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      // Lazy load sequence if not yet loaded
-      if (allProductsSequence.length === 0) {
-        apiFetch('/api/products?limit=100', { signal })
-          .then(async (seqRes) => {
-            if (signal?.aborted) return;
-            if (seqRes.ok) {
-              const seqData = await seqRes.json();
-              if (signal?.aborted) return;
-              if (seqData) {
-                const plist = Array.isArray(seqData) ? seqData : (seqData.products || []);
-                setAllProductsSequence(plist);
-              }
-            }
-          })
-          .catch(err => {
-            if (err?.name !== 'AbortError') {
-              console.error('[ProductDetail]', err);
-            }
-          });
-      }
-
       const res = await apiFetch(`/api/products/${productSlug}`, { signal });
       if (signal?.aborted) return;
       if (res.ok) {
@@ -699,7 +678,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         {/* Rich Product Details for Social Cards */}
         {product?.price && <meta property="product:price:amount" content={String(product.price)} />}
         <meta property="product:price:currency" content="INR" />
-        <meta property="og:availability" content="instock" />
+        <meta property="og:availability" content={product?.inStock !== false ? 'instock' : 'outofstock'} />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -955,13 +934,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-0.5 text-amber-300">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={`star-rating-main-${i}`} className={`h-4 w-4 ${i < Math.min(5, Math.max(0, Math.floor(product.rating || 4.5))) ? 'fill-amber-300 animate-pulse' : 'text-slate-100'}`} />
+                  <Star key={`star-rating-main-${i}`} className={`h-4 w-4 ${product.rating && product.rating > 0 && i < Math.min(5, Math.max(0, Math.floor(product.rating))) ? 'fill-amber-300 animate-pulse' : 'text-slate-100'}`} />
                 ))}
               </div>
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-50 font-mono">{product.rating || '4.5'}</span>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-50 font-mono">{product.rating && product.rating > 0 ? product.rating : 'N/A'}</span>
               <span className="text-xs text-slate-300 font-medium">
                 {(!product.reviews || product.reviews.length === 0) ? (
-                  "aggrigated score based on the original store"
+                  "aggregated score based on the original store"
                 ) : (
                   `(${product.totalReviews || product.reviews.length} reviews)`
                 )}
@@ -984,7 +963,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               )}
               {product.discount && (
                 <span className="bg-rose-50 text-rose-600 px-2 py-0.5 text-[9px] font-bold rounded-lg font-mono">
-                  -{product.discount}% Off Code Active
+                  -{product.discount}% Off Deal Active
                 </span>
               )}
             </div>
@@ -996,7 +975,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 px-6 py-3.5 text-xs font-bold text-white shadow-xl active:scale-97 transition-all cursor-pointer"
               >
                 <ShoppingBag className="h-5 w-5 shrink-0" />
-                Buy on Amazon
+                Buy on {product.seller || product.marketplace || 'Store'}
                 <ExternalLink className="h-3.5 w-3.5" />
               </button>
 
@@ -1031,7 +1010,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             </div>
 
             <p className="text-[10px] text-slate-300 leading-relaxed text-center sm:text-left">
-              *You will be securely redirected to the Amazon store product page. As an Amazon Associate, we earn from qualifying purchases. Thank you for supporting our review platform!
+              *You will be securely redirected to the online retailer. As an affiliate partner, we earn from qualifying purchases. Thank you for supporting our review platform!
             </p>
           </div>
 
@@ -1143,14 +1122,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         <div className="lg:col-span-1 space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Fidelity Reviews</h3>
           <div className="rounded-2xl border border-slate-50 p-5 bg-slate-50/40 dark:border-slate-700 dark:bg-slate-800/20 text-center space-y-3">
-            <p className="text-3xl font-black font-mono text-slate-800 dark:text-white">{product.rating || '4.5'}</p>
+            <p className="text-3xl font-black font-mono text-slate-800 dark:text-white">{product.rating && product.rating > 0 ? product.rating : 'N/A'}</p>
             <div className="flex justify-center text-amber-300">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={`stat-star-${i}`} className={`h-5 w-5 ${i < Math.min(5, Math.max(0, Math.floor(product.rating || 4.5))) ? 'fill-amber-300' : 'text-slate-100'}`} />
+                <Star key={`stat-star-${i}`} className={`h-5 w-5 ${product.rating && product.rating > 0 && i < Math.min(5, Math.max(0, Math.floor(product.rating))) ? 'fill-amber-300' : 'text-slate-100'}`} />
               ))}
             </div>
             {(!product.reviews || product.reviews.length === 0) ? (
-              <p className="text-xs text-slate-300 font-medium">aggrigated score based on the original store</p>
+              <p className="text-xs text-slate-300 font-medium">aggregated score based on the original store</p>
             ) : (
               <p className="text-xs text-slate-300 font-medium">Aggregated score based on {product.reviews?.length || 0} user inputs.</p>
             )}
@@ -1240,7 +1219,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                   <h4 className="text-[11px] sm:text-xs font-bold text-slate-700 truncate dark:text-white group-hover:text-indigo-500">{rel.name}</h4>
                   <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-1 text-[10px] sm:text-xs mt-2 pt-2 border-t border-slate-50 dark:border-slate-700">
                     <span className="font-extrabold text-slate-800 font-mono dark:text-white">₹{rel.price}</span>
-                    <span className="text-[9px] sm:text-[10px] text-slate-300 font-semibold font-mono">★ {rel.rating || '4.5'}</span>
+                    <span className="text-[9px] sm:text-[10px] text-slate-300 font-semibold font-mono">★ {rel.rating && rel.rating > 0 ? rel.rating : 'N/A'}</span>
                   </div>
                 </div>
               </div>
