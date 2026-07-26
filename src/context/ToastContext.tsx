@@ -58,36 +58,16 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     const msg = message.toLowerCase();
     
+    const isExplicitCategory = category === 'System Status' || category === 'User Action' || category === 'Connectivity';
+    
     // Explicit mappings or smart heuristics
-    if (category === 'System Status' || category === 'User Action' || category === 'Connectivity') {
+    if (isExplicitCategory) {
       mappedCategory = category as Toast['category'];
     } else {
-      if (
-        msg.includes('offline') || 
-        msg.includes('online') || 
-        msg.includes('connection') || 
-        msg.includes('network') || 
-        msg.includes('disconnect') ||
-        msg.includes('sync') ||
-        msg.includes('fetch') ||
-        msg.includes('server')
-      ) {
+      const matchWord = (words: string[]) => words.some(w => new RegExp(`\\b${w}\\b`, 'i').test(msg));
+      if (matchWord(['offline', 'online', 'connection', 'network', 'disconnect', 'sync', 'fetch', 'server'])) {
         mappedCategory = 'Connectivity';
-      } else if (
-        msg.includes('signed') || 
-        msg.includes('logged') || 
-        msg.includes('register') || 
-        msg.includes('profile') || 
-        msg.includes('bookmark') || 
-        msg.includes('wishlist') || 
-        msg.includes('added') || 
-        msg.includes('copied') || 
-        msg.includes('share') || 
-        msg.includes('submitted') || 
-        msg.includes('order') ||
-        msg.includes('subscribe') ||
-        msg.includes('click')
-      ) {
+      } else if (matchWord(['signed', 'logged', 'register', 'profile', 'bookmark', 'wishlist', 'added', 'copied', 'share', 'submitted', 'order', 'subscribe', 'click'])) {
         mappedCategory = 'User Action';
       } else {
         // Fallback depending on type
@@ -99,22 +79,24 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     let refinedMessage = message;
     if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('cors')) {
       refinedMessage = 'We are having trouble reaching the server. Please check your internet connection.';
-      mappedCategory = 'Connectivity';
+      if (!isExplicitCategory) mappedCategory = 'Connectivity';
     } else if (msg.includes('unauthorized') || msg.includes('jwt') || msg.includes('token expired')) {
       refinedMessage = 'Your session has expired. Please sign in again to continue.';
-      mappedCategory = 'User Action';
+      if (!isExplicitCategory) mappedCategory = 'User Action';
     } else if (msg.includes('mongoose') || msg.includes('mongodb') || msg.includes('database error')) {
       refinedMessage = 'A resource synchronization issue occurred. Restoring cached local backup data.';
-      mappedCategory = 'System Status';
+      if (!isExplicitCategory) mappedCategory = 'System Status';
     }
 
     setToasts((prev) => [...prev, { id, message: refinedMessage, type, duration, category: mappedCategory, onUndo }]);
 
-    const timeoutId = setTimeout(() => {
-      removeToast(id);
-    }, duration);
-    
-    timeoutIds.current[id] = timeoutId;
+    if (duration > 0) {
+      const timeoutId = setTimeout(() => {
+        removeToast(id);
+      }, duration);
+      
+      timeoutIds.current[id] = timeoutId;
+    }
   }, [removeToast]);
 
   React.useEffect(() => {

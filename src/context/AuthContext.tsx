@@ -99,10 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else {
           showToast(data.error || 'Failed to authorize.', 'error');
+          refreshProfile().catch(() => {});
         }
       })
       .catch(() => {
         showToast('Connection error during authorization exchange.', 'error');
+        refreshProfile().catch(() => {});
       })
       .finally(() => {
         setLoading(false);
@@ -114,12 +116,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newQuery = params.toString();
       const newPath = window.location.pathname + (newQuery ? `?${newQuery}` : '');
       window.history.replaceState({}, document.title, newPath);
+    } else {
+      refreshProfile().catch(() => {});
     }
-  }, [showToast]);
-
-  useEffect(() => {
-    refreshProfile().catch(() => {});
-  }, [refreshProfile]);
+  }, [showToast, refreshProfile]);
 
   useEffect(() => {
     if (token) {
@@ -183,7 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const cred = await createUserWithEmailAndPassword(auth, email, password);
           
           // Register in backend as well, which will send our custom verification link
-          const res = await fetch('/api/auth/register', {
+          const res = await apiFetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password, name })
@@ -218,14 +218,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (e.code === 'auth/email-already-in-use') {
             return { success: false, error: 'Email already in use. Please sign in.' };
           } else if (e.code === 'auth/operation-not-allowed') {
-            
+            // Firebase email/password auth is disabled in console; fall back to primary backend registration
           } else {
             return { success: false, error: e.message || String(fbErr) };
           }
         }
       }
       
-      const res = await fetch('/api/auth/register', {
+      const res = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name })
