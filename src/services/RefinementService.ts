@@ -193,8 +193,8 @@ export class MetricsService {
   private static apiResponseTimesSum = 0;
   private static dbQueries = 0;
   private static activeSockets = 0;
+  private static dbLatencies: number[] = [];
   private static dbLatencySum = 0;
-  private static dbLatencyCount = 0;
   private static liveLogs: any[] = [];
 
   public static incrementRequests(): void {
@@ -217,8 +217,14 @@ export class MetricsService {
   }
 
   public static recordDbLatency(ms: number): void {
+    this.dbLatencies.push(ms);
     this.dbLatencySum += ms;
-    this.dbLatencyCount++;
+    if (this.dbLatencies.length > 500) {
+      const removed = this.dbLatencies.shift();
+      if (removed !== undefined) {
+        this.dbLatencySum -= removed;
+      }
+    }
   }
 
   public static addLiveLog(log: any): void {
@@ -237,8 +243,8 @@ export class MetricsService {
       ? Math.round(this.apiResponseTimesSum / this.apiResponseTimes.length)
       : 0;
 
-    const avgDbLatency = this.dbLatencyCount > 0
-      ? Number((this.dbLatencySum / this.dbLatencyCount).toFixed(2))
+    const avgDbLatency = this.dbLatencies.length > 0
+      ? Number((this.dbLatencySum / this.dbLatencies.length).toFixed(2))
       : 0;
 
     return {

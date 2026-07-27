@@ -331,6 +331,9 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                   onChange={(e) => setSelectDistrict(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-50 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/25 focus:bg-white dark:focus:border-indigo-300 dark:focus:bg-slate-800 transition-all font-semibold"
                 >
+                  <option value="" className="bg-white text-slate-400 dark:bg-slate-800 font-semibold">
+                    -- Choose Location / District (Optional) --
+                  </option>
                   {TAMIL_NADU_DISTRICTS.map((dst) => (
                     <option key={dst} value={dst} className="bg-white text-slate-700 dark:bg-slate-800 dark:text-slate-50 font-semibold selection:bg-indigo-50">
                       {dst}

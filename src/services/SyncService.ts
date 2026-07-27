@@ -287,10 +287,15 @@ export class SyncService {
             if (pricing.originalPrice) nextOriginalPrice = pricing.originalPrice;
             if (pricing.discount !== undefined) nextDiscount = pricing.discount;
             if (pricing.inStock !== undefined) nextInStock = pricing.inStock;
+          } else {
+            throw new Error('Pricing data could not be extracted from provider');
           }
+        } else {
+          throw new Error('No compatible marketplace provider detected for affiliate link');
         }
       } catch (err) {
         console.warn('Live background synchronization fetch failed, preserving old values:', err);
+        throw err;
       }
     }
 

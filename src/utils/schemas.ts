@@ -59,8 +59,7 @@ export const profileSchema = z.object({
     .min(2, { message: 'Name must be at least 2 characters long' })
     .max(50, { message: 'Name must be 50 characters or less' })
     .transform(val => val.trim()),
-  district: z.string()
-    .min(1, { message: 'Please select a valid district' })
+  district: z.string().optional()
 });
 
 /**

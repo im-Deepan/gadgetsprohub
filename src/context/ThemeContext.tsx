@@ -17,29 +17,22 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isDark, setIsDark] = useState<boolean>(false);
-  const [mounted, setMounted] = useState<boolean>(false);
-
-  useEffect(() => {
-    let resolvedIsDark = false;
+  const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = safeGetItem('aff_theme');
     if (saved !== null) {
       try {
-        resolvedIsDark = JSON.parse(saved);
+        return JSON.parse(saved);
       } catch (e) {
         console.warn('Theme parse error', e);
-        resolvedIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
-    } else {
-      resolvedIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
-    
-    setIsDark(resolvedIsDark);
-    setMounted(true);
-  }, []);
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
 
   useEffect(() => {
-    if (!mounted) return;
     safeSetItem('aff_theme', JSON.stringify(isDark));
 
     if (isDark) {
@@ -47,15 +40,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [isDark, mounted]);
+  }, [isDark]);
 
   const toggleTheme = () => setIsDark(prev => !prev);
 
-  // Use a fallback to false during initial mismatch window to ensure server layout safety
-  const resolvedIsDark = mounted ? isDark : false;
-
   return (
-    <ThemeContext.Provider value={{ isDark: resolvedIsDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

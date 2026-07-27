@@ -2676,9 +2676,32 @@ async function startServer() {
     }
   });
 
-  const failedLoginTracker = new Map<string, { count: number; lockUntil?: Date }>();
+  const failedLoginTracker = new Map<string, { count: number; lockUntil?: Date; lastAttemptAt: Date }>();
+
+  function cleanupFailedLoginTracker(): void {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const now = new Date();
+    for (const [email, record] of failedLoginTracker.entries()) {
+      if (record.lastAttemptAt < oneHourAgo && (!record.lockUntil || record.lockUntil < now)) {
+        failedLoginTracker.delete(email);
+      }
+    }
+  }
+
+  // Periodic hourly background cleanup to guarantee memory release for stale records
+  const bruteForceCleanupTimer = setInterval(() => {
+    try {
+      cleanupFailedLoginTracker();
+    } catch (err) {
+      console.error('[failedLoginTracker Cleanup Error]:', err);
+    }
+  }, 60 * 60 * 1000);
+  if (typeof bruteForceCleanupTimer.unref === 'function') {
+    bruteForceCleanupTimer.unref();
+  }
 
   function checkBruteForceLockout(email: string): { isLocked: boolean; remainingMinutes?: number } {
+    cleanupFailedLoginTracker();
     if (!ConfigurationService.getFlag('enableBruteForceProtection')) {
       return { isLocked: false };
     }
@@ -2698,9 +2721,11 @@ async function startServer() {
   }
 
   function recordFailedLoginAttempt(email: string): void {
+    cleanupFailedLoginTracker();
     if (!ConfigurationService.getFlag('enableBruteForceProtection')) return;
-    const record = failedLoginTracker.get(email) || { count: 0 };
+    const record = failedLoginTracker.get(email) || { count: 0, lastAttemptAt: new Date() };
     record.count += 1;
+    record.lastAttemptAt = new Date();
     if (record.count >= 5) {
       record.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
       console.warn(`[BruteForceProtection] Account ${email} locked for 15 minutes after 5 consecutive failed login attempts.`);
@@ -5599,8 +5624,8 @@ async function startServer() {
               `• <b>Category:</b> ${escapeHTML(categoryName)}\n` +
               `• <b>Subcategory:</b> ${escapeHTML(state.data.subcategory || 'N/A')}\n` +
               `• <b>Brand:</b> ${escapeHTML(state.data.brand || 'N/A')}\n` +
-              `• <b>Price:</b> ₹${state.data.price}\n` +
-              `• <b>Original Price:</b> ${state.data.originalPrice ? '₹' + state.data.originalPrice : 'N/A'}\n` +
+              `• <b>Price:</b> $${state.data.price}\n` +
+              `• <b>Original Price:</b> ${state.data.originalPrice ? '$' + state.data.originalPrice : 'N/A'}\n` +
               `• <b>Discount:</b> ${state.data.discount ? state.data.discount + '%' : 'N/A'}\n` +
               `• <b>Affiliate Link:</b> <code>${escapeHTML(state.data.affiliateLink || '')}</code>\n` +
               `• <b>Description:</b> ${escapeHTML(state.data.description || 'N/A')}\n` +

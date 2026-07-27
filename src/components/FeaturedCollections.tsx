@@ -369,11 +369,11 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
             </span>
           )}
           <span className="text-xs font-black text-slate-800 dark:text-white">
-            ${currentProduct.price}
+            ₹{currentProduct.price}
           </span>
           {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
             <span className="text-[10px] text-slate-300 line-through dark:text-slate-500 font-medium">
-              ${currentProduct.originalPrice}
+              ₹{currentProduct.originalPrice}
             </span>
           )}
         </div>
@@ -614,11 +614,11 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             </span>
             <div className="flex items-baseline gap-1">
               <span className="text-sm font-black text-slate-800 dark:text-white">
-                ${currentProduct.price}
+                ₹{currentProduct.price}
               </span>
               {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
                 <span className="text-[10px] text-slate-300 line-through dark:text-slate-500">
-                  ${currentProduct.originalPrice}
+                  ₹{currentProduct.originalPrice}
                 </span>
               )}
             </div>

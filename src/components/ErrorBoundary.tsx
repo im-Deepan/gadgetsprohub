@@ -57,7 +57,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               We encountered a temporary issue while loading this section. Try clicking the 'Try Again' button below or reloading your browser.
             </p>
 
-            {(process.env.NODE_ENV !== 'production' || (import.meta as any).env?.DEV) && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-50 dark:border-slate-700 rounded-lg text-[11px] font-mono text-slate-500 dark:text-slate-300 mb-6 overflow-auto max-h-32 whitespace-pre-wrap">
                 {this.state.error.toString()}
               </div>

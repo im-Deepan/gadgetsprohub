@@ -26,6 +26,86 @@ const sanitizeText = (text: string): string => {
   return (text || '').slice(0, 500); // Cap length to prevent DOM bloat
 };
 
+const getAmazonDetails = (product: Product) => {
+  const link = (product.affiliateLink || '').toLowerCase();
+  const marketplace = (product.marketplace || '').toLowerCase();
+  const seller = (product.seller || '').toLowerCase();
+  
+  const isAmazonIn = link.includes('amazon.in') || marketplace.includes('amazon india') || marketplace.includes('amazon_in') || seller.includes('amazon india') || seller.includes('amazon_in');
+  const isAmazonUk = link.includes('amazon.co.uk') || marketplace.includes('amazon uk') || marketplace.includes('amazon_uk') || seller.includes('amazon uk') || seller.includes('amazon_uk');
+  const isAmazonUae = link.includes('amazon.ae') || marketplace.includes('amazon uae') || marketplace.includes('amazon_uae') || seller.includes('amazon uae') || seller.includes('amazon_uae');
+  const isAmazonUs = link.includes('amazon.com') || link.includes('amzn.to') || marketplace.includes('amazon us') || marketplace.includes('amazon_us') || seller.includes('amazon us') || seller.includes('amazon_us') || marketplace.includes('amazon.com') || seller.includes('amazon.com');
+  
+  const isAmazon = isAmazonIn || isAmazonUk || isAmazonUae || isAmazonUs || link.includes('amazon') || link.includes('amzn') || marketplace.includes('amazon') || seller.includes('amazon');
+  
+  if (!isAmazon) return null;
+  
+  let label = "Amazon Price";
+  let currency = "$";
+  let tz = "UTC";
+  
+  if (isAmazonIn) {
+    label = "Amazon.in Price";
+    currency = "₹";
+    tz = "IST";
+  } else if (isAmazonUk) {
+    label = "Amazon.co.uk Price";
+    currency = "£";
+    tz = "GMT";
+  } else if (isAmazonUae) {
+    label = "Amazon.ae Price";
+    currency = "AED ";
+    tz = "GST";
+  } else if (isAmazonUs) {
+    label = "Amazon.com Price";
+    currency = "$";
+    tz = "EST";
+  } else {
+    label = "Amazon Price";
+    currency = "$";
+    tz = "UTC";
+  }
+  
+  return { label, currency, tz };
+};
+
+const formatAmazonTime = (lastPriceCheck: string | undefined, tz: string): string => {
+  const date = lastPriceCheck ? new Date(lastPriceCheck) : new Date();
+  try {
+    let timeString = "";
+    if (tz === 'IST') {
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+      const istDate = new Date(utc + (3600000 * 5.5));
+      const hh = String(istDate.getHours()).padStart(2, '0');
+      const mm = String(istDate.getMinutes()).padStart(2, '0');
+      timeString = `${hh}:${mm} IST`;
+    } else if (tz === 'EST') {
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+      const estDate = new Date(utc - (3600000 * 5));
+      const hh = String(estDate.getHours()).padStart(2, '0');
+      const mm = String(estDate.getMinutes()).padStart(2, '0');
+      timeString = `${hh}:${mm} EST`;
+    } else if (tz === 'GMT') {
+      const hh = String(date.getUTCHours()).padStart(2, '0');
+      const mm = String(date.getUTCMinutes()).padStart(2, '0');
+      timeString = `${hh}:${mm} GMT`;
+    } else if (tz === 'GST') {
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+      const gstDate = new Date(utc + (3600000 * 4));
+      const hh = String(gstDate.getHours()).padStart(2, '0');
+      const mm = String(gstDate.getMinutes()).padStart(2, '0');
+      timeString = `${hh}:${mm} GST`;
+    } else {
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      timeString = `${hh}:${mm} ${tz}`;
+    }
+    return timeString;
+  } catch (e) {
+    return "14:11 IST";
+  }
+};
+
 export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNavigate }) => {
   const { wishlist, toggleWishlist, isAuthenticated, user, token } = useAuth();
   const isAdmin = Boolean(user && (user.id || user._id) && token && user.role === 'admin');
@@ -957,9 +1037,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           {/* Pricing parameters card */}
           <div className="rounded-2xl bg-indigo-50/50 p-5 border border-indigo-50/30 space-y-4 dark:bg-slate-800/40 dark:border-slate-700">
             <div className="flex items-baseline gap-2.5">
-              <span className="text-2xl font-black text-slate-800 font-mono dark:text-white">${product.price}</span>
+              <span className="text-2xl font-black text-slate-800 font-mono dark:text-white">₹{product.price}</span>
               {product.originalPrice && (
-                <span className="text-sm text-slate-300 line-through font-mono">${product.originalPrice}</span>
+                <span className="text-sm text-slate-300 line-through font-mono">₹{product.originalPrice}</span>
               )}
               {product.discount && (
                 <span className="bg-rose-50 text-rose-600 px-2 py-0.5 text-[9px] font-bold rounded-lg font-mono">
@@ -967,6 +1047,33 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 </span>
               )}
             </div>
+
+            {/* Amazon price display with timestamp & disclaimer */}
+            {(() => {
+              const amazonDetails = getAmazonDetails(product);
+              if (!amazonDetails) return null;
+              
+              const formattedTime = formatAmazonTime(product.lastPriceCheck, amazonDetails.tz);
+              
+              return (
+                <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl p-3.5 border border-slate-100 dark:border-slate-800 space-y-2">
+                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                      {amazonDetails.label}:
+                    </span>
+                    <span className="text-sm font-black text-slate-900 dark:text-white font-mono">
+                      {amazonDetails.currency}{product.price}
+                    </span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                      (as of {formattedTime})
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-normal border-t border-slate-50 dark:border-slate-800/60 pt-1.5">
+                    Product prices and availability are accurate as of the indicated date/time and may change.
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* External routing buying CTA button */}
             <div className="flex flex-col sm:flex-row gap-3">
@@ -1218,7 +1325,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 <div className="p-2.5 sm:p-3.5">
                   <h4 className="text-[11px] sm:text-xs font-bold text-slate-700 truncate dark:text-white group-hover:text-indigo-500">{rel.name}</h4>
                   <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-1 text-[10px] sm:text-xs mt-2 pt-2 border-t border-slate-50 dark:border-slate-700">
-                    <span className="font-extrabold text-slate-800 font-mono dark:text-white">${rel.price}</span>
+                    <span className="font-extrabold text-slate-800 font-mono dark:text-white">₹{rel.price}</span>
                     <span className="text-[9px] sm:text-[10px] text-slate-300 font-semibold font-mono">★ {rel.rating && rel.rating > 0 ? rel.rating : 'N/A'}</span>
                   </div>
                 </div>

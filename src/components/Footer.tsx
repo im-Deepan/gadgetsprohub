@@ -139,7 +139,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
           {/* Categories select */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-900 dark:text-white mb-4">
-              Real Categories
+              {categories.length > 0 ? "Product Categories" : "Featured Categories"}
             </h4>
             <ul className="space-y-2.5 text-xs">
               {categories.length > 0 ? (

@@ -460,9 +460,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
         <div className="pt-3 mt-3 border-t border-slate-50 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-baseline gap-1">
-            <span className="text-xs sm:text-sm font-black font-mono text-indigo-500 dark:text-indigo-300">${p.price}</span>
+            <span className="text-xs sm:text-sm font-black font-mono text-indigo-500 dark:text-indigo-300">₹{p.price}</span>
             {p.originalPrice && (
-              <span className="text-[10px] text-slate-300 line-through font-mono">${p.originalPrice}</span>
+              <span className="text-[10px] text-slate-300 line-through font-mono">₹{p.originalPrice}</span>
             )}
           </div>
 
@@ -1111,9 +1111,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       <div className="space-y-0.5">
                         <span className="text-[9px] text-slate-300 font-bold uppercase block">Deal price</span>
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-lg font-black text-slate-800 font-mono dark:text-white">${specModalProduct.price}</span>
+                          <span className="text-lg font-black text-slate-800 font-mono dark:text-white">₹{specModalProduct.price}</span>
                           {specModalProduct.originalPrice && (
-                            <span className="text-xs text-slate-300 line-through font-mono">${specModalProduct.originalPrice}</span>
+                            <span className="text-xs text-slate-300 line-through font-mono">₹{specModalProduct.originalPrice}</span>
                           )}
                         </div>
                       </div>

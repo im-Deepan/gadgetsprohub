@@ -312,30 +312,32 @@ export class PriceScannerService {
         syncError = err;
       }
 
-      // Explicitly update lastPriceCheck timestamp in MongoDB / local database for this product
-      const checkTimestamp = new Date();
-      try {
-        const isMongoConnected = mongoose.connection.readyState === 1;
-        if (isMongoConnected) {
-          const ProductModel = mongoose.model('Product');
-          await ProductModel.findByIdAndUpdate(
-            nextProduct._id,
-            { $set: { lastPriceCheck: checkTimestamp } },
-            { new: true }
-          );
-        } else {
-          const { localProducts } = require('./SyncService');
-          if (Array.isArray(localProducts)) {
-            const pIndex = localProducts.findIndex(
-              (lp: any) => lp._id?.toString() === nextProduct._id.toString() || lp.id === nextProduct._id.toString()
+      // Explicitly update lastPriceCheck timestamp in MongoDB / local database for this product ONLY if sync was successful
+      if (!syncError) {
+        const checkTimestamp = new Date();
+        try {
+          const isMongoConnected = mongoose.connection.readyState === 1;
+          if (isMongoConnected) {
+            const ProductModel = mongoose.model('Product');
+            await ProductModel.findByIdAndUpdate(
+              nextProduct._id,
+              { $set: { lastPriceCheck: checkTimestamp } },
+              { new: true }
             );
-            if (pIndex !== -1) {
-              localProducts[pIndex].lastPriceCheck = checkTimestamp;
+          } else {
+            const { localProducts } = require('./SyncService');
+            if (Array.isArray(localProducts)) {
+              const pIndex = localProducts.findIndex(
+                (lp: any) => lp._id?.toString() === nextProduct._id.toString() || lp.id === nextProduct._id.toString()
+              );
+              if (pIndex !== -1) {
+                localProducts[pIndex].lastPriceCheck = checkTimestamp;
+              }
             }
           }
+        } catch (dbErr: any) {
+          console.warn(`[PriceScanner] Failed to update lastPriceCheck in DB for product ${nextProduct._id}:`, dbErr.message);
         }
-      } catch (dbErr: any) {
-        console.warn(`[PriceScanner] Failed to update lastPriceCheck in DB for product ${nextProduct._id}:`, dbErr.message);
       }
 
       // Process result
