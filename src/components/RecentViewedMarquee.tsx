@@ -32,13 +32,18 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
 
   if (!recentViewed || recentViewed.length === 0) return null;
 
-  // Determine how many slots to render depending on size.
-  // Instead of completely hiding slots using javascript client-side resize which can flicker,
-  // we will standardise Tailwind grid classes to show/hide slots.
-  // Mobile: grid-cols-2 (2 slots)
-  // Tablet: md:grid-cols-3 (3 slots)
-  // Desktop: lg:grid-cols-4 (4 slots)
-  const renderSlots = [0, 1, 2, 3];
+  const uniqueCount = recentViewed.length;
+  // Limit slot count to available unique products (max 4 slots)
+  const slotCount = Math.min(4, uniqueCount);
+  const renderSlots = Array.from({ length: slotCount }, (_, i) => i);
+
+  const gridClass = slotCount === 1 
+    ? "grid grid-cols-1 max-w-sm mx-auto gap-4" 
+    : slotCount === 2 
+    ? "grid grid-cols-2 max-w-xl mx-auto gap-4" 
+    : slotCount === 3 
+    ? "grid grid-cols-2 md:grid-cols-3 max-w-3xl mx-auto gap-4" 
+    : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4";
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
@@ -62,7 +67,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
       </div>
 
       {/* Grid of equally-spaced square containers */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className={gridClass}>
         {renderSlots.map((slotIndex) => {
           // Calculate the actual product index for this slot.
           // We apply an offset so that each slot displays a different product!

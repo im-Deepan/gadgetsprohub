@@ -646,7 +646,7 @@ const mediaAssetSchema = new mongoose.Schema({
   width: { type: Number },
   height: { type: Number },
   aspectRatio: { type: Number },
-  hash: { type: String, index: true },
+  hash: { type: String, unique: true, sparse: true },
   uploadDate: { type: Date, default: Date.now },
   optimizationStatus: { type: String, enum: ['pending', 'processing', 'completed', 'failed'], default: 'pending' },
   originalSize: { type: Number },
@@ -669,8 +669,8 @@ const mediaQueueJobSchema = new mongoose.Schema({
   completedAt: { type: Date }
 });
 
-const MediaAsset = mongoose.model('MediaAsset', mediaAssetSchema);
-const MediaQueueJob = mongoose.model('MediaQueueJob', mediaQueueJobSchema);
+const MediaAsset = mongoose.models.MediaAsset || mongoose.model('MediaAsset', mediaAssetSchema);
+const MediaQueueJob = mongoose.models.MediaQueueJob || mongoose.model('MediaQueueJob', mediaQueueJobSchema);
 
 // ========== PHASE 8: SEO & PUBLISHING SCHEMAS ==========
 const redirectRuleSchema = new mongoose.Schema({
@@ -1285,6 +1285,11 @@ const fileSyncQueue = {
 };
 
 async function syncProductsToSeedFile(): Promise<void> {
+  try {
+    saveLocalProducts();
+  } catch (e: any) {
+    console.warn("Failed syncing products to local store:", e.message);
+  }
   return Promise.resolve();
 }
 
@@ -4403,15 +4408,16 @@ async function startServer() {
   app.get('/api/search', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { q } = req.query;
-      if (!q) return res.json({ products: [], blogs: [] });
+      if (!q) return res.json({ products: [], blogs: [], categories: [], brands: [] });
       const queryStr = String(q).toLowerCase().trim();
 
       if (isMongoConnected) {
         const searchRegex = new RegExp(queryStr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
         
+        let matchedCats: any[] = [];
         let categoryIds: any[] = [];
         try {
-          const matchedCats = await Category.find({ name: { $regex: searchRegex } });
+          matchedCats = await Category.find({ name: { $regex: searchRegex } }).limit(5);
           categoryIds = matchedCats.map((c: any) => c._id);
         } catch (err) {
           captureError(err, { context: 'Category search mapping' });
@@ -4431,15 +4437,20 @@ async function startServer() {
 
         const products = await Product.find(productFilter).populate('category').limit(10);
 
+        // Extract distinct brands from matched products
+        const brands = Array.from(new Set(products.map((p: any) => p.brand).filter(Boolean))).slice(0, 5);
+
         const blogs = await Blog.find({
           $or: [
             { title: { $regex: searchRegex } },
             { content: { $regex: searchRegex } },
             { category: { $regex: searchRegex } }
           ]
-        }).limit(10);
+        }).limit(5);
 
-        return res.json({ products, blogs });
+        const categoryNames = matchedCats.map((c: any) => c.name);
+
+        return res.json({ products, blogs, categories: categoryNames, brands });
       } else {
         const matchedProducts = localProducts.filter((p: any) => {
           const catName = typeof p.category === 'object' && p.category ? (p.category as any).name : '';
@@ -4454,9 +4465,12 @@ async function startServer() {
           b.title?.toLowerCase().includes(queryStr) || 
           b.content?.toLowerCase().includes(queryStr) ||
           b.category?.toLowerCase().includes(queryStr)
-        ).slice(0, 10);
+        ).slice(0, 5);
 
-        return res.json({ products: matchedProducts, blogs: matchedBlogs });
+        const categoryNames = Array.from(new Set(matchedProducts.map((p: any) => typeof p.category === 'object' && p.category ? p.category.name : p.category).filter(Boolean))).slice(0, 5);
+        const brands = Array.from(new Set(matchedProducts.map((p: any) => p.brand).filter(Boolean))).slice(0, 5);
+
+        return res.json({ products: matchedProducts, blogs: matchedBlogs, categories: categoryNames, brands });
       }
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -6121,6 +6135,7 @@ async function startServer() {
               : (existingProduct.imageUrl || ''),
             images: existingProduct.images || (existingProduct.imageUrl ? [existingProduct.imageUrl] : []),
             affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20',
+            affiliateLink: existingProduct.affiliateLink || (existingProduct.asin ? `https://www.amazon.com/dp/${existingProduct.asin}/?tag=${existingProduct.affiliateCode || 'gadgetspro-20'}` : ''),
             features: Array.isArray(existingProduct.features) && existingProduct.features.length > 0 
               ? existingProduct.features 
               : [],
@@ -6167,6 +6182,7 @@ async function startServer() {
               : '',
             images: scrapedDetails.images || [],
             affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20',
+            affiliateLink: scrapedDetails.affiliateLink || scrapedDetails.url || inputUrl || (cleanAsin ? `https://www.amazon.com/dp/${cleanAsin}/?tag=${process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20'}` : ''),
             features: [
               `Official Amazon Item (${cleanAsin})`,
               'Full manufacturer warranty coverage',
@@ -7070,6 +7086,7 @@ async function startServer() {
 
   app.get('/api/admin/sync/jobs', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const jobs = await SyncJob.find({}).sort({ createdAt: -1 }).limit(50);
       res.json({ success: true, data: jobs });
     } catch (err: any) {
@@ -7079,6 +7096,7 @@ async function startServer() {
 
   app.post('/api/admin/sync/jobs', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to create sync job' });
       const { name, priority } = req.body;
       const job = new SyncJob({
         name: name || `Manual Full Sync - ${new Date().toLocaleTimeString()}`,
@@ -7103,13 +7121,30 @@ async function startServer() {
         return res.status(400).json({ error: 'Invalid action parameter. Allowed values: pause, resume, cancel, retry' });
       }
 
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to perform job actions' });
+
       const job = await SyncJob.findById(req.params.jobId);
       if (!job) return res.status(404).json({ error: 'Job not found' });
 
-      if (action === 'pause') job.status = 'paused';
-      else if (action === 'resume') job.status = 'running';
-      else if (action === 'cancel') job.status = 'cancelled';
-      else if (action === 'retry') {
+      if (action === 'pause') {
+        if (job.status !== 'running' && job.status !== 'waiting') {
+          return res.status(400).json({ error: `Cannot pause job with status "${job.status}". Only running or waiting jobs can be paused.` });
+        }
+        job.status = 'paused';
+      } else if (action === 'resume') {
+        if (job.status !== 'paused') {
+          return res.status(400).json({ error: `Cannot resume job with status "${job.status}". Only paused jobs can be resumed.` });
+        }
+        job.status = 'running';
+      } else if (action === 'cancel') {
+        if (job.status === 'completed' || job.status === 'cancelled') {
+          return res.status(400).json({ error: `Cannot cancel job that is already ${job.status}.` });
+        }
+        job.status = 'cancelled';
+      } else if (action === 'retry') {
+        if (job.status !== 'failed' && job.status !== 'cancelled') {
+          return res.status(400).json({ error: `Cannot retry job with status "${job.status}". Only failed or cancelled jobs can be retried.` });
+        }
         job.status = 'waiting';
         job.processedItems = 0;
         job.failedItems = 0;
@@ -7131,6 +7166,7 @@ async function startServer() {
 
   app.get('/api/admin/sync/schedules', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const schedules = await SchedulerTask.find({});
       res.json({ success: true, data: schedules });
     } catch (err: any) {
@@ -7140,6 +7176,7 @@ async function startServer() {
 
   app.post('/api/admin/sync/schedules/:taskId/run', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to run scheduler task' });
       const task = await SchedulerTask.findById(req.params.taskId);
       if (!task) return res.status(404).json({ error: 'Scheduler task not found' });
 
@@ -7175,6 +7212,7 @@ async function startServer() {
 
   app.post('/api/admin/sync/schedules/:taskId/toggle', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to toggle schedule' });
       const task = await SchedulerTask.findById(req.params.taskId);
       if (!task) return res.status(404).json({ error: 'Scheduler task not found' });
 
@@ -7188,6 +7226,7 @@ async function startServer() {
 
   app.get('/api/admin/sync/alerts', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const alerts = await AlertRule.find({}).populate('productId', 'name');
       res.json({ success: true, data: alerts });
     } catch (err: any) {
@@ -7197,6 +7236,7 @@ async function startServer() {
 
   app.post('/api/admin/sync/alerts', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to save alert rule' });
       const { _id, name, productId, triggerType, threshold, channels, active } = req.body;
       let alert;
       if (_id) {
@@ -7213,6 +7253,7 @@ async function startServer() {
 
   app.delete('/api/admin/sync/alerts/:id', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to delete alert rule' });
       await AlertRule.findByIdAndDelete(req.params.id);
       res.json({ success: true });
     } catch (err: any) {
@@ -7222,6 +7263,7 @@ async function startServer() {
 
   app.get('/api/admin/sync/health', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const reports = await ProductHealth.find({}).populate('productId', 'name price lastPriceCheck');
       res.json({ success: true, data: reports });
     } catch (err: any) {
@@ -7231,6 +7273,7 @@ async function startServer() {
 
   app.get('/api/admin/sync/rules', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const rules = await AutomationRule.find({});
       res.json({ success: true, data: rules });
     } catch (err: any) {
@@ -7240,6 +7283,7 @@ async function startServer() {
 
   app.post('/api/admin/sync/rules', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to save automation rule' });
       const { _id, name, triggerType, triggerThreshold, actions, active } = req.body;
       let rule;
       if (_id) {
@@ -7256,6 +7300,7 @@ async function startServer() {
 
   app.delete('/api/admin/sync/rules/:id', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to delete automation rule' });
       await AutomationRule.findByIdAndDelete(req.params.id);
       res.json({ success: true });
     } catch (err: any) {
@@ -7265,6 +7310,7 @@ async function startServer() {
 
   app.get('/api/admin/sync/timeline/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: { priceHistory: [], changes: [] } });
       const priceHistory = await PriceHistory.find({ productId: req.params.productId }).sort({ timestamp: -1 }).limit(30);
       const changes = await ProductChange.find({ productId: req.params.productId }).sort({ timestamp: -1 }).limit(30);
       res.json({
@@ -7281,6 +7327,7 @@ async function startServer() {
 
   app.post('/api/admin/sync/product/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to sync product' });
       const result = await syncService.runLiveProductSync(req.params.productId, req.body);
       res.json({ success: true, data: result });
     } catch (err: any) {
@@ -7300,6 +7347,7 @@ async function startServer() {
 
   app.get('/api/admin/sync/notifications', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const logs = await NotificationHistory.find({}).sort({ timestamp: -1 }).limit(100);
       res.json({ success: true, data: logs });
     } catch (err: any) {
@@ -7322,6 +7370,7 @@ async function startServer() {
 
   app.get('/api/admin/marketplace/providers', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const providers = await MarketplaceProviderModel.find({});
       res.json({ success: true, data: providers });
     } catch (err: any) {
@@ -7331,6 +7380,7 @@ async function startServer() {
 
   app.post('/api/admin/marketplace/providers/toggle', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to toggle marketplace provider' });
       const { providerId, enabled } = req.body;
       const provider = await MarketplaceProviderModel.findOneAndUpdate(
         { providerId },
@@ -7346,6 +7396,7 @@ async function startServer() {
 
   app.get('/api/admin/marketplace/settings', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const settings = await MarketplaceSettingsModel.find({});
       const sanitized = settings.map(s => {
         const obj = s.toObject ? s.toObject() : { ...s };
@@ -7389,6 +7440,7 @@ async function startServer() {
 
   app.post('/api/admin/marketplace/settings', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to save marketplace settings' });
       const { providerId, apiKeys, sessionTokens, cookies, importRules } = req.body;
       const existing = await MarketplaceSettingsModel.findOne({ providerId });
 
@@ -7433,6 +7485,7 @@ async function startServer() {
 
   app.get('/api/admin/marketplace/affiliate', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const profiles = await AffiliateProfilesModel.find({});
       res.json({ success: true, data: profiles });
     } catch (err: any) {
@@ -7442,6 +7495,7 @@ async function startServer() {
 
   app.post('/api/admin/marketplace/affiliate', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to save affiliate profile' });
       const { providerId, region, affiliateId, campaignName, customParams } = req.body;
       const profile = await AffiliateProfilesModel.findOneAndUpdate(
         { providerId, region },
@@ -7612,6 +7666,7 @@ async function startServer() {
 
   app.get('/api/admin/marketplace/health', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const status = await MarketplaceHealthModel.find({});
       res.json({ success: true, data: status });
     } catch (err: any) {
@@ -7621,6 +7676,7 @@ async function startServer() {
 
   app.get('/api/admin/marketplace/logs', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: [] });
       const logs = await ProviderLogsModel.find({}).sort({ timestamp: -1 }).limit(100);
       res.json({ success: true, data: logs });
     } catch (err: any) {
@@ -7630,6 +7686,7 @@ async function startServer() {
 
   app.post('/api/admin/marketplace/import', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required for marketplace import' });
       const { url, categoryId, forceUpdate } = req.body;
       if (!url) return res.status(400).json({ error: 'URL parameter is required' });
       
@@ -7642,6 +7699,7 @@ async function startServer() {
 
   app.post('/api/admin/marketplace/bulk-import', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required for bulk import' });
       const { urls, categoryId } = req.body;
       if (!urls || !Array.isArray(urls)) {
         return res.status(400).json({ error: 'URLs array is required' });
@@ -7655,6 +7713,7 @@ async function startServer() {
 
   app.post('/api/admin/marketplace/merge', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to merge products' });
       const { primaryId, duplicateId, strategy } = req.body;
       if (!primaryId || !duplicateId) {
         return res.status(400).json({ error: 'Primary and duplicate IDs are required' });
@@ -7668,6 +7727,7 @@ async function startServer() {
 
   app.get('/api/admin/marketplace/compare/:productId', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required for cross-marketplace comparison' });
       const comparison = await marketplaceService.compareCrossMarketplace(req.params.productId);
       res.json({ success: true, data: comparison });
     } catch (err: any) {
@@ -7677,6 +7737,9 @@ async function startServer() {
 
   app.get('/api/admin/marketplace/currencies', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) {
+        return res.json({ success: true, data: { baseCurrency: 'USD', rates: { USD: 1, INR: 83.5, EUR: 0.92, GBP: 0.78, CAD: 1.36 }, lastUpdated: new Date() } });
+      }
       let rates = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
       if (!rates || !rates.lastUpdated || (Date.now() - new Date(rates.lastUpdated).getTime() > 24 * 3600 * 1000)) {
         rates = await marketplaceService.refreshExchangeRates().catch(() => null) || rates;
@@ -7689,6 +7752,7 @@ async function startServer() {
 
   app.post('/api/admin/marketplace/currencies/refresh', adminOnly, async (_req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.status(503).json({ error: 'Database connection required to refresh currency rates' });
       const rates = await marketplaceService.refreshExchangeRates(true);
       res.json({ success: true, message: 'Exchange rates refreshed successfully', data: rates });
     } catch (err: any) {
@@ -8099,22 +8163,29 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         });
       }
 
-      // 6b. Normalize Affiliate Link to clean canonical form
+      // 6b. Normalize Affiliate Link to clean canonical form while preserving direct SiteStripe / affiliate links
       let cleanAffiliateLink = '';
-      if (normalizedAsin) {
-        cleanAffiliateLink = `https://www.amazon.com/dp/${normalizedAsin}/?tag=${resolvedAffiliateCode}`;
-      } else if (rawPayload.affiliateLink && typeof rawPayload.affiliateLink === 'string') {
-        const urlStr = rawPayload.affiliateLink.trim();
-        try {
-          const parsedUrl = new URL(urlStr);
-          // FORCE the official resolved affiliate code to prevent commission hijacking!
-          const customTag = resolvedAffiliateCode;
-          const pathAsinMatch = urlStr.match(/\/(dp|gp\/product)\/([A-Z0-9]{10})/i);
-          const finalAsin = normalizedAsin || (pathAsinMatch ? pathAsinMatch[2] : 'unknown');
-          cleanAffiliateLink = `https://www.amazon.com/dp/${finalAsin}/?tag=${customTag}`;
-        } catch (e) {
-          cleanAffiliateLink = `https://www.amazon.com/dp/unknown/?tag=${resolvedAffiliateCode}`;
+      const rawAffiliateInput = rawPayload.affiliateLink || rawPayload.siteStripeLink || rawPayload.buyUrl || rawPayload.productUrl;
+
+      if (rawAffiliateInput && typeof rawAffiliateInput === 'string' && rawAffiliateInput.trim().length > 0) {
+        let rawLink = rawAffiliateInput.trim();
+        if (!/^https?:\/\//i.test(rawLink)) {
+          rawLink = 'https://' + rawLink;
         }
+        try {
+          if (rawLink.includes('amazon.') || rawLink.includes('amzn.')) {
+            // Ensure tag parameter is attached if missing
+            if (!rawLink.includes('tag=')) {
+              const sep = rawLink.includes('?') ? '&' : '?';
+              rawLink = `${rawLink}${sep}tag=${resolvedAffiliateCode}`;
+            }
+          }
+          cleanAffiliateLink = rawLink;
+        } catch (e) {
+          cleanAffiliateLink = rawLink;
+        }
+      } else if (normalizedAsin) {
+        cleanAffiliateLink = `https://www.amazon.com/dp/${normalizedAsin}/?tag=${resolvedAffiliateCode}`;
       } else {
         cleanAffiliateLink = `https://www.amazon.com/dp/unknown/?tag=${resolvedAffiliateCode}`;
       }
@@ -9573,6 +9644,143 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     res.send(`google.com, ${cleanId}, DIRECT, f08c47fec0942fa0\n`);
   });
 
+  // Helper function to serve index.html with dynamic OpenGraph meta tags for social share links (WhatsApp, Instagram, Twitter, etc.)
+  const serveHydratedHtml = async (req: express.Request, res: express.Response, indexPath: string) => {
+    try {
+      if (!fs.existsSync(indexPath)) {
+        return res.status(404).send('HTML template not found');
+      }
+      let html = fs.readFileSync(indexPath, 'utf8');
+
+      // Determine canonical base URL
+      const hostHeader = req.get('host') || 'gadgetsprohub.onrender.com';
+      const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      const baseUrl = process.env.APP_URL 
+        ? process.env.APP_URL.replace(/\/$/, '') 
+        : `${proto}://${hostHeader}`;
+      
+      const rawPath = (req.originalUrl || req.path || '/').split('?')[0];
+      const requestUrl = `${baseUrl}${rawPath}`;
+
+      // Default metadata values
+      let metaTitle = "gadgetsprohub | Premium Electronics & Smart Gear Directory";
+      let metaDesc = "gadgetsprohub - Your premium destination for discovering high-quality electronics, smartphones, laptops, smart gear, and extensive tech accessory specifications, reviews, and deals.";
+      let metaImage = `${baseUrl}/og-banner.png`;
+      let metaType = "website";
+
+      const pathParts = rawPath.split('/').filter(Boolean);
+
+      // Dynamic metadata for Product Detail pages (/product-detail/:slug or /product/:slug)
+      if ((pathParts[0] === 'product-detail' || pathParts[0] === 'product') && pathParts[1]) {
+        const slug = pathParts[1];
+        let foundProduct: any = null;
+        if (isMongoConnected) {
+          try {
+            foundProduct = await Product.findOne({ slug }).lean();
+          } catch (e) {}
+        }
+        if (!foundProduct) {
+          foundProduct = localProducts.find((p: any) => p.slug === slug);
+        }
+
+        if (foundProduct) {
+          metaTitle = `${foundProduct.seoTitle || foundProduct.name} | gadgetsprohub`;
+          metaDesc = foundProduct.seoDescription || foundProduct.description || metaDesc;
+          if (foundProduct.images && foundProduct.images.length > 0) {
+            const img = foundProduct.images[0];
+            metaImage = img.startsWith('http') ? img : `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+          }
+          metaType = "product";
+        }
+      }
+      // Dynamic metadata for Blog Detail pages (/blog-detail/:slug or /blog/:slug)
+      else if ((pathParts[0] === 'blog-detail' || pathParts[0] === 'blog') && pathParts[1]) {
+        const slug = pathParts[1];
+        let foundBlog: any = null;
+        if (isMongoConnected) {
+          try {
+            foundBlog = await Blog.findOne({ slug }).lean();
+          } catch (e) {}
+        }
+        if (!foundBlog) {
+          foundBlog = localBlogs.find((b: any) => b.slug === slug);
+        }
+
+        if (foundBlog) {
+          metaTitle = `${foundBlog.seoTitle || foundBlog.title} | gadgetsprohub`;
+          metaDesc = foundBlog.seoDescription || foundBlog.excerpt || metaDesc;
+          if (foundBlog.featured_image) {
+            const img = foundBlog.featured_image;
+            metaImage = img.startsWith('http') ? img : `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+          }
+          metaType = "article";
+        }
+      }
+      // Dynamic metadata for Category pages (/category/:slug)
+      else if (pathParts[0] === 'category' && pathParts[1]) {
+        const slug = pathParts[1];
+        let foundCat: any = null;
+        if (isMongoConnected) {
+          try {
+            foundCat = await Category.findOne({ slug }).lean();
+          } catch (e) {}
+        }
+        if (!foundCat) {
+          foundCat = localCategories.find((c: any) => c.slug === slug);
+        }
+        if (foundCat) {
+          metaTitle = `${foundCat.name} Gadgets & Gear | gadgetsprohub`;
+          metaDesc = foundCat.description || `Browse top-rated ${foundCat.name} electronics, specifications, price comparisons, and deals on gadgetsprohub.`;
+        }
+      }
+
+      // Sanitize string replacements
+      const cleanTitle = escapeHTML(metaTitle);
+      const cleanDesc = escapeHTML(metaDesc);
+      const cleanImage = metaImage;
+      const cleanUrl = requestUrl;
+
+      // Replace <title>
+      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${cleanTitle}</title>`);
+
+      // Replace canonical URL
+      html = html.replace(/<link rel="canonical" href="[^"]*"/i, `<link rel="canonical" href="${cleanUrl}"`);
+
+      // Replace og:title
+      html = html.replace(/<meta property="og:title" content="[^"]*"/i, `<meta property="og:title" content="${cleanTitle}"`);
+
+      // Replace og:description
+      html = html.replace(/<meta property="og:description" content="[^"]*"/i, `<meta property="og:description" content="${cleanDesc}"`);
+
+      // Replace og:url
+      html = html.replace(/<meta property="og:url" content="[^"]*"/i, `<meta property="og:url" content="${cleanUrl}"`);
+
+      // Replace og:image & og:image:secure_url
+      html = html.replace(/<meta property="og:image" content="[^"]*"/i, `<meta property="og:image" content="${cleanImage}"`);
+      html = html.replace(/<meta property="og:image:secure_url" content="[^"]*"/i, `<meta property="og:image:secure_url" content="${cleanImage}"`);
+
+      // Replace og:type
+      html = html.replace(/<meta property="og:type" content="[^"]*"/i, `<meta property="og:type" content="${metaType}"`);
+
+      // Replace twitter:title
+      html = html.replace(/<meta name="twitter:title" content="[^"]*"/i, `<meta name="twitter:title" content="${cleanTitle}"`);
+
+      // Replace twitter:description
+      html = html.replace(/<meta name="twitter:description" content="[^"]*"/i, `<meta name="twitter:description" content="${cleanDesc}"`);
+
+      // Replace twitter:image
+      html = html.replace(/<meta name="twitter:image" content="[^"]*"/i, `<meta name="twitter:image" content="${cleanImage}"`);
+
+      // Replace twitter:url
+      html = html.replace(/<meta name="twitter:url" content="[^"]*"/i, `<meta name="twitter:url" content="${cleanUrl}"`);
+
+      res.setHeader('Content-Type', 'text/html; charset=UTF-8');
+      res.send(html);
+    } catch (err) {
+      res.sendFile(indexPath);
+    }
+  };
+
   // Vite Integration for Serving UI
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -9613,8 +9821,8 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         if (err) { res.status(404).send("Source file not found"); }
       });
     });
-    app.get('*', (_req: express.Request, res: express.Response) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get('*', (req: express.Request, res: express.Response) => {
+      serveHydratedHtml(req, res, path.join(distPath, 'index.html'));
     });
   }
 

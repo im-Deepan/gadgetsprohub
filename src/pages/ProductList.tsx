@@ -10,6 +10,7 @@ import { Helmet } from '../components/Helmet';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
+import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 
 import { getCategoryName } from '../utils/category';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
@@ -819,70 +820,20 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               <div className="flex-1 overflow-y-auto p-5 space-y-6">
                 
                 {/* Search Keywords */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-300 dark:text-slate-400">Search Keywords</h4>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-300" />
-                      <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => { 
-                          setSearch(e.target.value); 
-                          setSelectedCategory('');
-                          setSelectedSubcategory('');
-                          setMinPrice('');
-                          setMaxPrice('');
-                          setMinRating('');
-                          setSortField('newest');
-                          setCurrentPage(1); 
-                        }}
-                        placeholder="Brand, feature, tags..."
-                        className="w-full text-xs rounded-lg border border-slate-100 bg-white py-2 pl-9 pr-8 text-slate-800 outline-none focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                      />
-                      {search && (
-                        <button
-                          onClick={() => { setSearch(''); setCurrentPage(1); }}
-                          className="absolute right-2.5 top-2.5 p-0.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 cursor-pointer"
-                          title="Clear input" aria-label="Clear input"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {recentSearches.length > 0 && (
-                    <div className="space-y-2 pt-0.5">
-                      <div className="flex items-center justify-between text-[10px] font-semibold">
-                        <span className="text-slate-300 dark:text-slate-400 uppercase tracking-wider font-bold">Recent Searches</span>
-                        <button
-                          onClick={handleClearAllRecentSearches}
-                          className="text-indigo-500 dark:text-indigo-300 hover:underline font-bold text-[9px] uppercase tracking-wider cursor-pointer"
-                        >
-                          Clear All
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {recentSearches.map((query, index) => (
-                          <div
-                            key={`search-pill-${query}-${index}`}
-                            onClick={() => { setSearch(query); setCurrentPage(1); }}
-                            className="group flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-50 border border-slate-50 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-200 hover:text-indigo-500 dark:hover:text-indigo-300 cursor-pointer transition-all"
-                          >
-                            <span className="truncate max-w-[120px]">{query}</span>
-                            <button
-                              onClick={(e) => handleRemoveRecentSearch(e, query)}
-                              className="text-slate-300 hover:text-rose-400 rounded-full transition-colors cursor-pointer"
-                              title="Remove search" aria-label="Remove search"
-                            >
-                              <X className="h-2.5 w-2.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Search Keywords</h4>
+                  <SearchAutocompleteInput
+                    value={search}
+                    onChange={(val) => {
+                      setSearch(val);
+                      setCurrentPage(1);
+                    }}
+                    onNavigate={onNavigate}
+                    variant="catalog"
+                    placeholder="Brand, product, feature..."
+                    inputClassName="w-full text-xs rounded-xl border border-slate-200/80 bg-white py-2 pl-9 pr-8 text-slate-800 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    onClear={() => setSearch('')}
+                  />
                 </div>
 
                 {/* Categories */}

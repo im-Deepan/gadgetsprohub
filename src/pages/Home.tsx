@@ -18,6 +18,7 @@ import { FeaturedCollections } from '../components/FeaturedCollections';
 import { RecentViewedMarquee } from '../components/RecentViewedMarquee';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { NewsletterSubscribe } from '../components/NewsletterSubscribe';
+import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 
 import { getCategoryId, getCategoryName } from '../utils/category';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
@@ -353,10 +354,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
   // Filter products in real-time based on the hero search query and active category filter
   const filteredProducts = React.useMemo(() => {
     return allProducts.filter((prod: Product) => {
-      const matchesSearch = 
-        prod.name.toLowerCase().includes(homeSearch.toLowerCase()) ||
-        (prod.brand && prod.brand.toLowerCase().includes(homeSearch.toLowerCase())) ||
-        prod.description.toLowerCase().includes(homeSearch.toLowerCase());
+      const query = homeSearch.trim().toLowerCase();
+      const matchesSearch = !query || 
+        (prod.name && prod.name.toLowerCase().includes(query)) ||
+        (prod.brand && prod.brand.toLowerCase().includes(query)) ||
+        (prod.description && prod.description.toLowerCase().includes(query));
       
       if (activeCategory === 'all') {
         return matchesSearch;
@@ -364,10 +366,18 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         return matchesSearch && Boolean(prod.trending);
       } else {
         const prodCatId = getCategoryId(prod.category);
-        return matchesSearch && String(prodCatId) === String(activeCategory);
+        const prodCatSlug = typeof prod.category === 'object' && prod.category ? (prod.category as any).slug : (typeof prod.category === 'string' ? prod.category : '');
+        const targetCat = categories.find(c => String(c._id) === String(activeCategory) || c.slug === activeCategory);
+        const targetId = targetCat ? String(targetCat._id) : String(activeCategory);
+        const targetSlug = targetCat ? targetCat.slug : String(activeCategory);
+
+        const matchesCat = String(prodCatId) === targetId || 
+                           String(prodCatId) === targetSlug || 
+                           prodCatSlug === targetSlug;
+        return matchesSearch && matchesCat;
       }
     });
-  }, [allProducts, homeSearch, activeCategory]);
+  }, [allProducts, homeSearch, activeCategory, categories]);
 
   // Sort filtered products by latest added/updated
   const latestProductsToShow = React.useMemo(() => {
@@ -392,12 +402,13 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
     // Filter standard categories based on activeCategory
     const filteredCats = activeCategory === 'all' 
       ? categories 
-      : categories.filter(c => String(c._id) === String(activeCategory));
+      : categories.filter(c => String(c._id) === String(activeCategory) || c.slug === activeCategory);
 
     const standardCols = filteredCats.map(cat => {
       let catProducts = allProducts.filter((prod: Product) => {
         const prodCatId = getCategoryId(prod.category);
-        return String(prodCatId) === String(cat._id);
+        const prodCatSlug = typeof prod.category === 'object' && prod.category ? (prod.category as any).slug : (typeof prod.category === 'string' ? prod.category : '');
+        return String(prodCatId) === String(cat._id) || String(prodCatId) === cat.slug || prodCatSlug === cat.slug;
       });
 
       // Filter by search query if user typed in the hero search bar
@@ -541,77 +552,15 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             className="mt-10 mx-auto max-w-2xl relative" 
             ref={searchContainerRef}
           >
-            <form onSubmit={handleHomeSearchSubmit} className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-400 to-purple-500 dark:from-slate-700 dark:to-slate-705 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none">
-                  <Search className="h-5 w-5 text-indigo-400 dark:text-indigo-300" />
-                </span>
-                <input
-                  type="text"
-                  value={homeSearch}
-                  onChange={(e) => setHomeSearch(e.target.value)}
-                  onFocus={() => setShowDropdown(true)}
-                  placeholder="Search products, brands, tech items..."
-                  className="w-full rounded-[1.75rem] border border-slate-100/50 bg-white/90 backdrop-blur-md py-4 pl-14 pr-16 text-base text-slate-800 shadow-xl outline-none transition-all placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/10 dark:border-slate-600/50 dark:bg-slate-800/90 dark:text-white"
-                />
-                {homeSearch && (
-                  <button 
-                    type="button"
-                    aria-label="Clear search" onClick={() => setHomeSearch('')}
-                    className="absolute inset-y-0 right-4 flex items-center p-2 rounded-full text-slate-300 hover:text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </form>
-
-            {/* Premium Interactive Recent Searches Dropdown */}
-            {showDropdown && recentSearches.length > 0 && (
-              <div className="absolute z-50 left-0 right-0 mt-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-800 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-50 dark:border-slate-700/80">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5 font-mono">
-                    <Clock className="h-3 w-3 text-slate-300 shrink-0" />
-                    Recent Searches
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleClearAllRecentSearches}
-                    className="text-[10px] font-bold uppercase text-rose-400 hover:text-rose-500 transition-colors cursor-pointer border-none bg-transparent p-0"
-                  >
-                    Clear All
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  {recentSearches.map((query, index) => (
-                    <div
-                      key={`recent-search-${query}-${index}`}
-                      onClick={() => {
-                        setHomeSearch(query);
-                        saveSearchToLocal(query);
-                        setShowDropdown(false);
-                        onNavigate('products', `search-${query}`);
-                      }}
-                      className="group flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2 truncate">
-                        <History className="h-3.5 w-3.5 text-slate-300 group-hover:text-indigo-400 transition-colors shrink-0" />
-                        <span className="truncate">{query}</span>
-                      </span>
-                      <button
-                        type="button"
-                        aria-label="Remove recent search" onClick={(e) => handleRemoveRecentSearch(e, query)}
-                        className="rounded-md p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-300 hover:text-slate-500 dark:text-slate-400 dark:hover:text-slate-200 transition-all cursor-pointer border-none bg-transparent"
-                        title="Remove Search"
-                      >
-                        <X className="h-3.5 w-3.5 shrink-0" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <SearchAutocompleteInput
+              value={homeSearch}
+              onChange={(val) => setHomeSearch(val)}
+              onNavigate={onNavigate}
+              variant="hero"
+              placeholder="Search products, brands, tech items..."
+              inputClassName="w-full rounded-[1.75rem] border border-slate-200/80 bg-white/95 backdrop-blur-md py-4 pl-12 pr-12 text-base text-slate-800 shadow-xl outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-800/95 dark:text-white dark:focus:border-indigo-400"
+              onClear={() => setHomeSearch('')}
+            />
           </motion.div>
 
           {/* Quick Categories Filter (Max 5) */}

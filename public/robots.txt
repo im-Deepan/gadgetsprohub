@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /og-banner.png
+Allow: /favicon.png
+Allow: /uploads/
+Allow: /assets/
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+Sitemap: https://gadgetsprohub.onrender.com/sitemap.xml

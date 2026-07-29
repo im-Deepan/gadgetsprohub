@@ -41,6 +41,7 @@ export interface PriceScannerState {
 
 export class PriceScannerService {
   private static instance: PriceScannerService;
+  private lastRunDate: string | null = null;
 
   private state: PriceScannerState = {
     isRunning: false,
@@ -90,17 +91,20 @@ export class PriceScannerService {
   }
 
   /**
-   * Background watcher that checks every 30 seconds if it's 1:00 AM to trigger the daily flow
+   * Background watcher that checks every 30 seconds if it's 1:00 AM or later to trigger daily scan with catch-up support
    */
   private start1AMCronWatcher() {
     if (this.cronIntervalHandle) clearInterval(this.cronIntervalHandle);
 
     this.cronIntervalHandle = setInterval(() => {
       const now = new Date();
-      // Check if current hour is 1 AM (1:00 AM to 1:01 AM) and scanner isn't currently running
-      if (now.getHours() === 1 && now.getMinutes() === 0 && !this.state.isRunning && !this.state.isPaused) {
-        console.log('⏰ [PriceScanner] 1:00 AM Daily Trigger Reached! Starting descending price scan cycle...');
-        this.addLog('SYSTEM', '1:00 AM Daily Scheduled Trigger activated descending price scan cycle.', 0, 0, 'unchanged');
+      const todayStr = now.toISOString().split('T')[0];
+
+      // Trigger if hour is 1 AM or later today, scan hasn't run yet today, and scanner isn't active/paused
+      if (now.getHours() >= 1 && this.lastRunDate !== todayStr && !this.state.isRunning && !this.state.isPaused) {
+        this.lastRunDate = todayStr;
+        console.log(`⏰ [PriceScanner] Daily 1:00 AM Trigger / Catch-up activated for ${todayStr}! Starting scan cycle...`);
+        this.addLog('SYSTEM', `Daily Scheduled Trigger activated descending price scan cycle for ${todayStr}.`, 0, 0, 'unchanged');
         this.startScanCycle();
       }
     }, 30000); // Check every 30 seconds
@@ -128,6 +132,7 @@ export class PriceScannerService {
     this.state.isRunning = true;
     this.state.isPaused = false;
     this.state.lastRunStartTime = new Date().toISOString();
+    this.lastRunDate = new Date().toISOString().split('T')[0];
 
     // Fetch products in descending price order
     const products = await this.getProductsSortedByPriceDesc();
@@ -349,7 +354,8 @@ export class PriceScannerService {
           oldPrice,
           oldPrice,
           'failed',
-          nextProduct.asin
+          nextProduct.asin,
+          nextProduct.name
         );
       } else if (result && result.hasChanges && result.changedFields?.price) {
         const newPrice = Number(result.currentPrice);
@@ -360,7 +366,8 @@ export class PriceScannerService {
           oldPrice,
           newPrice,
           'updated',
-          nextProduct.asin
+          nextProduct.asin,
+          nextProduct.name
         );
       } else {
         const currentPrice = result ? Number(result.currentPrice) : oldPrice;
@@ -371,7 +378,8 @@ export class PriceScannerService {
           oldPrice,
           currentPrice,
           'unchanged',
-          nextProduct.asin
+          nextProduct.asin,
+          nextProduct.name
         );
       }
 
@@ -412,13 +420,15 @@ export class PriceScannerService {
     oldPrice: number,
     newPrice: number,
     status: 'updated' | 'unchanged' | 'failed',
-    asin?: string
+    asin?: string,
+    productName?: string
   ) {
+    const resolvedName = productName || (productId === 'SYSTEM' || productId === 'COMPLETED' ? 'System Notification' : message);
     const logItem: PriceScannerLog = {
       id: 'log_' + Math.random().toString(36).substring(2, 9),
       timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       productId,
-      productName: message,
+      productName: resolvedName,
       asin,
       oldPrice,
       newPrice,

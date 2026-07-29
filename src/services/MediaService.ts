@@ -21,53 +21,89 @@ const logStructured = (level: 'info' | 'warn' | 'error', message: string, contex
   }));
 };
 
-// Defensive Getters to register models lazily and avoid MissingSchemaError
-function getMediaAssetModel(): any {
+// Helper to validate URL scheme and block SSRF (loopback, private IPs, metadata)
+function isSafeUrl(urlString: string): boolean {
+  if (!urlString || typeof urlString !== 'string') return false;
   try {
-    return mongoose.model('MediaAsset');
-  } catch (err) {
-    const mediaAssetSchema = new mongoose.Schema({
-      productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
-      asin: { type: String, index: true },
-      originalUrl: { type: String },
-      localPath: { type: String },
-      fileName: { type: String, required: true },
-      cdnUrl: { type: String },
-      mimeType: { type: String },
-      width: { type: Number },
-      height: { type: Number },
-      aspectRatio: { type: Number },
-      hash: { type: String, index: true },
-      uploadDate: { type: Date, default: Date.now },
-      optimizationStatus: { type: String, enum: ['pending', 'processing', 'completed', 'failed'], default: 'pending' },
-      originalSize: { type: Number },
-      optimizedSize: { type: Number },
-      compressionRatio: { type: Number },
-      storageProvider: { type: String, enum: ['local', 's3', 'r2', 'cloudinary'], default: 'local' },
-      variants: { type: mongoose.Schema.Types.Mixed },
-      metadata: { type: mongoose.Schema.Types.Mixed }
-    });
-    return mongoose.model('MediaAsset', mediaAssetSchema);
+    const parsed = new URL(urlString);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+    const hostname = parsed.hostname.toLowerCase().trim();
+    if (!hostname) return false;
+
+    if (hostname === 'localhost' || hostname === '0.0.0.0' || hostname === '::1' || hostname === '[::1]') {
+      return false;
+    }
+
+    const cleanHost = hostname.replace(/^\[|\]$/g, '');
+    if (cleanHost.startsWith('169.254.') || cleanHost.startsWith('127.')) {
+      return false;
+    }
+
+    if (cleanHost.startsWith('10.') || cleanHost.startsWith('192.168.')) {
+      return false;
+    }
+
+    const ipParts = cleanHost.split('.').map(Number);
+    if (ipParts.length === 4 && !ipParts.some(isNaN)) {
+      if (ipParts[0] === 172 && ipParts[1] >= 16 && ipParts[1] <= 31) {
+        return false;
+      }
+      if (ipParts[0] === 0) return false;
+    }
+
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
-function getMediaQueueJobModel(): any {
-  try {
-    return mongoose.model('MediaQueueJob');
-  } catch (err) {
-    const mediaQueueJobSchema = new mongoose.Schema({
-      assetId: { type: mongoose.Schema.Types.ObjectId, ref: 'MediaAsset' },
-      type: { type: String, enum: ['download', 'optimize', 'convert', 'upload', 'cleanup'] },
-      status: { type: String, enum: ['waiting', 'running', 'completed', 'failed', 'cancelled'], default: 'waiting' },
-      attempts: { type: Number, default: 0 },
-      maxAttempts: { type: Number, default: 3 },
-      error: { type: String },
-      createdAt: { type: Date, default: Date.now },
-      startedAt: { type: Date },
-      completedAt: { type: Date }
-    });
-    return mongoose.model('MediaQueueJob', mediaQueueJobSchema);
+// Defensive Getters to register models lazily and avoid MissingSchemaError
+function getMediaAssetModel(): any {
+  if (mongoose.models.MediaAsset) {
+    return mongoose.models.MediaAsset;
   }
+  const mediaAssetSchema = new mongoose.Schema({
+    productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
+    asin: { type: String, index: true },
+    originalUrl: { type: String, index: true },
+    localPath: { type: String },
+    fileName: { type: String, required: true },
+    cdnUrl: { type: String },
+    mimeType: { type: String },
+    width: { type: Number },
+    height: { type: Number },
+    aspectRatio: { type: Number },
+    hash: { type: String, unique: true, sparse: true },
+    uploadDate: { type: Date, default: Date.now },
+    optimizationStatus: { type: String, enum: ['pending', 'processing', 'completed', 'failed'], default: 'pending' },
+    originalSize: { type: Number },
+    optimizedSize: { type: Number },
+    compressionRatio: { type: Number },
+    storageProvider: { type: String, enum: ['local', 's3', 'r2', 'cloudinary'], default: 'local' },
+    variants: { type: mongoose.Schema.Types.Mixed },
+    metadata: { type: mongoose.Schema.Types.Mixed }
+  });
+  return mongoose.model('MediaAsset', mediaAssetSchema);
+}
+
+function getMediaQueueJobModel(): any {
+  if (mongoose.models.MediaQueueJob) {
+    return mongoose.models.MediaQueueJob;
+  }
+  const mediaQueueJobSchema = new mongoose.Schema({
+    assetId: { type: mongoose.Schema.Types.ObjectId, ref: 'MediaAsset' },
+    type: { type: String, enum: ['download', 'optimize', 'convert', 'upload', 'cleanup'] },
+    status: { type: String, enum: ['waiting', 'running', 'completed', 'failed', 'cancelled'], default: 'waiting' },
+    attempts: { type: Number, default: 0 },
+    maxAttempts: { type: Number, default: 3 },
+    error: { type: String },
+    createdAt: { type: Date, default: Date.now },
+    startedAt: { type: Date },
+    completedAt: { type: Date }
+  });
+  return mongoose.model('MediaQueueJob', mediaQueueJobSchema);
 }
 
 export class MediaService {
@@ -85,6 +121,10 @@ export class MediaService {
    * Downloads an image, validates it, optimizes it, and stores it in the MediaAsset collection.
    */
   public async processImageDownload(payload: DownloadMediaPayload) {
+    if (!payload.url || !isSafeUrl(payload.url)) {
+      throw new Error('Prohibited or invalid URL. Only public HTTP/HTTPS URLs are allowed.');
+    }
+
     const MediaAsset = getMediaAssetModel();
 
     // 1. Check deduplication (by URL first, later by hash)
@@ -175,27 +215,33 @@ export class MediaService {
 
       const compressionRatio = optimizedBuffer.length > 0 ? (buffer.length / optimizedBuffer.length) : 1;
 
-      // 5. Store in DB
-      const asset = new MediaAsset({
-        productId: payload.productId,
-        asin: payload.asin,
-        originalUrl: payload.url,
-        localPath: relativePath,
-        fileName,
-        mimeType: contentType || `image/${format}`,
-        width: originalMetadata.width,
-        height: originalMetadata.height,
-        aspectRatio: originalMetadata.width && originalMetadata.height ? (originalMetadata.width / originalMetadata.height) : 1,
-        hash,
-        optimizationStatus: 'completed',
-        originalSize: buffer.length,
-        optimizedSize: optimizedBuffer.length,
-        compressionRatio,
-        storageProvider: 'local',
-        variants
-      });
+      // 5. Store in DB atomically (upsert by hash)
+      const asset = await MediaAsset.findOneAndUpdate(
+        { hash },
+        {
+          $setOnInsert: {
+            productId: payload.productId,
+            asin: payload.asin,
+            originalUrl: payload.url,
+            localPath: relativePath,
+            fileName,
+            mimeType: contentType || `image/${format}`,
+            width: originalMetadata.width,
+            height: originalMetadata.height,
+            aspectRatio: originalMetadata.width && originalMetadata.height ? (originalMetadata.width / originalMetadata.height) : 1,
+            hash,
+            optimizationStatus: 'completed',
+            originalSize: buffer.length,
+            optimizedSize: optimizedBuffer.length,
+            compressionRatio,
+            storageProvider: 'local',
+            variants,
+            uploadDate: new Date()
+          }
+        },
+        { new: true, upsert: true }
+      );
 
-      await asset.save();
       logStructured('info', 'Successfully processed and saved image asset', { id: asset._id, fileName });
       return asset;
 

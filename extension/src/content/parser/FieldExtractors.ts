@@ -354,4 +354,35 @@ export class FieldExtractors {
 
     return specs;
   }
+
+  public static getSiteStripeLink(): string | null {
+    // 1. Check SiteStripe elements on Amazon pages (shortlink, full link, textareas, inputs)
+    const siteStripeSelectors = [
+      '#amzn-ss-text-shortlink-textarea',
+      '#amzn-ss-text-full-textarea',
+      '#amzn-ss-text-link-textarea',
+      '#amzn-ss-text-link-input',
+      'textarea[id*="amzn-ss"]',
+      'input[id*="amzn-ss"]',
+      '.amzn-ss-link',
+      '#amzn-ss-text-get-link-btn'
+    ];
+    for (const sel of siteStripeSelectors) {
+      const el = document.querySelector(sel) as HTMLInputElement | HTMLTextAreaElement;
+      if (el) {
+        const val = el.value || el.textContent;
+        if (val && (val.includes('amzn.to') || val.includes('amazon.') || val.includes('tag='))) {
+          return val.trim();
+        }
+      }
+    }
+
+    // 2. Check if current URL already contains SiteStripe or affiliate parameters
+    const currentUrl = window.location.href;
+    if (currentUrl.includes('tag=') || currentUrl.includes('linkCode=') || currentUrl.includes('amzn.to')) {
+      return currentUrl;
+    }
+
+    return null;
+  }
 }

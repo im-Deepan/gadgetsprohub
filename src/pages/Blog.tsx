@@ -7,6 +7,7 @@ import { AdSenseBanner } from '../components/AdSenseBanner';
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from '../components/Helmet';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 
 interface BlogProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -104,14 +105,15 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
         </p>
 
         {/* Big Search Input */}
-        <div className="relative max-w-md mx-auto pt-2">
-          <Search className="absolute left-3.5 top-5 h-4 w-4 text-slate-300 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search guides, headphones reviews, trial shoes tips..."
+        <div className="max-w-md mx-auto pt-2">
+          <SearchAutocompleteInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full text-xs rounded-full border border-slate-100 bg-white py-3 pl-10 pr-4 text-slate-800 shadow-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            onChange={(val) => setSearch(val)}
+            onNavigate={onNavigate}
+            variant="blog"
+            placeholder="Search guides, reviews, products..."
+            inputClassName="w-full text-xs rounded-full border border-slate-200/80 bg-white py-3 pl-10 pr-10 text-slate-800 shadow-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            onClear={() => setSearch('')}
           />
         </div>
       </div>

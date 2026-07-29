@@ -16,7 +16,7 @@ export const ENVIRONMENTS: Record<'Development' | 'Staging' | 'Production', Envi
   },
   Staging: {
     name: 'Staging',
-    apiBaseUrl: 'https://ais-pre-qsss35leqdsbti2ibtyylr-247249937666.asia-east1.run.app',
+    apiBaseUrl: 'https://staging.gadgetsprohub.com',
     debugMode: true,
   },
   Production: {

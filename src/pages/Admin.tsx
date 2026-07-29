@@ -2149,9 +2149,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                           });
 
                                           if (res.ok) {
+                                            const resData = await res.json().catch(() => ({}));
                                             clearApiCache();
                                             setMessages(prev => prev.map(msg => msg?._id === m?._id ? { ...msg, read: true, replied: true } : msg));
-                                            setSentReplySuccess(m?._id);
+                                            
+                                            if (resData.emailSent === false) {
+                                              const warnMsg = resData.smtpError || 'SMTP server is not configured or failed to deliver email.';
+                                              triggerAlert("Reply Saved (Email Failed)", `Message reply was saved in database, but email delivery failed: ${warnMsg}`);
+                                            } else {
+                                              setSentReplySuccess(m?._id);
+                                            }
+
                                             setTimeout(() => {
                                               setSentReplySuccess(null);
                                               setActiveReplyId(null);

@@ -6,6 +6,7 @@ import { Category, Product, Blog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../context/ThemeContext';
 import { apiFetch } from '../utils/apiClient';
+import { SearchAutocompleteInput } from './SearchAutocompleteInput';
 
 interface NavbarProps {
   currentView: string;
@@ -145,14 +146,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
         case '/':
           e.preventDefault();
           setIsVisible(true); // make sure navigation bar slides back in
-          setTimeout(() => {
-            if (showMobileMenu && mobileSearchInputRef.current) {
-              mobileSearchInputRef.current.focus();
-            } else if (searchInputRef.current) {
-              searchInputRef.current.focus();
-            }
-          }, 50);
-          showToast("Search field focused via keyboard shortcut.", "info", 4000, "User Action");
+          window.dispatchEvent(new CustomEvent('focus-search-input'));
+          showToast("Search field focused via keyboard shortcut.", "info", 3000, "User Action");
           break;
         case 'h':
           e.preventDefault();
@@ -476,67 +471,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
           {/* Search Bar Input - Desktop */}
           <div className="relative hidden md:flex flex-1 max-w-sm">
-            <form onSubmit={handleSearchSubmit} className="w-full">
-              <div className="relative flex items-center">
-                <Search className="absolute left-3.5 h-4 w-4 text-slate-300" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Find products, electronic gadgets..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() => searchQuery.length > 1 && setShowResults(true)}
-                  onBlur={() => setTimeout(() => setShowResults(false), 300)}
-                  className="w-full rounded-full border border-slate-100 bg-slate-50 py-1.5 pl-10 pr-10 text-xs text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:ring-1 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-950"
-                />
-                <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-100 bg-slate-50 text-[10px] font-mono text-slate-300 shadow-xs pointer-events-none dark:border-slate-700 dark:bg-slate-700 dark:text-slate-400 select-none">
-                  /
-                </div>
-              </div>
-            </form>
-
-            {/* Live Search Popup Overlay */}
-            {showResults && (searchResults.products.length > 0 || searchResults.blogs.length > 0) && (
-              <div className="absolute top-11 left-0 w-full rounded-2xl border border-slate-100 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-800 animate-in fade-in duration-200 max-h-[400px] overflow-y-auto">
-                {searchResults.products.length > 0 && (
-                  <div className="mb-3">
-                    <h5 className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">Products</h5>
-                    <div className="space-y-1">
-                      {searchResults.products.slice(0, 10).map(p => (
-                        <button
-                          key={p._id}
-                          onClick={() => handleResultClick('product-detail', p.slug)}
-                          className="w-full flex items-center justify-between text-left rounded-xl p-2 px-3 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-50 cursor-pointer"
-                        >
-                          <div className="truncate pr-4">
-                            <p className="text-xs font-semibold truncate">{p.name}</p>
-                            <p className="text-[10px] text-slate-300 font-mono truncate">{p.brand || 'Store Selection'}</p>
-                          </div>
-                          <span className="text-xs font-bold text-indigo-500 dark:text-indigo-300 font-mono shrink-0">₹{p.price}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {searchResults.blogs.length > 0 && (
-                  <div>
-                    <h5 className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">Blog Posts</h5>
-                    <div className="space-y-1">
-                      {searchResults.blogs.map(b => (
-                        <button
-                          key={b._id}
-                          onClick={() => handleResultClick('blog-detail', b.slug)}
-                          className="w-full flex items-center justify-between text-left rounded-xl p-2 px-3 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-50 cursor-pointer"
-                        >
-                          <p className="text-xs font-semibold truncate">{b.title}</p>
-                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-50 dark:bg-slate-700 text-slate-300 shrink-0 font-mono">{b.category}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <SearchAutocompleteInput
+              onNavigate={onNavigate}
+              variant="navbar"
+              placeholder="Find products, tech gadgets..."
+            />
           </div>
 
           {/* Right Header Icons */}
@@ -666,67 +605,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
               {/* Mobile Search input wrapper */}
               <div className="relative">
-                <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-                  <Search className="absolute left-3.5 h-4 w-4 text-slate-300" />
-                  <input
-                    ref={mobileSearchInputRef}
-                    type="text"
-                    placeholder="Find product catalog items..."
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    onFocus={() => searchQuery.length > 1 && setShowResults(true)}
-                    onBlur={() => setTimeout(() => setShowResults(false), 300)}
-                    className="w-full rounded-full border border-slate-100 bg-slate-50 py-2 pl-10 pr-10 text-xs text-slate-950 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                  <div className="absolute right-3.5 px-1.5 py-0.5 rounded border border-slate-100 bg-slate-50 text-[10px] font-mono text-slate-300 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-400 select-none">
-                    /
-                  </div>
-                </form>
-
-                {/* Mobile Search Live Popover Results */}
-                {showResults && searchQuery.trim().length > 1 && (searchResults.products.length > 0 || searchResults.blogs.length > 0) && (
-                  <div className="absolute top-11 left-0 z-[60] w-full rounded-2xl border border-slate-100 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-800 max-h-[220px] overflow-y-auto">
-                    {searchResults.products.length > 0 && (
-                      <div className="mb-3">
-                        <h5 className="px-2 text-[9px] font-bold uppercase tracking-wider text-slate-300 mb-1">Products</h5>
-                        <div className="space-y-1">
-                          {searchResults.products.slice(0, 10).map(p => (
-                            <button
-                              key={p._id}
-                              onClick={() => {
-                                handleResultClick('product-detail', p.slug);
-                                setShowMobileMenu(false);
-                              }}
-                              className="w-full flex items-center justify-between text-left rounded-xl p-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-50 cursor-pointer"
-                            >
-                              <p className="text-[11px] font-semibold truncate pr-2">{p.name}</p>
-                              <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-300 shrink-0">₹{p.price}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {searchResults.blogs.length > 0 && (
-                      <div>
-                        <h5 className="px-2 text-[9px] font-bold uppercase tracking-wider text-slate-300 mb-1">Blog Posts</h5>
-                        <div className="space-y-1">
-                          {searchResults.blogs.map(b => (
-                            <button
-                              key={b._id}
-                              onClick={() => {
-                                handleResultClick('blog-detail', b.slug);
-                                setShowMobileMenu(false);
-                              }}
-                              className="w-full text-left rounded-xl p-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-50 cursor-pointer transition-colors"
-                            >
-                              <p className="text-[11px] font-semibold truncate">{b.title}</p>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <SearchAutocompleteInput
+                  onNavigate={(view, slug) => {
+                    setShowMobileMenu(false);
+                    onNavigate(view, slug);
+                  }}
+                  variant="navbar"
+                  placeholder="Find products, tech gadgets..."
+                />
               </div>
 
               {/* Mobile Nav items */}
