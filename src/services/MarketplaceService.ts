@@ -426,7 +426,8 @@ class AmazonInProvider implements IMarketplaceProvider {
   detectProduct(url: string) { return url.includes('amazon.in') || url.includes('amzn.eu'); }
   async extractProduct(url: string, trackingId?: string) {
     const details = await getProductDetails(url, this.providerId, this.currency);
-    details.affiliateLink = (trackingId && !url.includes('tag=')) ? `${url}${url.includes('?') ? '&' : '?'}tag=${trackingId}` : url;
+    const tag = trackingId || 'gadgetsprohub-21';
+    details.affiliateLink = !url.includes('tag=') ? `${url}${url.includes('?') ? '&' : '?'}tag=${tag}` : url.replace(/tag=[^&]+/g, `tag=${tag}`);
     return details;
   }
   async extractImages(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).images; }
@@ -453,7 +454,8 @@ class AmazonUsProvider implements IMarketplaceProvider {
   detectProduct(url: string) { return (url.includes('amazon.com') || url.includes('amzn.to')) && !url.includes('amazon.in') && !url.includes('amazon.co.uk') && !url.includes('amazon.ae'); }
   async extractProduct(url: string, trackingId?: string) {
     const details = await getProductDetails(url, this.providerId, this.currency);
-    details.affiliateLink = (trackingId && !url.includes('tag=')) ? `${url}${url.includes('?') ? '&' : '?'}tag=${trackingId}` : url;
+    const tag = trackingId || 'gadgetsprohub-21';
+    details.affiliateLink = !url.includes('tag=') ? `${url}${url.includes('?') ? '&' : '?'}tag=${tag}` : url.replace(/tag=[^&]+/g, `tag=${tag}`);
     return details;
   }
   async extractImages(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).images; }
@@ -480,7 +482,8 @@ class AmazonUkProvider implements IMarketplaceProvider {
   detectProduct(url: string) { return url.includes('amazon.co.uk'); }
   async extractProduct(url: string, trackingId?: string) {
     const details = await getProductDetails(url, this.providerId, this.currency);
-    details.affiliateLink = (trackingId && !url.includes('tag=')) ? `${url}${url.includes('?') ? '&' : '?'}tag=${trackingId}` : url;
+    const tag = trackingId || 'gadgetsprohub-21';
+    details.affiliateLink = !url.includes('tag=') ? `${url}${url.includes('?') ? '&' : '?'}tag=${tag}` : url.replace(/tag=[^&]+/g, `tag=${tag}`);
     return details;
   }
   async extractImages(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).images; }
@@ -505,7 +508,8 @@ class AmazonUaeProvider implements IMarketplaceProvider {
   detectProduct(url: string) { return url.includes('amazon.ae'); }
   async extractProduct(url: string, trackingId?: string) {
     const details = await getProductDetails(url, this.providerId, this.currency);
-    details.affiliateLink = (trackingId && !url.includes('tag=')) ? `${url}${url.includes('?') ? '&' : '?'}tag=${trackingId}` : url;
+    const tag = trackingId || 'gadgetsprohub-21';
+    details.affiliateLink = !url.includes('tag=') ? `${url}${url.includes('?') ? '&' : '?'}tag=${tag}` : url.replace(/tag=[^&]+/g, `tag=${tag}`);
     return details;
   }
   async extractImages(url: string) { return []; }

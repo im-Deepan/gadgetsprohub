@@ -359,6 +359,58 @@ export const validateUserProfileUpdate = [
  * Helper schema to validate product inputs (used for post and put).
  * This checks core types to avoid NoSQL injection on product creation/modification.
  */
+
+// Helper function to validate allowed domains globally
+const isValidAmazonOrAllowedDomain = (urlStr: string): boolean => {
+  if (!urlStr) return true;
+  try {
+    const parsed = new URL(urlStr);
+    const hostname = parsed.hostname.toLowerCase();
+    const allowedPatterns = [
+      /amazon\.[a-z\.]+$/, // Matches amazon.com, amazon.in, etc.
+      /amzn\.to$/,          // Amazon shortlinks
+      /flipkart\.com$/,     // Flipkart
+      /myntra\.com$/,       // Myntra
+      /croma\.com$/,        // Croma
+      /reliance\.?digital\.in$/, // Reliance Digital
+      /nykaa\.com$/,        // Nykaa
+      /tatacliq\.com$/,     // Tata Cliq
+      /ajio\.com$/,         // Ajio
+      /apple\.com$/,        // Apple
+      /samsung\.com$/,      // Samsung
+      /sony\.com$/,         // Sony
+      /nike\.com$/,         // Nike
+      /adidas\.com$/,       // Adidas
+      /puma\.com$/,         // Puma
+      /myntra\.in$/,
+      /boat-lifestyle\.com$/,
+      /oneplus\.in$/,
+      /lenovo\.com$/,
+      /dell\.com$/,
+      /hp\.com$/,
+      /asus\.com$/,
+      /mi\.com$/,
+      /realme\.com$/,
+      /vivo\.com$/,
+      /oppo\.com$/,
+      /noise\.com$/,
+      /fireboltt\.com$/,
+      /pebblecart\.com$/,
+      /nothing\.tech$/,
+      /unsplash\.com$/,
+      /images\.unsplash\.com$/,
+      /youtube\.com$/,
+      /youtu\.be$/,
+      /vimeo\.com$/,
+      /gadgetsprohub\.com$/, // Self
+      /^localhost$/
+    ];
+    return allowedPatterns.some(pattern => pattern.test(hostname));
+  } catch (e) {
+    return false; // Invalid URL structure is rejected
+  }
+};
+
 export const validateAdminProduct = [
   body('name')
     .isString()
@@ -414,6 +466,9 @@ export const validateAdminProduct = [
       if (val.includes('B501...') || val.includes('example.com') || val.toLowerCase().includes('placeholder')) {
         throw new Error('Placeholder sample affiliate URLs are not allowed. Please enter a real product link.');
       }
+      if (!isValidAmazonOrAllowedDomain(val)) {
+        throw new Error('Affiliate link must be from an allowed domain (e.g. Amazon, Flipkart, etc.).');
+      }
       return true;
     }),
   body('description')
@@ -450,7 +505,13 @@ export const validateAdminProduct = [
     .withMessage('Video URL must be a string')
     .trim()
     .isLength({ max: 1024 })
-    .withMessage('Video URL must be under 1024 characters'),
+    .withMessage('Video URL must be under 1024 characters')
+    .custom((val: string) => {
+      if (val && !isValidAmazonOrAllowedDomain(val)) {
+        throw new Error('Video URL must be from an allowed domain.');
+      }
+      return true;
+    }),
   body('affiliateCode')
     .optional()
     .isString()
@@ -536,7 +597,13 @@ export const validateAdminProduct = [
     .withMessage('Each image must be a valid string URL')
     .trim()
     .isLength({ min: 1, max: 2048 })
-    .withMessage('Each image URL must be between 1 and 2048 characters'),
+    .withMessage('Each image URL must be between 1 and 2048 characters')
+    .custom((val: string) => {
+      if (val && !isValidAmazonOrAllowedDomain(val)) {
+        throw new Error('Image URL must be from an allowed domain.');
+      }
+      return true;
+    }),
   body('tags')
     .optional()
     .isArray()

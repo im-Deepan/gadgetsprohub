@@ -43,7 +43,6 @@ import { isMetadataSpecKey, cleanSpecificationsObj, parseSpecificationsString } 
 import { aiService, AiPrompt, AiProviderSetting, AiJob, AiResponse, AiAnalytics, AiCache } from './src/services/AiService';
 import { SyncService, PriceHistory, ProductChange, SyncJob, SchedulerTask, AlertRule, ProductHealth, AutomationRule, NotificationHistory } from './src/services/SyncService';
 import { mediaService } from './src/services/MediaService';
-import { bulkImportService } from './src/services/BulkImportService';
 import {
   MarketplaceService,
   getProductDetails,
@@ -140,13 +139,15 @@ const userSchema = new mongoose.Schema({
       viewedAt: { type: Date, default: Date.now }
     }
   ],
-  district: { type: String, default: 'Chennai' },
+  district: { type: String, default: 'Unknown' },
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String, default: null },
   verificationExpiresAt: { type: Date, default: null },
   pendingEmail: { type: String, default: null },
   pendingEmailToken: { type: String, default: null },
   pendingEmailTokenExpires: { type: Date, default: null },
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorSecret: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -173,6 +174,7 @@ const sanitizeUser = (userObj: any) => {
   delete clean.pendingEmailToken;
   delete clean.pendingEmailTokenExpires;
   delete clean.pendingEmail;
+  delete clean.twoFactorSecret;
   return clean;
 };
 
@@ -306,7 +308,7 @@ const analyticsSchema = new mongoose.Schema({
   ipAddress: String,
   referer: String,
   district: { type: String, default: 'Chennai' },
-  timestamp: { type: Date, default: Date.now },
+  timestamp: { type: Date, default: Date.now, index: true, expires: '90d' },
   browser: String,
   device: String,
   pageUrl: String,
@@ -322,7 +324,7 @@ const visitorSchema = new mongoose.Schema({
   visitorId: { type: String, required: true },
   ip: String,
   userAgent: String,
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now, index: true, expires: '90d' }
 });
 
 const Visitor = mongoose.model('Visitor', visitorSchema);
@@ -347,7 +349,7 @@ const filterLogSchema = new mongoose.Schema({
   searchQuery: String,
   categoryId: String,
   categorySlug: String,
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now, index: true, expires: '90d' }
 });
 
 const FilterLog = mongoose.model('FilterLog', filterLogSchema);
@@ -356,7 +358,7 @@ let localFilterLogs: any[] = [];
 // Social Click Schema
 const socialClickSchema = new mongoose.Schema({
   platform: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
+  timestamp: { type: Date, default: Date.now, index: true, expires: '90d' },
   ipAddress: String,
   userAgent: String
 });
@@ -372,7 +374,7 @@ const subscriberSchema = new mongoose.Schema({
 const Subscriber = mongoose.model('Subscriber', subscriberSchema);
 
 let localSubscribers: any[] = [];
-const LOCAL_SUBSCRIBERS_FILE = path.join(process.cwd(), 'local_subscribers.json');
+const LOCAL_SUBSCRIBERS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_subscribers.json');
 
 if (fs.existsSync(LOCAL_SUBSCRIBERS_FILE)) {
   try {
@@ -400,7 +402,7 @@ const pickLeftInterestSchema = new mongoose.Schema({
 const PickLeftInterest = mongoose.model('PickLeftInterest', pickLeftInterestSchema);
 
 let localPickLeftInterests: any[] = [];
-const LOCAL_PICK_LEFT_INTERESTS_FILE = path.join(process.cwd(), 'local_pick_left_interests.json');
+const LOCAL_PICK_LEFT_INTERESTS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_pick_left_interests.json');
 
 if (fs.existsSync(LOCAL_PICK_LEFT_INTERESTS_FILE)) {
   try {
@@ -419,10 +421,10 @@ async function syncPickLeftInterestsToLocalFile() {
 }
 
 // Persistent File Paths for Offline Fallback System
-const LOCAL_USERS_FILE = path.join(process.cwd(), 'local_users.json');
-const LOCAL_PRODUCTS_FILE = path.join(process.cwd(), 'local_products.json');
-const LOCAL_ORDERS_FILE = path.join(process.cwd(), 'local_orders.json');
-const LOCAL_SUNDAY_LOGS_FILE = path.join(process.cwd(), 'local_sunday_logs.json');
+const LOCAL_USERS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_users.json');
+const LOCAL_PRODUCTS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_products.json');
+const LOCAL_ORDERS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_orders.json');
+const LOCAL_SUNDAY_LOGS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_sunday_logs.json');
 
 // Order Schema
 const orderSchema = new mongoose.Schema({
@@ -478,7 +480,7 @@ if (fs.existsSync(LOCAL_SUNDAY_LOGS_FILE)) {
 }
 
 // ========== SECURITY LOGS SCHEMA & FALLBACK ==========
-const LOCAL_SECURITY_LOGS_FILE = path.join(process.cwd(), 'local_security_logs.json');
+const LOCAL_SECURITY_LOGS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_security_logs.json');
 
 const securityLogSchema = new mongoose.Schema({
   action: { type: String, required: true },
@@ -488,7 +490,7 @@ const securityLogSchema = new mongoose.Schema({
   details: { type: mongoose.Schema.Types.Mixed },
   ipAddress: String,
   userAgent: String,
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now, index: true, expires: '90d' }
 });
 
 const SecurityLog = mongoose.model('SecurityLog', securityLogSchema);
@@ -587,7 +589,7 @@ const logSecurityAction = async (
 };
 
 // ========== PRODUCT IMPORT HISTORY SCHEMA & FALLBACK ==========
-const LOCAL_IMPORT_HISTORY_FILE = path.join(process.cwd(), 'local_import_history.json');
+const LOCAL_IMPORT_HISTORY_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_import_history.json');
 
 const importHistorySchema = new mongoose.Schema({
   productName: { type: String, required: true },
@@ -635,40 +637,7 @@ bulkImportJobSchema.index({ adminId: 1, status: 1 });
 const BulkImportJob = mongoose.model('BulkImportJob', bulkImportJobSchema);
 
 // ========== PHASE 7: MEDIA MANAGEMENT SCHEMAS ==========
-const mediaAssetSchema = new mongoose.Schema({
-  productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
-  asin: { type: String, index: true },
-  originalUrl: { type: String },
-  localPath: { type: String },
-  fileName: { type: String, required: true },
-  cdnUrl: { type: String },
-  mimeType: { type: String },
-  width: { type: Number },
-  height: { type: Number },
-  aspectRatio: { type: Number },
-  hash: { type: String, unique: true, sparse: true },
-  uploadDate: { type: Date, default: Date.now },
-  optimizationStatus: { type: String, enum: ['pending', 'processing', 'completed', 'failed'], default: 'pending' },
-  originalSize: { type: Number },
-  optimizedSize: { type: Number },
-  compressionRatio: { type: Number },
-  storageProvider: { type: String, enum: ['local', 's3', 'r2', 'cloudinary'], default: 'local' },
-  variants: { type: mongoose.Schema.Types.Mixed }, // e.g. { webp: '...', avif: '...', thumb: '...' }
-  metadata: { type: mongoose.Schema.Types.Mixed }
-});
-
-const mediaQueueJobSchema = new mongoose.Schema({
-  assetId: { type: mongoose.Schema.Types.ObjectId, ref: 'MediaAsset' },
-  type: { type: String, enum: ['download', 'optimize', 'convert', 'upload', 'cleanup'] },
-  status: { type: String, enum: ['waiting', 'running', 'completed', 'failed', 'cancelled'], default: 'waiting' },
-  attempts: { type: Number, default: 0 },
-  maxAttempts: { type: Number, default: 3 },
-  error: { type: String },
-  createdAt: { type: Date, default: Date.now },
-  startedAt: { type: Date },
-  completedAt: { type: Date }
-});
-
+import { mediaAssetSchema, mediaQueueJobSchema } from './src/services/MediaService';
 const MediaAsset = mongoose.models.MediaAsset || mongoose.model('MediaAsset', mediaAssetSchema);
 const MediaQueueJob = mongoose.models.MediaQueueJob || mongoose.model('MediaQueueJob', mediaQueueJobSchema);
 
@@ -685,7 +654,7 @@ const redirectRuleSchema = new mongoose.Schema({
 const seoAuditHistorySchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', index: true },
   score: { type: Number, required: true },
-  auditDate: { type: Date, default: Date.now },
+  auditDate: { type: Date, default: Date.now, index: true, expires: '90d' },
   suggestions: [String],
   details: mongoose.Schema.Types.Mixed
 });
@@ -776,7 +745,7 @@ const logImportHistory = async (entry: {
 
 // ========== FOOTER SOCIAL CLICKS PERSISTENCE ==========
 let socialClicks = { instagram: 0, linkedin: 0 };
-const SOCIAL_CLICKS_FILE = path.join(process.cwd(), 'social_clicks.json');
+const SOCIAL_CLICKS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'social_clicks.json');
 
 // Load initial counts
 if (fs.existsSync(SOCIAL_CLICKS_FILE)) {
@@ -836,7 +805,7 @@ Promise.all(localUsers.map(async (u) => {
 
 let localMessages = JSON.parse(JSON.stringify(seedMessages));
 
-const LOCAL_BULK_JOBS_FILE = path.join(process.cwd(), 'local_bulk_jobs.json');
+const LOCAL_BULK_JOBS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_bulk_jobs.json');
 let localBulkImportJobs: any[] = [];
 if (fs.existsSync(LOCAL_BULK_JOBS_FILE)) {
   try {
@@ -854,7 +823,7 @@ const saveLocalBulkImportJobs = () => {
   }
 };
 
-const LOCAL_ALERT_RULES_FILE = path.join(process.cwd(), 'local_alert_rules.json');
+const LOCAL_ALERT_RULES_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_alert_rules.json');
 let localAlertRules: any[] = [];
 if (fs.existsSync(LOCAL_ALERT_RULES_FILE)) {
   try {
@@ -867,7 +836,7 @@ const saveLocalAlertRules = () => {
   try { fs.writeFileSync(LOCAL_ALERT_RULES_FILE, JSON.stringify(localAlertRules, null, 2), 'utf8'); } catch (err: any) {}
 };
 
-const LOCAL_AUTOMATION_RULES_FILE = path.join(process.cwd(), 'local_automation_rules.json');
+const LOCAL_AUTOMATION_RULES_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_automation_rules.json');
 let localAutomationRules: any[] = [];
 if (fs.existsSync(LOCAL_AUTOMATION_RULES_FILE)) {
   try {
@@ -880,7 +849,7 @@ const saveLocalAutomationRules = () => {
   try { fs.writeFileSync(LOCAL_AUTOMATION_RULES_FILE, JSON.stringify(localAutomationRules, null, 2), 'utf8'); } catch (err: any) {}
 };
 
-const LOCAL_PRODUCT_HEALTH_FILE = path.join(process.cwd(), 'local_product_health.json');
+const LOCAL_PRODUCT_HEALTH_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_product_health.json');
 let localProductHealth: any[] = [];
 if (fs.existsSync(LOCAL_PRODUCT_HEALTH_FILE)) {
   try {
@@ -893,7 +862,7 @@ const saveLocalProductHealth = () => {
   try { fs.writeFileSync(LOCAL_PRODUCT_HEALTH_FILE, JSON.stringify(localProductHealth, null, 2), 'utf8'); } catch (err: any) {}
 };
 
-const LOCAL_PRICE_HISTORY_FILE = path.join(process.cwd(), 'local_price_history.json');
+const LOCAL_PRICE_HISTORY_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_price_history.json');
 let localPriceHistory: any[] = [];
 if (fs.existsSync(LOCAL_PRICE_HISTORY_FILE)) {
   try {
@@ -906,7 +875,7 @@ const saveLocalPriceHistory = () => {
   try { fs.writeFileSync(LOCAL_PRICE_HISTORY_FILE, JSON.stringify(localPriceHistory, null, 2), 'utf8'); } catch (err: any) {}
 };
 
-const LOCAL_PRODUCT_CHANGES_FILE = path.join(process.cwd(), 'local_product_changes.json');
+const LOCAL_PRODUCT_CHANGES_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_product_changes.json');
 let localProductChanges: any[] = [];
 if (fs.existsSync(LOCAL_PRODUCT_CHANGES_FILE)) {
   try {
@@ -2500,7 +2469,7 @@ async function startServer() {
     userId: string;
     expiresAt: number;
   }
-  const LOCAL_AUTH_CODES_FILE = path.join(process.cwd(), 'local_auth_codes.json');
+  const LOCAL_AUTH_CODES_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_auth_codes.json');
   const getLocalAuthCodes = (): Record<string, PendingAuthCode> => {
     try {
       if (fs.existsSync(LOCAL_AUTH_CODES_FILE)) {
@@ -3492,7 +3461,7 @@ async function startServer() {
       await cleanExpiredTrendingProducts();
       const { category, subcategory, brand, minPrice, maxPrice, search, rating, sort, inStock, exclude, trending } = req.query;
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit as string) || 12));
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 12));
       
       if (isMongoConnected) {
         const filter: any = {};
@@ -3668,6 +3637,18 @@ async function startServer() {
   app.post('/api/products/click/:slug', validateProductClick, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const finalDistrict = req.body.district ? sanitizeDistrict(String(req.body.district)) : 'Unknown';
+      let verifiedUserId = null;
+
+      // Extract user from token if present, completely ignoring client-supplied userId
+      let token = req.headers.authorization?.split(' ')[1] || getCookieToken(req);
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as { userId: string };
+          verifiedUserId = decoded.userId;
+        } catch (e) {
+          // invalid token, just treat as anonymous
+        }
+      }
 
       if (!isMongoConnected) {
         return res.status(503).json({ error: 'Database is currently offline. Please try again shortly.' });
@@ -3685,7 +3666,7 @@ async function startServer() {
         productId: product._id,
         affiliateCode: product.affiliateCode,
         eventType: 'click',
-        userId: req.body.userId,
+        userId: verifiedUserId,
         district: finalDistrict,
         referer: req.headers.referer
       }).catch(err => console.warn('Background click analytics logging failed:', err.message));
@@ -6134,8 +6115,8 @@ async function startServer() {
               ? existingProduct.images[0] 
               : (existingProduct.imageUrl || ''),
             images: existingProduct.images || (existingProduct.imageUrl ? [existingProduct.imageUrl] : []),
-            affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20',
-            affiliateLink: existingProduct.affiliateLink || (existingProduct.asin ? `https://www.amazon.com/dp/${existingProduct.asin}/?tag=${existingProduct.affiliateCode || 'gadgetspro-20'}` : ''),
+            affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetsprohub-21',
+            affiliateLink: existingProduct.affiliateLink || (existingProduct.asin ? `https://www.amazon.com/dp/${existingProduct.asin}/?tag=${existingProduct.affiliateCode || 'gadgetsprohub-21'}` : ''),
             features: Array.isArray(existingProduct.features) && existingProduct.features.length > 0 
               ? existingProduct.features 
               : [],
@@ -6181,8 +6162,8 @@ async function startServer() {
               ? scrapedDetails.images[0] 
               : '',
             images: scrapedDetails.images || [],
-            affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20',
-            affiliateLink: scrapedDetails.affiliateLink || scrapedDetails.url || inputUrl || (cleanAsin ? `https://www.amazon.com/dp/${cleanAsin}/?tag=${process.env.AMAZON_AFFILIATE_TAG || 'gadgetspro-20'}` : ''),
+            affiliateCode: process.env.AMAZON_AFFILIATE_TAG || 'gadgetsprohub-21',
+            affiliateLink: scrapedDetails.affiliateLink || scrapedDetails.url || inputUrl || (cleanAsin ? `https://www.amazon.com/dp/${cleanAsin}/?tag=${process.env.AMAZON_AFFILIATE_TAG || 'gadgetsprohub-21'}` : ''),
             features: [
               `Official Amazon Item (${cleanAsin})`,
               'Full manufacturer warranty coverage',
@@ -7077,6 +7058,7 @@ async function startServer() {
 
   app.get('/api/admin/sync/dashboard', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: { status: 'offline', error: 'Database is offline' } });
       const stats = await syncService.getSyncDashboardAnalytics();
       res.json({ success: true, data: stats });
     } catch (err: any) {
@@ -8132,7 +8114,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       // 6. Detect & Resolve Duplicate Products via ASIN with Custom Strategies
       const strategy = rawPayload.strategy || 'create';
       const options = rawPayload.options || {};
-      const resolvedAffiliateCode = affiliateCode || 'gadgetspro-20';
+      const resolvedAffiliateCode = affiliateCode || 'gadgetsprohub-21';
 
       // 6a. Validate Affiliate Code/Tag Format (Format must be xxxxx-20 or similar)
       const tagRegex = /^[a-zA-Z0-9_\-]+-[0-9]+$/;
@@ -8174,10 +8156,12 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         }
         try {
           if (rawLink.includes('amazon.') || rawLink.includes('amzn.')) {
-            // Ensure tag parameter is attached if missing
+            // Ensure tag parameter is attached if missing or replaced if present
             if (!rawLink.includes('tag=')) {
               const sep = rawLink.includes('?') ? '&' : '?';
               rawLink = `${rawLink}${sep}tag=${resolvedAffiliateCode}`;
+            } else {
+              rawLink = rawLink.replace(/tag=[^&]+/g, `tag=${resolvedAffiliateCode}`);
             }
           }
           cleanAffiliateLink = rawLink;
@@ -8882,8 +8866,9 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
 
       if (isMongoConnected) {
         const category = await Category.findByIdAndUpdate(catId, { $set: payload }, { new: true });
+        if (!category) return res.status(404).json({ error: 'Category not found' });
         await syncCategoriesToSeedFile();
-        await logSecurityAction(req, 'CATEGORY_UPDATED', catId, { name: category?.name, slug: category?.slug });
+        await logSecurityAction(req, 'CATEGORY_UPDATED', catId, { name: category.name, slug: category.slug });
         return res.json(category);
       } else {
         const index = localCategories.findIndex((c: any) => c._id === catId);

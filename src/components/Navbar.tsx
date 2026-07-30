@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
     checkDb().catch(() => {});
     const interval = setInterval(() => {
       checkDb().catch(() => {});
-    }, 15000);
+    }, 60000);
     return () => {
       controller.abort();
       clearInterval(interval);

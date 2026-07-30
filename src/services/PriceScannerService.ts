@@ -42,6 +42,7 @@ export interface PriceScannerState {
 export class PriceScannerService {
   private static instance: PriceScannerService;
   private lastRunDate: string | null = null;
+  private pendingProducts: any[] = [];
 
   private state: PriceScannerState = {
     isRunning: false,
@@ -136,6 +137,7 @@ export class PriceScannerService {
 
     // Fetch products in descending price order
     const products = await this.getProductsSortedByPriceDesc();
+    this.pendingProducts = [...products];
     this.state.totalProducts = products.length;
     this.state.scannedProductIds = [];
     this.state.productsChecked = 0;
@@ -198,6 +200,7 @@ export class PriceScannerService {
     }
 
     const products = await this.getProductsSortedByPriceDesc();
+    this.pendingProducts = [];
     this.state.isRunning = false;
     this.state.isPaused = false;
     this.state.scannedProductIds = [];
@@ -261,13 +264,7 @@ export class PriceScannerService {
     if (!this.state.isRunning || this.state.isPaused) return;
 
     try {
-      const sortedProducts = await this.getProductsSortedByPriceDesc();
-      this.state.totalProducts = sortedProducts.length;
-
-      // Find first product in descending price order that has NOT been scanned yet
-      const nextProduct = sortedProducts.find(
-        (p) => !this.state.scannedProductIds.includes(p._id.toString())
-      );
+      const nextProduct = this.pendingProducts.shift();
 
       if (!nextProduct) {
         // All products in descending order scanned!
@@ -423,7 +420,8 @@ export class PriceScannerService {
     asin?: string,
     productName?: string
   ) {
-    const resolvedName = productName || (productId === 'SYSTEM' || productId === 'COMPLETED' ? 'System Notification' : message);
+    const isSystem = productId === 'SYSTEM' || productId === 'COMPLETED';
+    const resolvedName = productName || (isSystem ? 'System Notification' : 'Unknown Product');
     const logItem: PriceScannerLog = {
       id: 'log_' + Math.random().toString(36).substring(2, 9),
       timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),

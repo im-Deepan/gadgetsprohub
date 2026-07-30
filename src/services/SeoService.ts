@@ -355,10 +355,10 @@ export class SeoService {
     };
 
     // Aggregate rating if available
-    if (product.totalReviews > 0) {
+    if (product.totalReviews > 0 && product.rating) {
       schema.aggregateRating = {
         '@type': 'AggregateRating',
-        'ratingValue': product.rating || 4.5,
+        'ratingValue': product.rating,
         'reviewCount': product.totalReviews || 1,
         'bestRating': '5',
         'worstRating': '1'
@@ -512,6 +512,7 @@ export class SeoService {
     buyingSummary: string;
     ctaSection: string;
     faqs: { question: string; answer: string; category: string }[];
+    isFallback?: boolean;
   }> {
     if (!this.ai) {
       // Fallback simple mock generator if GEMINI_API_KEY is not configured
@@ -650,13 +651,25 @@ export class SeoService {
   /**
    * Generates a standard XML sitemap file with incremental additions.
    */
-  public async buildXmlSitemap(req?: any, localProducts?: any[], localBlogs?: any[]): Promise<string> {
+    public async buildXmlSitemap(req?: any, localProducts?: any[], localBlogs?: any[]): Promise<string> {
     const isMongoConnected = mongoose.connection.readyState === 1;
     let productsList: any[] = [];
     let blogsList: any[] = [];
     let categoriesList: any[] = [];
-
     const siteUrl = process.env.SITE_URL || process.env.APP_URL || (req ? `${req.headers['x-forwarded-proto'] || req.protocol || 'https'}://${req.get('host') || 'gadgetsprohub.com'}` : 'https://gadgetsprohub.com');
+    
+    const escapeXml = (unsafe: string) => {
+      return (unsafe || '').replace(/[<>&'"]/g, function (c) {
+        switch (c) {
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '&': return '&amp;';
+          case '\'': return '&apos;';
+          case '"': return '&quot;';
+          default: return c;
+        }
+      });
+    };
 
     if (isMongoConnected) {
       try {
@@ -671,40 +684,22 @@ export class SeoService {
         // Also update SitemapRecord cache if we want to retain it
         const SitemapRecord = mongoose.model('SitemapRecord');
         await SitemapRecord.deleteMany({});
-        // Rebuild cache for records
+        
+        const bulkRecords = [];
         for (const url of ['', '/about', '/contact', '/blog']) {
-          await SitemapRecord.create({
-            loc: `${siteUrl}${url}`,
-            priority: url === '' ? 1.0 : 0.5,
-            changefreq: 'weekly',
-            type: 'static'
-          });
+          bulkRecords.push({ loc: `${siteUrl}${url}`, priority: url === '' ? 1.0 : 0.5, changefreq: 'weekly', type: 'static' });
         }
         for (const cat of categoriesList) {
-          await SitemapRecord.create({
-            loc: `${siteUrl}/category/${cat.slug}`,
-            priority: 0.7,
-            changefreq: 'daily',
-            type: 'category'
-          });
+          bulkRecords.push({ loc: `${siteUrl}/category/${cat.slug}`, priority: 0.7, changefreq: 'daily', type: 'category' });
         }
         for (const p of productsList) {
-          await SitemapRecord.create({
-            loc: `${siteUrl}/product/${p.slug}`,
-            priority: 0.8,
-            changefreq: 'daily',
-            lastmod: p.updatedAt || p.createdAt,
-            type: 'product'
-          });
+          bulkRecords.push({ loc: `${siteUrl}/product/${p.slug}`, priority: 0.8, changefreq: 'daily', lastmod: p.updatedAt || p.createdAt, type: 'product' });
         }
         for (const b of blogsList) {
-          await SitemapRecord.create({
-            loc: `${siteUrl}/blog/${b.slug}`,
-            priority: 0.7,
-            changefreq: 'weekly',
-            lastmod: b.updatedAt || b.createdAt,
-            type: 'blog'
-          });
+          bulkRecords.push({ loc: `${siteUrl}/blog/${b.slug}`, priority: 0.7, changefreq: 'weekly', lastmod: b.updatedAt || b.createdAt, type: 'blog' });
+        }
+        if (bulkRecords.length > 0) {
+          await SitemapRecord.insertMany(bulkRecords, { ordered: false });
         }
       } catch (err: any) {
         console.warn('Failed to sync SitemapRecord cache:', err.message);
@@ -747,11 +742,12 @@ export class SeoService {
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
     const todayStr = new Date().toISOString().split('T')[0];
+    const safeSiteUrl = escapeXml(siteUrl);
 
     // Static pages
     for (const item of staticUrls) {
       xml += `  <url>\n`;
-      xml += `    <loc>${siteUrl}/${item.path}</loc>\n`;
+      xml += `    <loc>${safeSiteUrl}/${escapeXml(item.path)}</loc>\n`;
       xml += `    <lastmod>${todayStr}</lastmod>\n`;
       xml += `    <changefreq>${item.changefreq}</changefreq>\n`;
       xml += `    <priority>${item.priority}</priority>\n`;
@@ -762,7 +758,7 @@ export class SeoService {
     for (const cat of categoriesList) {
       if (!cat.slug) continue;
       xml += `  <url>\n`;
-      xml += `    <loc>${siteUrl}/category/${cat.slug}</loc>\n`;
+      xml += `    <loc>${safeSiteUrl}/category/${escapeXml(cat.slug)}</loc>\n`;
       xml += `    <lastmod>${todayStr}</lastmod>\n`;
       xml += `    <changefreq>daily</changefreq>\n`;
       xml += `    <priority>0.7</priority>\n`;
@@ -780,7 +776,7 @@ export class SeoService {
         dateStr = todayStr;
       }
       xml += `  <url>\n`;
-      xml += `    <loc>${siteUrl}/product-detail/${prod.slug}</loc>\n`;
+      xml += `    <loc>${safeSiteUrl}/product-detail/${escapeXml(prod.slug)}</loc>\n`;
       xml += `    <lastmod>${dateStr}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
       xml += `    <priority>0.8</priority>\n`;
@@ -798,7 +794,7 @@ export class SeoService {
         dateStr = todayStr;
       }
       xml += `  <url>\n`;
-      xml += `    <loc>${siteUrl}/blog-detail/${blog.slug}</loc>\n`;
+      xml += `    <loc>${safeSiteUrl}/blog-detail/${escapeXml(blog.slug)}</loc>\n`;
       xml += `    <lastmod>${dateStr}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
       xml += `    <priority>0.7</priority>\n`;
@@ -818,7 +814,6 @@ export class SeoService {
     } catch (err: any) {
       console.warn('Failed to write sitemap.xml to disk:', err.message);
     }
-
     return xml;
   }
 }

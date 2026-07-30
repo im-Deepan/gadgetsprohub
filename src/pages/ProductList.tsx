@@ -15,6 +15,7 @@ import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 import { getCategoryName } from '../utils/category';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 import { parseSpecificationsString } from '../utils/specParser';
+import { getCleanAffiliateUrl } from '../utils/affiliate';
 
 interface ProductListProps {
   initialFilter?: string | null;
@@ -1191,8 +1192,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     }).catch((err) => {
                       console.error('[ProductList click tracker]', err);
                     });
-                    if (specModalProduct.affiliateLink) {
-                      window.open(specModalProduct.affiliateLink, '_blank', 'noreferrer,noopener');
+                    const targetUrl = getCleanAffiliateUrl(specModalProduct.affiliateLink, specModalProduct.asin, specModalProduct.affiliateCode);
+                    if (targetUrl) {
+                      window.open(targetUrl, '_blank', 'noreferrer,noopener');
                     }
                   }}
                   className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white py-3 text-xs font-bold transition-all cursor-pointer shadow-md"

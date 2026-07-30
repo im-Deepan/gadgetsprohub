@@ -123,11 +123,11 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
                     className="absolute w-full h-full flex items-center justify-center p-3"
                   >
                     <img
-                      src={(prod.images && prod.images[0] && prod.images[0].trim() !== '') ? prod.images[0] : 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300'}
+                      src={(prod.images && prod.images[0] && prod.images[0].trim() !== '') ? prod.images[0] : '/placeholder.png'}
                       alt={prod.name}
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        e.currentTarget.src = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300';
+                        e.currentTarget.src = '/placeholder.png';
                       }}
                       className="max-w-full max-h-full object-contain drop-shadow-xs group-hover:scale-105 transition-all duration-300 inline-block"
                     />

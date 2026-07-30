@@ -213,7 +213,10 @@ export class AiService {
     // Decouple from JWT_SECRET so token rotation does not break encrypted database keys.
     // Derive a stable fallback from persistent server config (e.g. MONGODB_URI, APP_URL, GEMINI_API_KEY)
     // rather than volatile container HOSTNAME or hardcoded secret literals in source code.
-    const persistentSeed = process.env.MONGODB_URI || process.env.APP_URL || process.env.GEMINI_API_KEY || '';
+    const persistentSeed = process.env.MONGODB_URI || process.env.APP_URL || process.env.GEMINI_API_KEY;
+    if (!persistentSeed) {
+      throw new Error('Fatal: Cannot derive secure encryption seed. Set MONGODB_URI, APP_URL, or GEMINI_API_KEY.');
+    }
     return crypto.createHash('sha256').update(`ai-key-encryption-seed:${persistentSeed}`).digest('hex');
   }
 

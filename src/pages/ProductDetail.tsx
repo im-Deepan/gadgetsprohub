@@ -16,6 +16,7 @@ import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage'
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { apiFetch } from '../utils/apiClient';
 import { parseSpecificationsString } from '../utils/specParser';
+import { getCleanAffiliateUrl } from '../utils/affiliate';
 
 interface ProductDetailProps {
   productSlug: string;
@@ -233,19 +234,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const handleCopyLinkClick = () => {
     if (!product) return;
     
-    let validatedUrl = '';
-    try {
-      if (product.affiliateLink) {
-        let rawLink = product.affiliateLink.trim();
-        if (!/^https?:\/\//i.test(rawLink)) {
-          rawLink = 'https://' + rawLink;
-        }
-        const parsed = new URL(rawLink);
-        validatedUrl = parsed.toString();
-      }
-    } catch (err) {
-      console.warn('ProductDetail URL copy parse warning:', err);
-    }
+    const validatedUrl = getCleanAffiliateUrl(product.affiliateLink, product.asin, product.affiliateCode);
 
     if (!validatedUrl) {
       showToast("The e-commerce reference link is currently unavailable. Please try again soon.", "warning", 4000, "User Action");
@@ -546,19 +535,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const handleAffiliateClick = async () => {
     if (!product) return;
     
-    let validatedUrl = '';
-    try {
-      if (product.affiliateLink) {
-        let rawLink = product.affiliateLink.trim();
-        if (!/^https?:\/\//i.test(rawLink)) {
-          rawLink = 'https://' + rawLink;
-        }
-        const parsed = new URL(rawLink);
-        validatedUrl = parsed.toString();
-      }
-    } catch (err) {
-      console.warn('ProductDetail affiliate url parse warning:', err);
-    }
+    const validatedUrl = getCleanAffiliateUrl(product.affiliateLink, product.asin, product.affiliateCode);
 
     if (!validatedUrl) {
       showToast("This link is currently unavailable. Please inspect other items.", "warning");
@@ -1069,7 +1046,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-normal border-t border-slate-50 dark:border-slate-800/60 pt-1.5">
-                    Product prices and availability are accurate as of the indicated date/time and may change.
+                    Product prices and availability are accurate as of the date/time indicated and are subject to change. Any price and availability information displayed on Amazon at the time of purchase will apply to the purchase of this product.
                   </p>
                 </div>
               );
@@ -1116,8 +1093,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               )}
             </div>
 
-            <p className="text-[10px] text-slate-300 leading-relaxed text-center sm:text-left">
-              *You will be securely redirected to the online retailer. As an affiliate partner, we earn from qualifying purchases. Thank you for supporting our review platform!
+            <p className="text-[10px] text-slate-400 dark:text-slate-400 leading-relaxed text-center sm:text-left">
+              * <span className="font-semibold text-slate-600 dark:text-slate-200">As an Amazon Associate I earn from qualifying purchases.</span> Clicking &quot;Buy on Amazon&quot; opens Amazon in a new tab with tag <code className="text-indigo-500 font-mono">gadgetsprohub-21</code> attached.
             </p>
           </div>
 

@@ -31,6 +31,9 @@ export const Disclaimer: React.FC = () => {
             In compliance with FTC (Federal Trade Commission) guidelines, please be informed that <span className="font-bold">gadgetsprohub</span> is a professional product review and comparison platform.
           </p>
           <div className="rounded-2xl bg-indigo-50/50 p-4 border border-indigo-50/30 text-indigo-800 dark:bg-indigo-950/20 dark:border-indigo-800/40 dark:text-indigo-200">
+            <p className="text-xs leading-relaxed font-bold text-indigo-900 dark:text-indigo-100 mb-1.5">
+              &quot;As an Amazon Associate I earn from qualifying purchases.&quot;
+            </p>
             <p className="text-xs leading-relaxed font-medium">
               We frequently include outbound store referral tags (affiliate links) on our product specification listings. Clicking an outbound store action to buy an accessory occasionally results in our platform receiving a small percentage commission from the vendor (e.g. Amazon Associate commissions, affiliate networks). 
             </p>

@@ -52,19 +52,17 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
     <footer className="w-full border-t border-slate-100 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-black dark:text-slate-200 transition-colors duration-300">
       
       {/* Top Banner Ethical Disclosure */}
-      {isHomePage && (
-        <div className="bg-indigo-50/70 border-b border-indigo-50/40 py-4 px-4 dark:bg-indigo-950/20 dark:border-slate-700">
-          <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-3 text-xs md:px-8">
-            <div className="flex items-center gap-2.5 text-indigo-600 dark:text-indigo-300">
-              <BadgeAlert className="h-5 w-5 shrink-0" />
-              <span className="font-semibold uppercase tracking-wider">Affiliate Disclosure Statement</span>
-            </div>
-            <p className="text-[11px] text-slate-400 max-w-2xl text-center md:text-right leading-relaxed dark:text-slate-300">
-              gadgetsprohub is an independent product reviews platform. We review select electronic gadgets, apparel & lifestyle items. When you hover and click dynamic store tags to execute a purchase, our platform occasionally earns minor percentages in commissions from vendor outlets.
-            </p>
+      <div className="bg-indigo-50/70 border-b border-indigo-50/40 py-3.5 px-4 dark:bg-indigo-950/20 dark:border-slate-700">
+        <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-3 text-xs md:px-8">
+          <div className="flex items-center gap-2.5 text-indigo-600 dark:text-indigo-300">
+            <BadgeAlert className="h-5 w-5 shrink-0" />
+            <span className="font-semibold uppercase tracking-wider">Amazon Associate Disclosure</span>
           </div>
+          <p className="text-[11px] text-slate-500 max-w-2xl text-center md:text-right leading-relaxed dark:text-slate-300">
+            <span className="font-bold text-slate-700 dark:text-white">As an Amazon Associate I earn from qualifying purchases.</span> gadgetsprohub is an independent product reviews platform providing objective spec indexing and curated shopping recommendations.
+          </p>
         </div>
-      )}
+      </div>
 
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5 md:px-4">

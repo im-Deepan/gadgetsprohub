@@ -60,50 +60,46 @@ function isSafeUrl(urlString: string): boolean {
 }
 
 // Defensive Getters to register models lazily and avoid MissingSchemaError
-function getMediaAssetModel(): any {
-  if (mongoose.models.MediaAsset) {
-    return mongoose.models.MediaAsset;
-  }
-  const mediaAssetSchema = new mongoose.Schema({
-    productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
-    asin: { type: String, index: true },
-    originalUrl: { type: String, index: true },
-    localPath: { type: String },
-    fileName: { type: String, required: true },
-    cdnUrl: { type: String },
-    mimeType: { type: String },
-    width: { type: Number },
-    height: { type: Number },
-    aspectRatio: { type: Number },
-    hash: { type: String, unique: true, sparse: true },
-    uploadDate: { type: Date, default: Date.now },
-    optimizationStatus: { type: String, enum: ['pending', 'processing', 'completed', 'failed'], default: 'pending' },
-    originalSize: { type: Number },
-    optimizedSize: { type: Number },
-    compressionRatio: { type: Number },
-    storageProvider: { type: String, enum: ['local', 's3', 'r2', 'cloudinary'], default: 'local' },
-    variants: { type: mongoose.Schema.Types.Mixed },
-    metadata: { type: mongoose.Schema.Types.Mixed }
-  });
-  return mongoose.model('MediaAsset', mediaAssetSchema);
+export const mediaAssetSchema = new mongoose.Schema({
+  productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
+  asin: { type: String, index: true },
+  originalUrl: { type: String, index: true, unique: true, sparse: true },
+  localPath: { type: String },
+  fileName: { type: String, required: true },
+  cdnUrl: { type: String },
+  mimeType: { type: String },
+  width: { type: Number },
+  height: { type: Number },
+  aspectRatio: { type: Number },
+  hash: { type: String, unique: true, sparse: true },
+  uploadDate: { type: Date, default: Date.now },
+  optimizationStatus: { type: String, enum: ['pending', 'processing', 'completed', 'failed'], default: 'pending' },
+  originalSize: { type: Number },
+  optimizedSize: { type: Number },
+  compressionRatio: { type: Number },
+  storageProvider: { type: String, enum: ['local', 's3', 'r2', 'cloudinary'], default: 'local' },
+  variants: { type: mongoose.Schema.Types.Mixed },
+  metadata: { type: mongoose.Schema.Types.Mixed }
+});
+
+export const mediaQueueJobSchema = new mongoose.Schema({
+  assetId: { type: mongoose.Schema.Types.ObjectId, ref: 'MediaAsset' },
+  type: { type: String, enum: ['download', 'optimize', 'convert', 'upload', 'cleanup'] },
+  status: { type: String, enum: ['waiting', 'running', 'completed', 'failed', 'cancelled'], default: 'waiting' },
+  attempts: { type: Number, default: 0 },
+  maxAttempts: { type: Number, default: 3 },
+  error: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  startedAt: { type: Date },
+  completedAt: { type: Date }
+});
+
+export function getMediaAssetModel(): any {
+  return mongoose.models.MediaAsset || mongoose.model('MediaAsset', mediaAssetSchema);
 }
 
-function getMediaQueueJobModel(): any {
-  if (mongoose.models.MediaQueueJob) {
-    return mongoose.models.MediaQueueJob;
-  }
-  const mediaQueueJobSchema = new mongoose.Schema({
-    assetId: { type: mongoose.Schema.Types.ObjectId, ref: 'MediaAsset' },
-    type: { type: String, enum: ['download', 'optimize', 'convert', 'upload', 'cleanup'] },
-    status: { type: String, enum: ['waiting', 'running', 'completed', 'failed', 'cancelled'], default: 'waiting' },
-    attempts: { type: Number, default: 0 },
-    maxAttempts: { type: Number, default: 3 },
-    error: { type: String },
-    createdAt: { type: Date, default: Date.now },
-    startedAt: { type: Date },
-    completedAt: { type: Date }
-  });
-  return mongoose.model('MediaQueueJob', mediaQueueJobSchema);
+export function getMediaQueueJobModel(): any {
+  return mongoose.models.MediaQueueJob || mongoose.model('MediaQueueJob', mediaQueueJobSchema);
 }
 
 export class MediaService {
@@ -134,6 +130,28 @@ export class MediaService {
       return existing;
     }
 
+    try {
+      const urlObj = new URL(payload.url);
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+         throw new Error('Only HTTP/HTTPS URLs are allowed');
+      }
+      
+      const isPrivateIP = (hostname: string) => {
+         const parts = hostname.split('.');
+         if (parts.length === 4 && parts.every(p => !isNaN(Number(p)))) {
+            const ip = parts.map(Number);
+            if (ip[0] === 10 || (ip[0] === 172 && ip[1] >= 16 && ip[1] <= 31) || (ip[0] === 192 && ip[1] === 168) || ip[0] === 127 || ip[0] === 0 || ip[0] === 169) return true;
+         }
+         return ['localhost', '::1'].includes(hostname);
+      };
+      
+      if (isPrivateIP(urlObj.hostname)) {
+         throw new Error('Private/Link-local IPs are not allowed');
+      }
+    } catch (e: any) {
+       throw new Error(`Invalid URL: ${e.message}`);
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds request timeout
 
@@ -157,6 +175,11 @@ export class MediaService {
 
       if (buffer.length < 100) {
         throw new Error('Image too small or corrupted.');
+      }
+      
+      const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
+      if (buffer.length > MAX_IMAGE_SIZE) {
+        throw new Error(`Image size exceeds 15MB limit (${(buffer.length / 1024 / 1024).toFixed(2)}MB)`);
       }
 
       // 3. Hash calculation for Deduplication

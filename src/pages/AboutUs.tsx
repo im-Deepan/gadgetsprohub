@@ -71,6 +71,17 @@ export const AboutUs: React.FC = () => {
           </p>
         </section>
 
+        {/* Amazon Associates Disclosure */}
+        <section className="space-y-3 rounded-2xl bg-indigo-50/50 p-4 border border-indigo-50/30 dark:bg-indigo-950/20 dark:border-indigo-800/40">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-indigo-500" />
+            <span>Amazon Associates Program Disclosure</span>
+          </h3>
+          <p className="text-xs leading-relaxed font-medium text-slate-700 dark:text-slate-200">
+            <span className="font-bold text-indigo-600 dark:text-indigo-300">As an Amazon Associate I earn from qualifying purchases.</span> gadgetsprohub is a participant in the Amazon Services LLC Associates Program, an affiliate advertising program designed to provide a means for sites to earn advertising fees by advertising and linking to Amazon.com and affiliated sites.
+          </p>
+        </section>
+
         {/* Contact info support */}
         <div className="pt-6 border-t border-slate-50 dark:border-slate-700 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-left">

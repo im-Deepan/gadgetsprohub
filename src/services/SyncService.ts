@@ -357,7 +357,7 @@ export class SyncService {
   /**
    * Validates Amazon Affiliate link structure and tracking tag correctness.
    */
-  public validateAffiliateLink(link: string, tag?: string): { valid: boolean; issues: string[]; suggestions: string[] } {
+  public validateAffiliateLink(link: string, tag: string = 'gadgetsprohub-21'): { valid: boolean; issues: string[]; suggestions: string[] } {
     const issues: string[] = [];
     const suggestions: string[] = [];
 
