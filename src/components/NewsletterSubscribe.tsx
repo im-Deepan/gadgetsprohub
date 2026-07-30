@@ -86,7 +86,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
                 setEmail(e.target.value);
                 if (errorText) setErrorText('');
               }}
-              className="w-full rounded-xl border border-slate-100 bg-slate-50 py-2.5 pl-10 pr-4 text-xs font-medium text-slate-700 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-1 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-50 dark:focus:border-indigo-300 dark:focus:bg-slate-800"
+              className="w-full rounded-xl border border-slate-100 bg-slate-50 py-2.5 pl-10 pr-4 text-xs font-medium text-slate-700 transition-all duration-300 outline-none focus:border-indigo-400 focus:bg-white focus:ring-1 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-50 dark:focus:border-indigo-300 dark:focus:bg-slate-800"
               required
             />
             <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300 dark:text-slate-400" />
@@ -94,7 +94,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
           <button
             type="submit"
             disabled={loading || subscribed}
-            className={`flex items-center justify-center rounded-xl px-4 py-2.5 text-xs font-bold text-white transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50 ${
+            className={`flex items-center justify-center rounded-xl px-4 py-2.5 text-xs font-bold text-white transition-all duration-300 active:scale-95 disabled:pointer-events-none disabled:opacity-50 ${
               subscribed 
                 ? 'bg-emerald-400 hover:bg-emerald-500' 
                 : 'bg-indigo-500 hover:bg-indigo-600 hover:shadow-md hover:shadow-indigo-400/10'
@@ -170,7 +170,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
                       setEmail(e.target.value);
                       if (errorText) setErrorText('');
                     }}
-                    className="w-full rounded-2xl border border-slate-100 bg-white/80 py-3.5 pl-11 pr-4 text-sm font-medium text-slate-700 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-50/60 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-indigo-300 dark:focus:ring-indigo-800/30"
+                    className="w-full rounded-2xl border border-slate-100 bg-white/80 py-3.5 pl-11 pr-4 text-sm font-medium text-slate-700 transition-all duration-300 outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-50/60 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-indigo-300 dark:focus:ring-indigo-800/30"
                     required
                   />
                   <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-300/80 dark:text-slate-400" />
@@ -186,7 +186,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-800 hover:bg-indigo-500 dark:bg-white dark:hover:bg-indigo-500 dark:text-slate-950 dark:hover:text-white px-5 py-3.5 text-sm font-bold text-white transition-all shadow-md active:scale-98 disabled:pointer-events-none disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-800 hover:bg-indigo-500 dark:bg-white dark:hover:bg-indigo-500 dark:text-slate-950 dark:hover:text-white px-5 py-3.5 text-sm font-bold text-white transition-all duration-300 shadow-md active:scale-98 disabled:pointer-events-none disabled:opacity-50"
                 >
                   {loading ? (
                     <>
@@ -228,7 +228,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
             </div>
             <button
               onClick={() => setSubscribed(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-indigo-500 dark:text-slate-300 dark:hover:text-indigo-300 transition-colors"
+              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-indigo-500 dark:text-slate-300 dark:hover:text-indigo-300 transition-colors duration-300"
             >
               Subscribe another email
             </button>

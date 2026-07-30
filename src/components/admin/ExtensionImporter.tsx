@@ -668,21 +668,21 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
           <div className="flex flex-wrap gap-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700 self-start">
             <button
               onClick={() => { setActiveTab('live'); setResult(null); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'live' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${activeTab === 'live' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'}`}
             >
               <Activity className="h-3.5 w-3.5" />
               Live Extension
             </button>
             <button
               onClick={() => { setActiveTab('simulator'); setResult(null); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'simulator' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${activeTab === 'simulator' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'}`}
             >
               <Terminal className="h-3.5 w-3.5" />
               Simulator Mode
             </button>
             <button
               onClick={() => { setActiveTab('devtools'); setResult(null); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'devtools' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${activeTab === 'devtools' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'}`}
             >
               <Settings className="h-3.5 w-3.5" />
               Developer Tools
@@ -713,7 +713,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                     <div>
                       <h4 className="font-bold text-slate-800 dark:text-slate-200">Download & Install Ext</h4>
                       <p className="mt-0.5 mb-2">Unpack the Chrome extension source from your developer zip package and load it into <code className="bg-slate-50 dark:bg-zinc-800 px-1 rounded">chrome://extensions</code> in Developer Mode.</p>
-                      <a href="/extension.zip" download className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-bold rounded-lg text-xs transition-colors cursor-pointer">
+                      <a href="/extension.zip" download className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-bold rounded-lg text-xs transition-colors duration-300 cursor-pointer">
                         Download Extension ZIP
                       </a>
                     </div>
@@ -743,7 +743,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                   </div>
                   <button
                     onClick={handleSimulateHandshake}
-                    className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-all duration-300 cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     Simulate Pair Signal
@@ -830,7 +830,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                         type="button"
                         onClick={() => handleSimulateScrape(idx)}
                         disabled={scraping || importing}
-                        className={`text-left p-3 rounded-xl border text-xs transition-all flex items-center justify-between group cursor-pointer ${
+                        className={`text-left p-3 rounded-xl border text-xs transition-all duration-300 flex items-center justify-between group cursor-pointer ${
                           selectedPreset === idx 
                             ? 'border-indigo-500 bg-indigo-50/40 text-indigo-950 dark:bg-indigo-950/20 dark:text-indigo-200 font-medium' 
                             : 'border-slate-100 hover:border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-zinc-800/40 text-slate-600 dark:text-slate-300'
@@ -840,7 +840,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                           <p className="font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 truncate">{p.name}</p>
                           <p className="text-[10px] text-slate-400 font-mono mt-0.5">ASIN: {p.asin} • {p.brand}</p>
                         </div>
-                        <Layers className={`h-4 w-4 shrink-0 transition-colors ${selectedPreset === idx ? 'text-indigo-500' : 'text-slate-300'}`} />
+                        <Layers className={`h-4 w-4 shrink-0 transition-colors duration-300 ${selectedPreset === idx ? 'text-indigo-500' : 'text-slate-300'}`} />
                       </button>
                     ))}
                   </div>
@@ -878,7 +878,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                       <button
                         type="submit"
                         disabled={scraping || importing || !targetAsin.trim()}
-                        className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs cursor-pointer hover:bg-slate-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none shrink-0"
+                        className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs cursor-pointer hover:bg-slate-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none shrink-0"
                       >
                         {scraping ? 'Parsing...' : 'Scrape Web'}
                       </button>
@@ -896,7 +896,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                     <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden dark:bg-zinc-800">
                       <div className="h-full bg-indigo-600 rounded-full animate-infinite-loading"></div>
                     </div>
-                    <p className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 transition-all">{scrapeStep}</p>
+                    <p className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 transition-all duration-300">{scrapeStep}</p>
                   </div>
                 )}
               </div>
@@ -986,7 +986,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
 
             {/* IMPORT RESULTS SPLASH */}
             {result && (
-              <div className={`rounded-2xl border p-6 space-y-6 shadow-md transition-all ${
+              <div className={`rounded-2xl border p-6 space-y-6 shadow-md transition-all duration-300 ${
                 result.success 
                   ? 'border-emerald-100 bg-emerald-50/10 dark:border-emerald-900/40' 
                   : 'border-rose-100 bg-rose-50/10 dark:border-rose-900/40'
@@ -1067,7 +1067,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                         setSelectedPreset(null);
                         setTargetAsin('');
                       }}
-                      className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-all cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-all duration-300 cursor-pointer"
                     >
                       Import Another Product
                     </button>
@@ -1076,7 +1076,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                       <button
                         type="button"
                         onClick={handleProductImport}
-                        className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-all cursor-pointer"
+                        className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-all duration-300 cursor-pointer"
                       >
                         Retry Import Handshake
                       </button>
@@ -1084,7 +1084,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                         <button
                           type="button"
                           onClick={() => window.location.href = '/login'}
-                          className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-all cursor-pointer"
+                          className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-all duration-300 cursor-pointer"
                         >
                           Go to Sign In
                         </button>
@@ -1249,7 +1249,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                   type="button"
                   onClick={handleProductImport}
                   disabled={importing}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-xl cursor-pointer hover:scale-[1.01] active:scale-[0.99] shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-xl cursor-pointer hover:scale-[1.01] active:scale-[0.99] shadow-md transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <Send className="h-4 w-4" /> Import and Attach Affiliate Link
                 </button>
@@ -1328,7 +1328,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                 <button
                   onClick={runTestSuite}
                   disabled={runningTestSuite}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg cursor-pointer transition-all disabled:opacity-55"
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg cursor-pointer transition-all duration-300 disabled:opacity-55"
                 >
                   {runningTestSuite ? 'Executing...' : 'Run Diagnostics'}
                 </button>

@@ -60,7 +60,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
         </div>
         <button
           onClick={onClear}
-          className="text-xs font-bold text-slate-300 hover:text-rose-400 transition-colors bg-transparent border-none cursor-pointer p-0 mt-1 md:mt-0"
+          className="text-xs font-bold text-slate-300 hover:text-rose-400 transition-colors duration-300 bg-transparent border-none cursor-pointer p-0 mt-1 md:mt-0"
         >
           Clear history
         </button>
@@ -93,7 +93,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
           return (
             <div
               key={`slot-${slotIndex}`}
-              className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-800 transition-all hover:shadow-md hover:border-slate-200 dark:hover:border-slate-600 aspect-square flex flex-col justify-between p-4 group cursor-pointer ${responsiveClass}`}
+              className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-800 transition-all duration-300 hover:shadow-md hover:border-slate-200 dark:hover:border-slate-600 aspect-square flex flex-col justify-between p-4 group cursor-pointer ${responsiveClass}`}
               onClick={() => {
                 if (onPickLeftClick) {
                   onPickLeftClick(prod);
@@ -163,7 +163,7 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
                     <span className="text-[9px] font-black tracking-wider uppercase font-mono text-indigo-500 dark:text-indigo-300 leading-none truncate">
                       {prod.brand || (typeof prod.category === 'object' ? prod.category?.name : prod.category) || 'Gadget'}
                     </span>
-                    <h3 className="text-xs font-extrabold text-slate-700 dark:text-slate-100 line-clamp-1 group-hover:text-indigo-500 dark:group-hover:text-indigo-300 transition-colors tracking-tight leading-none mt-1">
+                    <h3 className="text-xs font-extrabold text-slate-700 dark:text-slate-100 line-clamp-1 group-hover:text-indigo-500 dark:group-hover:text-indigo-300 transition-colors duration-300 tracking-tight leading-none mt-1">
                       {prod.name}
                     </h3>
                   </motion.div>

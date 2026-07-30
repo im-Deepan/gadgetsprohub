@@ -447,7 +447,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             <span className="uppercase font-mono">{p.brand || 'Premium'}</span>
           </div>
 
-          <h3 className={`font-bold text-slate-700 leading-snug mt-2 line-clamp-1 group-hover:text-indigo-500 dark:text-white transition-colors-300 ${
+          <h3 className={`font-bold text-slate-700 leading-snug mt-2 line-clamp-1 group-hover:text-indigo-500 dark:text-white transition-colors duration-300 ${
             viewStyle === 'grid' ? 'text-[10px] sm:text-sm' : 'text-sm'
           }`}>
             {p.name}
@@ -480,14 +480,14 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setSpecModalProduct(p); }}
-              className="rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 py-1.5 px-2.5 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors"
+              className="rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 py-1.5 px-2.5 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors duration-300"
             >
               Specs
             </button>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onNavigate('product-detail', p.slug); }}
-              className="rounded-lg bg-indigo-50 border border-indigo-50 hover:bg-indigo-100 text-[10px] font-bold text-indigo-600 py-1.5 px-2.5 cursor-pointer dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-200 transition-colors"
+              className="rounded-lg bg-indigo-50 border border-indigo-50 hover:bg-indigo-100 text-[10px] font-bold text-indigo-600 py-1.5 px-2.5 cursor-pointer dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-200 transition-colors duration-300"
             >
               See Details
             </button>
@@ -558,7 +558,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           {/* Custom Filter Minimizer Trigger */}
           <button
             onClick={() => setIsFilterOpen(true)}
-            className={`flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${
+            className={`flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs font-bold transition-all duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${
               hasActiveFilters
                 ? 'border-indigo-500 bg-indigo-50/50 text-indigo-600 dark:border-indigo-400/50 dark:bg-indigo-950/25 dark:text-indigo-300 font-black'
                 : 'border-slate-100 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
@@ -575,7 +575,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           <div className="flex rounded-lg border border-slate-100 p-0.5 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 shrink-0">
             <button
               onClick={() => setViewStyle('grid')}
-              className={`p-1.5 px-2.5 rounded-md hover:text-indigo-500 transition-all cursor-pointer flex items-center gap-1.5 ${viewStyle === 'grid' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-300'}`}
+              className={`p-1.5 px-2.5 rounded-md hover:text-indigo-500 transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${viewStyle === 'grid' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-300'}`}
               title="Grid show"
               aria-label="Grid view"
             >
@@ -584,7 +584,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             </button>
             <button
               onClick={() => setViewStyle('list')}
-              className={`p-1.5 px-2.5 rounded-md hover:text-indigo-500 transition-all cursor-pointer flex items-center gap-1.5 ${viewStyle === 'list' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-300'}`}
+              className={`p-1.5 px-2.5 rounded-md hover:text-indigo-500 transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${viewStyle === 'list' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-300'}`}
               title="List show"
               aria-label="List view"
             >
@@ -599,7 +599,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             <select
               value={sortField}
               onChange={(e) => { setSortField(e.target.value); setCurrentPage(1); }}
-              className="rounded-lg border border-slate-100 bg-white py-1.5 pl-10 pr-4 text-xs font-semibold text-slate-600 outline-none focus:border-indigo-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors"
+              className="rounded-lg border border-slate-100 bg-white py-1.5 pl-10 pr-4 text-xs font-semibold text-slate-600 outline-none focus:border-indigo-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors duration-300"
             >
               <option value="newest">Sort: Newest First</option>
               <option value="price-asc">Sort: Price Low-High</option>
@@ -712,7 +712,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                         <button
                           type="button"
                           onClick={() => setExpandedSections(prev => ({ ...prev, [sectionName]: !isExpanded }))}
-                          className="px-5 py-2 rounded-full border border-indigo-50 hover:border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50/55 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-800/40 dark:text-indigo-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider flex items-center gap-2"
+                          className="px-5 py-2 rounded-full border border-indigo-50 hover:border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50/55 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-800/40 dark:text-indigo-300 text-xs font-bold transition-all duration-300 cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider flex items-center gap-2"
                         >
                           <span>{isExpanded ? 'See Less' : 'See More'}</span>
                           <span className="bg-indigo-50 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-100 text-[10px] px-2 py-0.5 rounded-full font-bold">
@@ -737,7 +737,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     <button
                       type="button"
                       onClick={() => setCurrentPage(prev => prev + 1)}
-                      className="px-6 py-2.5 rounded-full border border-indigo-50 hover:border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50/10 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-800/40 dark:text-indigo-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider"
+                      className="px-6 py-2.5 rounded-full border border-indigo-50 hover:border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50/10 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-800/40 dark:text-indigo-300 text-xs font-bold transition-all duration-300 cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider"
                     >
                       See More
                     </button>
@@ -761,7 +761,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsFilterOpen(true)}
-        className="fixed bottom-20 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500 text-white shadow-xl hover:bg-slate-800 active:scale-95 transition-all cursor-pointer"
+        className="fixed bottom-20 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500 text-white shadow-xl hover:bg-slate-800 active:scale-95 transition-all duration-300 cursor-pointer"
         title="Open Filter Matrix Parameters"
       >
         <SlidersHorizontal className="h-5 w-5" />
@@ -810,7 +810,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   )}
                   <button
                     onClick={() => setIsFilterOpen(false)}
-                    className="p-1.5 rounded-lg text-slate-300 hover:bg-slate-50 hover:text-slate-500 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                    className="p-1.5 rounded-lg text-slate-300 hover:bg-slate-50 hover:text-slate-500 dark:hover:bg-slate-800 cursor-pointer transition-colors duration-300"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -892,7 +892,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                             }
                             setCurrentPage(1);
                           }}
-                          className={`py-2 px-1 text-[10px] font-bold rounded-lg border text-center transition-all cursor-pointer ${
+                          className={`py-2 px-1 text-[10px] font-bold rounded-lg border text-center transition-all duration-300 cursor-pointer ${
                             isActive
                               ? 'bg-indigo-500 border-indigo-400 text-white shadow-sm font-bold'
                               : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700'
@@ -955,14 +955,14 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 {hasActiveFilters && (
                   <button
                     onClick={handleResetFilters}
-                    className="flex-1 py-2 text-xs font-bold rounded-lg border border-slate-100 bg-white text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
+                    className="flex-1 py-2 text-xs font-bold rounded-lg border border-slate-100 bg-white text-slate-600 hover:bg-slate-50 transition-colors duration-300 cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
                   >
                     Reset Limits
                   </button>
                 )}
                 <button
                   onClick={() => setIsFilterOpen(false)}
-                  className="flex-1 py-2 text-xs font-bold rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 transition-colors cursor-pointer shadow-sm text-center"
+                  className="flex-1 py-2 text-xs font-bold rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 transition-colors duration-300 cursor-pointer shadow-sm text-center"
                 >
                   Apply Filters
                 </button>
@@ -1008,7 +1008,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 </div>
                 <button
                   onClick={() => setSpecModalProduct(null)}
-                  className="p-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-300 hover:text-slate-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-300 hover:text-slate-700 dark:hover:text-slate-100 transition-colors duration-300 cursor-pointer"
                   title="Close Specifications" aria-label="Close Specifications"
                 >
                   <X className="h-5 w-5" />
@@ -1096,7 +1096,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                               </thead>
                               <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                                 {Object.entries(modalSpecMap).map(([key, value]) => (
-                                  <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/10 transition-colors">
+                                  <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/10 transition-colors duration-300">
                                     <td className="py-2 px-3 font-semibold text-slate-700 dark:text-slate-100">{key}</td>
                                     <td className="py-2 px-3 text-slate-500 dark:text-slate-300 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
                                   </tr>
@@ -1175,7 +1175,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     setSpecModalProduct(null);
                     onNavigate('product-detail', slug);
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-100 dark:border-slate-700 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 dark:bg-slate-800 dark:text-slate-100 py-3 text-xs font-bold transition-all cursor-pointer shadow-3xs"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-100 dark:border-slate-700 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 dark:bg-slate-800 dark:text-slate-100 py-3 text-xs font-bold transition-all duration-300 cursor-pointer shadow-3xs"
                 >
                   <Search size={14} />
                   <span>View Review & Full Details Page</span>
@@ -1197,7 +1197,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       window.open(targetUrl, '_blank', 'noreferrer,noopener');
                     }
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white py-3 text-xs font-bold transition-all cursor-pointer shadow-md"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white py-3 text-xs font-bold transition-all duration-300 cursor-pointer shadow-md"
                 >
                   <ShoppingBag size={14} />
                   <span>Shop on {specModalProduct.seller || specModalProduct.marketplace || 'Store'}</span>

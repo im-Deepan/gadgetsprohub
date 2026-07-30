@@ -1131,7 +1131,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             <div className="pt-2">
               <button
                 onClick={openAddProduct}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white dark:bg-indigo-400 dark:hover:bg-indigo-500 py-3 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-sm shadow-indigo-50 dark:shadow-none"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white dark:bg-indigo-400 dark:hover:bg-indigo-500 py-3 text-xs font-bold transition-all duration-300 cursor-pointer active:scale-95 shadow-sm shadow-indigo-50 dark:shadow-none"
               >
                 <Plus className="h-4 w-4 shrink-0" />
                 <span>Add Custom Product Card</span>
@@ -1161,7 +1161,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               <button
                 type="button"
                 onClick={handleExportAnalyticsCSV}
-                className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-800/80 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+                className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-800/80 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-all duration-300 cursor-pointer active:scale-95 shadow-2xs shrink-0"
               >
                 <Download className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                 <span>Export Report</span>
@@ -1200,7 +1200,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         {topFour.map(({ name, count }) => {
                           const pct = dtotal === 0 ? 0 : Math.round((count / dtotal) * 100);
                           return (
-                            <div key={name} className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl flex items-center justify-between border border-slate-50 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all shadow-2xs">
+                            <div key={name} className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl flex items-center justify-between border border-slate-50 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all duration-300 shadow-2xs">
                               <span className="flex items-center gap-1.5 font-sans font-bold text-slate-800 dark:text-slate-100">
                                 {getDistrictEmoji(name)} {name}
                               </span>
@@ -1217,7 +1217,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           {remaining.map(({ name, count }) => {
                             const pct = dtotal === 0 ? 0 : Math.round((count / dtotal) * 100);
                             return (
-                              <div key={name} className="bg-slate-50/50 dark:bg-slate-950/20 p-2 rounded-lg flex items-center justify-between border border-slate-50 dark:border-slate-700/40 hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-all">
+                              <div key={name} className="bg-slate-50/50 dark:bg-slate-950/20 p-2 rounded-lg flex items-center justify-between border border-slate-50 dark:border-slate-700/40 hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-all duration-300">
                                 <span className="flex items-center gap-1 font-sans text-[11px] text-slate-500 dark:text-slate-300">
                                   {getDistrictEmoji(name)} {name}
                                 </span>
@@ -1233,7 +1233,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <button
                         type="button"
                         onClick={() => setShowAllDistricts(!showAllDistricts)}
-                        className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-indigo-500 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-200 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/40 rounded-xl transition-all cursor-pointer border border-dashed border-slate-100 dark:border-slate-700"
+                        className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-indigo-500 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-200 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/40 rounded-xl transition-all duration-300 cursor-pointer border border-dashed border-slate-100 dark:border-slate-700"
                       >
                         <span>
                           {showAllDistricts 
@@ -1301,17 +1301,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               tabContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
           }}
-          className="rounded-2xl border border-slate-50 bg-white p-5 hover:border-violet-400 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-violet-400 group"
+          className="rounded-2xl border border-slate-50 bg-white p-5 hover:border-violet-400 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all duration-300 text-left w-full focus:outline-none focus:ring-2 focus:ring-violet-400 group"
           aria-label="View unique visitors telemetry"
         >
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1 group-hover:text-violet-500 transition-colors">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1 group-hover:text-violet-500 transition-colors duration-300">
               <span>Unique Site Visitors</span>
               <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-ping"></span>
             </p>
             <h3 className="text-lg font-mono font-black text-violet-500 dark:text-violet-300">{stats.totalVisitors} Visitors</h3>
           </div>
-          <div className="h-10 w-10 rounded-lg bg-violet-50 dark:bg-violet-950/30 flex items-center justify-center text-violet-500 group-hover:scale-110 transition-transform">
+          <div className="h-10 w-10 rounded-lg bg-violet-50 dark:bg-violet-950/30 flex items-center justify-center text-violet-500 group-hover:scale-110 transition-transform duration-300">
             <Users className="h-5 w-5 shrink-0" />
           </div>
         </button>
@@ -1324,14 +1324,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               tabContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
           }}
-          className="rounded-2xl border border-slate-50 bg-white p-5 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 group"
+          className="rounded-2xl border border-slate-50 bg-white p-5 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all duration-300 text-left w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 group"
           aria-label="View total click CTR metrics"
         >
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-indigo-500 transition-colors">Total Tracked Click CTR</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-indigo-500 transition-colors duration-300">Total Tracked Click CTR</p>
             <h3 className="text-lg font-mono font-black text-indigo-500 dark:text-indigo-300">{stats.totalClicks} Clicks</h3>
           </div>
-          <div className="h-10 w-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
+          <div className="h-10 w-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform duration-300">
             <MousePointerClick className="h-5 w-5 animate-pulse shrink-0" />
           </div>
         </button>
@@ -1344,14 +1344,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               tabContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
           }}
-          className="rounded-2xl border border-slate-50 bg-white p-5 hover:border-teal-300 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-teal-400 group"
+          className="rounded-2xl border border-slate-50 bg-white p-5 hover:border-teal-300 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all duration-300 text-left w-full focus:outline-none focus:ring-2 focus:ring-teal-400 group"
           aria-label="View estimated curator commissions"
         >
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-teal-500 transition-colors">Estimated Curator Commission</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-teal-500 transition-colors duration-300">Estimated Curator Commission</p>
             <h3 className="text-lg font-mono font-black text-teal-500 dark:text-teal-300">₹{stats.estimatedEarnings}</h3>
           </div>
-          <div className="h-10 w-10 rounded-lg bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center text-teal-500 group-hover:scale-110 transition-transform">
+          <div className="h-10 w-10 rounded-lg bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center text-teal-500 group-hover:scale-110 transition-transform duration-300">
             <Coins className="h-5 w-5 shrink-0" />
           </div>
         </button>
@@ -1365,17 +1365,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               tabContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
           }}
-          className="rounded-2xl border border-slate-50 bg-white p-5 hover:border-amber-300 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-amber-400 group"
+          className="rounded-2xl border border-slate-50 bg-white p-5 hover:border-amber-300 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all duration-300 text-left w-full focus:outline-none focus:ring-2 focus:ring-amber-400 group"
           aria-label="View unread customer messages"
         >
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1 group-hover:text-amber-500 transition-colors">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1 group-hover:text-amber-500 transition-colors duration-300">
               <span>Customer Mail Desk</span>
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping"></span>
             </p>
             <h3 className="text-lg font-mono font-black text-amber-500 dark:text-amber-300">{stats.unreadMessages} Unread</h3>
           </div>
-          <div className="h-10 w-10 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-500 select-none group-hover:scale-110 transition-transform">
+          <div className="h-10 w-10 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-500 select-none group-hover:scale-110 transition-transform duration-300">
             <Mail className="h-5 w-5 shrink-0" />
           </div>
         </button>
@@ -1384,7 +1384,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       {/* 1.5. FOOTER SOCIAL CLICKS DISPLAY */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 md:px-4">
         {/* Instagram click counter */}
-        <div className="rounded-2xl border border-pink-50 bg-white p-5 dark:border-pink-950/20 dark:bg-slate-800/40 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+        <div className="rounded-2xl border border-pink-50 bg-white p-5 dark:border-pink-950/20 dark:bg-slate-800/40 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
           <div className="space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-pink-400 flex items-center gap-1.5 font-mono">
               <span className="h-2 w-2 rounded-full bg-pink-400 animate-pulse"></span>
@@ -1400,7 +1400,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         </div>
 
         {/* LinkedIn click counter */}
-        <div className="rounded-2xl border border-blue-50 bg-white p-5 dark:border-blue-950/20 dark:bg-slate-800/40 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+        <div className="rounded-2xl border border-blue-50 bg-white p-5 dark:border-blue-950/20 dark:bg-slate-800/40 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
           <div className="space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5 font-mono">
               <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span>
@@ -1420,90 +1420,90 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       <div ref={tabContainerRef} className="relative z-30 overflow-visible flex flex-wrap border-b border-slate-50 pb-3 gap-2 md:px-4 mb-8 dark:border-slate-700">
         <button
           onClick={() => setActiveTab('products')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'products' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'products' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           📦 Catalog specs ({products.length})
         </button>
         <button
           onClick={() => setActiveTab('categories')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'categories' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'categories' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           📁 Classifications ({categories.length})
         </button>
         <button
           onClick={() => setActiveTab('blogs')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'blogs' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'blogs' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           📖 Manual guides ({blogs.length})
         </button>
         <button
           onClick={() => setActiveTab('messages')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'messages' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'messages' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           ✉ Help Inquiries ({messages.length})
         </button>
         <button
           onClick={() => setActiveTab('telemetry')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'telemetry' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'telemetry' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           📊 Traffic Track logs ({analyticsData.length})
         </button>
         <button
           onClick={() => setActiveTab('scheduler')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'scheduler' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'scheduler' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🕒 Sunday Scheduler
         </button>
         <button
           onClick={() => setActiveTab('users')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'users' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'users' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           👥 No of Users ({users.length})
         </button>
         <button
           onClick={() => setActiveTab('security-logs')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'security-logs' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'security-logs' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🛡️ Audit Logs ({securityLogs.length})
         </button>
         <button
           onClick={() => setActiveTab('importer')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'importer' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'importer' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🔌 Extension Importer
         </button>
       
         <button
           onClick={() => setActiveTab('media')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'media' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'media' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🖼️ Media Library
         </button>
 
         <button
           onClick={() => setActiveTab('seo')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'seo' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'seo' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🔍 SEO & Publishing
         </button>
 
         <button
           onClick={() => setActiveTab('ai-content')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'ai-content' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'ai-content' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           ✨ AI Content
         </button>
 
         <button
           onClick={() => setActiveTab('sync-dashboard')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'sync-dashboard' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'sync-dashboard' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🔄 Monitoring & Sync
         </button>
 
         <button
           onClick={() => setActiveTab('security-console')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'security-console' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'security-console' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🛡️ Security & Telemetry
         </button>
@@ -1559,7 +1559,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     <h4 className="text-xs font-black uppercase text-slate-300 tracking-wider">Review specifications index</h4>
                     <button
                       onClick={openAddProduct}
-                      className="flex items-center gap-1 text-xs font-bold bg-indigo-500 hover:bg-indigo-600 text-white py-1.5 px-3 rounded-lg shadow-md cursor-pointer transition-colors"
+                      className="flex items-center gap-1 text-xs font-bold bg-indigo-500 hover:bg-indigo-600 text-white py-1.5 px-3 rounded-lg shadow-md cursor-pointer transition-colors duration-300"
                     >
                       <Plus className="h-4 w-4 shrink-0" />
                       Add Curation Specs
@@ -1630,7 +1630,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           </thead>
                           <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                             {paginatedProducts.map((p, idx) => (
-                              <tr key={p?._id || `prod-desk-${idx}`} className="hover:bg-slate-50/20 transition-all">
+                              <tr key={p?._id || `prod-desk-${idx}`} className="hover:bg-slate-50/20 transition-all duration-300">
                                 <td className="py-3 px-4 font-bold text-slate-800 dark:text-white truncate max-w-xs">{p?.name}</td>
                                 <td className="py-3 px-4 text-slate-400">
                                   {(() => {
@@ -1821,7 +1821,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     <div className="flex gap-2">
                       <button
                         type="submit"
-                        className="flex-1 rounded-xl bg-slate-950 hover:bg-indigo-500 text-white font-bold text-xs py-2.5 cursor-pointer transition-colors"
+                        className="flex-1 rounded-xl bg-slate-950 hover:bg-indigo-500 text-white font-bold text-xs py-2.5 cursor-pointer transition-colors duration-300"
                       >
                         {editingCategory ? 'Update Classifier' : 'Create Classifier'}
                       </button>
@@ -1829,7 +1829,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         <button
                           type="button"
                           onClick={cancelEditCategory}
-                          className="rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-xs px-3 py-2.5 cursor-pointer transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100"
+                          className="rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-xs px-3 py-2.5 cursor-pointer transition-colors duration-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100"
                         >
                           Cancel
                         </button>
@@ -2008,14 +2008,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     <button
                       type="button"
                       onClick={() => setMessagesFilter('all')}
-                      className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all ${messagesFilter === 'all' ? 'bg-white text-indigo-500 shadow-sm dark:bg-slate-600 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:text-slate-300'}`}
+                      className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-300 ${messagesFilter === 'all' ? 'bg-white text-indigo-500 shadow-sm dark:bg-slate-600 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:text-slate-300'}`}
                     >
                       All Messages ({messages.length})
                     </button>
                     <button
                       type="button"
                       onClick={() => setMessagesFilter('unread')}
-                      className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all flex items-center gap-1.5 ${messagesFilter === 'unread' ? 'bg-white text-indigo-500 shadow-sm dark:bg-slate-600 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:text-slate-300'}`}
+                      className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-300 flex items-center gap-1.5 ${messagesFilter === 'unread' ? 'bg-white text-indigo-500 shadow-sm dark:bg-slate-600 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:text-slate-300'}`}
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
                       Unread ({stats.unreadMessages})
@@ -2050,7 +2050,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         return (
                           <div
                             key={m?._id || `msg-${idx}`}
-                            className={`rounded-2xl border p-5 space-y-3.5 transition-all ${!m?.read ? 'bg-indigo-50/40 border-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800 shadow-xs' : 'bg-slate-50/20 border-slate-100 dark:border-slate-700'}`}
+                            className={`rounded-2xl border p-5 space-y-3.5 transition-all duration-300 ${!m?.read ? 'bg-indigo-50/40 border-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800 shadow-xs' : 'bg-slate-50/20 border-slate-100 dark:border-slate-700'}`}
                           >
                             <div className="flex items-center justify-between gap-4 border-b pb-2 dark:border-slate-700">
                               <div>
@@ -2091,7 +2091,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                     }
                                   }
                                 }}
-                                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-300 cursor-pointer ${
                                   isReplying 
                                     ? 'bg-slate-700 text-white dark:bg-slate-100 dark:text-slate-800' 
                                     : 'bg-slate-50 hover:bg-slate-50 text-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-700'
@@ -2103,7 +2103,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                               <a
                                 href={`mailto:${m.email}?subject=${encodeURIComponent(`Re: ${m?.subject}`)}&body=${encodeURIComponent(`Hi ${m.name},\n\n`)}`}
-                                className="flex items-center gap-1.5 rounded-lg bg-teal-50 hover:bg-teal-50 text-teal-700 px-3 py-1.5 text-xs font-bold transition-all cursor-pointer dark:bg-teal-950/20 dark:text-teal-200 dark:hover:bg-teal-905"
+                                className="flex items-center gap-1.5 rounded-lg bg-teal-50 hover:bg-teal-50 text-teal-700 px-3 py-1.5 text-xs font-bold transition-all duration-300 cursor-pointer dark:bg-teal-950/20 dark:text-teal-200 dark:hover:bg-teal-905"
                               >
                                 <span className="text-xs">✉</span>
                                 <span>Direct Email Link</span>
@@ -2177,7 +2177,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                           triggerAlert("Network Error", e.message || "Failed to reach server.");
                                         }
                                       }}
-                                      className="rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                                      className="rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all duration-300 active:scale-95 flex items-center gap-1.5"
                                     >
                                       <span>Send & Mark Read</span>
                                     </button>
@@ -2209,7 +2209,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     type="button"
                     onClick={() => handleSimulateSunday()}
                     disabled={simulatingSunday}
-                    className="flex items-center gap-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 text-xs font-bold transition-all duration-300 shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
                   >
                     <RefreshCcw className={`h-3.5 w-3.5 shrink-0 ${simulatingSunday ? 'animate-spin' : ''}`} />
                     <span>{simulatingSunday ? 'Executing Simulation...' : 'Simulate Sunday robot addition'}</span>
@@ -2367,7 +2367,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <button
                         type="button"
                         onClick={() => loadAdminMetrics()}
-                        className="flex items-center gap-1.5 rounded-xl border border-slate-100/85 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-600 dark:text-slate-200 transition-all cursor-pointer active:scale-95 shadow-xs"
+                        className="flex items-center gap-1.5 rounded-xl border border-slate-100/85 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-600 dark:text-slate-200 transition-all duration-300 cursor-pointer active:scale-95 shadow-xs"
                       >
                         <RefreshCcw className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-300" />
                         <span>Refresh accounts list</span>
@@ -2443,7 +2443,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             key={r}
                             type="button"
                             onClick={() => setUserRoleFilter(r)}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-lg cursor-pointer capitalize transition-all ${userRoleFilter === r ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-300 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+                            className={`px-3 py-1 text-[10px] font-bold rounded-lg cursor-pointer capitalize transition-all duration-300 ${userRoleFilter === r ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-300 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
                           >
                             {r}
                           </button>
@@ -2475,7 +2475,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               const isCurrentAdmin = usr?.role === 'admin';
 
                               return (
-                                <tr key={usrId} className="hover:bg-slate-50/20 dark:hover:bg-slate-700/20 transition-colors">
+                                <tr key={usrId} className="hover:bg-slate-50/20 dark:hover:bg-slate-700/20 transition-colors duration-300">
                                   <td className="py-3.5 px-4 animate-fadeIn">
                                     <div className="flex items-center gap-3">
                                       <div className="h-8 w-8 rounded-full bg-slate-50 text-slate-600 font-bold items-center justify-center flex border border-slate-100 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600">
@@ -2616,7 +2616,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <button
                         type="button"
                         onClick={() => { setSelectedActionType('all'); setSecuritySearchQuery(''); setLocalLogsPage(1); }}
-                        className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-600 hover:underline dark:text-indigo-300 transition-all px-2 py-2"
+                        className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-600 hover:underline dark:text-indigo-300 transition-all duration-300 px-2 py-2"
                       >
                         Reset Filters
                       </button>
@@ -2653,7 +2653,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                             {paginatedLogs.map((log, index) => {
                               return (
-                                <tr key={log._id || log.id || index} className="text-xs hover:bg-slate-50/50 transition-colors dark:hover:bg-zinc-700/20">
+                                <tr key={log._id || log.id || index} className="text-xs hover:bg-slate-50/50 transition-colors duration-300 dark:hover:bg-zinc-700/20">
                                   <td className="py-3.5 px-4 font-mono text-[10px] text-slate-300 dark:text-slate-400">
                                     {log?.timestamp ? new Date(log?.timestamp).toLocaleString() : 'N/A'}
                                   </td>
@@ -2700,7 +2700,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             type="button"
                             onClick={() => setLocalLogsPage(prev => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
-                            className="rounded-lg border border-slate-100 px-3 py-1 text-xs font-bold text-slate-500 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800/40 disabled:opacity-50 cursor-pointer active:scale-95 transition-all"
+                            className="rounded-lg border border-slate-100 px-3 py-1 text-xs font-bold text-slate-500 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800/40 disabled:opacity-50 cursor-pointer active:scale-95 transition-all duration-300"
                           >
                             Prev
                           </button>
@@ -2708,7 +2708,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             type="button"
                             onClick={() => setLocalLogsPage(prev => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
-                            className="rounded-lg border border-slate-100 px-3 py-1 text-xs font-bold text-slate-500 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800/40 disabled:opacity-50 cursor-pointer active:scale-95 transition-all"
+                            className="rounded-lg border border-slate-100 px-3 py-1 text-xs font-bold text-slate-500 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800/40 disabled:opacity-50 cursor-pointer active:scale-95 transition-all duration-300"
                           >
                             Next
                           </button>
@@ -2759,7 +2759,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 <button
                   type="button"
                   onClick={handleExportAnalyticsCSV}
-                  className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                  className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-all duration-300 cursor-pointer active:scale-95 shadow-2xs"
                 >
                   <Download className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Export Report (CSV)</span>
@@ -2768,7 +2768,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   type="button"
                   onClick={handleReloadTraffic}
                   disabled={refreshingTraffic}
-                  className="flex items-center gap-1.5 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all cursor-pointer active:scale-95 disabled:opacity-50 shadow-sm"
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all duration-300 cursor-pointer active:scale-95 disabled:opacity-50 shadow-sm"
                 >
                   <RefreshCcw className={`h-3 w-3 text-indigo-500 dark:text-indigo-300 ${refreshingTraffic ? 'animate-spin' : ''}`} />
                   <span>{refreshingTraffic ? 'Refreshing...' : 'Reload Traffic'}</span>
@@ -2908,7 +2908,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                   e.stopPropagation();
                                   triggerAlert("Host Diagnostic Info", `Recorded Host IP: ${a?.ipAddress || "N/A"}\nLocation: ${visitorPlace} District\nBrowser: ${a?.browser || "N/A"}\nDevice: ${a?.device || "N/A"}`);
                                 }}
-                                className="text-[9px] rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-500 font-bold px-2 py-1 transition-all dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                                className="text-[9px] rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-500 font-bold px-2 py-1 transition-all duration-300 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 cursor-pointer"
                               >
                                 Inspect Host IP
                               </button>
@@ -3006,7 +3006,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             <React.Fragment key={recordId}>
                               <tr
                                 onClick={() => setExpandedVisitorId(isExpanded ? null : recordId)}
-                                className={`hover:bg-indigo-50/20 dark:hover:bg-slate-700/30 transition-colors cursor-pointer select-none ${isExpanded ? 'bg-indigo-50/30 dark:bg-indigo-950/20' : ''}`}
+                                className={`hover:bg-indigo-50/20 dark:hover:bg-slate-700/30 transition-colors duration-300 cursor-pointer select-none ${isExpanded ? 'bg-indigo-50/30 dark:bg-indigo-950/20' : ''}`}
                               >
                                 {/* S.No */}
                                 <td className="py-3.5 px-3 text-center text-slate-300 font-mono text-[11px]">
@@ -3080,7 +3080,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                                 {/* Sole Details Trigger Action */}
                                 <td className="py-3.5 px-4 text-center">
-                                  <div className="inline-flex items-center gap-1 text-[10px] bg-slate-50 hover:bg-slate-100 text-slate-500 px-2 py-1 rounded-md transition-colors dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 font-bold">
+                                  <div className="inline-flex items-center gap-1 text-[10px] bg-slate-50 hover:bg-slate-100 text-slate-500 px-2 py-1 rounded-md transition-colors duration-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 font-bold">
                                     <span>{isExpanded ? 'Hide' : 'Show'}</span>
                                     {isExpanded ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />}
                                   </div>
@@ -3089,7 +3089,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                               {/* EXPANSIBLE SOLE DETAILS BLOCK CONTAINER */}
                               {isExpanded && (
-                                <tr className="bg-slate-50/60 dark:bg-slate-800/60 transition-all">
+                                <tr className="bg-slate-50/60 dark:bg-slate-800/60 transition-all duration-300">
                                   <td colSpan={9} className="p-5 border-t border-b border-indigo-50/50 dark:border-indigo-950/50">
                                     <div className="rounded-2xl border border-slate-100/80 bg-white p-5 dark:border-slate-700 dark:bg-slate-950/40 shadow-xs space-y-4">
                                       <div className="flex items-center justify-between border-b border-slate-50 pb-3 dark:border-slate-700/80">
@@ -3181,7 +3181,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                             e.stopPropagation();
                                             triggerAlert("Host Diagnostic Info", `Recorded Host IP: ${a?.ipAddress || "N/A"}\nLocation: ${visitorPlace} District\nBrowser: ${a?.browser || "N/A"}\nDevice: ${a?.device || "N/A"}`);
                                           }}
-                                          className="text-[10px] rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-500 font-bold px-3 py-1.5 transition-all dark:border-slate-600 dark:text-slate-305 dark:hover:bg-slate-700 cursor-pointer"
+                                          className="text-[10px] rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-500 font-bold px-3 py-1.5 transition-all duration-300 dark:border-slate-600 dark:text-slate-305 dark:hover:bg-slate-700 cursor-pointer"
                                         >
                                           Inspect Host IP Registry
                                         </button>
@@ -3269,7 +3269,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                     <button
                                       type="button"
                                       onClick={() => setLogsPage(p)}
-                                      className={`relative inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-black transition-all cursor-pointer ${
+                                      className={`relative inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-black transition-all duration-300 cursor-pointer ${
                                         isCurrent
                                           ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800 scale-102 shadow-2xs'
                                           : 'text-slate-500 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-zinc-600/75'
@@ -3392,7 +3392,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                 setSlugCheckError('');
                                 setSuggestedSlug('');
                               }}
-                              className="text-[9px] bg-amber-400 hover:bg-amber-500 active:bg-amber-600 text-white font-black px-2.5 py-1 rounded-md cursor-pointer transition-all block w-fit shadow-xs uppercase tracking-wider mt-1"
+                              className="text-[9px] bg-amber-400 hover:bg-amber-500 active:bg-amber-600 text-white font-black px-2.5 py-1 rounded-md cursor-pointer transition-all duration-300 block w-fit shadow-xs uppercase tracking-wider mt-1"
                             >
                               Auto-fix using: <span className="font-mono underline lowercase">{suggestedSlug}</span>
                             </button>
@@ -3440,7 +3440,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         <span className="truncate">
                           {categories.find(c => String(c._id) === String(prodForm.category))?.name || "Select Category"}
                         </span>
-                        <ChevronDown className={`h-4 w-4 transition-transform ${isCatDropdownOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${isCatDropdownOpen ? 'rotate-180' : ''}`} />
                       </div>
                       
                       {isCatDropdownOpen && (
@@ -3472,7 +3472,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                         <span className="truncate">
                           {prodForm.subcategory || "No Subcategory"}
                         </span>
-                        <ChevronDown className={`h-4 w-4 transition-transform ${isSubcatDropdownOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${isSubcatDropdownOpen ? 'rotate-180' : ''}`} />
                       </div>
 
                       {isSubcatDropdownOpen && (
@@ -3693,7 +3693,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
               <button
                 type="submit"
-                className="w-full rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs py-3 cursor-pointer shadow-md transition-all active:scale-97"
+                className="w-full rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs py-3 cursor-pointer shadow-md transition-all duration-300 active:scale-97"
               >
                 Save Product to Catalog
               </button>

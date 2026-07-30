@@ -784,7 +784,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                         setActiveImageIdx(idx);
                         setShowVideo(false);
                       }}
-                      className={`w-20 h-16 rounded-xl border-2 overflow-hidden shrink-0 cursor-pointer transition-all ${
+                      className={`w-20 h-16 rounded-xl border-2 overflow-hidden shrink-0 cursor-pointer transition-all duration-300 ${
                         !showVideo && activeImageIdx === idx 
                           ? 'border-indigo-500 ring-2 ring-indigo-50 dark:ring-indigo-950/50' 
                           : 'border-slate-50 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'
@@ -801,7 +801,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                     <button
                       type="button"
                       onClick={() => setShowVideo(true)}
-                      className={`w-20 h-16 rounded-xl border-2 overflow-hidden shrink-0 cursor-pointer transition-all flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800 ${
+                      className={`w-20 h-16 rounded-xl border-2 overflow-hidden shrink-0 cursor-pointer transition-all duration-300 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800 ${
                         showVideo 
                           ? 'border-indigo-500 ring-2 ring-indigo-50 dark:ring-indigo-950/50 bg-indigo-50/20 text-indigo-500' 
                           : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 bg-slate-50 dark:bg-slate-950 text-slate-400'
@@ -848,7 +848,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                       <button
                         type="button"
                         onClick={() => setShowVideo(false)}
-                        className="mt-4 px-3.5 py-1.5 rounded-full bg-slate-700 hover:bg-slate-600 text-[10px] font-bold text-indigo-300 dark:text-indigo-300 border border-slate-700 transition-all cursor-pointer"
+                        className="mt-4 px-3.5 py-1.5 rounded-full bg-slate-700 hover:bg-slate-600 text-[10px] font-bold text-indigo-300 dark:text-indigo-300 border border-slate-700 transition-all duration-300 cursor-pointer"
                       >
                         Back to main photo
                       </button>
@@ -859,7 +859,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                     src={(product.images && activeImageIdx < product.images.length && activeImageIdx >= 0 ? product.images[activeImageIdx] : undefined) || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'}
                     alt={product.name}
                     referrerPolicy="no-referrer"
-                    className="h-full w-full object-contain p-4 transition-transform hover:scale-101 duration-305 cursor-zoom-in"
+                    className="h-full w-full object-contain p-4 transition-transform duration-300 hover:scale-101 duration-305 cursor-zoom-in"
                     onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393295-5887e240974b?w=600'; }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -878,14 +878,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
                 {/* Symmetrical arrows navigation pill elegantly positioned at the bottom of the image */}
                 {!showVideo && product.images && product.images.length > 1 && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md px-3.5 py-2 rounded-full shadow-lg border border-slate-100/50 dark:border-slate-700/80 transition-transform hover:scale-105 z-10 select-none">
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md px-3.5 py-2 rounded-full shadow-lg border border-slate-100/50 dark:border-slate-700/80 transition-transform duration-300 hover:scale-105 z-10 select-none">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setActiveImageIdx((prev) => (prev - 1 + product.images.length) % product.images.length);
                       }}
-                      className="p-1 rounded-full text-slate-600 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-90 transition-all cursor-pointer"
+                      className="p-1 rounded-full text-slate-600 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-90 transition-all duration-300 cursor-pointer"
                       title="Previous Image"
                     >
                       <ChevronLeft size={16} />
@@ -899,7 +899,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                         e.stopPropagation();
                         setActiveImageIdx((prev) => (prev + 1) % product.images.length);
                       }}
-                      className="p-1 rounded-full text-slate-600 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-90 transition-all cursor-pointer"
+                      className="p-1 rounded-full text-slate-600 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-90 transition-all duration-300 cursor-pointer"
                       title="Next Image"
                     >
                       <ChevronRight size={16} />
@@ -941,7 +941,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
               {/* Page changing toggle next to it (with less transparence / solid high-opacity look) */}
               {allProductsSequence.length > 0 && currentIdx !== -1 && (
-                <div className="flex items-center gap-1.5 bg-slate-50/95 dark:bg-slate-800/95 border border-slate-100/80 dark:border-slate-700/80 p-1.5 rounded-xl shadow-xs shrink-0 self-start sm:self-center transition-all select-none">
+                <div className="flex items-center gap-1.5 bg-slate-50/95 dark:bg-slate-800/95 border border-slate-100/80 dark:border-slate-700/80 p-1.5 rounded-xl shadow-xs shrink-0 self-start sm:self-center transition-all duration-300 select-none">
                   <button
                     disabled={!prevProduct}
                     onClick={() => {
@@ -949,7 +949,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                         onNavigate('product-detail', prevProduct.slug);
                       }
                     }}
-                    className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-[11px] font-extrabold cursor-pointer ${
+                    className={`p-1.5 rounded-lg transition-all duration-300 flex items-center gap-1 text-[11px] font-extrabold cursor-pointer ${
                       prevProduct 
                         ? 'hover:bg-indigo-500 hover:text-white bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 shadow-3xs' 
                         : 'text-slate-300 dark:text-slate-500 cursor-not-allowed opacity-40'
@@ -972,7 +972,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                         onNavigate('product-detail', nextProduct.slug);
                       }
                     }}
-                    className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-[11px] font-extrabold cursor-pointer ${
+                    className={`p-1.5 rounded-lg transition-all duration-300 flex items-center gap-1 text-[11px] font-extrabold cursor-pointer ${
                       nextProduct 
                         ? 'hover:bg-indigo-500 hover:text-white bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 shadow-3xs' 
                         : 'text-slate-300 dark:text-slate-500 cursor-not-allowed opacity-40'
@@ -1056,7 +1056,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleAffiliateClick}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 px-6 py-3.5 text-xs font-bold text-white shadow-xl active:scale-97 transition-all cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 px-6 py-3.5 text-xs font-bold text-white shadow-xl active:scale-97 transition-all duration-300 cursor-pointer"
               >
                 <ShoppingBag className="h-5 w-5 shrink-0" />
                 Buy on {product.seller || product.marketplace || 'Store'}
@@ -1084,7 +1084,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               {isAuthenticated && (
                 <button
                   onClick={() => toggleWishlist(product._id, product.name)}
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-100 text-rose-500' : 'bg-white border-slate-100 hover:bg-slate-50 text-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'}`}
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all duration-300 ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-100 text-rose-500' : 'bg-white border-slate-100 hover:bg-slate-50 text-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'}`}
                   title="Bookmark item"
                   aria-label={wishlist.includes(product._id) ? "Remove from wishlist" : "Add to wishlist"}
                 >
@@ -1183,7 +1183,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                   {Object.entries(specMap).map(([key, value]) => (
-                    <tr key={key} className="hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors">
+                    <tr key={key} className="hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors duration-300">
                       <td className="py-3 px-4 font-semibold text-slate-700 dark:text-slate-100">{key}</td>
                       <td className="py-3 px-4 text-slate-500 dark:text-slate-300 font-mono leading-relaxed">{String(value)}</td>
                     </tr>
@@ -1294,7 +1294,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               <div
                 key={rel._id}
                 onClick={() => { onNavigate('product-detail', rel.slug); window.scrollTo(0, 0); }}
-                className="group cursor-pointer rounded-xl border border-slate-50 bg-white hover:shadow-md overflow-hidden transition-all dark:border-slate-700 dark:bg-slate-800"
+                className="group cursor-pointer rounded-xl border border-slate-50 bg-white hover:shadow-md overflow-hidden transition-all duration-300 dark:border-slate-700 dark:bg-slate-800"
               >
                 <div className="h-28 sm:h-36 bg-slate-50 overflow-hidden shrink-0">
                   <img loading="lazy" src={rel.images?.[0]} alt={rel.name} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />

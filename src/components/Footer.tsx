@@ -85,7 +85,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                 target="_blank" 
                 rel="noopener noreferrer" 
                 onClick={() => trackSocialClick('instagram')}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-500 hover:text-white dark:bg-slate-800 transition-colors cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-500 hover:text-white dark:bg-slate-800 transition-colors duration-300 cursor-pointer"
                 title="Follow us on Instagram"
                 aria-label="Follow us on Instagram"
               >
@@ -96,7 +96,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                 target="_blank" 
                 rel="noopener noreferrer" 
                 onClick={() => trackSocialClick('linkedin')}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-500 hover:text-white dark:bg-slate-800 transition-colors cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-500 hover:text-white dark:bg-slate-800 transition-colors duration-300 cursor-pointer"
                 title="Connect with us on LinkedIn"
                 aria-label="Connect with us on LinkedIn"
               >
@@ -112,22 +112,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
             </h4>
             <ul className="space-y-2.5 text-xs">
               <li>
-                <button onClick={() => onNavigate('home')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
+                <button onClick={() => onNavigate('home')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
                   <span>🏠</span> Home Hub
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
+                <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
                   <span>🛒</span> Product Selections
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('blogs')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
+                <button onClick={() => onNavigate('blogs')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
                   <span>✍️</span> Blog Feed
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('contact')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
+                <button onClick={() => onNavigate('contact')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
                   <span>📞</span> Contact Desk
                 </button>
               </li>
@@ -145,7 +145,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                   <li key={cat._id}>
                     <button 
                       onClick={() => onNavigate('products', `category-${cat._id}`)} 
-                      className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5"
+                      className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5"
                     >
                       <span>{cat.icon || '📦'}</span> {cat.name}
                     </button>
@@ -154,22 +154,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
               ) : (
                 <>
                   <li>
-                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
+                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
                       <span>📱</span> Electronics
                     </button>
                   </li>
                   <li>
-                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
+                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
                       <span>👔</span> Fashion Wear
                     </button>
                   </li>
                   <li>
-                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
+                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
                       <span>🏡</span> Home & Kitchen
                     </button>
                   </li>
                   <li>
-                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
+                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
                       <span>⚽</span> Athletics Gear
                     </button>
                   </li>

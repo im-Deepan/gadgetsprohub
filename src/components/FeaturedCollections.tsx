@@ -272,7 +272,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100/80 dark:border-slate-700 p-2.5 flex flex-col justify-between shadow-xs transition-transform active:scale-[0.99] w-full min-h-[295px] overflow-hidden group"
+      className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100/80 dark:border-slate-700 p-2.5 flex flex-col justify-between shadow-xs transition-transform duration-300 active:scale-[0.99] w-full min-h-[295px] overflow-hidden group"
     >
       <div className="flex flex-col w-full">
         {/* Aspect square image stage */}
@@ -321,7 +321,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
               <button
                 onClick={handlePrev}
                 type="button"
-                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-50 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all"
+                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-50 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all duration-300"
                 aria-label="Previous image"
               >
                 <ChevronLeft className="h-4 w-4 stroke-[2.5]" aria-hidden="true" />
@@ -329,7 +329,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
               <button
                 onClick={handleNext}
                 type="button"
-                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-50 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all"
+                className="pointer-events-auto h-7.5 w-7.5 rounded-full bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-50 shadow-md hover:scale-105 active:scale-90 flex items-center justify-center cursor-pointer border-none z-30 transition-all duration-300"
                 aria-label="Next image"
               >
                 <ChevronRight className="h-4 w-4 stroke-[2.5]" aria-hidden="true" />
@@ -344,7 +344,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
               e.stopPropagation();
               handleCardClick();
             }}
-            className="absolute bottom-1.5 right-1.5 w-7.5 h-7.5 rounded-full bg-amber-300 active:scale-90 text-slate-950 flex items-center justify-center hover:bg-amber-200 transition-all font-bold shadow-md z-25 cursor-pointer border-none"
+            className="absolute bottom-1.5 right-1.5 w-7.5 h-7.5 rounded-full bg-amber-300 active:scale-90 text-slate-950 flex items-center justify-center hover:bg-amber-200 transition-all duration-300 font-bold shadow-md z-25 cursor-pointer border-none"
             title="Read Technical Specifications"
           >
             <Plus className="h-4 w-4 stroke-[3]" />
@@ -500,7 +500,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
 
       {/* Product Image Stage Container */}
       <div
-        className={`relative bg-slate-50/50 dark:bg-slate-950/45 border-b border-slate-50 dark:border-slate-800 group-hover:bg-slate-50/20 dark:group-hover:bg-slate-950/20 transition-colors shrink-0 flex items-center justify-center p-6 ${
+        className={`relative bg-slate-50/50 dark:bg-slate-950/45 border-b border-slate-50 dark:border-slate-800 group-hover:bg-slate-50/20 dark:group-hover:bg-slate-950/20 transition-colors duration-300 shrink-0 flex items-center justify-center p-6 ${
           horizontalOnLarge ? 'w-full md:w-1/2 h-44 md:h-full border-b md:border-b-0 md:border-r' : 'h-48 sm:h-52 md:h-56'
         }`}
       >
@@ -548,7 +548,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             <button
               onClick={handlePrev}
               type="button"
-              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-100/85 bg-white/95 text-slate-600 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-700 dark:bg-slate-800/95 dark:text-slate-100 dark:hover:bg-slate-700"
+              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-100/85 bg-white/95 text-slate-600 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all duration-300 flex items-center justify-center cursor-pointer dark:border-slate-700 dark:bg-slate-800/95 dark:text-slate-100 dark:hover:bg-slate-700"
               aria-label="Previous image"
             >
               <ChevronLeft className="h-4.5 w-4.5" aria-hidden="true" />
@@ -556,7 +556,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             <button
               onClick={handleNext}
               type="button"
-              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-100/85 bg-white/95 text-slate-600 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer dark:border-slate-700 dark:bg-slate-800/95 dark:text-slate-100 dark:hover:bg-slate-700"
+              className="pointer-events-auto h-8 w-8 rounded-full border border-slate-100/85 bg-white/95 text-slate-600 shadow-md hover:scale-105 active:scale-95 hover:bg-slate-50 transition-all duration-300 flex items-center justify-center cursor-pointer dark:border-slate-700 dark:bg-slate-800/95 dark:text-slate-100 dark:hover:bg-slate-700"
               aria-label="Next image"
             >
               <ChevronRight className="h-4.5 w-4.5" aria-hidden="true" />
@@ -598,7 +598,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             )}
           </div>
 
-          <h3 className="text-sm sm:text-base font-extrabold text-slate-800 group-hover:text-indigo-500 dark:text-white dark:group-hover:text-indigo-300 line-clamp-1 transition-colors leading-snug">
+          <h3 className="text-sm sm:text-base font-extrabold text-slate-800 group-hover:text-indigo-500 dark:text-white dark:group-hover:text-indigo-300 line-clamp-1 transition-colors duration-300 leading-snug">
             {currentProduct.name}
           </h3>
           <p className="text-xs text-slate-400 dark:text-slate-300 line-clamp-2 leading-relaxed">
@@ -630,7 +630,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
               handleCardClick();
             }}
             type="button"
-            className="px-3.5 py-2 sm:px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 hover:scale-[1.02] active:scale-[0.98] transition-all text-xs font-bold leading-none flex items-center gap-1 border-none cursor-pointer"
+            className="px-3.5 py-2 sm:px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 text-xs font-bold leading-none flex items-center gap-1 border-none cursor-pointer"
           >
             <span>Learn Specs</span>
             <ArrowRight className="h-3 w-3" />

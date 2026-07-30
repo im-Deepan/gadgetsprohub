@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Lock, Mail, User, ShieldCheck, ArrowLeft, Eye, EyeOff } from 'lucide-react';
@@ -80,7 +81,7 @@ const LoginErrorDisplay: React.FC<{ error: string; onClear: () => void }> = ({ e
   const { title, description, suggestion } = translateAuthError(error);
 
   return (
-    <div id="login-error-card" className="relative overflow-hidden rounded-xl border border-rose-50 bg-rose-50/75 p-4 text-xs text-rose-950 transition-all dark:border-rose-950/40 dark:bg-rose-950/10 dark:text-rose-100">
+    <div id="login-error-card" className="relative overflow-hidden rounded-xl border border-rose-50 bg-rose-50/75 p-4 text-xs text-rose-950 transition-all duration-300 dark:border-rose-950/40 dark:bg-rose-950/10 dark:text-rose-100">
       <div className="flex items-start gap-2.5">
         <div className="mt-0.5 rounded-full bg-rose-50 p-1 text-rose-500 dark:bg-rose-950/80 dark:text-rose-300">
           <svg className="h-3.5 w-3.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -242,7 +243,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
       {/* High Visibility Floating Back Button */}
       <button
         onClick={() => onNavigate('home')}
-        className="flex items-center gap-2 rounded-full border border-slate-100 bg-white px-5 py-2 text-xs font-bold text-slate-600 hover:text-indigo-500 shadow-sm transition-all hover:bg-slate-50 cursor-pointer dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:text-white"
+        className="flex items-center gap-2 rounded-full border border-slate-100 bg-white px-5 py-2 text-xs font-bold text-slate-600 hover:text-indigo-500 shadow-sm transition-all duration-300 hover:bg-slate-50 cursor-pointer dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
         <span>Back to Store Home</span>
@@ -265,13 +266,13 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         <div className="flex border-b border-slate-50 p-0.5 bg-slate-50 rounded-xl dark:border-slate-700 dark:bg-slate-950 shrink-0">
           <button
             onClick={() => { setActiveTab('login'); setAuthError(''); setRegisteredEmail(''); setSimulatedVerificationUrl(''); setSmtpError(''); }}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'login' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-400'}`}
+            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'login' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-400'}`}
           >
             Access Sign In
           </button>
           <button
             onClick={() => { setActiveTab('register'); setAuthError(''); setRegisteredEmail(''); setSimulatedVerificationUrl(''); setSmtpError(''); }}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors ${activeTab === 'register' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-400'}`}
+            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'register' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-400'}`}
           >
             Register Account
           </button>
@@ -313,7 +314,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                     </p>
                     <a
                       href={simulatedVerificationUrl}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-400 transition-all focus:outline-none cursor-pointer mt-1"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-400 transition-all duration-300 focus:outline-none cursor-pointer mt-1"
                     >
                       <ShieldCheck className="h-3 w-3" />
                       Verify & Auto-Sign-In Instantly
@@ -344,7 +345,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                     </p>
                     <a
                       href={simulatedVerificationUrl}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-400 transition-all focus:outline-none cursor-pointer mt-1"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-400 transition-all duration-300 focus:outline-none cursor-pointer mt-1"
                     >
                       <ShieldCheck className="h-3 w-3" />
                       Verify & Log In Instantly
@@ -361,22 +362,31 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           
           <LoginErrorDisplay error={authError} onClear={() => setAuthError('')} />
 
-          {activeTab === 'register' && (
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
-                <input
-                  type="text"
-                  required
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                />
-              </div>
-            </div>
-          )}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {activeTab === 'register' && (
+              <motion.div
+                key="register-name"
+                initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
+                exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                transition={{ duration: 0.3 }}
+                className="space-y-1.5"
+              >
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="John Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Email Address</label>
@@ -388,7 +398,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                 placeholder="buyer@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
               />
             </div>
           </div>
@@ -403,12 +413,12 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 pr-10 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 pr-10 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 focus:outline-none cursor-pointer"
+                className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 focus:outline-none cursor-pointer transition-colors duration-300"
                 title={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -421,27 +431,46 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           </div>
 
           {/* Newsletter Subscription Checkbox */}
-          {activeTab === 'register' && (
-            <div className="flex items-start gap-2.5 pt-1.5 pb-2.5 select-none" id="newsletter-login-opt-in">
-              <input
-                id="newsletter-subscribe-login"
-                type="checkbox"
-                checked={subscribeNewsletter}
-                onChange={(e) => setSubscribeNewsletter(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded-md border-slate-100 text-indigo-500 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-950 cursor-pointer"
-              />
-              <label htmlFor="newsletter-subscribe-login" className="text-[11px] text-slate-400 dark:text-slate-300 leading-normal cursor-pointer font-medium">
-                Subscribe to our newsletter to receive the latest tech updates, gadget price drops, and exclusive member discounts.
-              </label>
-            </div>
-          )}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {activeTab === 'register' && (
+              <motion.div
+                key="register-newsletter"
+                initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
+                exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                transition={{ duration: 0.3 }}
+                className="flex items-start gap-2.5 pt-1.5 pb-2.5 select-none" id="newsletter-login-opt-in"
+              >
+                <input
+                  id="newsletter-subscribe-login"
+                  type="checkbox"
+                  checked={subscribeNewsletter}
+                  onChange={(e) => setSubscribeNewsletter(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded-md border-slate-100 text-indigo-500 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-950 cursor-pointer transition-colors duration-300"
+                />
+                <label htmlFor="newsletter-subscribe-login" className="text-[11px] text-slate-400 dark:text-slate-300 leading-normal cursor-pointer font-medium transition-colors duration-300">
+                  Subscribe to our newsletter to receive the latest tech updates, gadget price drops, and exclusive member discounts.
+                </label>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-xl bg-indigo-500 hover:bg-indigo-600 hover:shadow-xl text-white font-bold py-3 text-xs tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            className="w-full rounded-xl bg-indigo-500 hover:bg-indigo-600 hover:shadow-xl text-white font-bold py-3 text-xs tracking-wider transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
           >
-            <span>{submitting ? 'Verifying account...' : activeTab === 'login' ? 'Sign In Now' : 'Create Member Account'}</span>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={activeTab === 'login' ? 'login' : 'register'}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.2 }}
+              >
+                {submitting ? 'Verifying account...' : activeTab === 'login' ? 'Sign In Now' : 'Create Member Account'}
+              </motion.span>
+            </AnimatePresence>
           </button>
         </form>
 
@@ -455,7 +484,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={submitting}
-          className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800 py-3 text-xs font-bold text-slate-600 dark:text-slate-200 transition-all cursor-pointer active:scale-95"
+          className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800 py-3 text-xs font-bold text-slate-600 dark:text-slate-200 transition-all duration-300 cursor-pointer active:scale-95"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24">
             <path

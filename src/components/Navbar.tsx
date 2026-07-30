@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Search, Heart, User, LogOut, Menu, X, LayoutDashboard, Sun, Moon, Keyboard } from 'lucide-react';
+import { Search, Heart, User, LogOut, Menu, X, LayoutDashboard, Sun, Moon, Monitor, Keyboard } from 'lucide-react';
 import { Category, Product, Blog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../context/ThemeContext';
@@ -17,7 +17,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPreload }) => {
   const { user, isAuthenticated, isAdmin, logout, wishlist } = useAuth();
   const { showToast } = useToast();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, theme, toggleTheme, setTheme } = useTheme();
   
   const handleLogout = () => {
     logout();
@@ -171,7 +171,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
           break;
         case 't':
           e.preventDefault();
-          toggleTheme();
+          if (theme === 'light') setTheme('dark');
+          else if (theme === 'dark') setTheme('system');
+          else setTheme('light');
           showToast("Visual color theme refreshed.", "success", 4000, "User Action");
           break;
         case 'w':
@@ -208,7 +210,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onNavigate, isAdmin, isAuthenticated, toggleTheme, showMobileMenu, showShortcutsModal, showToast]);
+  }, [onNavigate, isAdmin, isAuthenticated, theme, setTheme, showMobileMenu, showShortcutsModal, showToast]);
 
   useEffect(() => {
     const dirs: ('ltr' | 'rtl' | 'diagonal' | 'vertical')[] = ['ltr', 'rtl', 'diagonal', 'vertical'];
@@ -369,7 +371,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 onClick={() => onNavigate('home')} 
                 className="flex items-center text-sm sm:text-lg font-bold tracking-tight cursor-pointer group"
               >
-                <span className={`from-pink-400 via-rose-400 via-amber-300 via-emerald-300 via-teal-400 via-indigo-400 via-purple-500 to-pink-400 bg-clip-text text-transparent font-black tracking-tight text-sm sm:text-xl transition-all group-hover:scale-[1.02] ${getGradientClass(colorFlowDir)}`}>
+                <span className={`from-pink-400 via-rose-400 via-amber-300 via-emerald-300 via-teal-400 via-indigo-400 via-purple-500 to-pink-400 bg-clip-text text-transparent font-black tracking-tight text-sm sm:text-xl transition-all duration-300 group-hover:scale-[1.02] ${getGradientClass(colorFlowDir)}`}>
                   gadgetsprohub
                 </span>
               </button>
@@ -412,7 +414,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             <button 
               onClick={() => onNavigate('home')}
               onMouseEnter={() => onPreload?.('home')}
-              className={`transition-colors hover:text-indigo-500 cursor-pointer ${currentView === 'home' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
+              className={`transition-colors duration-300 hover:text-indigo-500 cursor-pointer ${currentView === 'home' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
             >
               Home
             </button>
@@ -427,7 +429,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               <button 
                 onClick={() => onNavigate('products')}
                 onMouseEnter={() => onPreload?.('products')}
-                className={`transition-colors hover:text-indigo-500 cursor-pointer py-2 ${currentView === 'products' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
+                className={`transition-colors duration-300 hover:text-indigo-500 cursor-pointer py-2 ${currentView === 'products' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
               >
                 Products
               </button>
@@ -456,14 +458,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             <button 
               onClick={() => onNavigate('blogs')}
               onMouseEnter={() => onPreload?.('blogs')}
-              className={`transition-colors hover:text-indigo-500 cursor-pointer ${currentView === 'blogs' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
+              className={`transition-colors duration-300 hover:text-indigo-500 cursor-pointer ${currentView === 'blogs' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
             >
               Blog
             </button>
             <button 
               onClick={() => onNavigate('contact')}
               onMouseEnter={() => onPreload?.('contact')}
-              className={`transition-colors hover:text-indigo-500 cursor-pointer ${currentView === 'contact' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
+              className={`transition-colors duration-300 hover:text-indigo-500 cursor-pointer ${currentView === 'contact' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
             >
               Contact
             </button>
@@ -482,15 +484,21 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Dark Mode Toggle */}
             <button
-              onClick={toggleTheme}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer hover:scale-105 active:scale-95"
-              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              onClick={() => {
+                if (theme === 'light') setTheme('dark');
+                else if (theme === 'dark') setTheme('system');
+                else setTheme('light');
+              }}
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+              title={`Current theme: ${theme}. Click to change.`}
               aria-label="Toggle theme"
             >
-              {isDark ? (
-                <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
+              {theme === 'system' ? (
+                <Monitor className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-500 dark:text-indigo-400" />
+              ) : theme === 'dark' ? (
+                <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-300" />
               ) : (
-                <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-[#1b365d]" />
+                <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
               )}
             </button>            {/* Wishlist Link - Desktop */}
             {isAuthenticated && (
@@ -498,7 +506,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 onClick={() => onNavigate('profile')}
                 onMouseEnter={() => onPreload?.('profile')}
                 aria-label="Your bookmarks"
-                className="hidden sm:flex relative h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-50 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                className="hidden sm:flex relative h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-50 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors duration-300 cursor-pointer"
                 title="Your bookmarks"
               >
                 <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -541,7 +549,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                   <button
                     onClick={handleLogout}
                     aria-label="Sign Out"
-                    className="hidden sm:flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-50 bg-white text-rose-400 shadow-sm hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    className="hidden sm:flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-50 bg-white text-rose-400 shadow-sm hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-rose-950/30 transition-colors duration-300 cursor-pointer"
                     title="Sign Out"
                   >
                     <LogOut className="h-4 w-4" />
@@ -551,7 +559,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 <button
                   onClick={() => onNavigate('login')}
                   onMouseEnter={() => onPreload?.('login')}
-                  className="flex items-center gap-1.5 rounded-full bg-indigo-500 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-600 active:scale-95 transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-full bg-indigo-500 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-600 active:scale-95 transition-all duration-300 cursor-pointer"
                 >
                   <User className="h-3.5 w-3.5" />
                   <span>Login</span>
@@ -596,7 +604,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 <button
                   onClick={() => setShowMobileMenu(false)}
                   aria-label="Close menu"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 text-slate-500 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 text-slate-500 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors duration-300"
                   title="Close menu"
                 >
                   <X className="h-5 w-5" />
@@ -620,14 +628,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 <button 
                   onClick={() => { onNavigate('home'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('home')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'home' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'home' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   Home
                 </button>
                 <button 
                   onClick={() => { onNavigate('products'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('products')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'products' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'products' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   All Products
                 </button>
@@ -635,21 +643,21 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 <button 
                   onClick={() => { onNavigate('blogs'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('blogs')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'blogs' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'blogs' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   Blog Reviews
                 </button>
                 <button 
                   onClick={() => { onNavigate('contact'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('contact')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'contact' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'contact' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   Contact Us
                 </button>
 
                 <button 
                   onClick={() => { setShowShortcutsModal(true); setShowMobileMenu(false); }}
-                  className="flex items-center gap-2.5 text-left text-sm py-2 px-3 rounded-lg text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-all"
+                  className="flex items-center gap-2.5 text-left text-sm py-2 px-3 rounded-lg text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-all duration-300"
                 >
                   <Keyboard className="h-4 w-4 text-slate-400" />
                   <span className="flex-grow">Keyboard Shortcuts</span>
@@ -661,7 +669,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                     <p className="px-3 text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">Your Account</p>
                     <button 
                       onClick={() => { onNavigate('profile'); setShowMobileMenu(false); }}
-                      className={`flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'profile' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                      className={`flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'profile' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                       <Heart className="h-4 w-4" />
                       <span>My Bookmarks</span>
@@ -674,7 +682,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                     {isAdmin && (
                       <button 
                         onClick={() => { onNavigate('admin'); setShowMobileMenu(false); }}
-                        className={`flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all ${currentView === 'admin' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                        className={`flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'admin' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                       >
                         <LayoutDashboard className="h-4 w-4" />
                         <span>Admin Dashboard</span>
@@ -682,7 +690,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                     )}
                     <button 
                       onClick={() => { handleLogout(); setShowMobileMenu(false); }}
-                      className="flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer transition-colors"
+                      className="flex items-center gap-3 w-full text-left text-sm py-2 px-3 rounded-lg text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer transition-colors duration-300"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Sign Out</span>
@@ -733,7 +741,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 </div>
                 <button
                   onClick={() => setShowShortcutsModal(false)}
-                  className="rounded-full p-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-300 hover:text-slate-500 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  className="rounded-full p-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-300 hover:text-slate-500 dark:hover:text-slate-200 transition-colors duration-300 cursor-pointer"
                   aria-label="Close modal"
                 >
                   <X className="h-4 w-4" />

@@ -255,7 +255,7 @@ export const Contact: React.FC = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs px-6 py-3 shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                className="rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs px-6 py-3 shadow-md transition-all duration-300 active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
               >
                 <Send className="h-3.5 w-3.5" />
                 {submitting ? 'Submitting query...' : 'Submit Inquiry'}
@@ -270,7 +270,7 @@ export const Contact: React.FC = () => {
       {/* Success Modal Dialogue */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-50 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-zinc-800 transition-all text-left">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-50 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-zinc-800 transition-all duration-300 text-left">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-teal-50 text-teal-500 dark:bg-teal-950/30 rounded-full shrink-0">
                 <ShieldCheck className="h-6 w-6 shrink-0" />
@@ -287,7 +287,7 @@ export const Contact: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowSuccessModal(false)}
-                className="rounded-lg bg-teal-500 hover:bg-teal-600 text-white py-2 px-4 text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+                className="rounded-lg bg-teal-500 hover:bg-teal-600 text-white py-2 px-4 text-xs font-bold shadow-sm transition-all duration-300 active:scale-95 cursor-pointer"
               >
                 Close
               </button>
@@ -299,7 +299,7 @@ export const Contact: React.FC = () => {
       {/* Error Modal Dialogue */}
       {showErrorModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-rose-50 bg-white p-6 shadow-xl dark:border-rose-950/20 dark:bg-zinc-800 transition-all text-left">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-rose-50 bg-white p-6 shadow-xl dark:border-rose-950/20 dark:bg-zinc-800 transition-all duration-300 text-left">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-rose-50 text-rose-500 dark:bg-rose-950/30 rounded-full shrink-0">
                 <AlertTriangle className="h-6 w-6 shrink-0" />
@@ -316,7 +316,7 @@ export const Contact: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowErrorModal(false)}
-                className="rounded-lg bg-rose-500 hover:bg-rose-600 text-white py-2 px-4 text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+                className="rounded-lg bg-rose-500 hover:bg-rose-600 text-white py-2 px-4 text-xs font-bold shadow-sm transition-all duration-300 active:scale-95 cursor-pointer"
               >
                 Dismiss
               </button>

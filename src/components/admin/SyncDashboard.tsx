@@ -887,7 +887,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
         <div className="flex items-center gap-2">
           <button 
             onClick={handleLaunchJob}
-            className="px-3.5 py-2 text-xs font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-lg cursor-pointer flex items-center gap-1.5 shadow-md transition-all"
+            className="px-3.5 py-2 text-xs font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-lg cursor-pointer flex items-center gap-1.5 shadow-md transition-all duration-300"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Spawn Sync Queue Job
@@ -946,7 +946,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
       <div className="flex border-b border-slate-800 pb-0.5 overflow-x-auto gap-2">
         <button
           onClick={() => setActiveTab('scanner')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all flex items-center gap-2 ${activeTab === 'scanner' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 flex items-center gap-2 ${activeTab === 'scanner' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           <PieChartIcon className="w-3.5 h-3.5" />
           <span>1 AM Price Scanner (Descending)</span>
@@ -956,37 +956,37 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
         </button>
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'overview' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'overview' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           Overview & Queue
         </button>
         <button
           onClick={() => setActiveTab('scheduler')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'scheduler' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'scheduler' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           Scheduler config
         </button>
         <button
           onClick={() => setActiveTab('health')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'health' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'health' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           Diagnostics & Links
         </button>
         <button
           onClick={() => setActiveTab('rules')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'rules' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'rules' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           Automation Rules
         </button>
         <button
           onClick={() => setActiveTab('audits')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'audits' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'audits' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           Activity & Audit logs
         </button>
         <button
           onClick={() => setActiveTab('marketplace')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'marketplace' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'marketplace' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           🔄 Universal Marketplace
         </button>
@@ -1051,7 +1051,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     {!scannerState.isRunning ? (
                       <button
                         onClick={handleStartScanner}
-                        className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                        className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer"
                       >
                         <Play className="w-4 h-4 fill-current" />
                         <span>Start Scan Cycle</span>
@@ -1059,7 +1059,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     ) : (
                       <button
                         onClick={handlePauseScanner}
-                        className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-amber-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                        className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-amber-600/30 flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer"
                       >
                         <Pause className="w-4 h-4 fill-current" />
                         <span>Pause Flow</span>
@@ -1069,7 +1069,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     {scannerState.isPaused && (
                       <button
                         onClick={handleResumeScanner}
-                        className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                        className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer"
                       >
                         <Play className="w-4 h-4 fill-current" />
                         <span>Resume</span>
@@ -1078,7 +1078,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
 
                     <button
                       onClick={handleResetScanner}
-                      className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer"
                     >
                       <RotateCcw className="w-4 h-4" />
                       <span>Reset</span>
@@ -1099,9 +1099,9 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <span className="text-[11px] text-slate-400 font-medium px-2">Fast Demo Test Mode (5s gap):</span>
                     <button
                       onClick={() => handleToggleFastMode(!scannerState.fastMode)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${scannerState.fastMode ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 cursor-pointer ${scannerState.fastMode ? 'bg-indigo-600' : 'bg-slate-700'}`}
                     >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${scannerState.fastMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${scannerState.fastMode ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
                 </div>
@@ -1295,7 +1295,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         onClick={handleExportCSV}
-                        className="px-4 py-3 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/60 text-emerald-300 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-950/40"
+                        className="px-4 py-3 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/60 text-emerald-300 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer shadow-lg shadow-emerald-950/40"
                       >
                         <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                         <span>Export CSV</span>
@@ -1303,7 +1303,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
 
                       <button
                         onClick={handleExportJSON}
-                        className="px-4 py-3 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-800/60 text-indigo-300 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-indigo-950/40"
+                        className="px-4 py-3 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-800/60 text-indigo-300 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer shadow-lg shadow-indigo-950/40"
                       >
                         <FileCode className="w-4 h-4 text-indigo-400" />
                         <span>Export JSON</span>
@@ -1348,7 +1348,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                         </tr>
                       ) : (
                         scannerState.logs.map((log: any) => (
-                          <tr key={log.id} className="hover:bg-slate-900/40 transition-colors">
+                          <tr key={log.id} className="hover:bg-slate-900/40 transition-colors duration-300">
                             <td className="p-3">
                               <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold font-sans ${
                                 log.status === 'updated' 
@@ -1429,7 +1429,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <button
                       onClick={handleManualProductSync}
                       disabled={syncingProduct || !selectedProductId}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-colors"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-colors duration-300"
                     >
                       {syncingProduct ? 'Syncing...' : 'Force Live Sync'}
                     </button>
@@ -1506,7 +1506,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                               {job.status === 'running' && (
                                 <button 
                                   onClick={() => handleJobControl(job._id, 'pause')}
-                                  className="p-1 bg-amber-950 hover:bg-amber-900 border border-amber-900/50 text-amber-400 rounded cursor-pointer transition-all"
+                                  className="p-1 bg-amber-950 hover:bg-amber-900 border border-amber-900/50 text-amber-400 rounded cursor-pointer transition-all duration-300"
                                   title="Pause Sync Job"
                                 >
                                   <Pause className="w-3.5 h-3.5" />
@@ -1515,7 +1515,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                               {job.status === 'paused' && (
                                 <button 
                                   onClick={() => handleJobControl(job._id, 'resume')}
-                                  className="p-1 bg-green-950 hover:bg-green-900 border border-green-900/50 text-emerald-400 rounded cursor-pointer transition-all"
+                                  className="p-1 bg-green-950 hover:bg-green-900 border border-green-900/50 text-emerald-400 rounded cursor-pointer transition-all duration-300"
                                   title="Resume Sync Job"
                                 >
                                   <Play className="w-3.5 h-3.5" />
@@ -1524,7 +1524,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                               {['waiting', 'running', 'paused'].includes(job.status) && (
                                 <button 
                                   onClick={() => handleJobControl(job._id, 'cancel')}
-                                  className="p-1 bg-red-950 hover:bg-red-900 border border-red-900/50 text-red-400 rounded cursor-pointer transition-all"
+                                  className="p-1 bg-red-950 hover:bg-red-900 border border-red-900/50 text-red-400 rounded cursor-pointer transition-all duration-300"
                                   title="Cancel Sync Job"
                                 >
                                   <Ban className="w-3.5 h-3.5" />
@@ -1533,7 +1533,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                               {['completed', 'failed', 'cancelled'].includes(job.status) && (
                                 <button 
                                   onClick={() => handleJobControl(job._id, 'retry')}
-                                  className="px-2 py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded cursor-pointer font-bold transition-all"
+                                  className="px-2 py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded cursor-pointer font-bold transition-all duration-300"
                                 >
                                   Retry Sync
                                 </button>
@@ -1578,13 +1578,13 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <div className="flex items-center gap-2.5">
                       <button
                         onClick={() => handleScheduleToggle(task._id)}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-colors ${task.active ? 'bg-amber-950 text-amber-400 hover:bg-amber-900' : 'bg-indigo-950 text-indigo-400 hover:bg-indigo-900'}`}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${task.active ? 'bg-amber-950 text-amber-400 hover:bg-amber-900' : 'bg-indigo-950 text-indigo-400 hover:bg-indigo-900'}`}
                       >
                         {task.active ? 'Deactivate' : 'Activate'}
                       </button>
                       <button
                         onClick={() => handleRunScheduleNow(task._id)}
-                        className="px-3 py-1.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg cursor-pointer flex items-center gap-1 transition-colors"
+                        className="px-3 py-1.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg cursor-pointer flex items-center gap-1 transition-colors duration-300"
                       >
                         <Play className="w-3.5 h-3.5" /> Run Now
                       </button>
@@ -1690,7 +1690,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                   <button
                     type="submit"
                     disabled={validating}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-colors"
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-colors duration-300"
                   >
                     {validating ? 'Evaluating Parameters...' : 'Audit Link Integrity'}
                   </button>
@@ -1754,7 +1754,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                           active: true
                         });
                       }}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-bold transition-colors"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-bold transition-colors duration-300"
                     >
                       + Create Alert Rule
                     </button>
@@ -1856,7 +1856,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                           active: true
                         });
                       }}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-bold transition-colors"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-bold transition-colors duration-300"
                     >
                       + Create Rule Action
                     </button>
@@ -2091,13 +2091,13 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                       <button
                         onClick={handleSaveMerge}
                         disabled={merging}
-                        className="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs px-4 py-1.5 rounded cursor-pointer transition-colors"
+                        className="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs px-4 py-1.5 rounded cursor-pointer transition-colors duration-300"
                       >
                         {merging ? 'Consolidating Datastores...' : 'Apply Merge Resolution'}
                       </button>
                       <button
                         onClick={() => { setDuplicateWarning(false); setDuplicateInfo(null); }}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs px-4 py-1.5 rounded cursor-pointer transition-colors"
+                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs px-4 py-1.5 rounded cursor-pointer transition-colors duration-300"
                       >
                         Cancel
                       </button>
@@ -2155,7 +2155,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <button
                       type="submit"
                       disabled={importingSingle}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-colors"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-colors duration-300"
                     >
                       {importingSingle ? 'Connecting to scraping server...' : 'Extract & Import Live Product'}
                     </button>
@@ -2198,7 +2198,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <button
                       type="submit"
                       disabled={importingBulk}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-colors"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-colors duration-300"
                     >
                       {importingBulk ? 'Deploying distributed workers...' : 'Queue Bulk Scraper Jobs'}
                     </button>
@@ -2295,7 +2295,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <button
                       type="submit"
                       disabled={savingSettings}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition-colors"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition-colors duration-300"
                     >
                       {savingSettings ? 'Securing secrets...' : 'Save Configuration Parameters'}
                     </button>
@@ -2368,7 +2368,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <button
                       type="submit"
                       disabled={savingAff}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 rounded-lg cursor-pointer transition-colors"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 rounded-lg cursor-pointer transition-colors duration-300"
                     >
                       {savingAff ? 'Linking parameters...' : 'Link Regional Affiliate profile'}
                     </button>
@@ -2401,7 +2401,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <button
                       onClick={handleComparePrices}
                       disabled={comparing}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-lg cursor-pointer transition-colors shrink-0"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-lg cursor-pointer transition-colors duration-300 shrink-0"
                     >
                       {comparing ? 'Auditing other hubs...' : 'Run Real-time Comparison'}
                     </button>
@@ -2495,7 +2495,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                     <button
                       onClick={handleConvertCurrency}
                       disabled={converting}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-1.5 rounded cursor-pointer transition-colors"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-1.5 rounded cursor-pointer transition-colors duration-300"
                     >
                       {converting ? 'Converting...' : 'Convert currency'}
                     </button>

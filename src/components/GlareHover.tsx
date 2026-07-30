@@ -54,7 +54,7 @@ export const GlareHover: React.FC<GlareHoverProps> = ({
     >
       <div className="relative z-10 w-full h-full">{children}</div>
       <div
-        className="pointer-events-none absolute inset-0 z-20 mix-blend-overlay transition-opacity"
+        className="pointer-events-none absolute inset-0 z-20 mix-blend-overlay transition-opacity duration-300"
         style={{
           opacity: isHovered ? glareOpacity : 0,
           background: `radial-gradient(circle ${glareSize}px at ${position.x}% ${position.y}%, ${glareColor}, transparent)`,

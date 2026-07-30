@@ -20,7 +20,7 @@ export const Disclaimer: React.FC = () => {
         </p>
       </div>
 
-      <div className="space-y-8 bg-white border border-slate-50 rounded-3xl p-6 md:p-10 dark:bg-slate-800 dark:border-slate-700 shadow-sm transition-all">
+      <div className="space-y-8 bg-white border border-slate-50 rounded-3xl p-6 md:p-10 dark:bg-slate-800 dark:border-slate-700 shadow-sm transition-all duration-300">
         {/* FTC Affiliate Disclosure */}
         <section className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">

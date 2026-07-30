@@ -818,7 +818,7 @@ const AppContent: React.FC = () => {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.22, ease: "easeInOut" }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className="w-full max-w-full overflow-x-hidden flex-grow flex flex-col"
           >
             <Suspense fallback={<ViewLoader />}>

@@ -241,7 +241,7 @@ export const ImageLightbox: React.FC = () => {
               e.stopPropagation();
               setLightboxData(null);
             }}
-            className="absolute top-6 right-6 p-2.5 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 hover:text-white transition-all cursor-pointer z-10"
+            className="absolute top-6 right-6 p-2.5 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 hover:text-white transition-all duration-300 cursor-pointer z-10"
             title="Close Lightbox (Esc)"
           >
             <X size={22} />
@@ -294,7 +294,7 @@ export const ImageLightbox: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleNavigate('prev')}
-                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/95 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/95 transition-colors duration-300 cursor-pointer flex items-center gap-1 text-[11px] font-bold"
                   title="Previous (Left Arrow)"
                 >
                   <ChevronLeft size={16} />
@@ -328,7 +328,7 @@ export const ImageLightbox: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleNavigate('next')}
-                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/95 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/95 transition-colors duration-300 cursor-pointer flex items-center gap-1 text-[11px] font-bold"
                   title="Next (Right Arrow)"
                 >
                   <span className="hidden sm:inline">Next</span>

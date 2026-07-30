@@ -513,15 +513,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
 
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10 w-full">
           
-          <motion.div
-            initial={{ opacity: 0, y: -15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="inline-flex items-center gap-2 rounded-full border border-indigo-50 bg-indigo-50/80 backdrop-blur-md px-5 py-2 text-xs font-bold text-indigo-800 shadow-sm dark:bg-indigo-950/30 dark:border-indigo-700/50 dark:text-indigo-200"
-          >
-            <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
-            <span className="tracking-wide uppercase">Carefully Checked Products & Direct Safe Links</span>
-          </motion.div>
+
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -558,7 +550,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
               onNavigate={onNavigate}
               variant="hero"
               placeholder="Search products, brands, tech items..."
-              inputClassName="w-full rounded-[1.75rem] border border-slate-200/80 bg-white/95 backdrop-blur-md py-4 pl-12 pr-12 text-base text-slate-800 shadow-xl outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-800/95 dark:text-white dark:focus:border-indigo-400"
+              inputClassName="w-full rounded-[1.75rem] border border-slate-200/80 bg-white/95 backdrop-blur-md py-4 pl-12 pr-12 text-base text-slate-800 shadow-xl outline-none transition-all duration-300 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-800/95 dark:text-white dark:focus:border-indigo-400"
               onClear={() => setHomeSearch('')}
             />
           </motion.div>
@@ -569,7 +561,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
               onClick={() => {
                 setActiveCategory('all');
               }}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all duration-300 border shadow-sm cursor-pointer ${
                 activeCategory === 'all'
                   ? 'bg-indigo-500 text-white border-indigo-500 dark:bg-indigo-400 dark:border-indigo-300'
                   : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600'
@@ -581,7 +573,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
               onClick={() => {
                 setActiveCategory('trending');
               }}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all duration-300 border shadow-sm cursor-pointer flex items-center gap-1 ${
                 activeCategory === 'trending'
                   ? 'bg-indigo-500 text-white border-indigo-500 dark:bg-indigo-400 dark:border-indigo-300'
                   : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600'
@@ -596,7 +588,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                 onClick={() => {
                   setActiveCategory(activeCategory === cat._id ? 'all' : cat._id);
                 }}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all border shadow-sm cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-bold font-mono transition-all duration-300 border shadow-sm cursor-pointer ${
                   activeCategory === cat._id
                     ? 'bg-indigo-500 text-white border-indigo-500 dark:bg-indigo-400 dark:border-indigo-300'
                     : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600'
@@ -684,11 +676,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             {collectionsData.map(({ category, latestFour }) => (
               <div 
                 key={category._id}
-                className="group flex flex-col bg-white dark:bg-slate-800 rounded-3xl border border-slate-100/80 dark:border-slate-700 shadow-xs hover:border-slate-300 dark:hover:border-slate-600 transition-all p-5 hover:translate-y-[-4px] duration-250 cursor-default"
+                className="group flex flex-col bg-white dark:bg-slate-800 rounded-3xl border border-slate-100/80 dark:border-slate-700 shadow-xs hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300 p-5 hover:translate-y-[-4px] duration-250 cursor-default"
               >
                 {/* Collection Info Header */}
                 <div className="mb-4">
-                  <h3 className="text-md font-black text-slate-800 dark:text-white group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors uppercase tracking-tight font-sans">
+                  <h3 className="text-md font-black text-slate-800 dark:text-white group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300 uppercase tracking-tight font-sans">
                     {category.name}
                   </h3>
                   {category.description && (
@@ -703,7 +695,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                   {latestFour.map((prod: any) => (
                     <div className="group" key={prod._id}>
                       <BorderGlow
-                        className="relative aspect-square bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100/50 dark:border-slate-800/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-400/40 dark:hover:border-slate-600 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-2xs"
+                        className="relative aspect-square bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100/50 dark:border-slate-800/80 flex flex-col items-center justify-between cursor-pointer hover:border-indigo-400/40 dark:hover:border-slate-600 hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 shadow-2xs"
                         borderRadius={16}
                       >
                       <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
@@ -757,7 +749,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                 <div className="mt-5 pt-3 border-t border-slate-50 dark:border-slate-700">
                   <button
                     onClick={() => onNavigate('products', `category-${category._id}`)}
-                    className="w-full text-center bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-200 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border-none"
+                    className="w-full text-center bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-200 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer border-none"
                   >
                     <span>See More</span>
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -861,7 +853,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                       {isAuthenticated && (
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleWishlist(prod._id, prod.name); }}
-                          className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-slate-400 shadow-xs hover:text-rose-400 dark:bg-slate-800/90 dark:text-slate-200 dark:hover:text-rose-400 transition-colors cursor-pointer border-none"
+                          className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-slate-400 shadow-xs hover:text-rose-400 dark:bg-slate-800/90 dark:text-slate-200 dark:hover:text-rose-400 transition-colors duration-300 cursor-pointer border-none"
                           title="Bookmark product" aria-label="Bookmark product"
                         >
                           <Heart className={`h-3.5 w-3.5 ${wishlist.includes(prod._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
@@ -887,7 +879,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                         </span>
                       </div>
 
-                      <h3 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-500 dark:text-white dark:group-hover:text-indigo-300 transition-colors leading-tight font-sans">
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-500 dark:text-white dark:group-hover:text-indigo-300 transition-colors duration-300 leading-tight font-sans">
                         {prod.name}
                       </h3>
 
@@ -904,7 +896,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                           )}
                         </div>
 
-                        <div className="rounded bg-indigo-50/80 hover:bg-indigo-50 text-indigo-600 py-1 px-2.5 text-[9px] sm:text-[10px] font-bold dark:bg-indigo-950/40 dark:text-indigo-200 dark:hover:bg-indigo-800/60 cursor-pointer transition-colors border border-indigo-50/40 dark:border-indigo-800/30">
+                        <div className="rounded bg-indigo-50/80 hover:bg-indigo-50 text-indigo-600 py-1 px-2.5 text-[9px] sm:text-[10px] font-bold dark:bg-indigo-950/40 dark:text-indigo-200 dark:hover:bg-indigo-800/60 cursor-pointer transition-colors duration-300 border border-indigo-50/40 dark:border-indigo-800/30">
                           Details
                         </div>
                       </div>
@@ -922,14 +914,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
               {latestProductsToShow.length > visibleCount && (
                 <button
                   onClick={() => setVisibleCount(prev => prev + 6)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-100 hover:border-indigo-200 bg-white hover:bg-slate-50 text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-800 dark:text-indigo-200 px-6 py-2.5 text-xs font-bold shadow-xs cursor-pointer transition-all border-solid"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-100 hover:border-indigo-200 bg-white hover:bg-slate-50 text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-800 dark:text-indigo-200 px-6 py-2.5 text-xs font-bold shadow-xs cursor-pointer transition-all duration-300 border-solid"
                 >
                   Load More Products
                 </button>
               )}
               <button
                 onClick={() => onNavigate('products')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-none bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2.5 text-xs font-bold shadow-sm hover:shadow-md cursor-pointer transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-none bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2.5 text-xs font-bold shadow-sm hover:shadow-md cursor-pointer transition-all duration-300"
               >
                 <span>See All Products</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -969,7 +961,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
               <button
                 type="button"
                 onClick={() => setPickLeftModalProd(null)}
-                className="absolute right-4 top-4 rounded-xl p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer"
+                className="absolute right-4 top-4 rounded-xl p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-all duration-300 cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1006,14 +998,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                       placeholder="Enter your Gmail address..."
                       value={pickLeftEmail}
                       onChange={(e) => setPickLeftEmail(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950/50 dark:text-white dark:focus:border-indigo-500 dark:focus:bg-slate-900 dark:focus:ring-indigo-950"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition-all duration-300 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950/50 dark:text-white dark:focus:border-indigo-500 dark:focus:bg-slate-900 dark:focus:ring-indigo-950"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isSubmittingPickLeft}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-500 hover:bg-indigo-600 active:scale-98 text-white py-3 px-4 text-xs font-extrabold tracking-wider uppercase shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-500 hover:bg-indigo-600 active:scale-98 text-white py-3 px-4 text-xs font-extrabold tracking-wider uppercase shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer disabled:opacity-50"
                   >
                     {isSubmittingPickLeft ? (
                       <span>Enabling Alert...</span>
@@ -1033,7 +1025,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                     setPickLeftModalProd(null);
                     if (slug) onNavigate('product-detail', slug);
                   }}
-                  className="mt-3 w-full rounded-2xl border border-slate-100 bg-white hover:bg-slate-50 active:scale-98 text-slate-500 py-3 px-4 text-xs font-bold transition-all cursor-pointer dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/50 dark:text-slate-400"
+                  className="mt-3 w-full rounded-2xl border border-slate-100 bg-white hover:bg-slate-50 active:scale-98 text-slate-500 py-3 px-4 text-xs font-bold transition-all duration-300 cursor-pointer dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/50 dark:text-slate-400"
                 >
                   No thanks, just view product
                 </button>

@@ -105,7 +105,7 @@ export const N8nStatusIndicator: React.FC<{ token: string | null }> = ({ token }
     <>
       <button 
         onClick={() => setShowDialog(true)}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 dark:focus:ring-offset-slate-900 cursor-pointer ${getStatusStyles()}`}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors duration-300 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 dark:focus:ring-offset-slate-900 cursor-pointer ${getStatusStyles()}`}
         title="Click to view n8n diagnostics"
       >
         <StatusIcon />
@@ -149,7 +149,7 @@ export const N8nStatusIndicator: React.FC<{ token: string | null }> = ({ token }
                   <button
                     onClick={handleTestWebhook}
                     disabled={testing}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
                   >
                     {testing ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
@@ -208,7 +208,7 @@ export const N8nStatusIndicator: React.FC<{ token: string | null }> = ({ token }
             <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end">
               <button
                 onClick={() => setShowDialog(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors duration-300"
               >
                 Close
               </button>

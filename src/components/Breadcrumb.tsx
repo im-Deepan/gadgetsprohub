@@ -30,7 +30,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
               <button
                 onClick={item.onClick}
                 disabled={isLast || !item.onClick}
-                className={`flex items-center hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors ${
+                className={`flex items-center hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors duration-300 ${
                   isLast ? 'text-slate-700 dark:text-slate-100 font-semibold cursor-default' : 'cursor-pointer'
                 } ${index === 0 ? 'inline-flex items-center gap-1.5' : ''}`}
                 aria-current={isLast ? 'page' : undefined}

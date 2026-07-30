@@ -490,14 +490,14 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
         <div className="flex items-center gap-2">
           <button 
             onClick={handleClearCache}
-            className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg cursor-pointer flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg cursor-pointer flex items-center gap-1.5 transition-colors duration-300"
           >
             <Database className="w-3.5 h-3.5" />
             Clear AI Cache
           </button>
           <button 
             onClick={loadAllData}
-            className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg cursor-pointer flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg cursor-pointer flex items-center gap-1.5 transition-colors duration-300"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Sync Hub
@@ -509,31 +509,31 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
       <div className="flex border-b border-slate-800 pb-0.5 overflow-x-auto gap-2">
         <button
           onClick={() => setActiveTab('assistant')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'assistant' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'assistant' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           AI Copywriter
         </button>
         <button
           onClick={() => setActiveTab('prompts')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'prompts' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'prompts' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           Prompt Library
         </button>
         <button
           onClick={() => setActiveTab('queue')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'queue' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'queue' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           Bulk Runner
         </button>
         <button
           onClick={() => setActiveTab('analytics')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'analytics' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'analytics' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           Cost & Stats
         </button>
         <button
           onClick={() => setActiveTab('settings')}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'settings' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all duration-300 ${activeTab === 'settings' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
         >
           Engine Config
         </button>
@@ -605,7 +605,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                 <button
                   onClick={handleGenerate}
                   disabled={generating}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white py-2.5 rounded-lg cursor-pointer text-xs font-bold tracking-wide flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white py-2.5 rounded-lg cursor-pointer text-xs font-bold tracking-wide flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50"
                 >
                   <Wand2 className="w-4 h-4" />
                   {generating ? 'Processing Engine...' : 'Run Generation'}
@@ -660,13 +660,13 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                     <div className="flex gap-1.5">
                       <button 
                         onClick={() => handleApprove('approved')}
-                        className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-green-900 hover:bg-green-800 text-white rounded-md cursor-pointer flex items-center gap-1 transition-all"
+                        className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-green-900 hover:bg-green-800 text-white rounded-md cursor-pointer flex items-center gap-1 transition-all duration-300"
                       >
                         <Check className="w-3 h-3" /> Approve
                       </button>
                       <button 
                         onClick={() => handleApprove('rejected')}
-                        className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-red-950 hover:bg-red-900 text-white rounded-md cursor-pointer flex items-center gap-1 transition-all"
+                        className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-red-950 hover:bg-red-900 text-white rounded-md cursor-pointer flex items-center gap-1 transition-all duration-300"
                       >
                         <X className="w-3 h-3" /> Reject
                       </button>
@@ -685,7 +685,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                             navigator.clipboard.writeText(generatedContent);
                             showNotice('success', 'Copied generated output!');
                           }}
-                          className="hover:text-slate-200 text-slate-500 cursor-pointer flex items-center gap-1 transition-colors"
+                          className="hover:text-slate-200 text-slate-500 cursor-pointer flex items-center gap-1 transition-colors duration-300"
                         >
                           <Copy className="w-3 h-3" /> Copy
                         </button>
@@ -708,7 +708,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                             navigator.clipboard.writeText(draftContent);
                             showNotice('success', 'Copied active draft!');
                           }}
-                          className="hover:text-slate-200 text-slate-500 cursor-pointer flex items-center gap-1 transition-colors"
+                          className="hover:text-slate-200 text-slate-500 cursor-pointer flex items-center gap-1 transition-colors duration-300"
                         >
                           <Copy className="w-3 h-3" /> Copy
                         </button>
@@ -750,7 +750,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                       <button
                         onClick={handleRewrite}
                         disabled={generating || !draftContent}
-                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-semibold flex items-center gap-1 transition-colors disabled:opacity-40"
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-semibold flex items-center gap-1 transition-colors duration-300 disabled:opacity-40"
                       >
                         Rewrite
                       </button>
@@ -781,7 +781,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                       <button
                         onClick={handleTranslate}
                         disabled={generating || !draftContent}
-                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-semibold flex items-center gap-1 transition-colors disabled:opacity-40"
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-semibold flex items-center gap-1 transition-colors duration-300 disabled:opacity-40"
                       >
                         Translate
                       </button>
@@ -813,7 +813,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                       });
                       setShowPromptForm(true);
                     }}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-bold transition-all"
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg cursor-pointer text-xs font-bold transition-all duration-300"
                   >
                     + Create Template
                   </button>
@@ -924,7 +924,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                             setEditingPrompt(p);
                             setShowPromptForm(true);
                           }}
-                          className="px-2.5 py-1 text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg cursor-pointer transition-colors"
+                          className="px-2.5 py-1 text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg cursor-pointer transition-colors duration-300"
                         >
                           Edit
                         </button>
@@ -1004,7 +1004,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
 
                 <button
                   onClick={handleLaunchBatch}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white py-2.5 rounded-lg cursor-pointer text-xs font-bold tracking-wide flex items-center justify-center gap-2 transition-all"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white py-2.5 rounded-lg cursor-pointer text-xs font-bold tracking-wide flex items-center justify-center gap-2 transition-all duration-300"
                 >
                   <Play className="w-3.5 h-3.5" />
                   Launch Bulk Enrichment
@@ -1059,7 +1059,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                               {job.status === 'running' && (
                                 <button 
                                   onClick={() => handleJobControl(job._id, 'pause')}
-                                  className="p-1 hover:bg-slate-800 text-amber-400 hover:text-amber-300 rounded cursor-pointer transition-all"
+                                  className="p-1 hover:bg-slate-800 text-amber-400 hover:text-amber-300 rounded cursor-pointer transition-all duration-300"
                                 >
                                   <Pause className="w-3.5 h-3.5" />
                                 </button>
@@ -1067,7 +1067,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                               {job.status === 'paused' && (
                                 <button 
                                   onClick={() => handleJobControl(job._id, 'resume')}
-                                  className="p-1 hover:bg-slate-800 text-green-400 hover:text-green-300 rounded cursor-pointer transition-all"
+                                  className="p-1 hover:bg-slate-800 text-green-400 hover:text-green-300 rounded cursor-pointer transition-all duration-300"
                                 >
                                   <Play className="w-3.5 h-3.5" />
                                 </button>
@@ -1075,7 +1075,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                               {['waiting', 'running', 'paused'].includes(job.status) && (
                                 <button 
                                   onClick={() => handleJobControl(job._id, 'cancel')}
-                                  className="p-1 hover:bg-slate-800 text-red-400 hover:text-red-300 rounded cursor-pointer transition-all"
+                                  className="p-1 hover:bg-slate-800 text-red-400 hover:text-red-300 rounded cursor-pointer transition-all duration-300"
                                 >
                                   <Ban className="w-3.5 h-3.5" />
                                 </button>
@@ -1083,7 +1083,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
                               {['completed', 'failed', 'cancelled'].includes(job.status) && (
                                 <button 
                                   onClick={() => handleJobControl(job._id, 'retry')}
-                                  className="p-1 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded cursor-pointer transition-all"
+                                  className="p-1 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded cursor-pointer transition-all duration-300"
                                 >
                                   <RefreshCw className="w-3.5 h-3.5" />
                                 </button>
@@ -1271,7 +1271,7 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
 
                       <button
                         onClick={() => handleSaveProvider(prov.provider, prov)}
-                        className="w-full bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700 py-2 rounded-lg cursor-pointer text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700 py-2 rounded-lg cursor-pointer text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5"
                       >
                         <Save className="w-3.5 h-3.5" />
                         Save Settings

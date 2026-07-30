@@ -55,7 +55,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                   type="button"
                   key={starIdx}
                   onClick={() => setReviewRating(starIdx)}
-                  className="text-amber-300 hover:scale-110 active:scale-95 transition-transform cursor-pointer"
+                  className="text-amber-300 hover:scale-110 active:scale-95 transition-transform duration-300 cursor-pointer"
                 >
                   <Star className={`h-5 w-5 ${starIdx <= reviewRating ? 'fill-amber-300' : 'text-slate-100'}`} />
                 </button>
@@ -90,7 +90,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           <button
             type="submit"
             disabled={reviewLoading}
-            className={`w-full rounded-xl bg-slate-800 text-white font-bold py-2.5 text-xs tracking-wider transition-colors cursor-pointer active:scale-97 ${reviewLoading ? 'opacity-50 pointer-events-none' : 'hover:bg-indigo-500'}`}
+            className={`w-full rounded-xl bg-slate-800 text-white font-bold py-2.5 text-xs tracking-wider transition-colors duration-300 cursor-pointer active:scale-97 ${reviewLoading ? 'opacity-50 pointer-events-none' : 'hover:bg-indigo-500'}`}
           >
             {reviewLoading ? 'Posting...' : 'Post Feedback'}
           </button>
@@ -100,7 +100,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           <p className="text-xs text-slate-300 mb-3.5 leading-relaxed">Login with your account to leave a star rating and review.</p>
           <button
             onClick={() => onNavigate('login')}
-            className="rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-600 py-1.5 px-4 text-[10px] font-bold cursor-pointer transition-all active:scale-95 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-200 dark:hover:bg-indigo-900/60"
+            className="rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-600 py-1.5 px-4 text-[10px] font-bold cursor-pointer transition-all duration-300 active:scale-95 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-200 dark:hover:bg-indigo-900/60"
           >
             Go to Login Drawer
           </button>

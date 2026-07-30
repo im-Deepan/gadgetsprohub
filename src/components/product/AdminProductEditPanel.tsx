@@ -39,7 +39,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
   if (!isAdmin) return null;
 
   return (
-    <div className="bg-violet-50/50 dark:bg-violet-950/15 border border-violet-50 dark:border-violet-800/40 p-4 rounded-xl -mx-2 sm:-mx-0 space-y-3 mb-6 transition-all font-sans">
+    <div className="bg-violet-50/50 dark:bg-violet-950/15 border border-violet-50 dark:border-violet-800/40 p-4 rounded-xl -mx-2 sm:-mx-0 space-y-3 mb-6 transition-all duration-300 font-sans">
       <div className="flex items-center justify-between pointer-events-none">
         <h3 className="text-[10px] font-black uppercase text-violet-700 dark:text-violet-300 tracking-wider flex items-center gap-2">
           Administrator Mode Active
@@ -199,7 +199,7 @@ export const AdminProductEditPanel: React.FC<AdminProductEditPanelProps> = ({
           <button
             type="submit"
             disabled={isSavingAdminEdit}
-            className="w-full py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
+            className="w-full py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400 text-white text-xs font-bold transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
           >
             {isSavingAdminEdit ? 'Saving alterations...' : '✓ Put Save to Live Storefront'}
           </button>

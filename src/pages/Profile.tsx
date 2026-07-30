@@ -288,7 +288,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
 
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-50 hover:bg-rose-50 text-rose-600 py-2.5 text-xs font-bold transition-all cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-50 hover:bg-rose-50 text-rose-600 py-2.5 text-xs font-bold transition-all duration-300 cursor-pointer"
               aria-label="Sign out of your account"
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
@@ -329,7 +329,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                   aria-label="Primary Location or District Selection"
                   value={selectDistrict}
                   onChange={(e) => setSelectDistrict(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-50 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/25 focus:bg-white dark:focus:border-indigo-300 dark:focus:bg-slate-800 transition-all font-semibold"
+                  className="w-full rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-50 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/25 focus:bg-white dark:focus:border-indigo-300 dark:focus:bg-slate-800 transition-all duration-300 font-semibold"
                 >
                   <option value="" className="bg-white text-slate-400 dark:bg-slate-800 font-semibold">
                     -- Choose Location / District (Optional) --
@@ -354,7 +354,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
               <button
                 type="submit"
                 disabled={isSavingProfile}
-                className="w-full rounded-xl bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-50 dark:text-slate-800 dark:hover:bg-slate-100 py-2.5 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                className="w-full rounded-xl bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-50 dark:text-slate-800 dark:hover:bg-slate-100 py-2.5 text-xs font-bold transition-all duration-300 disabled:opacity-50 cursor-pointer"
               >
                 {isSavingProfile ? 'Saving Changes...' : 'Save Preferences'}
               </button>
@@ -376,7 +376,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
               
               <div className="grid grid-cols-3 gap-1.5 text-center">
                 {/* 1. Verified State Badge */}
-                <div className={`p-1.5 rounded-lg border text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
+                <div className={`p-1.5 rounded-lg border text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
                   user?.isVerified && !user?.pendingEmail
                     ? 'bg-emerald-50/70 border-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:border-emerald-800/50 dark:text-emerald-300 shadow-xs'
                     : 'bg-slate-50/20 border-slate-50 text-slate-300 dark:bg-slate-800/10 dark:border-slate-700/40 dark:text-slate-500'
@@ -386,7 +386,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 </div>
 
                 {/* 2. Email Pending State Badge */}
-                <div className={`p-1.5 rounded-lg border text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
+                <div className={`p-1.5 rounded-lg border text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
                   !user?.isVerified && !user?.pendingEmail
                     ? 'bg-amber-50/70 border-amber-100 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300 shadow-xs animate-pulse'
                     : 'bg-slate-50/20 border-slate-50 text-slate-300 dark:bg-slate-800/10 dark:border-slate-700/40 dark:text-slate-500'
@@ -396,7 +396,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 </div>
 
                 {/* 3. Update in Progress State Badge */}
-                <div className={`p-1.5 rounded-lg border text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
+                <div className={`p-1.5 rounded-lg border text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
                   user?.pendingEmail
                     ? 'bg-indigo-50/70 border-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:border-indigo-800/50 dark:text-indigo-300 shadow-xs animate-pulse'
                     : 'bg-slate-50/20 border-slate-50 text-slate-300 dark:bg-slate-800/10 dark:border-slate-700/40 dark:text-slate-500'
@@ -487,7 +487,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                   </p>
                   <a
                     href={simulatedEmailUrl}
-                    className="inline-flex w-full justify-center items-center gap-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white py-2 text-[10px] font-extrabold text-center transition-all shadow-xs"
+                    className="inline-flex w-full justify-center items-center gap-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white py-2 text-[10px] font-extrabold text-center transition-all duration-300 shadow-xs"
                   >
                     <RefreshCw className="h-3 w-3 animate-spin-slow" />
                     Verify and Update Email Right Now
@@ -498,7 +498,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
               <button
                 type="submit"
                 disabled={isUpdatingEmail}
-                className="w-full rounded-xl bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-50 dark:text-slate-800 dark:hover:bg-slate-100 py-2.5 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full rounded-xl bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-50 dark:text-slate-800 dark:hover:bg-slate-100 py-2.5 text-xs font-bold transition-all duration-300 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
               >
                 {isUpdatingEmail ? (
                   <>
@@ -547,7 +547,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 <p className="text-xs text-slate-300 italic">Your bookmark list is currently empty. Bookmark product specs to save them here.</p>
                 <button
                   onClick={() => onNavigate('products')}
-                  className="rounded-full bg-slate-800 border border-slate-800 text-white font-bold text-xs px-4 py-2 hover:bg-slate-700 transition-colors cursor-pointer"
+                  className="rounded-full bg-slate-800 border border-slate-800 text-white font-bold text-xs px-4 py-2 hover:bg-slate-700 transition-colors duration-300 cursor-pointer"
                 >
                   Explore Products
                 </button>
@@ -564,7 +564,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                       
                       <button
                         onClick={() => handleRemoveBookmark(p._id)}
-                        className="absolute top-2.5 right-2.5 h-8 w-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-700 hover:bg-rose-50 hover:text-rose-500 text-slate-400 shadow-md transition-colors cursor-pointer-none border-0"
+                        className="absolute top-2.5 right-2.5 h-8 w-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-700 hover:bg-rose-50 hover:text-rose-500 text-slate-400 shadow-md transition-colors duration-300 cursor-pointer-none border-0"
                         title="Remove bookmark"
                         aria-label={`Remove ${p.name} from bookmarks`}
                       >
@@ -576,7 +576,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                       <div>
                         <h4
                           onClick={() => onNavigate('product-detail', p.slug)}
-                          className="text-xs sm:text-sm font-bold text-slate-700 dark:text-white truncate cursor-pointer hover:text-indigo-500 transition-colors"
+                          className="text-xs sm:text-sm font-bold text-slate-700 dark:text-white truncate cursor-pointer hover:text-indigo-500 transition-colors duration-300"
                         >
                           {p.name}
                         </h4>

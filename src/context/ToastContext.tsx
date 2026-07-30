@@ -169,7 +169,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                         toast.onUndo?.();
                         removeToast(toast.id);
                       }}
-                      className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-white/15 hover:bg-white/25 active:scale-95 text-white shadow-sm border border-white/10 transition-all cursor-pointer"
+                      className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-white/15 hover:bg-white/25 active:scale-95 text-white shadow-sm border border-white/10 transition-all duration-300 cursor-pointer"
                     >
                       Undo
                     </button>
@@ -179,7 +179,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                aria-label="Close Notification" className="shrink-0 p-0.5 rounded-lg hover:bg-white/10 active:scale-95 text-slate-200 dark:text-slate-300 hover:text-white transition-all cursor-pointer"
+                aria-label="Close Notification" className="shrink-0 p-0.5 rounded-lg hover:bg-white/10 active:scale-95 text-slate-200 dark:text-slate-300 hover:text-white transition-all duration-300 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>

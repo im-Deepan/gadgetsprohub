@@ -119,7 +119,7 @@ export function MediaLibrary({ token }: { token: string | null }) {
         <div className="p-4 border-b border-slate-100 flex justify-between items-center">
           <h2 className="text-lg font-bold text-slate-800">Media Library</h2>
           <div className="flex gap-2">
-            <label className="bg-violet-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-violet-700 transition">
+            <label className="bg-violet-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-violet-700 transition duration-300">
               <Upload className="w-4 h-4" />
               Upload Image
               <input type="file" className="hidden" accept="image/*" onChange={handleUpload} />
@@ -135,7 +135,7 @@ export function MediaLibrary({ token }: { token: string | null }) {
                   <img src={item.variants?.thumb || item.localPath} alt={item.fileName} className="w-full h-full object-cover" loading="lazy" />
                   <button 
                     onClick={() => setDeleteConfirmId(item._id)}
-                    className="absolute top-2 right-2 p-1.5 bg-white text-rose-600 rounded-md opacity-0 group-hover:opacity-100 transition shadow-sm hover:bg-rose-50"
+                    className="absolute top-2 right-2 p-1.5 bg-white text-rose-600 rounded-md opacity-0 group-hover:opacity-100 transition duration-300 shadow-sm hover:bg-rose-50"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

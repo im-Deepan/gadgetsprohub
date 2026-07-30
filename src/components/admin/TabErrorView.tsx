@@ -22,7 +22,7 @@ export const TabErrorView: React.FC<TabErrorProps> = ({ message, title, onRetry 
       <button
         type="button"
         onClick={onRetry}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-xs cursor-pointer transition-all active:scale-95"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-xs cursor-pointer transition-all duration-300 active:scale-95"
       >
         <RefreshCcw className="h-3.5 w-3.5 shrink-0" />
         <span>Retry Sourcing This Resource</span>

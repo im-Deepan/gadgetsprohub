@@ -326,7 +326,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
     <div ref={containerRef} className={`relative w-full ${className}`}>
       <form onSubmit={handleFormSubmit} className="relative w-full">
         <div className="relative flex items-center w-full">
-          <Search className={`absolute left-3.5 h-4 w-4 pointer-events-none text-slate-400 transition-colors ${isOpen ? 'text-indigo-500 dark:text-indigo-400' : ''}`} />
+          <Search className={`absolute left-3.5 h-4 w-4 pointer-events-none text-slate-400 transition-colors duration-300 ${isOpen ? 'text-indigo-500 dark:text-indigo-400' : ''}`} />
           
           <input
             ref={inputRef}
@@ -337,7 +337,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
             onFocus={() => setIsOpen(true)}
             placeholder={placeholder}
             autoFocus={autoFocus}
-            className={inputClassName || `w-full rounded-2xl border border-slate-200/80 bg-white/90 py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-white dark:focus:border-indigo-400 dark:focus:bg-slate-900`}
+            className={inputClassName || `w-full rounded-2xl border border-slate-200/80 bg-white/90 py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-all duration-300 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-white dark:focus:border-indigo-400 dark:focus:bg-slate-900`}
           />
 
           {isLoading ? (
@@ -349,7 +349,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
               type="button"
               onClick={handleClearInput}
               aria-label="Clear search query"
-              className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-700/60 transition-all cursor-pointer"
+              className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-700/60 transition-all duration-300 cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -386,7 +386,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                   <button
                     type="button"
                     onClick={handleClearAllRecent}
-                    className="text-[10px] font-bold uppercase text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 flex items-center gap-1 transition-colors cursor-pointer bg-transparent border-none p-0"
+                    className="text-[10px] font-bold uppercase text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 flex items-center gap-1 transition-colors duration-300 cursor-pointer bg-transparent border-none p-0"
                     title="Clear all recent searches"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -400,10 +400,10 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                       key={`recent-${item}-${idx}`}
                       variants={itemVariants}
                       onClick={() => handleSelectSearchQuery(item)}
-                      className="group flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40 transition-all cursor-pointer"
+                      className="group flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40 transition-all duration-300 cursor-pointer"
                     >
                       <span className="flex items-center gap-2.5 truncate">
-                        <Clock className="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors shrink-0" />
+                        <Clock className="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors duration-300 shrink-0" />
                         <span className="truncate">{renderHighlightedText(item, trimmedQuery)}</span>
                       </span>
 
@@ -411,7 +411,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                         type="button"
                         onClick={(e) => handleRemoveRecentItem(e, item)}
                         title="Delete search from recent list"
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-all cursor-pointer border-none bg-transparent"
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-all duration-300 cursor-pointer border-none bg-transparent"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -440,7 +440,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                         key={`db-product-${product._id}`}
                         variants={itemVariants}
                         onClick={() => handleSelectProduct(product)}
-                        className="group flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                        className="group flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all duration-300 cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                       >
                         <img
                           src={img}
@@ -466,7 +466,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                           <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
                             ₹{product.price.toLocaleString()}
                           </span>
-                          <ArrowUpRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-indigo-500 ml-auto mt-0.5 transition-colors" />
+                          <ArrowUpRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-indigo-500 ml-auto mt-0.5 transition-colors duration-300" />
                         </div>
                       </motion.div>
                     );
@@ -491,7 +491,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                       variants={itemVariants}
                       type="button"
                       onClick={() => handleSelectSearchQuery(cat)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200/60 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/60 transition-all cursor-pointer"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200/60 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/60 transition-all duration-300 cursor-pointer"
                     >
                       <Tag className="h-3 w-3 text-amber-500" />
                       <span>{renderHighlightedText(cat, trimmedQuery)}</span>
@@ -503,7 +503,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                       variants={itemVariants}
                       type="button"
                       onClick={() => handleSelectSearchQuery(brand)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 transition-all cursor-pointer"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 transition-all duration-300 cursor-pointer"
                     >
                       <Sparkles className="h-3 w-3 text-indigo-500" />
                       <span>{renderHighlightedText(brand, trimmedQuery)}</span>
@@ -528,7 +528,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                       key={`blog-${blog._id}`}
                       variants={itemVariants}
                       onClick={() => handleSelectBlog(blog)}
-                      className="group flex items-center justify-between p-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all cursor-pointer"
+                      className="group flex items-center justify-between p-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all duration-300 cursor-pointer"
                     >
                       <span className="truncate pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                         {renderHighlightedText(blog.title, trimmedQuery)}
@@ -558,7 +558,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                       variants={itemVariants}
                       type="button"
                       onClick={() => handleSelectSearchQuery(term)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200/60 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-300 transition-all cursor-pointer"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200/60 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-300 transition-all duration-300 cursor-pointer"
                     >
                       <Search className="h-3 w-3 text-slate-400" />
                       <span>{renderHighlightedText(term, trimmedQuery)}</span>
@@ -574,7 +574,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                 <button
                   type="button"
                   onClick={() => handleSelectSearchQuery(trimmedQuery)}
-                  className="w-full py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl transition-all duration-300 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <span>Search all results for "{trimmedQuery}"</span>
                   <ArrowUpRight className="h-3.5 w-3.5" />
