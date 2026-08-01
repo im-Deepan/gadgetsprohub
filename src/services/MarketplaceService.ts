@@ -137,14 +137,14 @@ const comparisonHistorySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Register models
-export const MarketplaceProviderModel = mongoose.models.MarketplaceProvider || mongoose.model('MarketplaceProvider', marketplaceProviderSchema);
-export const MarketplaceSettingsModel = mongoose.models.MarketplaceSettings || mongoose.model('MarketplaceSettings', marketplaceSettingsSchema);
-export const MarketplaceHealthModel = mongoose.models.MarketplaceHealth || mongoose.model('MarketplaceHealth', marketplaceHealthSchema);
-export const MarketplaceAnalyticsModel = mongoose.models.MarketplaceAnalytics || mongoose.model('MarketplaceAnalytics', marketplaceAnalyticsSchema);
-export const CurrencyRatesModel = mongoose.models.CurrencyRates || mongoose.model('CurrencyRates', currencyRatesSchema);
-export const AffiliateProfilesModel = mongoose.models.AffiliateProfiles || mongoose.model('AffiliateProfiles', affiliateProfilesSchema);
-export const ProviderLogsModel = mongoose.models.ProviderLogs || mongoose.model('ProviderLogs', providerLogsSchema);
-export const ComparisonHistoryModel = mongoose.models.ComparisonHistory || mongoose.model('ComparisonHistory', comparisonHistorySchema);
+export const MarketplaceProviderModel: any = mongoose.models.MarketplaceProvider || mongoose.model<any>('MarketplaceProvider', marketplaceProviderSchema);
+export const MarketplaceSettingsModel: any = mongoose.models.MarketplaceSettings || mongoose.model<any>('MarketplaceSettings', marketplaceSettingsSchema);
+export const MarketplaceHealthModel: any = mongoose.models.MarketplaceHealth || mongoose.model<any>('MarketplaceHealth', marketplaceHealthSchema);
+export const MarketplaceAnalyticsModel: any = mongoose.models.MarketplaceAnalytics || mongoose.model<any>('MarketplaceAnalytics', marketplaceAnalyticsSchema);
+export const CurrencyRatesModel: any = mongoose.models.CurrencyRates || mongoose.model<any>('CurrencyRates', currencyRatesSchema);
+export const AffiliateProfilesModel: any = mongoose.models.AffiliateProfiles || mongoose.model<any>('AffiliateProfiles', affiliateProfilesSchema);
+export const ProviderLogsModel: any = mongoose.models.ProviderLogs || mongoose.model<any>('ProviderLogs', providerLogsSchema);
+export const ComparisonHistoryModel: any = mongoose.models.ComparisonHistory || mongoose.model<any>('ComparisonHistory', comparisonHistorySchema);
 
 // ========================================================
 // MARKETPLACE PROVIDER IMPLEMENTATIONS (PLUGIN PATTERN)
@@ -255,8 +255,8 @@ async function fetchRealMarketplaceData(url: string): Promise<any> {
     // Extract Image (including Amazon landingImage fallback)
     if (images.length === 0) {
       // Attempt 1: Extract from Amazon's inline imageGalleryData or colorImages
-      const hiResMatches = [...html.matchAll(/["']hiRes["']\s*:\s*["']([^"']+)["']/gi)];
-      const largeMatches = [...html.matchAll(/["']large["']\s*:\s*["']([^"']+)["']/gi)];
+      let hiResMatches = []; let m1; const re1 = /["']hiRes["']\s*:\s*["']([^"']+)["']/gi; while ((m1 = re1.exec(html)) !== null) { hiResMatches.push(m1); }
+      let largeMatches = []; let m2; const re2 = /["']large["']\s*:\s*["']([^"']+)["']/gi; while ((m2 = re2.exec(html)) !== null) { largeMatches.push(m2); }
       
       if (hiResMatches.length > 0) {
         images = Array.from(new Set(hiResMatches.map(m => m[1]).filter(url => url && url.startsWith('http') && !url.includes('null'))));
@@ -327,7 +327,7 @@ async function fetchRealMarketplaceData(url: string): Promise<any> {
     // Extract Brand
     if (!brand) {
       const amazonBrandMatch = html.match(/<a\s+id=["']bylineInfo["'][^>]*>(?:Brand:\s*|Visit the\s*)?([^<]+)<\/a>/i) ||
-                               html.match(/<tr\s+class=["']po-brand["'][^>]*>.*?<span[^>]*>([^<]+)<\/span>/is);
+                               html.match(/<tr\s+class=["']po-brand["'][^>]*>.*?<span[^>]*>([^<]+)<\/span>/i);
       if (amazonBrandMatch) {
         brand = amazonBrandMatch[1].replace(/^Visit the\s+/i, '').replace(/\s+Store$/i, '').trim();
       } else {
@@ -834,7 +834,7 @@ export class MarketplaceService {
     }
     try {
       // 1. Currency rates seeding
-      const currencyCount = await CurrencyRatesModel.countDocuments();
+      const currencyCount = await CurrencyRatesModel.countDocuments() as any;
       if (currencyCount === 0) {
         await new CurrencyRatesModel({
           baseCurrency: 'USD',
@@ -854,7 +854,7 @@ export class MarketplaceService {
       this.refreshExchangeRates().catch(() => {});
 
       // 2. Providers seeding
-      const count = await MarketplaceProviderModel.countDocuments();
+      const count = await MarketplaceProviderModel.countDocuments() as any;
       if (count === 0) {
         const providersData = this.providers.map(p => ({
           providerId: p.providerId,
@@ -865,7 +865,7 @@ export class MarketplaceService {
           timeout: 15000,
           retryPolicy: { attempts: 3, backoffMs: 1500 }
         }));
-        await MarketplaceProviderModel.insertMany(providersData);
+        await MarketplaceProviderModel.insertMany(providersData) as any;
 
         // Settings seeding
         const settingsData = this.providers.map(p => ({
@@ -875,7 +875,7 @@ export class MarketplaceService {
           cookies: '',
           importRules: { autoPublish: true, syncReviews: true, syncImages: true, maxImagesToImport: 5 }
         }));
-        await MarketplaceSettingsModel.insertMany(settingsData);
+        await MarketplaceSettingsModel.insertMany(settingsData) as any;
 
         // Health seeding
         const healthData = this.providers.map(p => ({
@@ -888,7 +888,7 @@ export class MarketplaceService {
           errorFrequency: 0,
           lastChecked: new Date()
         }));
-        await MarketplaceHealthModel.insertMany(healthData);
+        await MarketplaceHealthModel.insertMany(healthData) as any;
 
         console.log('✅ Pre-seeded Marketplace Providers configuration and status logs.');
       }
@@ -915,7 +915,7 @@ export class MarketplaceService {
    */
   public async refreshExchangeRates(force: boolean = false): Promise<any> {
     try {
-      let rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+      let rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' }) as any;
       const now = new Date();
 
       if (!force && rateDoc && rateDoc.lastUpdated) {
@@ -965,7 +965,7 @@ export class MarketplaceService {
     }
 
     try {
-      const rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+      const rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' }) as any;
       if (rateDoc) {
         rateDoc.lastUpdated = new Date();
         await rateDoc.save();
@@ -981,7 +981,7 @@ export class MarketplaceService {
    * Currency Converter Utility
    */
   public async convertCurrency(amount: number, from: string, to: string): Promise<number> {
-    let rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' });
+    let rateDoc = await CurrencyRatesModel.findOne({ baseCurrency: 'USD' }) as any;
     if (!rateDoc || !rateDoc.lastUpdated || (Date.now() - new Date(rateDoc.lastUpdated).getTime() > 24 * 3600 * 1000)) {
       rateDoc = await this.refreshExchangeRates().catch(() => null) || rateDoc;
     }
@@ -1010,7 +1010,7 @@ export class MarketplaceService {
    * Duplicate detection utility checking UPC/EAN/GTIN or Brand + Name resemblance
    */
   public async detectDuplicates(productData: Partial<NormalizedProduct>): Promise<any[]> {
-    const ProductModel = mongoose.model('Product');
+    const ProductModel: any = mongoose.model('Product');
     const duplicates: any[] = [];
 
     // 1. Match on GTIN/EAN/UPC if available
@@ -1039,7 +1039,7 @@ export class MarketplaceService {
           name: { $all: queryWords }
         }).limit(5);
 
-        matches.forEach(m => {
+        matches.forEach((m: any) => {
           // Prevent duplicates already added
           if (!duplicates.some(d => d.product._id.toString() === m._id.toString())) {
             duplicates.push({ product: m, criteria: 'Brand & Model keyword matching', score: 85 });
@@ -1058,9 +1058,9 @@ export class MarketplaceService {
     if (String(primaryId) === String(duplicateId)) {
       throw new Error('Self-merge guard: Cannot merge a product with itself.');
     }
-    const ProductModel = mongoose.model('Product');
-    const primary = await ProductModel.findById(primaryId);
-    const duplicate = await ProductModel.findById(duplicateId);
+    const ProductModel: any = mongoose.model('Product');
+    const primary = await ProductModel.findById(primaryId) as any;
+    const duplicate = await ProductModel.findById(duplicateId) as any;
 
     if (!primary || !duplicate) throw new Error('One of the products was not found.');
 
@@ -1077,6 +1077,27 @@ export class MarketplaceService {
       }
 
       // Add duplicate to comparison products
+      if (!primary.comparisonProducts.includes(duplicate._id)) {
+        primary.comparisonProducts.push(duplicate._id);
+      }
+    } else if (strategy === 'keep_secondary') {
+      // Overwrite primary fields with duplicate data
+      primary.name = duplicate.name;
+      primary.description = duplicate.description;
+      primary.longDescription = duplicate.longDescription;
+      primary.price = duplicate.price;
+      primary.originalPrice = duplicate.originalPrice;
+      primary.discount = duplicate.discount;
+      primary.brand = duplicate.brand;
+      primary.category = duplicate.category;
+      primary.images = duplicate.images;
+      primary.specifications = duplicate.specifications;
+      primary.sku = duplicate.sku;
+      primary.affiliateLink = duplicate.affiliateLink;
+      primary.rating = duplicate.rating;
+      primary.totalReviews = duplicate.totalReviews;
+      primary.inStock = duplicate.inStock;
+      
       if (!primary.comparisonProducts.includes(duplicate._id)) {
         primary.comparisonProducts.push(duplicate._id);
       }
@@ -1126,7 +1147,7 @@ export class MarketplaceService {
    * Perform a cross-marketplace price and metrics comparison for a product
    */
   public async compareCrossMarketplace(productId: string): Promise<any> {
-    const ProductModel = mongoose.model('Product');
+    const ProductModel: any = mongoose.model('Product');
     const product = await ProductModel.findById(productId).populate('comparisonProducts');
     if (!product) throw new Error('Product not found.');
 
@@ -1197,14 +1218,14 @@ export class MarketplaceService {
       throw new Error('Unsupported product URL. No matching marketplace provider detected.');
     }
 
-    const provConfig = await MarketplaceProviderModel.findOne({ providerId: provider.providerId });
+    const provConfig = await MarketplaceProviderModel.findOne({ providerId: provider.providerId }) as any;
     if (provConfig && !provConfig.enabled) {
       throw new Error(`The marketplace provider ${provider.name} is currently disabled by administrator.`);
     }
 
     try {
       // 1. Fetch matching affiliate profile if exists to append tag
-      const affiliateProfile = await AffiliateProfilesModel.findOne({ providerId: provider.providerId });
+      const affiliateProfile = await AffiliateProfilesModel.findOne({ providerId: provider.providerId }) as any;
       const affiliateCode = affiliateProfile?.affiliateId || 'partner-21';
 
       // 2. Perform secure scraping extraction
@@ -1212,7 +1233,7 @@ export class MarketplaceService {
       const latency = Date.now() - startTime;
 
       // 3. Register standard Mongoose Product models
-      const ProductModel = mongoose.model('Product');
+      const ProductModel: any = mongoose.model('Product');
       const CategoryModel = mongoose.model('Category');
 
       // 4. Validate or merge duplicates
@@ -1396,11 +1417,35 @@ export class MarketplaceService {
    */
   private async updateAnalyticsMetrics(providerId: string) {
     try {
-      const ProductModel = mongoose.model('Product');
-      const productsCount = await ProductModel.countDocuments({ tags: providerId });
+      const ProductModel: any = mongoose.model('Product');
+      const products = await ProductModel.find({ tags: providerId }) as any;
+      const productsCount = products.length;
       
-      const successLogs = await ProviderLogsModel.countDocuments({ providerId, status: 'success' });
-      const errorLogs = await ProviderLogsModel.countDocuments({ providerId, status: 'error' });
+      let totalDiscount = 0;
+      let countWithDiscount = 0;
+      let revenuePotential = 0;
+      
+      products.forEach((p: any) => {
+         let currentDiscount = 0;
+         if (p.originalPrice && p.price && p.originalPrice > p.price) {
+             currentDiscount = ((p.originalPrice - p.price) / p.originalPrice) * 100;
+         } else if (p.discount && typeof p.discount === 'number' && p.discount > 0) {
+             currentDiscount = p.discount;
+         }
+         
+         if (currentDiscount > 0) {
+            totalDiscount += currentDiscount;
+            countWithDiscount++;
+         }
+
+         if (p.price && typeof p.price === 'number') {
+            revenuePotential += p.price;
+         }
+      });
+      const averageDiscount = countWithDiscount > 0 ? Math.round(totalDiscount / countWithDiscount) : 0;
+      
+      const successLogs = await ProviderLogsModel.countDocuments({ providerId, status: 'success' }) as any;
+      const errorLogs = await ProviderLogsModel.countDocuments({ providerId, status: 'error' }) as any;
       const totalLogs = successLogs + errorLogs;
       const importSuccessRate = totalLogs > 0 ? Math.round((successLogs / totalLogs) * 100) : 0;
 
@@ -1410,8 +1455,8 @@ export class MarketplaceService {
           providerId,
           productsCount,
           importSuccessRate,
-          revenuePotential: productsCount * 45, // simulated potential metric value
-          averageDiscount: 15,
+          revenuePotential,
+          averageDiscount,
           failedImports: errorLogs,
           syncCoverage: productsCount > 0 ? 100 : 0
         },
@@ -1426,12 +1471,12 @@ export class MarketplaceService {
    * Aggregate complete metrics across all providers for Dashboard charts
    */
   public async getAnalytics(): Promise<any> {
-    const analytics = await MarketplaceAnalyticsModel.find({});
-    const healthStatus = await MarketplaceHealthModel.find({});
+    const analytics = await MarketplaceAnalyticsModel.find({}) as any;
+    const healthStatus = await MarketplaceHealthModel.find({}) as any;
     
     const providersSummary = this.providers.map(p => {
-      const metric = analytics.find(a => a.providerId === p.providerId) || { productsCount: 0, revenuePotential: 0, importSuccessRate: 0, failedImports: 0 };
-      const health = healthStatus.find(h => h.providerId === p.providerId) || { status: 'online', averageLatencyMs: 350 };
+      const metric = analytics.find((a: any) => a.providerId === p.providerId) || { productsCount: 0, revenuePotential: 0, importSuccessRate: 0, failedImports: 0 };
+      const health = healthStatus.find((h: any) => h.providerId === p.providerId) || { status: 'online', averageLatencyMs: 350 };
       return {
         providerId: p.providerId,
         name: p.name,

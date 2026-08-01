@@ -7436,7 +7436,7 @@ async function startServer() {
     try {
       if (!isMongoConnected) return res.json({ success: true, data: [] });
       const settings = await MarketplaceSettingsModel.find({});
-      const sanitized = settings.map(s => {
+      const sanitized = settings.map((s: any) => {
         const obj = s.toObject ? s.toObject() : { ...s };
         if (obj.apiKeys && typeof obj.apiKeys === 'object') {
           const masked: Record<string, string> = {};
