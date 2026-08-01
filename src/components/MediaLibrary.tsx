@@ -8,6 +8,7 @@ export function MediaLibrary({ token }: { token: string | null }) {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fetchMedia = async () => {
     setLoading(true);
@@ -27,8 +28,9 @@ export function MediaLibrary({ token }: { token: string | null }) {
       if (statsData.success) {
         setStats(statsData.data);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setFeedback({ type: 'error', message: 'Failed to load media assets from server.' });
     }
     setLoading(false);
   };
@@ -41,11 +43,21 @@ export function MediaLibrary({ token }: { token: string | null }) {
     if (!deleteConfirmId) return;
     const id = deleteConfirmId;
     setDeleteConfirmId(null);
-    await apiFetch(`/api/admin/media/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    fetchMedia();
+    try {
+      const res = await apiFetch(`/api/admin/media/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        setFeedback({ type: 'success', message: 'Media asset deleted successfully.' });
+        fetchMedia();
+      } else {
+        setFeedback({ type: 'error', message: data.error || 'Failed to delete media asset.' });
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Error communicating with media server.' });
+    }
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,16 +67,36 @@ export function MediaLibrary({ token }: { token: string | null }) {
     const formData = new FormData();
     formData.append('file', file);
     
-    await apiFetch('/api/admin/media/upload', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData
-    });
-    fetchMedia();
+    try {
+      const res = await apiFetch('/api/admin/media/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        setFeedback({ type: 'success', message: 'Image uploaded successfully.' });
+        fetchMedia();
+      } else {
+        setFeedback({ type: 'error', message: data.error || 'Upload failed. File type or size limit restriction.' });
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Error uploading file.' });
+    }
   };
 
   return (
     <div className="space-y-6">
+      {feedback && (
+        <div className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between ${
+          feedback.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+        }`}>
+          <span>{feedback.message}</span>
+          <button onClick={() => setFeedback(null)} className="text-xs font-bold underline cursor-pointer ml-4">
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
           <div>

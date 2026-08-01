@@ -64,13 +64,6 @@ export class DataNormalizer {
     let val = parseFloat(cleaned);
     if (isNaN(val) || val < 0) return 0;
 
-    // 3. Handle integer price string collapsed from whole + fraction without decimal (e.g. "1999" -> 19.99)
-    if (val >= 1000 && !trimmed.includes('.') && !trimmed.includes(',')) {
-      if (val % 100 !== 0) {
-        val = val / 100;
-      }
-    }
-
     if (val > 100000) return 0;
 
     return Math.round(val * 100) / 100;

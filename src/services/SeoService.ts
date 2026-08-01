@@ -528,7 +528,8 @@ export class SeoService {
         faqs: [
           { question: `Is the ${payload.productName} durable?`, answer: `Yes, built from high-grade materials to ensure long-term durability.`, category: 'Usage' },
           { question: `What is the warranty policy?`, answer: `Standard manufacturer warranties apply. Check Amazon listing details.`, category: 'Warranty' }
-        ]
+        ],
+        isFallback: true
       };
     }
 
@@ -612,7 +613,21 @@ export class SeoService {
       return JSON.parse(text);
     } catch (error: any) {
       console.error('Gemini AI SEO Assistant generation error:', error.message);
-      throw error;
+      const focus = this.generateSeoSlug(payload.productName).split('-').slice(0, 3).join(' ');
+      return {
+        seoTitle: `Best ${payload.productName} Review & Guide (${new Date().getFullYear()})`,
+        seoDescription: `Read our comprehensive hands-on expert analysis of the ${payload.productName} by ${payload.brand || 'experts'}. Check the latest pricing, benefits, and specifications here!`,
+        focusKeyword: focus,
+        secondaryKeywords: [payload.brand || 'review', 'buy online', 'top affiliate product'],
+        productIntro: `Welcome to our in-depth showcase of the ${payload.productName}. If you're searching for premium quality and outstanding reliability, this review serves as your ultimate guide.`,
+        buyingSummary: `The ${payload.productName} stands out for its great value, outstanding performance, and durable materials, making it a stellar purchase for any enthusiast.`,
+        ctaSection: `Don't miss the current promotional discounts! Click below to view the latest live deals on Amazon.`,
+        faqs: [
+          { question: `Is the ${payload.productName} durable?`, answer: `Yes, built from high-grade materials to ensure long-term durability.`, category: 'Usage' },
+          { question: `What is the warranty policy?`, answer: `Standard manufacturer warranties apply. Check Amazon listing details.`, category: 'Warranty' }
+        ],
+        isFallback: true
+      };
     }
   }
 

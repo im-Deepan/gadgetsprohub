@@ -261,12 +261,13 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
   };
 
   useEffect(() => {
+    if (activeTab !== 'scanner') return;
     fetchScannerStatus();
     const interval = setInterval(() => {
       fetchScannerStatus();
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeTab]);
 
   const handleStartScanner = async () => {
     try {
@@ -636,6 +637,9 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
         setSingleUrl('');
         await fetchMarketplaceData();
       } else {
+        if (secondaryId) {
+          await apiFetch(`/api/admin/products/${secondaryId}`, { method: 'DELETE' }).catch(() => null);
+        }
         showNotice('error', 'Merge database operation failed.');
       }
     } catch {

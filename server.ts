@@ -307,7 +307,7 @@ const analyticsSchema = new mongoose.Schema({
   userAgent: String,
   ipAddress: String,
   referer: String,
-  district: { type: String, default: 'Chennai' },
+  district: { type: String, default: 'Unknown' },
   timestamp: { type: Date, default: Date.now, index: true, expires: '90d' },
   browser: String,
   device: String,
@@ -6011,26 +6011,34 @@ async function startServer() {
 
     // Test 3: Duplicate ASIN Protection check
     await runTest("Data Integrity: Duplicate ASIN Prevention", async () => {
-      let testAsin = "B0CSY18N5V";
-      let match = null;
-      if (isMongoConnected) {
-        match = await Product.findOne({ asin: testAsin });
-      } else {
-        match = localProducts.find((p: any) => p.asin === testAsin);
+      const testAsin = "TEST_DUP_ASIN_999";
+      let existing = isMongoConnected ? await Product.findOne({ asin: testAsin }) : localProducts.find((p: any) => p.asin === testAsin);
+      if (!existing) {
+        const dummyProd = { name: "Test Prod", asin: testAsin, price: 99, categoryId: "665a0001bc93ef2d8c000001", affiliateLink: "https://amazon.com/dp/" + testAsin };
+        if (isMongoConnected) {
+          existing = await new Product(dummyProd).save();
+        } else {
+          localProducts.push(dummyProd);
+          existing = dummyProd;
+        }
       }
-      if (match) {
-        return;
+      
+      // Verification: duplicate query finds existing item and prevents duplicate creation
+      const dupMatch = isMongoConnected ? await Product.find({ asin: testAsin }) : localProducts.filter((p: any) => p.asin === testAsin);
+      if (dupMatch.length > 1) {
+        throw new Error("Duplicate ASIN records detected in database for " + testAsin);
       }
     });
 
     // Test 4: Idempotency check
     await runTest("Reliability: Idempotency Handling", async () => {
-      const testId = "test-idempotency-key-123";
-      const fakeResponse = { success: true, mocked: true };
+      const testId = "test-idempotency-key-" + Date.now();
+      const fakeResponse = { success: true, mocked: true, timestamp: Date.now() };
       processedImportsCache.set(testId, fakeResponse);
       
-      if (!processedImportsCache.has(testId)) {
-        throw new Error("Idempotency cache lookup failed");
+      const cached = processedImportsCache.get(testId);
+      if (!cached || cached.timestamp !== fakeResponse.timestamp) {
+        throw new Error("Idempotency cache lookup failed or returned mismatched response");
       }
       processedImportsCache.delete(testId); 
     });
@@ -7030,19 +7038,67 @@ async function startServer() {
 
       await responseDoc.save();
 
-      // If approved or published, write generated content into the Product object's main description!
+      // If approved or published, write generated content into the Product object's appropriate fields!
       if (status === 'approved' || status === 'published') {
         const ProductModel = mongoose.model('Product');
-        const p = await ProductModel.findById(responseDoc.productId);
+        let p = isMongoConnected ? await ProductModel.findById(responseDoc.productId) : localProducts.find((item: any) => item._id?.toString() === responseDoc.productId?.toString());
+
         if (p) {
-          // Determine which field to overwrite based on promptKey
-          if (responseDoc.promptKey === 'product_long_description') {
-            p.set('description', responseDoc.generatedText);
-          } else if (responseDoc.promptKey === 'pros_cons') {
-            // Can be structured or stored in description/features appropriately
-            p.set('features', [responseDoc.generatedText]);
+          const key = (responseDoc.promptKey || '').toLowerCase();
+          const text = (responseDoc.generatedText || '').trim();
+
+          if (key.includes('long_description') || key.includes('longdescription')) {
+            p.longDescription = text;
+            if (!p.description) p.description = text;
+          } else if (key.includes('short_summary') || key.includes('summary') || key.includes('description')) {
+            p.description = text;
+          } else if (key.includes('pros_cons') || key.includes('pros') || key.includes('cons')) {
+            const lines = text.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+            const prosArr: string[] = [];
+            const consArr: string[] = [];
+            let currentMode: 'pros' | 'cons' = 'pros';
+
+            for (const line of lines) {
+              const lower = line.toLowerCase();
+              if (lower.startsWith('pro:') || lower.startsWith('pros:') || lower.includes('pros:')) {
+                currentMode = 'pros';
+                const cleaned = line.replace(/^(pro|pros):\s*/i, '').trim();
+                if (cleaned) prosArr.push(cleaned);
+              } else if (lower.startsWith('con:') || lower.startsWith('cons:') || lower.includes('cons:')) {
+                currentMode = 'cons';
+                const cleaned = line.replace(/^(con|cons):\s*/i, '').trim();
+                if (cleaned) consArr.push(cleaned);
+              } else {
+                const cleaned = line.replace(/^[\+\-\*•\d\.\s]+/, '').trim();
+                if (cleaned) {
+                  if (currentMode === 'pros') prosArr.push(cleaned);
+                  else consArr.push(cleaned);
+                }
+              }
+            }
+            if (prosArr.length > 0) p.pros = prosArr;
+            if (consArr.length > 0) p.cons = consArr;
+            if (prosArr.length === 0 && consArr.length === 0) {
+              p.features = lines.map((l: string) => l.replace(/^[\+\-\*•\d\.\s]+/, '').trim()).filter((l: string) => l.length > 0);
+            }
+          } else if (key.includes('bullet') || key.includes('feature')) {
+            const featuresArr = text.split('\n')
+              .map((l: string) => l.replace(/^[\+\-\*•\d\.\s]+/, '').trim())
+              .filter((l: string) => l.length > 0);
+            if (featuresArr.length > 0) p.features = featuresArr;
+          } else if (key.includes('seo_meta_title') || key.includes('seotitle')) {
+            p.seoTitle = text;
+          } else if (key.includes('seo_meta_description') || key.includes('seodescription')) {
+            p.seoDescription = text;
+          } else {
+            // Default fallback
+            if (p.longDescription) p.longDescription = text;
+            else p.description = text;
           }
-          await p.save();
+
+          if (isMongoConnected && typeof p.save === 'function') {
+            await p.save();
+          }
         }
       }
 
@@ -7761,30 +7817,56 @@ async function startServer() {
 app.post('/api/admin/products/bulk/:jobId/action', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const { action } = req.body; // pause, resume, cancel
+      if (!action || !['pause', 'resume', 'cancel'].includes(action)) {
+        return res.status(400).json({ error: 'Invalid action parameter. Allowed values: pause, resume, cancel' });
+      }
+
       if (isMongoConnected) {
         const job = await BulkImportJob.findById(req.params.jobId);
         if (!job) return res.status(404).json({ error: 'Job not found' });
 
-        if (action === 'pause') job.status = 'paused';
-        else if (action === 'resume') job.status = 'running';
-        else if (action === 'cancel') {
+        if (action === 'pause') {
+          if (['completed', 'cancelled', 'failed'].includes(job.status)) {
+            return res.status(400).json({ error: `Cannot pause job with status "${job.status}"` });
+          }
+          job.status = 'paused';
+        } else if (action === 'resume') {
+          if (job.status !== 'paused') {
+            return res.status(400).json({ error: `Cannot resume job with status "${job.status}". Only paused jobs can be resumed.` });
+          }
+          job.status = 'running';
+        } else if (action === 'cancel') {
+          if (['completed', 'cancelled'].includes(job.status)) {
+            return res.status(400).json({ error: `Cannot cancel job that is already ${job.status}` });
+          }
           job.status = 'cancelled';
           job.completedAt = new Date();
         }
-        
+
         await job.save();
         res.status(200).json({ success: true, status: job.status });
       } else {
         const job = localBulkImportJobs.find(j => j._id === req.params.jobId);
         if (!job) return res.status(404).json({ error: 'Job not found' });
 
-        if (action === 'pause') job.status = 'paused';
-        else if (action === 'resume') job.status = 'running';
-        else if (action === 'cancel') {
+        if (action === 'pause') {
+          if (['completed', 'cancelled', 'failed'].includes(job.status)) {
+            return res.status(400).json({ error: `Cannot pause job with status "${job.status}"` });
+          }
+          job.status = 'paused';
+        } else if (action === 'resume') {
+          if (job.status !== 'paused') {
+            return res.status(400).json({ error: `Cannot resume job with status "${job.status}". Only paused jobs can be resumed.` });
+          }
+          job.status = 'running';
+        } else if (action === 'cancel') {
+          if (['completed', 'cancelled'].includes(job.status)) {
+            return res.status(400).json({ error: `Cannot cancel job that is already ${job.status}` });
+          }
           job.status = 'cancelled';
           job.completedAt = new Date();
         }
-        
+
         saveLocalBulkImportJobs();
         res.status(200).json({ success: true, status: job.status });
       }

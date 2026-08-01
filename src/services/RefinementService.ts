@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { EventEmitter } from 'events';
+import fs from 'fs';
+import path from 'path';
 
 // ========== STRUCTURED LOGGING ENGINE ==========
 export class Logger {
@@ -79,6 +81,8 @@ export const CacheEntry = mongoose.models.CacheEntry || mongoose.model('CacheEnt
 // ========== CORE SERVICES ==========
 
 // 1. Feature Flags and Configuration Service
+const FLAGS_FILE_PATH = path.join(process.cwd(), 'data', 'feature_flags.json');
+
 export class ConfigurationService {
   private static flags: Record<string, boolean> = {
     enable2fa: true,
@@ -89,16 +93,49 @@ export class ConfigurationService {
     enableStructuredLogs: true,
     enableDependencyInjection: true
   };
+  private static isInitialized = false;
+
+  private static initFlags(): void {
+    if (this.isInitialized) return;
+    this.isInitialized = true;
+    try {
+      if (fs.existsSync(FLAGS_FILE_PATH)) {
+        const fileData = fs.readFileSync(FLAGS_FILE_PATH, 'utf8');
+        const parsed = JSON.parse(fileData);
+        if (parsed && typeof parsed === 'object') {
+          this.flags = { ...this.flags, ...parsed };
+        }
+      }
+    } catch (err: any) {
+      console.warn('[ConfigurationService] Failed to load persisted feature flags from disk:', err.message);
+    }
+  }
+
+  private static saveFlags(): void {
+    try {
+      const dir = path.dirname(FLAGS_FILE_PATH);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(FLAGS_FILE_PATH, JSON.stringify(this.flags, null, 2), 'utf8');
+    } catch (err: any) {
+      console.warn('[ConfigurationService] Failed to persist feature flags to disk:', err.message);
+    }
+  }
 
   public static getFlag(flag: string): boolean {
+    this.initFlags();
     return this.flags[flag] ?? false;
   }
 
   public static setFlag(flag: string, value: boolean): void {
+    this.initFlags();
     this.flags[flag] = value;
+    this.saveFlags();
   }
 
   public static getAllFlags(): Record<string, boolean> {
+    this.initFlags();
     return { ...this.flags };
   }
 }

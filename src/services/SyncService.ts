@@ -159,7 +159,12 @@ export class SyncService {
       if (mongoose.connection.readyState !== 1) return;
       if (this.isProcessingQueue) return;
       try {
-        const nextJob = await SyncJob.findOne({ status: 'waiting' }).sort({ priority: -1, createdAt: 1 });
+        const workerId = `Worker-${process.pid}-${Math.floor(Math.random() * 10000)}`;
+        const nextJob = await SyncJob.findOneAndUpdate(
+          { status: 'waiting' },
+          { $set: { status: 'running', workerId, startedAt: new Date() } },
+          { sort: { priority: -1, createdAt: 1 }, new: true }
+        );
         if (nextJob) {
           this.isProcessingQueue = true;
           await this.processJob(nextJob._id.toString());
@@ -491,12 +496,51 @@ export class SyncService {
       if (isTriggered) {
         // Send alert messages across channels
         for (const channel of alert.channels) {
+          let dispatchStatus: 'sent' | 'failed' = 'sent';
+          let dispatchError = '';
+
+          try {
+            if (channel === 'telegram' && process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+              const tgUrl = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+              const tgRes = await fetch(tgUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: alertMessage })
+              });
+              if (!tgRes.ok) dispatchStatus = 'failed';
+            } else if (channel === 'discord' && process.env.DISCORD_WEBHOOK_URL) {
+              const dcRes = await fetch(process.env.DISCORD_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: alertMessage })
+              });
+              if (!dcRes.ok) dispatchStatus = 'failed';
+            } else if (channel === 'slack' && process.env.SLACK_WEBHOOK_URL) {
+              const slRes = await fetch(process.env.SLACK_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: alertMessage })
+              });
+              if (!slRes.ok) dispatchStatus = 'failed';
+            } else if (channel === 'webhook' && alert.webhookUrl) {
+              const whRes = await fetch(alert.webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event: 'alert_triggered', rule: alert.name, product, message: alertMessage })
+              });
+              if (!whRes.ok) dispatchStatus = 'failed';
+            }
+          } catch (err: any) {
+            dispatchStatus = 'failed';
+            dispatchError = err.message;
+          }
+
           await new NotificationHistory({
             recipient: 'Admin/Subscriber Team',
             channel,
             title: `Product Sync Alert: ${alert.name}`,
-            message: alertMessage,
-            status: 'sent'
+            message: dispatchError ? `${alertMessage} (Error: ${dispatchError})` : alertMessage,
+            status: dispatchStatus
           }).save();
         }
       }
@@ -517,20 +561,44 @@ export class SyncService {
       if (runAction) {
         // Execute rule actions
         for (const act of rule.actions) {
+          let execStatus: 'sent' | 'failed' = 'sent';
+
+          try {
+            if (act.actionType === 'mark_best_deal') {
+              product.trending = true;
+              product.badge = 'Best Deal';
+              await product.save();
+            } else if (act.actionType === 'update_website') {
+              product.updatedAt = new Date();
+              await product.save();
+            } else if (act.actionType === 'send_telegram' && process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+              await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `[Automation: ${rule.name}] ${product.name} updated!` })
+              });
+            } else if (act.actionType === 'send_discord' && process.env.DISCORD_WEBHOOK_URL) {
+              await fetch(process.env.DISCORD_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: `[Automation: ${rule.name}] ${product.name} updated!` })
+              });
+            } else if (act.actionType === 'regenerate_ai') {
+              product.description = `Featured Deal: ${product.name} - now available at $${product.price}.`;
+              await product.save();
+            }
+          } catch (e) {
+            execStatus = 'failed';
+          }
+
           // Register audit log
           await new NotificationHistory({
             recipient: 'Automation Exec',
             channel: 'system',
             title: `Executed Action: ${act.actionType}`,
-            message: `Rule "${rule.name}" triggered on ${product.name} changes. Triggered ${act.actionType}`,
-            status: 'sent'
+            message: `Rule "${rule.name}" triggered on ${product.name} changes. Action ${act.actionType} execution: ${execStatus}`,
+            status: execStatus
           }).save();
-
-          // Apply specific behaviors
-          if (act.actionType === 'mark_best_deal') {
-            product.trending = true;
-            await product.save();
-          }
         }
       }
     }

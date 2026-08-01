@@ -39,7 +39,7 @@ const PRESET_PRODUCTS: ScrapedProduct[] = [
     description: "A fully customizable wireless mechanical keyboard with QMK/VIA support and double-gasket design.",
     longDescription: "The Keychron Q1 Max is a premium all-metal custom mechanical keyboard that supports 2.4GHz wireless, Bluetooth 5.1, and USB-C wired connectivity. It features a solid CNC aluminum body, hot-swappable switches, double-gasket mount design, and customizable RGB backlighting for the ultimate typing experience.",
     imageUrl: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800",
-    affiliateCode: "shopgear-20",
+    affiliateCode: "gadgetspro-20",
     features: [
       "2.4 GHz wireless & Bluetooth 5.1 connection",
       "Full CNC aluminum body & double-gasket design",
@@ -66,7 +66,7 @@ const PRESET_PRODUCTS: ScrapedProduct[] = [
     description: "Premium wireless over-ear noise-canceling headphones with auto-optimizing noise canceling.",
     longDescription: "The Sony WH-1000XM5 headphones rewrite the rules for distraction-free listening. With two processors controlling 8 microphones, Auto NC Optimizer for automatically optimizing noise canceling based on your wearing conditions and environment, and a specially designed driver unit, you get premium audio performance.",
     imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800",
-    affiliateCode: "shopgear-20",
+    affiliateCode: "gadgetspro-20",
     features: [
       "Industry-leading active noise cancellation (ANC)",
       "Up to 30-hour battery life with quick charging",
@@ -92,7 +92,7 @@ const PRESET_PRODUCTS: ScrapedProduct[] = [
     description: "Ultra-high capacity power bank with 200W total output and smart digital display screen.",
     longDescription: "Anker Prime Power Bank combines ultra-compact design with maximum charging speed. Equipped with two USB-C ports and one USB-A port, it lets you charge up to 3 devices simultaneously. The intelligent digital display provides real-time information on remaining battery, input power, and output power.",
     imageUrl: "https://images.unsplash.com/photo-1609592424109-dd9892f1b17c?w=800",
-    affiliateCode: "shopgear-20",
+    affiliateCode: "gadgetspro-20",
     features: [
       "Massive 200W total output to charge laptops quickly",
       "Smart digital display screen showing power stats",
@@ -449,31 +449,16 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
       }
     } catch (err: any) {
       clearInterval(stepTimer);
-      // Fallback structured data for this specific ASIN if network fails
-      setScrapedProduct({
-        name: `Amazon Curated Spec (ASIN ${asin})`,
-        asin: asin,
-        brand: "Amazon Merchant",
-        price: 99.99,
-        originalPrice: 119.99,
-        categoryName: "Electronics",
-        subcategory: "Accessories",
-        description: `Imported product details for Amazon ASIN ${asin}. Ready for affiliate portal publication.`,
-        longDescription: `This product was extracted directly from Amazon (ASIN: ${asin}). The content parser extracted technical specifications and identifiers for your curated catalog.`,
-        imageUrl: "https://images.unsplash.com/photo-1547082299-de196ea013d6?w=800",
-        affiliateCode: "shopgear-20",
-        features: [
-          `Verified Amazon ASIN: ${asin}`,
-          "Manufacturer warranty and support",
-          "High-performance design and premium build"
-        ],
-        specifications: {
-          "Brand": "Amazon Merchant",
-          "Category": "Electronics & Accessories",
-          "Warranty": "1 Year Manufacturer Limited Warranty",
-          "Item Condition": "New - Factory Sealed"
-        },
-        tags: ["imported", "amazon", asin.toLowerCase()]
+      setScrapedProduct(null);
+      const errorMessage = err.message || 'Scraper failed to extract product data from Amazon.';
+      setAlertDialog({
+        title: 'Extraction Failed',
+        message: `${errorMessage} Please ensure the ASIN or Amazon URL is active and reachable, or enter product details manually.`
+      });
+      setResult({
+        success: false,
+        message: 'Product Scrape Failed',
+        error: errorMessage
       });
     } finally {
       setScraping(false);

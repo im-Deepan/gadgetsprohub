@@ -313,6 +313,11 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
     setRefreshing(false);
   };
 
+  // Clear temporary token when tab changes
+  useEffect(() => {
+    setGeneratedPat('');
+  }, [activeSubTab]);
+
   // Initial Data Fetch
   useEffect(() => {
     setLoading(true);
@@ -495,19 +500,27 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                       <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider dark:text-indigo-400">
                         New Access Token Value:
                       </span>
-                      <button
-                        onClick={() => copyToClipboard(generatedPat)}
-                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 dark:text-indigo-400"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        {copiedPat ? 'COPIED!' : 'Copy to Clipboard'}
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => copyToClipboard(generatedPat)}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 dark:text-indigo-400 cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          {copiedPat ? 'COPIED!' : 'Copy to Clipboard'}
+                        </button>
+                        <button
+                          onClick={() => setGeneratedPat('')}
+                          className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 dark:text-rose-400 cursor-pointer"
+                        >
+                          Dismiss Token
+                        </button>
+                      </div>
                     </div>
                     <div className="font-mono text-xs bg-slate-900 text-emerald-400 p-2.5 rounded border border-slate-800 select-all break-all">
                       {generatedPat}
                     </div>
                     <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
-                      ⚠️ Make sure to save this token safely. It will not be shown again!
+                      ⚠️ Make sure to save this token safely. Click "Dismiss Token" when finished to clear it from memory.
                     </p>
                   </div>
                 )}
@@ -790,10 +803,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
 
                 <div className="font-mono text-[11px] bg-slate-950 p-3.5 rounded-lg border border-slate-800 text-emerald-400/90 h-[180px] overflow-y-auto space-y-1.5 leading-relaxed">
                   {liveLogs.length === 0 ? (
-                    <>
-                      <p className="text-slate-500">// No live request logs captured yet. Perform actions or browse pages to log traffic!</p>
-                      <p>{"{"}"timestamp":"{new Date().toISOString()}","level":"INFO","method":"GET","url":"/api/metrics","status":200,"durationMs":3,"correlationId":"init_connection"{"}"}</p>
-                    </>
+                    <p className="text-slate-500">// No live request logs captured yet. Perform actions or browse pages to log traffic!</p>
                   ) : (
                     liveLogs.map((log, idx) => (
                       <p key={idx}>{JSON.stringify(log)}</p>
@@ -900,26 +910,27 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
                     </div>
                     
                     <div className="shrink-0">
-                      <button
-                        onClick={() => handleToggleDbConnection(dbInfo.isMongoConnected)}
-                        disabled={dbToggling}
-                        className={`px-4 py-2 text-xs font-black rounded-xl cursor-pointer transition-all duration-300 uppercase shadow-sm flex items-center gap-1.5 active:scale-95 disabled:opacity-50 ${
-                          dbInfo.isMongoConnected
-                            ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                            : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                        }`}
-                      >
-                        {dbToggling ? (
-                          <>
-                            <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
-                            <span>Switching...</span>
-                          </>
-                        ) : dbInfo.isMongoConnected ? (
-                          <span>Go Offline Fallback</span>
-                        ) : (
-                          <span>Go Live MongoDB</span>
-                        )}
-                      </button>
+                      {dbInfo.isMongoConnected ? (
+                        <div className="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-500 border border-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700 uppercase flex items-center gap-1.5" title="Offline fallback mode is permanently disabled for system integrity">
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Live Mode Locked</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleToggleDbConnection(false)}
+                          disabled={dbToggling}
+                          className="px-4 py-2 text-xs font-black rounded-xl cursor-pointer transition-all duration-300 uppercase shadow-sm flex items-center gap-1.5 active:scale-95 disabled:opacity-50 bg-emerald-500 hover:bg-emerald-600 text-white"
+                        >
+                          {dbToggling ? (
+                            <>
+                              <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Connecting...</span>
+                            </>
+                          ) : (
+                            <span>Connect Live MongoDB</span>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
 

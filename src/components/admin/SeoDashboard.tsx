@@ -86,7 +86,7 @@ export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
   const [savingRedirect, setSavingRedirect] = useState(false);
 
   // General Notification state
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   useEffect(() => {
     fetchInitialData();
@@ -117,7 +117,7 @@ export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
     }
   };
 
-  const showNotice = (type: 'success' | 'error', message: string) => {
+  const showNotice = (type: 'success' | 'error' | 'info', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 5000);
   };
@@ -211,7 +211,11 @@ export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
               faqs: data.faqs
             };
           });
-          showNotice('success', 'Gemini AI SEO suggestions applied to the form!');
+          if (data.isFallback) {
+            showNotice('info', 'Template SEO suggestions applied to the form (Gemini AI API key not configured or offline).');
+          } else {
+            showNotice('success', 'Gemini AI SEO suggestions applied to the form!');
+          }
         }
       }
     } catch (err) {

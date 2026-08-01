@@ -65,6 +65,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender: chrome
         isAmazon: /amazon\.(com|in|co\.uk|ca)$/.test(window.location.hostname)
       }
     });
+    return false;
   } else if (action === "SCRAPE_AMAZON_PRODUCT") {
     console.log("[GadgetsProHub Importer] Starting SCRAPE_AMAZON_PRODUCT extraction...");
     const debugSnapshot = captureDomDebugSnapshot();
@@ -112,6 +113,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender: chrome
         }
       });
     });
+    return true;
   } else if (action === "TEST_PARSER") {
     console.log("[GadgetsProHub Importer] Running TEST_PARSER...");
     const debugSnapshot = captureDomDebugSnapshot();
@@ -120,7 +122,10 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender: chrome
     }).catch(err => {
       sendResponse({ success: false, error: { code: 'TEST_ERR', message: err.message } });
     });
+    return true;
+  } else {
+    sendResponse({ success: false, error: { code: 'UNRECOGNIZED_ACTION', message: `Unrecognized action: ${action}` } });
+    return false;
   }
-  return true; // Keeps the messaging channel open for asynchronous responses
 });
 
