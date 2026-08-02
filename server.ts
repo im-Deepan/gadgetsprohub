@@ -689,6 +689,70 @@ const activePairingCodeSchema = new mongoose.Schema({
 });
 const ActivePairingCodeModel = mongoose.model('ActivePairingCode', activePairingCodeSchema);
 
+const siteSettingsSchema = new mongoose.Schema({
+  adsenseClientId: { type: String, default: 'ca-pub-1234567890123456' },
+  adsenseEnabled: { type: Boolean, default: true },
+  adsenseSlots: {
+    headerBannerSlot: { type: String, default: '6223881151' },
+    productDetailSlot: { type: String, default: '7898031267' },
+    blogSlot: { type: String, default: '1223904982' },
+    sidebarSlot: { type: String, default: '9876543210' },
+    homeSlot: { type: String, default: '6223881151' }
+  },
+  siteName: { type: String, default: 'gadgetsprohub' },
+  supportEmail: { type: String, default: 'support@gadgetsprohub.com' },
+  updatedAt: { type: Date, default: Date.now }
+});
+const SiteSettingsModel = mongoose.model('SiteSettings', siteSettingsSchema);
+
+const LOCAL_SITE_SETTINGS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_site_settings.json');
+let localSiteSettings = {
+  adsenseClientId: process.env.VITE_ADSENSE_CLIENT_ID || process.env.ADSENSE_CLIENT_ID || 'ca-pub-1234567890123456',
+  adsenseEnabled: true,
+  adsenseSlots: {
+    headerBannerSlot: '6223881151',
+    productDetailSlot: '7898031267',
+    blogSlot: '1223904982',
+    sidebarSlot: '9876543210',
+    homeSlot: '6223881151'
+  },
+  siteName: 'gadgetsprohub',
+  supportEmail: 'support@gadgetsprohub.com',
+  updatedAt: new Date().toISOString()
+};
+
+if (fs.existsSync(LOCAL_SITE_SETTINGS_FILE)) {
+  try {
+    const loaded = JSON.parse(fs.readFileSync(LOCAL_SITE_SETTINGS_FILE, 'utf8'));
+    localSiteSettings = { ...localSiteSettings, ...loaded };
+  } catch (e: any) {
+    console.warn("Failed reading local site settings:", e.message);
+  }
+}
+
+const saveLocalSiteSettings = () => {
+  try {
+    fs.writeFileSync(LOCAL_SITE_SETTINGS_FILE, JSON.stringify(localSiteSettings, null, 2), 'utf8');
+  } catch (e: any) {
+    console.warn("Failed saving local site settings:", e.message);
+  }
+};
+
+export async function getSiteSettingsData() {
+  if (isMongoConnected) {
+    try {
+      let dbSettings = await SiteSettingsModel.findOne({});
+      if (!dbSettings) {
+        dbSettings = await SiteSettingsModel.create(localSiteSettings);
+      }
+      return dbSettings.toObject ? dbSettings.toObject() : dbSettings;
+    } catch (e) {
+      return localSiteSettings;
+    }
+  }
+  return localSiteSettings;
+}
+
 
 
 
@@ -7663,6 +7727,61 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     }
   });
 
+  // Public endpoint for site & AdSense settings
+  app.get('/api/settings', async (_req: express.Request, res: express.Response) => {
+    try {
+      const settings = await getSiteSettingsData();
+      res.json({ success: true, data: settings });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch site settings' });
+    }
+  });
+
+  // Admin protected endpoint for full settings
+  app.get('/api/admin/settings', adminOnly, async (_req: express.Request, res: express.Response) => {
+    try {
+      const settings = await getSiteSettingsData();
+      res.json({ success: true, data: settings });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch admin settings' });
+    }
+  });
+
+  // Admin protected endpoint to save site & AdSense settings
+  app.post('/api/admin/settings', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { adsenseClientId, adsenseEnabled, adsenseSlots, siteName, supportEmail } = req.body;
+      
+      const updatedData = {
+        adsenseClientId: adsenseClientId?.trim() || localSiteSettings.adsenseClientId,
+        adsenseEnabled: adsenseEnabled !== undefined ? Boolean(adsenseEnabled) : localSiteSettings.adsenseEnabled,
+        adsenseSlots: {
+          headerBannerSlot: adsenseSlots?.headerBannerSlot || localSiteSettings.adsenseSlots.headerBannerSlot,
+          productDetailSlot: adsenseSlots?.productDetailSlot || localSiteSettings.adsenseSlots.productDetailSlot,
+          blogSlot: adsenseSlots?.blogSlot || localSiteSettings.adsenseSlots.blogSlot,
+          sidebarSlot: adsenseSlots?.sidebarSlot || localSiteSettings.adsenseSlots.sidebarSlot,
+          homeSlot: adsenseSlots?.homeSlot || localSiteSettings.adsenseSlots.homeSlot
+        },
+        siteName: siteName || localSiteSettings.siteName,
+        supportEmail: supportEmail || localSiteSettings.supportEmail,
+        updatedAt: new Date().toISOString()
+      };
+
+      localSiteSettings = { ...localSiteSettings, ...updatedData };
+      saveLocalSiteSettings();
+
+      if (isMongoConnected) {
+        await SiteSettingsModel.findOneAndUpdate({}, updatedData, { upsert: true, new: true });
+      }
+
+      await logSecurityAction(req, 'SETTINGS_UPDATED', 'site_settings', { adsenseClientId: updatedData.adsenseClientId, adsenseEnabled: updatedData.adsenseEnabled });
+
+      res.json({ success: true, data: updatedData, message: 'Site & AdSense settings saved and updated in real-time!' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to save settings' });
+    }
+  });
+
   // ==========================================
   // DESCENDING PRICE SCANNER (1:00 AM FLOW)
   // ==========================================
@@ -9812,8 +9931,9 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
   });
 
   // Google AdSense ads.txt crawler verification endpoint
-  app.get('/ads.txt', adsTxtLimiter, (_req: express.Request, res: express.Response) => {
-    const publisherId = process.env.ADSENSE_CLIENT_ID;
+  app.get('/ads.txt', adsTxtLimiter, async (_req: express.Request, res: express.Response) => {
+    const settings = await getSiteSettingsData();
+    const publisherId = settings.adsenseClientId || process.env.ADSENSE_CLIENT_ID || 'ca-pub-1234567890123456';
     if (!publisherId || publisherId === 'ca-pub-0000000000000000') {
       return res.status(404).send('Not configured');
     }

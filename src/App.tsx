@@ -363,20 +363,13 @@ const AppContent: React.FC = () => {
 
     trackVisit().catch(() => {});
 
-    // Lazy load AdSense safely with strict double-trigger protection
+    // Load AdSense script safely with fallback test publisher ID if unconfigured
     const loadAdSense = () => {
       if (adsenseScriptLoaded) return;
       adsenseScriptLoaded = true;
 
-      // Clean up event listeners immediately upon any physical interaction click/scroll
-      window.removeEventListener('scroll', loadAdSense);
-      window.removeEventListener('click', loadAdSense);
-      window.removeEventListener('touchstart', loadAdSense);
-      window.removeEventListener('mousemove', loadAdSense);
-
       try {
-        const publisherId = import.meta.env.VITE_ADSENSE_CLIENT_ID;
-        if (!publisherId) return; // Do not load if publisher ID is not configured
+        const publisherId = import.meta.env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-1234567890123456';
         const existingScript = document.querySelector(`script[src*="pagead2.googlesyndication.com"]`);
         if (!existingScript) {
           const script = document.createElement('script');
@@ -390,23 +383,10 @@ const AppContent: React.FC = () => {
       }
     };
 
-    if (!adsenseScriptLoaded) {
-      window.addEventListener('scroll', loadAdSense, { passive: true });
-      window.addEventListener('click', loadAdSense, { passive: true });
-      window.addEventListener('touchstart', loadAdSense, { passive: true });
-      window.addEventListener('mousemove', loadAdSense, { passive: true });
-    }
-
-    // 3.5s safety timeout for crawlers or indexers, giving plenty of time to render without script congestion
-    const adsenseTimeout = setTimeout(loadAdSense, 3500);
+    loadAdSense();
 
     return () => {
       controller.abort();
-      window.removeEventListener('scroll', loadAdSense);
-      window.removeEventListener('click', loadAdSense);
-      window.removeEventListener('touchstart', loadAdSense);
-      window.removeEventListener('mousemove', loadAdSense);
-      clearTimeout(adsenseTimeout);
     };
   }, []);
 

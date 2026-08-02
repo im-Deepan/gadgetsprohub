@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Product, Category, Blog, Message, User } from '../types';
 import { Plus, Edit, Trash2, MailOpen, MailCheck, Coins, MousePointerClick, Mail, RefreshCcw, Database, TrendingUp, Globe, Users, ChevronDown, ChevronUp, Instagram, Linkedin, Download } from 'lucide-react';
@@ -55,7 +55,23 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const tabContainerRef = useRef<HTMLDivElement>(null);
   
   // Tab selector
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler' | 'users' | 'security-logs' | 'importer' | 'media' | 'seo' | 'ai-content' | 'sync-dashboard' | 'security-console'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'blogs' | 'messages' | 'telemetry' | 'scheduler' | 'users' | 'security-logs' | 'importer' | 'media' | 'seo' | 'ai-content' | 'sync-dashboard' | 'security-console' | 'adsense-settings'>('products');
+  
+  // AdSense & Site Settings states
+  const [siteSettingsForm, setSiteSettingsForm] = useState({
+    adsenseClientId: 'ca-pub-1234567890123456',
+    adsenseEnabled: true,
+    headerBannerSlot: '6223881151',
+    productDetailSlot: '7898031267',
+    blogSlot: '1223904982',
+    sidebarSlot: '9876543210',
+    homeSlot: '6223881151',
+    siteName: 'gadgetsprohub',
+    supportEmail: 'support@gadgetsprohub.com'
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSuccessMsg, setSettingsSuccessMsg] = useState<string | null>(null);
+  const [settingsErrorMsg, setSettingsErrorMsg] = useState<string | null>(null);
   const [messagesFilter, setMessagesFilter] = useState<'all' | 'unread'>('all');
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
@@ -327,6 +343,80 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   }, [token, activeTab, productPage]);
 
 
+
+  const fetchSettings = useCallback(async () => {
+    if (!token) return;
+    try {
+      setSettingsLoading(true);
+      const res = await apiFetch('/api/admin/settings', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setSiteSettingsForm({
+          adsenseClientId: data.data.adsenseClientId || 'ca-pub-1234567890123456',
+          adsenseEnabled: data.data.adsenseEnabled !== undefined ? data.data.adsenseEnabled : true,
+          headerBannerSlot: data.data.adsenseSlots?.headerBannerSlot || '6223881151',
+          productDetailSlot: data.data.adsenseSlots?.productDetailSlot || '7898031267',
+          blogSlot: data.data.adsenseSlots?.blogSlot || '1223904982',
+          sidebarSlot: data.data.adsenseSlots?.sidebarSlot || '9876543210',
+          homeSlot: data.data.adsenseSlots?.homeSlot || '6223881151',
+          siteName: data.data.siteName || 'gadgetsprohub',
+          supportEmail: data.data.supportEmail || 'support@gadgetsprohub.com'
+        });
+      }
+    } catch (e: any) {
+      setSettingsErrorMsg('Failed to load settings');
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (activeTab === 'adsense-settings') {
+      fetchSettings();
+    }
+  }, [activeTab, fetchSettings]);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSettingsSuccessMsg(null);
+    setSettingsErrorMsg(null);
+    setSettingsLoading(true);
+    try {
+      const res = await apiFetch('/api/admin/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          adsenseClientId: siteSettingsForm.adsenseClientId,
+          adsenseEnabled: siteSettingsForm.adsenseEnabled,
+          adsenseSlots: {
+            headerBannerSlot: siteSettingsForm.headerBannerSlot,
+            productDetailSlot: siteSettingsForm.productDetailSlot,
+            blogSlot: siteSettingsForm.blogSlot,
+            sidebarSlot: siteSettingsForm.sidebarSlot,
+            homeSlot: siteSettingsForm.homeSlot
+          },
+          siteName: siteSettingsForm.siteName,
+          supportEmail: siteSettingsForm.supportEmail
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettingsSuccessMsg(json.message || 'Settings saved successfully!');
+        triggerAlert('Settings Saved', 'Site & AdSense settings saved and applied across the platform!');
+      } else {
+        setSettingsErrorMsg(json.error || 'Failed to save settings');
+      }
+    } catch (err: any) {
+      setSettingsErrorMsg(err.message || 'Error communicating with server');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
 
   // Polling for general user list synchronization
   useEffect(() => {
@@ -1506,6 +1596,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'security-console' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🛡️ Security & Telemetry
+        </button>
+
+        <button
+          onClick={() => setActiveTab('adsense-settings')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'adsense-settings' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+        >
+          💰 AdSense & Site Settings
         </button>
       </div>
 
@@ -2732,6 +2829,184 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             <SyncDashboard token={token || ''} showNotice={(type, message) => triggerAlert(type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Info', message)} />
           ) : activeTab === 'security-console' ? (
             <SecurityConsole token={token} triggerAlert={triggerAlert} />
+          ) : activeTab === 'adsense-settings' ? (
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    💰 Google AdSense & Site Settings
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Configure real-time publisher client IDs, banner slots, and dynamic ads.txt crawler authorization.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={fetchSettings}
+                    disabled={settingsLoading}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                  >
+                    {settingsLoading ? 'Refreshing...' : '🔄 Sync Latest'}
+                  </button>
+                </div>
+              </div>
+
+              {settingsSuccessMsg && (
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-medium flex items-center justify-between">
+                  <span>✓ {settingsSuccessMsg}</span>
+                  <button onClick={() => setSettingsSuccessMsg(null)} className="text-xs font-bold">✕</button>
+                </div>
+              )}
+
+              {settingsErrorMsg && (
+                <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center justify-between">
+                  <span>⚠️ {settingsErrorMsg}</span>
+                  <button onClick={() => setSettingsErrorMsg(null)} className="text-xs font-bold">✕</button>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveSettings} className="space-y-6">
+                {/* SECTION 1: PUBLISHER CLIENT ID & TOGGLE */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                        Google AdSense Account Authorization
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Enter your verified AdSense Publisher ID (e.g. <code className="bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded text-[11px]">ca-pub-XXXXXXXXXXXXXXXX</code>)
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={siteSettingsForm.adsenseEnabled}
+                        onChange={(e) => setSiteSettingsForm(prev => ({ ...prev, adsenseEnabled: e.target.checked }))}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                      <span className="ml-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {siteSettingsForm.adsenseEnabled ? 'Ads Active' : 'Ads Paused'}
+                      </span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      AdSense Client Publisher ID
+                    </label>
+                    <input
+                      type="text"
+                      value={siteSettingsForm.adsenseClientId}
+                      onChange={(e) => setSiteSettingsForm(prev => ({ ...prev, adsenseClientId: e.target.value }))}
+                      placeholder="ca-pub-1234567890123456"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                      Stored in real-time database and applied instantly across client banner slots and crawler <code className="text-indigo-400">/ads.txt</code>.
+                    </p>
+                  </div>
+                </div>
+
+                {/* SECTION 2: AD SLOT CONFIGURATION */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 shadow-xs space-y-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      Ad Placement Slot Reference IDs
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Configure specific slot IDs created in your Google AdSense console for each surface.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Header Banner Slot ID
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettingsForm.headerBannerSlot}
+                        onChange={(e) => setSiteSettingsForm(prev => ({ ...prev, headerBannerSlot: e.target.value }))}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Product Detail Page Slot ID
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettingsForm.productDetailSlot}
+                        onChange={(e) => setSiteSettingsForm(prev => ({ ...prev, productDetailSlot: e.target.value }))}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Blog & Article Page Slot ID
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettingsForm.blogSlot}
+                        onChange={(e) => setSiteSettingsForm(prev => ({ ...prev, blogSlot: e.target.value }))}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Home Catalog Feed Slot ID
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettingsForm.homeSlot}
+                        onChange={(e) => setSiteSettingsForm(prev => ({ ...prev, homeSlot: e.target.value }))}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 3: REAL-TIME ADS.TXT PREVIEW */}
+                <div className="p-5 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      Real-Time /ads.txt Crawler Endpoint Output
+                    </h4>
+                    <a
+                      href="/ads.txt"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-indigo-300 hover:text-indigo-200 underline font-mono"
+                    >
+                      Open Live /ads.txt &rarr;
+                    </a>
+                  </div>
+                  <pre className="p-3 bg-slate-950 rounded-xl text-emerald-300 font-mono text-xs overflow-x-auto border border-slate-800">
+                    {`google.com, ${siteSettingsForm.adsenseClientId.replace('ca-', '')}, DIRECT, f08c47fec0942fa0`}
+                  </pre>
+                  <p className="text-[10px] text-slate-400 font-sans">
+                    Google AdSense crawlers periodically request <code className="text-emerald-400 font-mono">/ads.txt</code> to verify domain ownership and ad revenue authorization.
+                  </p>
+                </div>
+
+                {/* SUBMIT BUTTON */}
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={settingsLoading}
+                    className="px-6 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-md disabled:opacity-50 cursor-pointer"
+                  >
+                    {settingsLoading ? 'Saving to Database...' : '💾 Save Settings to Real-Time Storage'}
+                  </button>
+                </div>
+              </form>
+            </div>
           ) : (
 
           /* VIEW TAB : TELEMETRY TRAFFIC LOGS */

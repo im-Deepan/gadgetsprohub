@@ -150,7 +150,10 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
       }
 
       const dRes = await apiFetch('/api/admin/sync/dashboard');
-      if (dRes.ok) {
+      if (dRes.status === 401) {
+        showNotice('error', 'Your session or authorization token has expired. Please sign in again to resume monitoring and sync.');
+        return;
+      } else if (dRes.ok) {
         const dData = await dRes.json();
         setStats(dData.data || {});
       }

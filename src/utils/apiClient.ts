@@ -108,7 +108,7 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
   }
 
   if (!hasAuthHeader) {
-    const token = memoryToken;
+    const token = memoryToken || (typeof localStorage !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken')) : null);
     if (token) {
       if (headersObj instanceof Headers) {
         headersObj.set('Authorization', `Bearer ${token}`);
