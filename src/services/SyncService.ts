@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { MarketplaceService } from './MarketplaceService';
 
 // ==========================================
 // SCHEMAS & MODELS FOR PRICE MONITORING
@@ -282,7 +283,6 @@ export class SyncService {
     } else {
       // Automatic real-time live synchronization using the detected MarketplaceProvider
       try {
-        const { MarketplaceService } = require('./MarketplaceService');
         const mService = MarketplaceService.getInstance();
         const provider = mService.detectMarketplace(product.affiliateLink || '');
         if (provider) {
@@ -639,3 +639,5 @@ export class SyncService {
     };
   }
 }
+
+export const localProducts: any[] = [];

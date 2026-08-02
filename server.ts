@@ -146,6 +146,8 @@ const userSchema = new mongoose.Schema({
   pendingEmail: { type: String, default: null },
   pendingEmailToken: { type: String, default: null },
   pendingEmailTokenExpires: { type: Date, default: null },
+  resetPasswordToken: { type: String, default: null },
+  resetPasswordExpiresAt: { type: Date, default: null },
   twoFactorEnabled: { type: Boolean, default: false },
   twoFactorSecret: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
@@ -798,7 +800,7 @@ Promise.all(localUsers.map(async (u) => {
 })).then(() => {
   try {
     fs.writeFileSync(LOCAL_USERS_FILE, JSON.stringify(localUsers, null, 2), 'utf8');
-  } catch (err) {
+  } catch (err: any) {
     // Ignore write failure in read-only setups
   }
 }).catch(err => console.warn("Error hashing initial users in-memory:", err));
@@ -1537,7 +1539,7 @@ async function cleanExpiredTrendingProducts() {
         { trending: true, trendingStartedAt: { $exists: false } },
         { $set: { trendingStartedAt: new Date() } }
       );
-    } catch (err) {
+    } catch (err: any) {
       captureError(err, { context: 'cleanExpiredTrendingProducts' });
     }
   } else {
@@ -1658,7 +1660,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
         addedProductsList.push(product);
       }
       await syncProductsToSeedFile();
-    } catch (err) {
+    } catch (err: any) {
       captureError(err, { context: 'saving automatic Sunday product drafts' });
     }
   } else {
@@ -1758,7 +1760,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
       });
       await mongoLog.save();
       finalLog = mongoLog;
-    } catch (err) {
+    } catch (err: any) {
       captureError(err, { context: 'Sunday Log Creation' });
     }
   } else {
@@ -2504,7 +2506,126 @@ async function startServer() {
     return jwt.sign({ userId }, JWT_SECRET_KEY, { expiresIn: '30d', algorithm: 'HS256' });
   };
 
-  app.get('/api/auth/verify', async (req: express.Request, res: express.Response): Promise<any> => {
+  
+  // Forgot Password
+  app.post('/api/auth/forgot-password', authLimiter, async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ error: 'Email is required.' });
+      
+      const storageEmail = getStorageEmail(email);
+      let resetToken = crypto.randomBytes(32).toString('hex');
+      let resetExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      let targetUser = null;
+
+      if (isMongoConnected) {
+        targetUser = await User.findOne({ email: storageEmail });
+        if (targetUser) {
+          (targetUser as any).resetPasswordToken = resetToken;
+          (targetUser as any).resetPasswordExpiresAt = resetExpiresAt;
+          await targetUser.save();
+        }
+      } else {
+        targetUser = localUsers.find(u => u.email === storageEmail);
+        if (targetUser) {
+          (targetUser as any).resetPasswordToken = resetToken;
+          (targetUser as any).resetPasswordExpiresAt = resetExpiresAt;
+          saveLocalUsers();
+        }
+      }
+
+      const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
+      const rawHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+      const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
+      const resetUrl = `${proto}://${host}/login?resetToken=${resetToken}`;
+
+      let emailSent = false;
+      let smtpErrorMsg = '';
+
+      const transporter = getMailTransport();
+      if (targetUser && transporter) {
+        try {
+          await transporter.sendMail({
+            from: process.env.SMTP_FROM || 'GadgetsProHub <noreply@gadgetsprohub.com>',
+            to: targetUser.email,
+            subject: 'Password Reset Request',
+            html: `
+              <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                  <h2 style="margin: 0; color: #111827;">Password Reset</h2>
+                </div>
+                <div style="padding: 20px; color: #374151;">
+                  <p>We received a request to reset your password. Click the button below to choose a new one:</p>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${resetUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+                  </div>
+                  <p style="margin: 0; font-size: 12px; color: #6b7280;">If you didn't request this, you can safely ignore this email.</p>
+                </div>
+              </div>
+            `
+          });
+          emailSent = true;
+        } catch (err: any) {
+          smtpErrorMsg = err.message;
+        }
+      } else if (targetUser) {
+        console.log(`[SIMULATED PASSWORD RESET] User: ${targetUser.email} - Reset link: ${resetUrl}`);
+      }
+
+      return res.json({ 
+        success: true, 
+        message: 'If an account matches that email, a password reset link has been sent.',
+        smtpError: smtpErrorMsg || (!transporter ? 'SMTP transporter not configured' : ''),
+        resetUrlSimulated: (targetUser && process.env.NODE_ENV !== 'production') ? resetUrl : undefined
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: 'An error occurred while processing your request.' });
+    }
+  });
+
+  // Reset Password
+  app.post('/api/auth/reset-password', authLimiter, async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password are required.' });
+
+      if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+
+      let targetUser = null;
+      const hashed = await bcrypt.hash(newPassword, 10);
+
+      if (isMongoConnected) {
+        targetUser = await User.findOne({ 
+          resetPasswordToken: token,
+          resetPasswordExpiresAt: { $gt: new Date() }
+        });
+        if (targetUser) {
+          targetUser.password = hashed;
+          (targetUser as any).resetPasswordToken = undefined;
+          (targetUser as any).resetPasswordExpiresAt = undefined;
+          await targetUser.save();
+        }
+      } else {
+        targetUser = localUsers.find(u => (u as any).resetPasswordToken === token && new Date((u as any).resetPasswordExpiresAt) > new Date());
+        if (targetUser) {
+          targetUser.password = hashed;
+          (targetUser as any).resetPasswordToken = undefined;
+          (targetUser as any).resetPasswordExpiresAt = undefined;
+          saveLocalUsers();
+        }
+      }
+
+      if (!targetUser) {
+        return res.status(400).json({ error: 'Invalid or expired password reset token.' });
+      }
+
+      return res.json({ success: true, message: 'Password has been successfully reset. You can now log in.' });
+    } catch (error: any) {
+      res.status(500).json({ error: 'An error occurred while resetting your password.' });
+    }
+  });
+
+app.get('/api/auth/verify', async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { token } = req.query;
       if (!token || typeof token !== 'string') {
@@ -2666,7 +2787,7 @@ async function startServer() {
   const bruteForceCleanupTimer = setInterval(() => {
     try {
       cleanupFailedLoginTracker();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[failedLoginTracker Cleanup Error]:', err);
     }
   }, 60 * 60 * 1000);
@@ -2960,7 +3081,7 @@ async function startServer() {
       if (isMongoConnected) {
         try {
           await BlacklistedToken.create({ token });
-        } catch (err) {
+        } catch (err: any) {
           console.warn("Failed to blacklist token:", err);
         }
       } else {
@@ -3293,7 +3414,7 @@ async function startServer() {
             name: payload.name || payload.email.split('@')[0],
           };
         }
-      } catch (err) {
+      } catch (err: any) {
         // Fallback to manual Firebase verification
       }
 
@@ -3341,7 +3462,7 @@ async function startServer() {
       } catch (certErr) {
         console.error('Firebase signature verification failed:', certErr);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('ID Token verification failed:', error);
     }
     return null;
@@ -3482,7 +3603,7 @@ async function startServer() {
               } else {
                 filter.category = catStr;
               }
-            } catch (err) {
+            } catch (err: any) {
               filter.category = catStr;
             }
           }
@@ -3500,7 +3621,7 @@ async function startServer() {
           try {
             const matchedCats = await Category.find({ name: { $regex: searchRegex } });
             categoryIds = matchedCats.map((c: any) => c._id);
-          } catch (err) {
+          } catch (err: any) {
             captureError(err, { context: 'Category search mapping' });
           }
 
@@ -4041,7 +4162,7 @@ async function startServer() {
       if (response.ok) {
         return await response.json();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Failed to fetch tracking data from Shippo:', err);
     }
     return null;
@@ -4400,7 +4521,7 @@ async function startServer() {
         try {
           matchedCats = await Category.find({ name: { $regex: searchRegex } }).limit(5);
           categoryIds = matchedCats.map((c: any) => c._id);
-        } catch (err) {
+        } catch (err: any) {
           captureError(err, { context: 'Category search mapping' });
         }
 
@@ -4825,9 +4946,8 @@ async function startServer() {
 
         return res.json({
           success: true,
-          message: emailSent ? 'A verification link has been sent to your new email address. Please click it to confirm your update.' : 'Email transport not configured or failed. Use simulated verification link below.',
-          smtpError: smtpErrorMsg || (!transporter ? 'SMTP transporter not configured' : ''),
-          verificationUrlSimulated: verificationUrl
+          message: emailSent ? 'A verification link has been sent to your new email address. Please click it to confirm your update.' : 'Email transport not configured or failed. ',
+          smtpError: smtpErrorMsg || (!transporter ? 'SMTP transporter not configured' : '')
         });
       } else {
         const currentUser = localUsers.find(u => u._id === uId);
@@ -4890,9 +5010,8 @@ async function startServer() {
 
         return res.json({
           success: true,
-          message: emailSent ? 'A verification link has been sent to your new email address. Please click it to confirm your update.' : 'Email transport not configured or failed. Use simulated verification link below.',
-          smtpError: smtpErrorMsg || (!transporter ? 'SMTP transporter not configured' : ''),
-          verificationUrlSimulated: verificationUrl
+          message: emailSent ? 'A verification link has been sent to your new email address. Please click it to confirm your update.' : 'Email transport not configured or failed. ',
+          smtpError: smtpErrorMsg || (!transporter ? 'SMTP transporter not configured' : '')
         });
       }
     } catch (error: any) {
@@ -7594,7 +7713,6 @@ async function startServer() {
       if (isMongoConnected) {
         products = await Product.find({}).sort({ price: -1 }).populate('category').lean();
       } else {
-        const { localProducts } = require('./src/services/SyncService');
         products = Array.isArray(localProducts) ? [...localProducts].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0)) : [];
       }
 
@@ -7656,7 +7774,6 @@ async function startServer() {
       if (isMongoConnected) {
         products = await Product.find({}).sort({ price: -1 }).populate('category').lean();
       } else {
-        const { localProducts } = require('./src/services/SyncService');
         products = Array.isArray(localProducts) ? [...localProducts].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0)) : [];
       }
 
@@ -9584,7 +9701,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         try {
           instaCount = await SocialClick.countDocuments({ platform: 'instagram' });
           linkedinCount = await SocialClick.countDocuments({ platform: 'linkedin' });
-        } catch (err) {
+        } catch (err: any) {
           captureError(err, { context: 'SocialClick counts dynamically' });
         }
 
@@ -9843,7 +9960,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
 
       res.setHeader('Content-Type', 'text/html; charset=UTF-8');
       res.send(html);
-    } catch (err) {
+    } catch (err: any) {
       res.sendFile(indexPath);
     }
   };

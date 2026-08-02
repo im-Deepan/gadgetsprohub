@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
-import { SyncService } from './SyncService';
+import { SyncService, localProducts } from './SyncService';
 
 export interface PriceScannerLog {
   id: string;
@@ -246,7 +246,6 @@ export class PriceScannerService {
         return prods;
       } else {
         // Fallback to local products if Mongo is offline
-        const { localProducts } = require('./SyncService');
         if (Array.isArray(localProducts)) {
           return [...localProducts].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
         }
@@ -327,7 +326,6 @@ export class PriceScannerService {
               { new: true }
             );
           } else {
-            const { localProducts } = require('./SyncService');
             if (Array.isArray(localProducts)) {
               const pIndex = localProducts.findIndex(
                 (lp: any) => lp._id?.toString() === nextProduct._id.toString() || lp.id === nextProduct._id.toString()

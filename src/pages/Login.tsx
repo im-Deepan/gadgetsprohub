@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Lock, Mail, User, ShieldCheck, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, User, ShieldCheck, ArrowLeft, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { loginSchema, registerSchema } from '../utils/schemas';
 import { apiFetch } from '../utils/apiClient';
 
@@ -13,7 +13,7 @@ interface LoginProps {
 const translateAuthError = (errorStr: string): { title: string; description: string; suggestion?: string } => {
   const err = errorStr.toLowerCase();
   
-  if (err.includes('incorrect') || err.includes('invalid-credential') || err.includes('wrong-password') || err.includes('invalid credentials')) {
+  if (err.includes('incorrect') || err.includes('invalid-credential') || err.includes('wrong-password') || err.includes('invalid credentials') || err.includes('user-not-found') || err.includes('no user record')) {
     return {
       title: "Authentication Failed",
       description: "The email address or password you entered doesn't match our records.",
@@ -45,13 +45,6 @@ const translateAuthError = (errorStr: string): { title: string; description: str
     };
   }
   
-  if (err.includes('user-not-found') || err.includes('no user record')) {
-    return {
-      title: "Account Not Found",
-      description: "No registered account matches the email address you entered.",
-      suggestion: "Double-check for spelling mistakes, or click 'Register Account' to set up a new profile."
-    };
-  }
 
   if (err.includes('profile name') || err.includes('name is required')) {
     return {
@@ -120,6 +113,21 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   
   // Fields state
+  
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false);
+  const [simulatedResetUrl, setSimulatedResetUrl] = useState('');
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('resetToken');
+    if (token) {
+      setResetToken(token);
+      setIsForgotPassword(true);
+    }
+  }, []);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -149,6 +157,65 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     e.preventDefault();
     setSubmitting(true);
     setAuthError('');
+
+    
+    if (isForgotPassword && !resetToken) {
+      if (!email) {
+        setAuthError('Please enter your email address to reset your password.');
+        setSubmitting(false);
+        return;
+      }
+      try {
+        const response = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setForgotPasswordSuccess(true);
+          showToast(data.message, 'success', 5000, "User Action");
+          if (data.resetUrlSimulated) {
+            setSimulatedResetUrl(data.resetUrlSimulated);
+          }
+        } else {
+          setAuthError(data.error || 'Failed to request password reset.');
+        }
+      } catch (e) {
+        setAuthError('Network error occurred.');
+      }
+      setSubmitting(false);
+      return;
+    }
+
+    if (isForgotPassword && resetToken) {
+      if (!password || password.length < 6) {
+        setAuthError('Password must be at least 6 characters long.');
+        setSubmitting(false);
+        return;
+      }
+      try {
+        const response = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: resetToken, newPassword: password })
+        });
+        const data = await response.json();
+        if (data.success) {
+          showToast(data.message, 'success', 5000, "User Action");
+          setIsForgotPassword(false);
+          setResetToken(null);
+          setActiveTab('login');
+          setPassword('');
+        } else {
+          setAuthError(data.error || 'Failed to reset password.');
+        }
+      } catch (e) {
+        setAuthError('Network error occurred.');
+      }
+      setSubmitting(false);
+      return;
+    }
 
     if (activeTab === 'login') {
       const validation = loginSchema.safeParse({ email, password });
@@ -358,120 +425,194 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         )}
 
         {/* Input Forms */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
+                <form onSubmit={handleSubmit} className="space-y-4">
           <LoginErrorDisplay error={authError} onClear={() => setAuthError('')} />
-
-          <AnimatePresence mode="popLayout" initial={false}>
-            {activeTab === 'register' && (
-              <motion.div
-                key="register-name"
-                initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
-                exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                transition={{ duration: 0.3 }}
-                className="space-y-1.5"
+          {isForgotPassword ? (
+            <div className="space-y-4">
+              {!resetToken && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="hello@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                    />
+                  </div>
+                </div>
+              )}
+              {resetToken && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">New Password</label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Enter new password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={submitting || forgotPasswordSuccess}
+                className="w-full text-xs relative flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-slate-950 px-4 py-2.5 font-semibold text-white shadow-md transition-all hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
               >
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Full Name</label>
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-400 border-t-white dark:border-slate-300 dark:border-t-slate-950" />
+                    Processing...
+                  </span>
+                ) : (
+                  <span>{resetToken ? 'Reset Password' : 'Send Reset Link'}</span>
+                )}
+              </button>
+              
+              {simulatedResetUrl && (
+                <div className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 border border-amber-200 dark:border-amber-800 break-all">
+                  <strong>Simulated Link:</strong> <a href={simulatedResetUrl} className="underline" target="_blank" rel="noreferrer">{simulatedResetUrl}</a>
+                </div>
+              )}
+              
+              <div className="text-center mt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setIsForgotPassword(false)}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <AnimatePresence mode="popLayout" initial={false}>
+                {activeTab === 'register' && (
+                  <motion.div
+                    key="register-name"
+                    initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                    animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
+                    exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-1.5"
+                  >
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Full Name</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="John Doe"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Email Address</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
                   <input
-                    type="text"
+                    type="email"
                     required
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    placeholder="buyer@gmail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
                   />
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Secure Password</label>
+                  {activeTab === 'login' && (
+                    <button type="button" onClick={() => setIsForgotPassword(true)} className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline">
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 pr-10 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 focus:outline-none cursor-pointer transition-colors duration-300"
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
-              <input
-                type="email"
-                required
-                placeholder="buyer@gmail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Secure Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 pr-10 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 focus:outline-none cursor-pointer transition-colors duration-300"
-                title={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
+              <AnimatePresence mode="popLayout" initial={false}>
+                {activeTab === 'register' && (
+                  <motion.div
+                    key="register-newsletter"
+                    initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                    animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
+                    exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                    transition={{ duration: 0.3 }}
+                    className="flex items-start gap-2.5 pt-1.5 pb-2.5 select-none" id="newsletter-login-opt-in"
+                  >
+                    <input
+                      id="newsletter-subscribe-login"
+                      type="checkbox"
+                      checked={subscribeNewsletter}
+                      onChange={(e) => setSubscribeNewsletter(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded-md border-slate-100 text-indigo-500 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-950 cursor-pointer transition-colors duration-300"
+                    />
+                    <label htmlFor="newsletter-subscribe-login" className="text-[11px] text-slate-400 dark:text-slate-300 leading-normal cursor-pointer font-medium transition-colors duration-300">
+                      Subscribe to our newsletter to receive the latest tech updates, gadget price drops, and exclusive member discounts.
+                    </label>
+                  </motion.div>
                 )}
+              </AnimatePresence>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-xl bg-indigo-500 hover:bg-indigo-600 hover:shadow-xl text-white font-bold py-3 text-xs tracking-wider transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={activeTab === 'login' ? 'login' : 'register'}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {submitting ? 'Verifying account...' : activeTab === 'login' ? 'Sign In Now' : 'Create Member Account'}
+                  </motion.span>
+                </AnimatePresence>
               </button>
-            </div>
-          </div>
-
-          {/* Newsletter Subscription Checkbox */}
-          <AnimatePresence mode="popLayout" initial={false}>
-            {activeTab === 'register' && (
-              <motion.div
-                key="register-newsletter"
-                initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
-                exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                transition={{ duration: 0.3 }}
-                className="flex items-start gap-2.5 pt-1.5 pb-2.5 select-none" id="newsletter-login-opt-in"
-              >
-                <input
-                  id="newsletter-subscribe-login"
-                  type="checkbox"
-                  checked={subscribeNewsletter}
-                  onChange={(e) => setSubscribeNewsletter(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded-md border-slate-100 text-indigo-500 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-950 cursor-pointer transition-colors duration-300"
-                />
-                <label htmlFor="newsletter-subscribe-login" className="text-[11px] text-slate-400 dark:text-slate-300 leading-normal cursor-pointer font-medium transition-colors duration-300">
-                  Subscribe to our newsletter to receive the latest tech updates, gadget price drops, and exclusive member discounts.
-                </label>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-xl bg-indigo-500 hover:bg-indigo-600 hover:shadow-xl text-white font-bold py-3 text-xs tracking-wider transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-          >
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={activeTab === 'login' ? 'login' : 'register'}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                transition={{ duration: 0.2 }}
-              >
-                {submitting ? 'Verifying account...' : activeTab === 'login' ? 'Sign In Now' : 'Create Member Account'}
-              </motion.span>
-            </AnimatePresence>
-          </button>
+            </>
+          )}
         </form>
 
         <div className="relative flex py-2 items-center">
