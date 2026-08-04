@@ -416,12 +416,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             </a>
           </div>
 
-          {/* Search Bar Input - Desktop */}
-          <div className="relative hidden md:flex flex-1 max-w-sm">
+          {/* Desktop Search Bar */}
+          <div className="hidden md:block w-48 lg:w-64">
             <SearchAutocompleteInput
-              onNavigate={onNavigate}
+              onNavigate={(view, slug) => onNavigate(view, slug)}
               variant="navbar"
-              placeholder="Search gadgets & reviews..."
+              placeholder="Search gadgets..."
             />
           </div>
 
@@ -542,7 +542,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed inset-y-0 left-0 z-50 w-72 bg-white p-5 shadow-2xl dark:bg-slate-950 flex flex-col space-y-6"
+              className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white p-5 shadow-2xl dark:bg-slate-950 flex flex-col space-y-6 overflow-y-auto max-h-screen"
             >
               
               {/* Drawer Header Brand & Close controller */}
@@ -560,15 +560,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 </button>
               </div>
 
-              {/* Mobile Search input wrapper */}
-              <div className="relative">
+              {/* Mobile Search Bar */}
+              <div className="w-full">
                 <SearchAutocompleteInput
                   onNavigate={(view, slug) => {
-                    setShowMobileMenu(false);
                     onNavigate(view, slug);
+                    setShowMobileMenu(false);
                   }}
                   variant="navbar"
-                  placeholder="Find products, tech gadgets..."
+                  placeholder="Search gadgets..."
                 />
               </div>
 

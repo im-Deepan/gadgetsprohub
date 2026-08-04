@@ -962,7 +962,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             </div>
 
             <div className="space-y-1">
-              <h1 className="text-xl sm:text-2xl font-extrabold font-sans tracking-tight text-slate-900 leading-snug dark:text-white">
+              <h1 className="text-lg sm:text-2xl font-extrabold font-sans tracking-tight text-slate-900 leading-snug dark:text-white break-words">
                 {getShortProductTitle(product.name, product.brand, 60)}
               </h1>
               {product.name.length > 60 && (
@@ -1019,44 +1019,46 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 </div>
 
                 {/* External routing buying CTA button */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 pt-2">
                   <button
                     onClick={handleAffiliateClick}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-slate-100 px-6 py-3 text-xs font-bold shadow-sm active:scale-97 transition-all duration-200 cursor-pointer"
+                    className="w-full sm:w-auto sm:flex-1 flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-slate-100 px-4 sm:px-6 py-3 text-xs font-bold shadow-sm active:scale-97 transition-all duration-200 cursor-pointer shrink-0"
                   >
                     <ShoppingBag className="h-4 w-4 shrink-0" />
                     Buy on {product.seller || product.marketplace || 'Store'}
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                   </button>
 
-                  <button
-                    onClick={handleCopyLinkClick}
-                    className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/20 dark:border-emerald-700 dark:text-emerald-400' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700/60'}`}
-                    title="Copy affiliate product link"
-                  >
-                    {copied ? <CheckCheck className="h-4 w-4 text-emerald-500 animate-bounce shrink-0" /> : <Copy className="h-4 w-4 shrink-0" />}
-                    <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-                  </button>
-
-                  <button
-                    onClick={handleShareClick}
-                    className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${shared ? 'bg-slate-100 dark:bg-slate-800 border-indigo-200 text-slate-900 dark:text-white' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700/60'}`}
-                    title="Share product"
-                  >
-                    {shared ? <Check className="h-4 w-4 text-emerald-500 shrink-0" /> : <Share2 className="h-4 w-4 shrink-0" />}
-                    <span>{shared ? 'Shared!' : 'Share'}</span>
-                  </button>
-
-                  {isAuthenticated && (
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-between sm:justify-start">
                     <button
-                      onClick={() => toggleWishlist(product._id, product.name)}
-                      className={`flex h-11 w-11 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all duration-200 ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
-                      title="Bookmark item"
-                      aria-label={wishlist.includes(product._id) ? "Remove from wishlist" : "Add to wishlist"}
+                      onClick={handleCopyLinkClick}
+                      className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border px-3 sm:px-4 py-3 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/20 dark:border-emerald-700 dark:text-emerald-400' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700/60'}`}
+                      title="Copy affiliate product link"
                     >
-                      <Heart className={`h-4 w-4 ${wishlist.includes(product._id) ? 'fill-rose-500 text-rose-500' : ''}`} aria-hidden="true" />
+                      {copied ? <CheckCheck className="h-4 w-4 text-emerald-500 animate-bounce shrink-0" /> : <Copy className="h-4 w-4 shrink-0" />}
+                      <span>{copied ? 'Copied!' : 'Copy Link'}</span>
                     </button>
-                  )}
+
+                    <button
+                      onClick={handleShareClick}
+                      className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border px-3 sm:px-4 py-3 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${shared ? 'bg-slate-100 dark:bg-slate-800 border-indigo-200 text-slate-900 dark:text-white' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700/60'}`}
+                      title="Share product"
+                    >
+                      {shared ? <Check className="h-4 w-4 text-emerald-500 shrink-0" /> : <Share2 className="h-4 w-4 shrink-0" />}
+                      <span>{shared ? 'Shared!' : 'Share'}</span>
+                    </button>
+
+                    {isAuthenticated && (
+                      <button
+                        onClick={() => toggleWishlist(product._id, product.name)}
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all duration-200 ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
+                        title="Bookmark item"
+                        aria-label={wishlist.includes(product._id) ? "Remove from wishlist" : "Add to wishlist"}
+                      >
+                        <Heart className={`h-4 w-4 ${wishlist.includes(product._id) ? 'fill-rose-500 text-rose-500' : ''}`} aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-[10px] text-slate-400 dark:text-slate-400 leading-relaxed pt-1">

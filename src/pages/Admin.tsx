@@ -1507,58 +1507,58 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       </div>
 
       {/* 2. ADMIN VIEW NAVIGATION TABS */}
-      <div ref={tabContainerRef} className="relative z-30 overflow-visible flex flex-wrap border-b border-slate-50 pb-3 gap-2 md:px-4 mb-8 dark:border-slate-700">
+      <div ref={tabContainerRef} className="relative z-30 overflow-x-auto whitespace-nowrap scrollbar-none flex flex-nowrap sm:flex-wrap border-b border-slate-50 pb-3 gap-2 md:px-4 mb-8 dark:border-slate-700 max-w-full">
         <button
           onClick={() => setActiveTab('products')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'products' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 shrink-0 ${activeTab === 'products' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           📦 Catalog specs ({products.length})
         </button>
         <button
           onClick={() => setActiveTab('categories')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'categories' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 shrink-0 ${activeTab === 'categories' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           📁 Classifications ({categories.length})
         </button>
         <button
           onClick={() => setActiveTab('blogs')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'blogs' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 shrink-0 ${activeTab === 'blogs' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           📖 Manual guides ({blogs.length})
         </button>
         <button
           onClick={() => setActiveTab('messages')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'messages' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 shrink-0 ${activeTab === 'messages' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           ✉ Help Inquiries ({messages.length})
         </button>
         <button
           onClick={() => setActiveTab('telemetry')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'telemetry' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 shrink-0 ${activeTab === 'telemetry' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           📊 Traffic Track logs ({analyticsData.length})
         </button>
         <button
           onClick={() => setActiveTab('scheduler')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'scheduler' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 shrink-0 ${activeTab === 'scheduler' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🕒 Sunday Scheduler
         </button>
         <button
           onClick={() => setActiveTab('users')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'users' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 shrink-0 ${activeTab === 'users' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           👥 No of Users ({users.length})
         </button>
         <button
           onClick={() => setActiveTab('security-logs')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'security-logs' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 shrink-0 ${activeTab === 'security-logs' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🛡️ Audit Logs ({securityLogs.length})
         </button>
         <button
           onClick={() => setActiveTab('importer')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'importer' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
+          className={`px-4 py-2 text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 shrink-0 ${activeTab === 'importer' ? 'bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800' : 'text-slate-400 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/40'}`}
         >
           🔌 Extension Importer
         </button>

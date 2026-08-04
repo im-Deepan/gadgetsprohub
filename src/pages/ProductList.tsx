@@ -987,7 +987,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 border-r border-slate-100 bg-white shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col dark:border-slate-800 dark:bg-slate-950 overflow-y-auto h-auto max-h-screen"
+              className="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 max-w-[85vw] border-r border-slate-100 bg-white shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col dark:border-slate-800 dark:bg-slate-950 overflow-y-auto h-auto max-h-screen"
             >
               {/* Drawer Header */}
               <div className="flex items-center justify-between border-b p-4 dark:border-slate-800 shrink-0">

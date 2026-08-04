@@ -112,7 +112,7 @@ export const Contact: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-slate-800 dark:text-slate-100">Editorial & Support Team</p>
-                  <p className="text-xs text-indigo-600 dark:text-indigo-300 mt-0.5">support@gadgetsprohub.com</p>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-300 mt-0.5 break-all sm:break-normal">support@gadgetsprohub.com</p>
                 </div>
               </div>
             </div>

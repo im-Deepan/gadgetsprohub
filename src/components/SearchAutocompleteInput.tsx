@@ -338,7 +338,10 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
             onFocus={() => setIsOpen(true)}
             placeholder={placeholder}
             autoFocus={autoFocus}
-            className={inputClassName || `w-full rounded-2xl border border-slate-200/80 bg-white/90 py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-all duration-300 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-white dark:focus:border-indigo-400 dark:focus:bg-slate-900`}
+            className={inputClassName || (variant === 'hero' 
+              ? `w-full rounded-2xl border border-slate-200/90 bg-white/95 py-3.5 pl-11 pr-11 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-sm transition-all duration-300 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/15 dark:border-slate-700/90 dark:bg-slate-800/95 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-indigo-400 dark:focus:bg-slate-900`
+              : `w-full rounded-2xl border border-slate-200/80 bg-white/90 py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-all duration-300 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-white dark:focus:border-indigo-400 dark:focus:bg-slate-900`
+            )}
           />
 
           {isLoading ? (

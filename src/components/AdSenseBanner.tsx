@@ -204,7 +204,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         {/* Google AdSense ins tag */}
         <ins
           className="adsbygoogle"
-          style={{ ...resolvedStyle, display: isUnfilled || isTestMode ? 'none' : 'block' }}
+          style={{ ...resolvedStyle, display: isUnfilled ? 'none' : 'block' }}
           data-ad-client={publisherId}
           data-ad-slot={slot}
           data-ad-format={format}
@@ -213,8 +213,8 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
           ref={adElement}
         />
 
-        {/* Fallback & Sandbox Sponsored Ad Banner (Ensures 100% ad visibility) */}
-        {(isUnfilled || isTestMode) && (
+        {/* Fallback Sponsored Ad Banner (Only shown if AdSense is unfilled or fails to load) */}
+        {isUnfilled && (
           <div className="w-full min-h-[90px] bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl flex flex-col sm:flex-row items-center justify-between p-4 border border-indigo-500/30 shadow-md">
             <div className="flex items-center gap-3.5 text-left mb-3 sm:mb-0">
               <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xs shadow-md shrink-0">
@@ -252,15 +252,16 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
       </div>
 
       {isAdmin && (
-        <div className="w-full flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[9px] font-mono text-slate-400 dark:text-slate-500">
-          <span>Publisher: <strong className="text-slate-600 dark:text-slate-300">{publisherId}</strong></span>
-          <span>
-            {configuredPublisherId ? (
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">&check; Custom Publisher Configured</span>
-            ) : (
-              <span className="text-amber-600 dark:text-amber-400 font-medium">&bull; Add VITE_ADSENSE_CLIENT_ID or update Admin Settings</span>
-            )}
-          </span>
+        <div className="w-full mt-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-[10px] font-mono text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span>Publisher: <strong className="text-slate-700 dark:text-slate-200">{publisherId}</strong> | Slot: {slot}</span>
+            <span>{isUnfilled ? <strong className="text-amber-500">AdSense Unfilled / 400 Notice</strong> : <strong className="text-emerald-500">AdSense Active</strong>}</span>
+          </div>
+          {isUnfilled && (
+            <p className="text-[9px] text-slate-400 dark:text-slate-400 leading-relaxed bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+              ℹ️ <strong>AdSense 400 Error / Unfilled Notice:</strong> Google AdSense returned a 400 error because this domain (<code className="text-indigo-400">gadgetsprohub.onrender.com</code>) or ad slot ID (<code className="text-indigo-400">{slot}</code>) is pending review, not yet approved in your AdSense console, or missing ads.txt verification. The verified fallback showcase banner is displayed above.
+            </p>
+          )}
         </div>
       )}
     </div>
