@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
 import { safeGetItem, safeRemoveItem } from '../utils/localStorage';
@@ -82,8 +81,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
           <div className="p-4 flex flex-col grow">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">{p.brand}</span>
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-2 mb-3 leading-tight">{p.name}</h3>
-            <div className="mt-auto flex items-end justify-between">
-              <div>
+            <div className="mt-auto flex items-end justify-between flex-wrap gap-2">
+              <div className="flex flex-col">
                 <div className="text-lg font-black text-zinc-900 dark:text-white dark:text-zinc-700 dark:text-slate-200 font-mono tracking-tight">{formatINRPrice(p.price)}</div>
                 {p.originalPrice && p.originalPrice > p.price && (
                   <div className="text-[11px] text-slate-400 line-through font-mono">{formatINRPrice(p.originalPrice)}</div>
@@ -112,14 +111,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-400/10 dark:bg-purple-600/10 blur-[120px] rounded-full z-0 pointer-events-none" />
         
         <div className="relative z-10 w-full max-w-4xl mx-auto flex flex-col items-center text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-100/50 dark:bg-slate-800/30 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-6"
-          >
-            <Sparkles size={14} />
-            <span>Curated Tech Specs & Honest Reviews</span>
-          </motion.div>
           
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
@@ -132,19 +123,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
               Without the marketing fluff.
             </span>
           </motion.h1>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="w-full max-w-2xl mx-auto relative mb-8"
-          >
-            <SearchAutocompleteInput
-              onNavigate={(view, slug) => onNavigate(view as AppView, slug)}
-              variant="hero"
-              placeholder="Search smartphones, laptops, audio..."
-            />
-          </motion.div>
 
           {/* Quick Categories Scroll Rail */}
           <motion.div 
@@ -194,7 +172,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
               Clear
             </button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {recentlyViewed.map(renderProductCard)}
           </div>
         </section>
@@ -222,31 +200,31 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
               <div key={i} className="aspect-[3/4] bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {products.map(renderProductCard)}
           </div>
         )}
       </section>
 
       {/* 4. EDITORIAL / DEALS BAND */}
-      <section className="w-full bg-slate-900 text-white py-16">
+      <section className="w-full bg-slate-50 dark:bg-slate-900 py-16 border-t border-slate-100 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="text-zinc-700 dark:text-slate-200 font-bold text-xs uppercase tracking-wider mb-2 block">Buying Guides</span>
-            <h2 className="text-3xl md:text-4xl font-display font-bold mb-4 leading-tight">Not sure what to buy? Read our tech guides.</h2>
-            <p className="text-indigo-200 mb-8 max-w-md leading-relaxed text-sm md:text-base">
+            <span className="text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-wider mb-2 block">Buying Guides</span>
+            <h2 className="text-3xl md:text-4xl font-display font-bold mb-4 leading-tight text-slate-900 dark:text-white">Not sure what to buy? Read our tech guides.</h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md leading-relaxed text-sm md:text-base">
               Our experts break down the specs that actually matter. Compare processors, camera sensors, and battery tech before you make a decision.
             </p>
             <a
               href="/blogs"
               onClick={(e) => { e.preventDefault(); onNavigate('blogs'); }}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-indigo-950 hover:bg-slate-100 dark:bg-slate-800 font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-zinc-900 text-white hover:bg-slate-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-slate-100 font-bold transition-colors cursor-pointer"
             >
               Read Guides
               <ArrowRight size={16} />
@@ -263,10 +241,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                 key={i}
                 href="/blogs"
                 onClick={(e) => { e.preventDefault(); onNavigate('blogs'); }}
-                className="bg-slate-800/50 border border-indigo-800/50 hover:border-zinc-900 dark:border-white hover:bg-indigo-800/50 p-4 sm:p-6 rounded-xl transition-all cursor-pointer group"
+                className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm dark:hover:shadow-none p-4 sm:p-6 rounded-xl transition-all cursor-pointer group"
               >
-                <guide.icon className="h-8 w-8 text-zinc-700 dark:text-slate-200 mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="font-semibold text-sm leading-snug">{guide.title}</h3>
+                <guide.icon className="h-8 w-8 text-zinc-700 dark:text-slate-300 mb-4 group-hover:scale-110 transition-transform" />
+                <h3 className="font-semibold text-slate-900 dark:text-white text-sm leading-snug">{guide.title}</h3>
               </a>
             ))}
           </div>

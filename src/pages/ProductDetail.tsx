@@ -1281,7 +1281,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       {relatedProducts.length > 0 && (
         <section className="mx-auto max-w-7xl md:px-4 space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300 px-1">Similar Recommendations</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
             {relatedProducts.map(rel => (
               <div
                 key={rel._id}

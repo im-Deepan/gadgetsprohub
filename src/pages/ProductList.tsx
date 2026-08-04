@@ -429,16 +429,16 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             </div>
 
             {/* Card Content Area */}
-            <div className="p-4 flex flex-col flex-grow justify-between font-sans">
+            <div className={`flex flex-col flex-grow justify-between font-sans ${viewStyle === 'grid' ? 'p-3 sm:p-4' : 'p-4'}`}>
               <div>
                 <div className="flex items-center justify-between gap-1 text-[9px] font-bold text-slate-400">
-                  <span className="truncate max-w-[120px]">
+                  <span className="truncate flex-1">
                     {getCategoryName(p.category, categories)}
                   </span>
-                  <span className="uppercase font-mono">{p.brand || 'Premium'}</span>
+                  <span className="uppercase font-mono truncate shrink-0 max-w-[60px] text-right">{p.brand || 'Premium'}</span>
                 </div>
 
-                <h3 className={`font-bold text-slate-800 leading-snug mt-1.5 line-clamp-1 group-hover:text-zinc-900 dark:text-white dark:text-white transition-colors duration-300 ${
+                <h3 className={`font-bold text-slate-800 leading-snug mt-1.5 line-clamp-2 group-hover:text-zinc-900 dark:text-white transition-colors duration-300 ${
                   viewStyle === 'grid' ? 'text-xs sm:text-sm' : 'text-sm'
                 }`}>
                   {shortTitle}
@@ -450,26 +450,26 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   </span>
                 )}
 
-                <p className={`text-slate-500 line-clamp-2 mt-1 dark:text-slate-300 leading-normal ${
+                <p className={`text-slate-500 line-clamp-2 mt-1 dark:text-slate-300 leading-relaxed ${
                   viewStyle === 'grid' ? 'text-[10px] sm:text-[11px]' : 'text-xs'
                 }`}>
                   {p.description}
                 </p>
               </div>
 
-              <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xs sm:text-sm font-black font-mono text-zinc-900 dark:text-white dark:text-zinc-200">
+              <div className="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                <div className="flex items-baseline gap-1.5 flex-wrap">
+                  <span className="text-xs sm:text-sm font-black font-mono text-zinc-900 dark:text-white">
                     {formatProductPrice(p.price, p)}
                   </span>
                   {isDiscounted && (
-                    <span className="text-[10px] text-slate-400 line-through font-mono">
+                    <span className="text-[9px] sm:text-[10px] text-slate-400 line-through font-mono">
                       {formatProductPrice(p.originalPrice, p)}
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {viewStyle === 'list' && isAuthenticated && (
                     <span
                       role="button"
@@ -894,7 +894,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       </div>
 
                       <div className={viewStyle === 'grid' 
-                        ? "grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-2 xl:grid-cols-3" 
+                        ? "grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-2 xl:grid-cols-3" 
                         : "space-y-4"
                       }>
                         {visibleProds.map((p) => p ? renderProductCard(p) : null)}
