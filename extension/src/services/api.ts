@@ -154,7 +154,7 @@ class ApiService {
       longDescription: productData.description || '',
       imageUrl: productData.images?.[0] || '',
       images: productData.images || [],
-      affiliateCode: 'gadgetspro-20',
+      affiliateCode: 'gadgetsprohub-21',
       specifications: productData.specifications || {},
       features: productData.bulletFeatures || [],
       strategy,

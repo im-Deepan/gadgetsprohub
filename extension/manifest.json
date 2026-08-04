@@ -15,7 +15,6 @@
     "https://*.amazon.in/*",
     "https://*.amazon.co.uk/*",
     "https://*.amazon.ca/*",
-    "http://localhost:3000/*",
     "https://*.gadgetsprohub.com/*",
     "https://gadgetsprohub.onrender.com/*"
   ],

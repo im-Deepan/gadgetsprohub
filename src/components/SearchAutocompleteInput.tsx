@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Clock, Trash2, X, ArrowUpRight, Tag, Sparkles, Package, BookOpen, Loader2 } from 'lucide-react';
+import { formatProductPrice } from '../utils/productUtils';
 import { motion, AnimatePresence, Variants } from 'motion/react';
 import { Product, Blog } from '../types';
 import { apiFetch } from '../utils/apiClient';
@@ -464,7 +465,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                         </div>
                         <div className="text-right shrink-0">
                           <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
-                            ₹{product.price.toLocaleString()}
+                            {formatProductPrice(product.price, product)}
                           </span>
                           <ArrowUpRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-indigo-500 ml-auto mt-0.5 transition-colors duration-300" />
                         </div>

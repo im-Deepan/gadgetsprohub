@@ -6,7 +6,6 @@ export interface ProductPayload {
   name: string;
   brand: string;
   asin: string;
-  price?: number;
   currentPrice: number;
   originalPrice: number;
   discount: number;

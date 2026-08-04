@@ -213,7 +213,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
     return (
       <div className="mx-auto max-w-md text-center py-20 px-4 space-y-4">
         <span className="text-4xl block">🔒</span>
-        <h2 className="text-sm font-bold text-slate-700">Secure Profile Desk</h2>
+        <h2 className="text-sm font-bold text-slate-700">Your Account</h2>
         <p className="text-xs text-slate-300">Kindly sign in with member accounts to inspect bookmarked items and click history.</p>
         <button
           onClick={() => onNavigate('login')}

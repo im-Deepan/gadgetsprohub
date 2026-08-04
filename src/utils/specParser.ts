@@ -1,7 +1,15 @@
+export const decodeHTMLEntities = (text: string): string => {
+  if (!text || typeof text !== 'string') return text || '';
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+};
+
 const METADATA_SPEC_KEYS = new Set([
-  'asin',
-  'asin code',
-  'asin_code',
   'source',
   'source link',
   'source_link',
@@ -12,8 +20,6 @@ const METADATA_SPEC_KEYS = new Set([
   'status',
   'currency',
   'gtin',
-  'sku',
-  'sku-series',
   'originalid',
   'original_id',
   'source url',
@@ -21,14 +27,13 @@ const METADATA_SPEC_KEYS = new Set([
 ]);
 
 /**
- * Checks if a specification key is an internal metadata field (e.g. ASIN, Source, Import Link)
+ * Checks if a specification key is an internal metadata field (e.g. Source, Import Link)
  * rather than a genuine physical/technical product specification.
  */
 export const isMetadataSpecKey = (key: string): boolean => {
   if (!key || typeof key !== 'string') return true;
   const lowerKey = key.trim().toLowerCase();
   if (METADATA_SPEC_KEYS.has(lowerKey)) return true;
-  if (lowerKey === 'asin' || lowerKey.startsWith('asin ') || lowerKey.endsWith(' asin')) return true;
   if (lowerKey === 'imported via' || lowerKey.startsWith('imported via')) return true;
   if (lowerKey === 'import link' || lowerKey === 'import status') return true;
   return false;
@@ -43,7 +48,9 @@ export const cleanSpecificationsObj = (specs: Record<string, string>): Record<st
   
   Object.entries(specs).forEach(([k, v]) => {
     if (k && v !== undefined && v !== null && !isMetadataSpecKey(k)) {
-      result[k.trim()] = String(v).trim();
+      const cleanKey = decodeHTMLEntities(k.trim());
+      const cleanVal = decodeHTMLEntities(String(v).trim());
+      result[cleanKey] = cleanVal;
     }
   });
   return result;

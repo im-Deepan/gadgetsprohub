@@ -36,6 +36,8 @@ export interface Product {
   brand?: string;
   seller?: string;
   marketplace?: string;
+  currency?: string;
+  currencyCode?: string;
   price: number;
   originalPrice?: number;
   discount?: number;
@@ -45,6 +47,8 @@ export interface Product {
   features?: string[];
   rating: number;
   totalReviews: number;
+  reviewsCount?: number;
+  reviewCount?: number;
   affiliateLink: string;
   affiliateCode?: string;
   inStock: boolean;

@@ -54,7 +54,7 @@ The platform includes an automated cron-like task executor designed to run every
 ### 3. Crypto-Secure Authentication & Session Guards
 - **Algorithm Pinning:** Pinning JWT validation explicitly to the `HS256` symmetric algorithm to guard against signature-bypass attacks (e.g., `alg: "none"` spoofing).
 - **Auto-Generating High-Entropy Secrets:** If no `JWT_SECRET` exists in the environmental variables, the server dynamically generates a 64-byte high-entropy fallback secret on boot, keeping session signatures safe.
-- **CSRF & Cookie Hardening:** Session cookies enforce `httpOnly: true`, `secure: true`, and `sameSite: "strict"`.
+- **CSRF & Cookie Hardening:** Session cookies enforce `httpOnly: true`, `secure: true`, and `sameSite: "none"` (optimised for cross-origin iframe embedding and preview environments).
 - **Global `wrapAsync` Middleware:** Seamlessly catches synchronous and asynchronous handler errors, piping them to the global Express error responder, which prevents stack traces from leaking database structures or internal directories.
 
 ---

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+const fs = require('fs');
+
+const newHome = `import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
-import { safeGetItem, safeRemoveItem } from '../utils/localStorage';
+import { safeGetItem } from '../utils/localStorage';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
 import { AppView } from '../App';
@@ -31,7 +33,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
       if (storedViews) {
         const parsedViews = JSON.parse(storedViews);
         if (Array.isArray(parsedViews) && parsedViews.length > 0) {
-          apiFetch(`/api/products/batch?ids=${parsedViews.slice(0, 4).join(',')}`)
+          apiFetch(\`/api/products/batch?ids=\${parsedViews.slice(0, 4).join(',')}\`)
             .then(res => res.json())
             .then(data => {
               if (Array.isArray(data)) setRecentlyViewed(data);
@@ -61,7 +63,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
     return (
       <a
         key={p._id}
-        href={`/product-detail/${p.slug}`}
+        href={\`/product-detail/\${p.slug}\`}
         onClick={(e) => {
           if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) {
             e.preventDefault();
@@ -70,7 +72,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         }}
         className="group block"
       >
-        <BorderGlow className="h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col hover:-translate-y-1 transition-transform" borderRadius={12}>
+        <BorderGlow className="h-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col hover:-translate-y-1 transition-transform" borderRadius={16}>
           <div className="relative aspect-square p-4 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
             <img loading="lazy" src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400'} alt={p.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500" />
             {p.discount && p.discount > 0 ? (
@@ -84,7 +86,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-2 mb-3 leading-tight">{p.name}</h3>
             <div className="mt-auto flex items-end justify-between">
               <div>
-                <div className="text-lg font-black text-zinc-900 dark:text-white dark:text-zinc-700 dark:text-slate-200 font-mono tracking-tight">{formatINRPrice(p.price)}</div>
+                <div className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono tracking-tight">{formatINRPrice(p.price)}</div>
                 {p.originalPrice && p.originalPrice > p.price && (
                   <div className="text-[11px] text-slate-400 line-through font-mono">{formatINRPrice(p.originalPrice)}</div>
                 )}
@@ -108,14 +110,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
       {/* 1. HERO SECTION (Compressed) */}
       <section className="relative w-full min-h-[45vh] md:min-h-[55vh] flex items-center justify-center pt-16 pb-12 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-slate-50 dark:from-indigo-950/20 dark:to-black z-0 pointer-events-none" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-400/10 dark:bg-zinc-900 dark:bg-white text-white dark:text-zinc-900/10 blur-[120px] rounded-full z-0 pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-400/10 dark:bg-indigo-600/10 blur-[120px] rounded-full z-0 pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-400/10 dark:bg-purple-600/10 blur-[120px] rounded-full z-0 pointer-events-none" />
         
         <div className="relative z-10 w-full max-w-4xl mx-auto flex flex-col items-center text-center">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-100/50 dark:bg-slate-800/30 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-6"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-100/50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-6"
           >
             <Sparkles size={14} />
             <span>Curated Tech Specs & Honest Reviews</span>
@@ -140,7 +142,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             className="w-full max-w-2xl mx-auto relative mb-8"
           >
             <SearchAutocompleteInput
-              onNavigate={(view, slug) => onNavigate(view as AppView, slug)}
+              onNavigate={onNavigate}
               variant="hero"
               placeholder="Search smartphones, laptops, audio..."
             />
@@ -155,20 +157,20 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
           >
             {[
               { id: 'smartphones', name: 'Smartphones', icon: Smartphone, color: 'text-blue-500' },
-              { id: 'laptops', name: 'Laptops', icon: Laptop, color: 'text-zinc-900 dark:text-white' },
+              { id: 'laptops', name: 'Laptops', icon: Laptop, color: 'text-indigo-500' },
               { id: 'audio', name: 'Audio', icon: Headphones, color: 'text-purple-500' },
               { id: 'wearables', name: 'Wearables', icon: Watch, color: 'text-emerald-500' }
             ].map((cat) => (
               <a
                 key={cat.id}
-                href={`/products/category-${cat.id}`}
+                href={\`/products/category-\${cat.id}\`}
                 onClick={(e) => {
                   e.preventDefault();
-                  onNavigate('products', `category-${cat.id}`);
+                  onNavigate('products', \`category-\${cat.id}\`);
                 }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-zinc-900 dark:border-white hover:shadow-sm whitespace-nowrap shrink-0 transition-all cursor-pointer group"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-sm whitespace-nowrap shrink-0 transition-all cursor-pointer group"
               >
-                <cat.icon size={16} className={`${cat.color} group-hover:scale-110 transition-transform`} />
+                <cat.icon size={16} className={\`\${cat.color} group-hover:scale-110 transition-transform\`} />
                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-300">{cat.name}</span>
               </a>
             ))}
@@ -181,13 +183,13 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         <section className="w-full max-w-7xl mx-auto px-4 py-8 border-b border-slate-200 dark:border-slate-800/50">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold flex items-center gap-2">
-              <History className="h-5 w-5 text-zinc-900 dark:text-white" />
+              <History className="h-5 w-5 text-indigo-500" />
               Recently Viewed
             </h2>
             <button 
               onClick={() => {
                 setRecentlyViewed([]);
-                safeRemoveItem('aff_recent_views');
+                safeGetItem('aff_recent_views') && safeGetItem('aff_recent_views', '[]');
               }}
               className="text-xs font-semibold text-slate-500 hover:text-rose-500 flex items-center gap-1 cursor-pointer"
             >
@@ -205,7 +207,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div>
             <h2 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
-              <TrendingUp className="h-7 w-7 text-zinc-900 dark:text-white" />
+              <TrendingUp className="h-7 w-7 text-indigo-600" />
               All Products
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Browse the latest tech gear, compared and reviewed.</p>
@@ -213,7 +215,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
           <a
             href="/products"
             onClick={(e) => { e.preventDefault(); onNavigate('products'); }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors cursor-pointer shadow-sm"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors cursor-pointer shadow-sm"
           >
             <ShoppingBag size={16} />
             <span>View Catalog</span>
@@ -224,7 +226,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         {isLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-              <div key={i} className="aspect-[3/4] bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
+              <div key={i} className="aspect-[3/4] bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : (
@@ -235,10 +237,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
       </section>
 
       {/* 4. EDITORIAL / DEALS BAND */}
-      <section className="w-full bg-slate-900 text-white py-16">
+      <section className="w-full bg-indigo-950 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="text-zinc-700 dark:text-slate-200 font-bold text-xs uppercase tracking-wider mb-2 block">Buying Guides</span>
+            <span className="text-indigo-400 font-bold text-xs uppercase tracking-wider mb-2 block">Buying Guides</span>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4 leading-tight">Not sure what to buy? Read our tech guides.</h2>
             <p className="text-indigo-200 mb-8 max-w-md leading-relaxed text-sm md:text-base">
               Our experts break down the specs that actually matter. Compare processors, camera sensors, and battery tech before you make a decision.
@@ -246,7 +248,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             <a
               href="/blogs"
               onClick={(e) => { e.preventDefault(); onNavigate('blogs'); }}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-indigo-950 hover:bg-slate-100 dark:bg-slate-800 font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-indigo-950 hover:bg-indigo-50 font-bold transition-colors cursor-pointer"
             >
               Read Guides
               <ArrowRight size={16} />
@@ -263,9 +265,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                 key={i}
                 href="/blogs"
                 onClick={(e) => { e.preventDefault(); onNavigate('blogs'); }}
-                className="bg-slate-800/50 border border-indigo-800/50 hover:border-zinc-900 dark:border-white hover:bg-indigo-800/50 p-4 sm:p-6 rounded-xl transition-all cursor-pointer group"
+                className="bg-indigo-900/50 border border-indigo-800/50 hover:border-indigo-500 hover:bg-indigo-800/50 p-4 sm:p-6 rounded-2xl transition-all cursor-pointer group"
               >
-                <guide.icon className="h-8 w-8 text-zinc-700 dark:text-slate-200 mb-4 group-hover:scale-110 transition-transform" />
+                <guide.icon className="h-8 w-8 text-indigo-400 mb-4 group-hover:scale-110 transition-transform" />
                 <h3 className="font-semibold text-sm leading-snug">{guide.title}</h3>
               </a>
             ))}
@@ -275,3 +277,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
     </div>
   );
 };
+`
+fs.writeFileSync('src/pages/Home.tsx', newHome);
+console.log('Rewrote Home.tsx');

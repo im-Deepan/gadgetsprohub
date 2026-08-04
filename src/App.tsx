@@ -57,12 +57,15 @@ const mapToTamilNaduCity = (rawName: string): string => {
   return raw;
 };
 
+import { NotFoundPage } from './pages/NotFoundPage';
+
 // Static allowed view definitions (exhaustively checked at compile time)
 export const ALLOWED_VIEWS = [
   'home',
   'products',
   'product-detail',
   'blogs',
+  'blog',
   'blog-detail',
   'contact',
   'login',
@@ -71,7 +74,8 @@ export const ALLOWED_VIEWS = [
   'privacy-policy',
   'about-us',
   'terms-conditions',
-  'disclaimer'
+  'disclaimer',
+  '404'
 ] as const;
 
 export type AppView = typeof ALLOWED_VIEWS[number];
@@ -216,15 +220,15 @@ export const preloadView = (view: AppView, slug?: string) => {
 
 const ViewLoader: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState("Preparing page components...");
-  const [progress, setProgress] = useState(15);
+  const [progress, setProgress] = useState(25);
   const [currentStep, setCurrentStep] = useState(1);
 
   useEffect(() => {
     const steps = [
-      { msg: "Connecting to secure catalog servers...", progress: 38, stepNum: 1 },
-      { msg: "Loading product s & reviews...", progress: 62, stepNum: 2 },
-      { msg: "Initializing interface filters and options...", progress: 84, stepNum: 3 },
-      { msg: "Rendering gallery elements for you...", progress: 100, stepNum: 4 }
+      { msg: "Connecting to secure catalog servers...", progress: 45, stepNum: 1 },
+      { msg: "Loading products & reviews...", progress: 70, stepNum: 2 },
+      { msg: "Initializing interface filters and options...", progress: 90, stepNum: 3 },
+      { msg: "Rendering gallery elements...", progress: 100, stepNum: 4 }
     ];
     let index = 0;
     const interval = setInterval(() => {
@@ -234,7 +238,7 @@ const ViewLoader: React.FC = () => {
         setCurrentStep(steps[index].stepNum);
         index++;
       }
-    }, 900);
+    }, 400);
     return () => clearInterval(interval);
   }, []);
 
@@ -249,7 +253,7 @@ const ViewLoader: React.FC = () => {
       <div className="relative flex items-center justify-center mb-6">
         <div className="h-16 w-16 rounded-full border-4 border-slate-50 dark:border-slate-700/80 border-t-indigo-500 animate-spin"></div>
         <div className="absolute h-16 w-16 rounded-full border border-dashed border-indigo-400/20 animate-ping"></div>
-        <div className="absolute text-[10px] font-mono font-bold text-indigo-500 dark:text-indigo-300">
+        <div className="absolute text-[10px] font-mono font-bold text-zinc-900 dark:text-white dark:text-indigo-300">
           {progress}%
         </div>
       </div>
@@ -395,11 +399,19 @@ const AppContent: React.FC = () => {
     try {
       const params = new URLSearchParams(window.location.search);
       const viewParam = params.get('view');
-      if (viewParam && (ALLOWED_VIEWS as readonly string[]).includes(viewParam)) return viewParam as AppView;
+      if (viewParam && (ALLOWED_VIEWS as readonly string[]).includes(viewParam)) {
+        return (viewParam === 'blog' ? 'blogs' : viewParam) as AppView;
+      }
       
-      const path = window.location.pathname.replace(/^\/+/, '');
+      const path = window.location.pathname.replace(/^\/+/, '').trim();
+      if (!path) return 'home';
+
       const pathParts = path.split('/');
       const viewPart = pathParts[0];
+
+      if (viewPart === 'blog' || viewPart === 'blogs') {
+        return pathParts.length > 1 && pathParts[1] ? 'blog-detail' : 'blogs';
+      }
 
       if (viewPart && (ALLOWED_VIEWS as readonly string[]).includes(viewPart)) {
         return viewPart as AppView;
@@ -411,7 +423,7 @@ const AppContent: React.FC = () => {
         return 'products';
       }
 
-      return 'home';
+      return '404';
     } catch (err) {
       captureError(err, { context: 'getInitialView' });
       return 'home';
@@ -424,9 +436,15 @@ const AppContent: React.FC = () => {
       const params = new URLSearchParams(window.location.search);
       if (params.has('slug')) return params.get('slug');
 
-      const path = window.location.pathname.replace(/^\/+/, '');
+      const path = window.location.pathname.replace(/^\/+/, '').trim();
+      if (!path) return null;
+
       const pathParts = path.split('/');
       const viewPart = pathParts[0];
+
+      if (viewPart === 'blog' || viewPart === 'blogs') {
+        return pathParts.length > 1 ? pathParts.slice(1).join('/') : null;
+      }
 
       // Map category slugs
       const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports'];
@@ -613,39 +631,46 @@ const AppContent: React.FC = () => {
   }, [activeView, selectedSlug]);
 
   // Manage body scroll positions on navigating
-  const navigateToView = (view: any, slug?: string) => {
-    if (!(ALLOWED_VIEWS as readonly string[]).includes(view)) return;
+  const navigateToView = (view: AppView | string, slug?: string) => {
+    const targetView = (view === 'blog' ? 'blogs' : view) as AppView;
+    if (!(ALLOWED_VIEWS as readonly string[]).includes(targetView)) {
+      setActiveView('404');
+      return;
+    }
     
-    if (activeView === view && selectedSlug === (slug || null)) {
+    if (activeView === targetView && selectedSlug === (slug || null)) {
       // If we are already on this view, trigger resets for better user experience!
-      if (view === 'products') {
+      if (targetView === 'products') {
         window.dispatchEvent(new CustomEvent('reset-product-detailfilters'));
-      } else if (view === 'home') {
+      } else if (targetView === 'home') {
         window.dispatchEvent(new CustomEvent('reset-home-filters'));
       }
       return; 
     }
 
-    setActiveView(view);
+    setActiveView(targetView);
     setSelectedSlug(slug || null);
     
     // Sync URL queries
     try {
       const url = new URL(window.location.href);
-      if (view === 'home' && !slug) {
+      if (targetView === 'home' && !slug) {
         url.pathname = '/';
         url.search = '';
-      } else if (view === 'products' && slug && slug.startsWith('category-')) {
+      } else if (targetView === 'blogs' && !slug) {
+        url.pathname = '/blog';
+        url.search = '';
+      } else if (targetView === 'products' && slug && slug.startsWith('category-')) {
         const catSlug = slug.replace('category-', '');
         url.pathname = '/' + catSlug;
         url.search = '';
       } else {
-        url.pathname = '/' + view + (slug ? '/' + slug : '');
+        url.pathname = '/' + targetView + (slug ? '/' + slug : '');
         url.search = ''; // Clean old queries
       }
       
       // Store state in history to retrieve on back/forward
-      window.history.pushState({ view, slug: slug || null }, '', url.toString());
+      window.history.pushState({ view: targetView, slug: slug || null }, '', url.toString());
     } catch (e) {
       captureError(e, { context: 'pushState error ignored', url: window.location.href });
     }
@@ -727,6 +752,7 @@ const AppContent: React.FC = () => {
         );
         break;
       case 'blogs':
+      case 'blog':
         content = (
           <Suspense fallback={<BlogPageSkeleton />}>
             <BlogList onNavigate={navigateToView} onPreload={preloadView} />
@@ -760,13 +786,9 @@ const AppContent: React.FC = () => {
       case 'disclaimer':
         content = <Disclaimer />;
         break;
+      case '404':
       default:
-        content = (
-          <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            <h2 className="text-2xl font-bold mb-4">Page Not Found</h2>
-            <button onClick={() => navigateToView('home')} className="bg-indigo-500 text-white px-6 py-2 rounded-lg">Return Home</button>
-          </div>
-        );
+        content = <NotFoundPage onNavigate={navigateToView} />;
         break;
     }
     
@@ -783,7 +805,7 @@ const AppContent: React.FC = () => {
       
       {isGlobalLoading && (
         <div className="fixed top-0 left-0 right-0 h-[3px] bg-slate-100/50 dark:bg-slate-700/50 z-[9999] overflow-hidden">
-          <div className="h-full bg-indigo-500 dark:bg-indigo-300 w-1/3 rounded-full animate-loading-bar" />
+          <div className="h-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 dark:bg-zinc-300 dark:bg-zinc-700 w-1/3 rounded-full animate-loading-bar" />
         </div>
       )}
 

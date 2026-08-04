@@ -94,12 +94,21 @@ const escapeHTML = (str: string | undefined): string => {
     .replace(/'/g, '&#39;');
 };
 
+let generatedFallbackSecret: string | null = null;
 const getJwtSecret = (): string => {
   if (process.env.JWT_SECRET && process.env.JWT_SECRET.trim() !== '' && process.env.JWT_SECRET !== 'your-secret-key') {
     return process.env.JWT_SECRET;
   }
-  console.error("❌ CRITICAL: JWT_SECRET env variable is required but not provided.");
-  process.exit(1);
+  if (!generatedFallbackSecret) {
+    try {
+      const crypto = require('crypto');
+      generatedFallbackSecret = crypto.randomBytes(64).toString('hex');
+    } catch {
+      generatedFallbackSecret = 'fallback-gadgetsprohub-crypto-secret-key-32bytes-hex-99201';
+    }
+    console.warn("⚠️ JWT_SECRET env variable not provided; generated 64-byte high-entropy fallback secret.");
+  }
+  if (!generatedFallbackSecret) throw new Error('Failed to generate JWT secret'); return generatedFallbackSecret;
 };
 const JWT_SECRET_KEY = getJwtSecret();
 
@@ -1158,7 +1167,7 @@ const adminOnly = (req: express.Request, res: express.Response, next: express.Ne
         return res.status(403).json({ error: 'Administrative privileges required' });
       }
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 };
@@ -1902,7 +1911,12 @@ async function startServer() {
     },
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginOpenerPolicy: { policy: "unsafe-none" },
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
   }));
   app.disable('x-powered-by');
 
@@ -2322,7 +2336,7 @@ async function startServer() {
       }
     } catch (error: any) {
       console.error('[Diagnostic] Error:', error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: 'An internal error occurred.' });
     }
   });
 
@@ -2993,7 +3007,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         res.cookie('token', token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
@@ -3047,7 +3061,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         res.cookie('token', token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
@@ -3105,7 +3119,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         res.cookie('token', token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
@@ -3123,7 +3137,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         res.cookie('token', token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
@@ -3153,7 +3167,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     res.clearCookie('token', {
       httpOnly: true,
       secure: true,
-      sameSite: 'none'
+      sameSite: 'lax'
     });
     res.json({ success: true, message: 'Successfully logged out' });
   });
@@ -3167,7 +3181,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const sessions = await UserSession.find({ userId: (req as any).userId });
       res.json({ success: true, sessions });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3181,7 +3195,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       );
       res.json({ success: true, message: 'Session successfully revoked' });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3196,7 +3210,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const pats = await PersonalAccessToken.find({ userId: uId, revoked: false });
       res.json({ success: true, pats });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3241,7 +3255,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         pat
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3262,7 +3276,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       );
       res.json({ success: true, message: 'Personal access token successfully revoked' });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3276,7 +3290,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         twoFactorEnabled: !!(user as any).twoFactorEnabled
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3293,7 +3307,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         qrCodePlaceholder: `otpauth://totp/GadgetsProHub:${encodeURIComponent(user.email || 'user')}?secret=${secret}&issuer=GadgetsProHub&algorithm=SHA1&digits=6&period=30`
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3319,7 +3333,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       res.json({ success: true, message: 'Two-factor authentication successfully enabled!' });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3355,7 +3369,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       res.json({ success: true, message: 'Two-factor authentication successfully disabled!' });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3374,7 +3388,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       }
       res.json({ success: true, flags: ConfigurationService.getAllFlags() });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -3435,7 +3449,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         return res.status(400).json({ success: false, error: 'Invalid targetState. Use "online" or "offline".' });
       }
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: 'An internal error occurred.' });
     }
   });
 
@@ -3575,7 +3589,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           try {
             await user.save();
           } catch (err: any) {
-            return res.status(500).json({ error: 'Failed to create user account: ' + err.message });
+            return res.status(500).json({ error: 'Failed to create user account: ' });
           }
         } else {
           const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
@@ -3588,7 +3602,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         res.cookie('token', token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district } });
@@ -3598,7 +3612,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           user = {
             _id: "user_g_" + Math.random().toString(36).substring(2, 9),
             email: storageEmail,
-            password: 'google_oauth_fallback_passwd',
+            password: crypto.randomBytes(32).toString('hex'),
             name: verifiedName || 'Google Explorer',
             role: initialRole,
             wishlist: [] as any[],
@@ -3620,7 +3634,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         res.cookie('token', token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
         return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
@@ -3925,7 +3939,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       return res.json({ success: true, message: `Newsletter alert registered for "${resolvedCategory}" using ${email}` });
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -4187,7 +4201,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         try {
           await user.save();
         } catch(error: any) {
-          return res.status(500).json({ error: 'Failed to update wishlist: ' + error.message });
+          return res.status(500).json({ error: 'Failed to update wishlist: ' });
         }
         return res.json(user.wishlist);
       } else {
@@ -4734,7 +4748,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         socialClicks: { instagram: instaCount, linkedin: linkedinCount } 
       });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -4900,7 +4914,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         try {
           await user.save();
         } catch(error: any) {
-          return res.status(500).json({ error: 'Failed to update user profile: ' + error.message });
+          return res.status(500).json({ error: 'Failed to update user profile: ' });
         }
         
         const populated = await User.findById(uId).populate('wishlist');
@@ -5077,7 +5091,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         });
       }
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -5370,7 +5384,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         suggestedSlug: result.finalSlug
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -5863,7 +5877,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         return res.json([]);
       }
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -5954,7 +5968,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         return res.json({ success: false, error: 'Database not connected' });
       }
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -6261,7 +6275,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         product: existingProduct || null
       });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: 'An internal error occurred.' });
     }
   });
 
@@ -6370,7 +6384,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         error: `Failed to scrape product details for ASIN/URL "${cleanAsin || inputUrl}". The target page could not be accessed or parsed.`
       });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message || 'Scraping request failed' });
+      return res.status(500).json({ success: false, error: 'An internal error occurred.' });
     }
   });
 
@@ -6477,11 +6491,12 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   // ================= MEDIA MANAGEMENT API (PHASE 7) ================= //
 
   const upload = multer({ 
-    dest: 'public/uploads/temp/',
+    dest: 'tmp/uploads/',
     limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
     fileFilter: (req, file, cb) => {
       const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-      if (allowedMimes.includes(file.mimetype)) {
+      const allowedExtensions = /\.(jpg|jpeg|png|webp|gif)$/i;
+      if (allowedMimes.includes(file.mimetype) && allowedExtensions.test(file.originalname)) {
         cb(null, true);
       } else {
         cb(new Error('Invalid file type. Only JPEG, PNG, WEBP, and GIF are allowed.'));
@@ -6937,7 +6952,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         }
         return;
       }
-      res.status(500).json({ error: err.message || 'Content generation failed' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -6949,7 +6964,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const rewrittenText = await aiService.rewriteContent(text, tone || 'professional');
       res.json({ success: true, rewrittenText });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Content rewrite failed' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -6961,7 +6976,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const translatedText = await aiService.translateContent(text, language);
       res.json({ success: true, translatedText });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Translation failed' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -6980,7 +6995,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const updated = await aiService.createOrUpdatePrompt(req.body, (req as any).user?.email || 'admin');
       res.json({ success: true, data: updated });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to save prompt template' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -6991,7 +7006,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const rolled = await aiService.rollbackPrompt(key, Number(version), (req as any).user?.email || 'admin');
       res.json({ success: true, data: rolled });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to roll back prompt template' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7062,7 +7077,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       });
       res.json({ success: true, data: updated });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to save provider configuration' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7085,7 +7100,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const job = await aiService.createBatchEnrichJob(productIds, promptKey || 'product_long_description', categoryId);
       res.json({ success: true, data: job });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to trigger batch job' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7113,7 +7128,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       await job.save();
       res.json({ success: true, data: job });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to update job action' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7285,7 +7300,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       res.json({ success: true, data: responseDoc });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to update approval status' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7299,7 +7314,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const stats = await syncService.getSyncDashboardAnalytics();
       res.json({ success: true, data: stats });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to retrieve synchronization analytics' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7309,7 +7324,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const jobs = await SyncJob.find({}).sort({ createdAt: -1 }).limit(50);
       res.json({ success: true, data: jobs });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to list synchronization queue jobs' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7329,7 +7344,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       res.json({ success: true, data: job });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to enqueue synchronization job' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7379,7 +7394,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       res.json({ success: true, data: job });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to update job status' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7389,7 +7404,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const schedules = await SchedulerTask.find({});
       res.json({ success: true, data: schedules });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to list scheduler tasks' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7400,6 +7415,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       if (!task) return res.status(404).json({ error: 'Scheduler task not found' });
 
       task.lastRun = new Date();
+      await task.save();
       const startTime = Date.now();
 
       // Trigger automatic background worker job on behalf of scheduler
@@ -7425,7 +7441,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       res.json({ success: true, message: 'Automated job launched successfully!', data: task });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to run scheduler task' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7439,7 +7455,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       await task.save();
       res.json({ success: true, data: task });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to toggle schedule' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7449,7 +7465,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const alerts = await AlertRule.find({}).populate('productId', 'name');
       res.json({ success: true, data: alerts });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch alert rules' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7466,7 +7482,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       }
       res.json({ success: true, data: alert });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to save alert rule' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7476,7 +7492,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       await AlertRule.findByIdAndDelete(req.params.id);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to delete alert rule' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7486,7 +7502,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const reports = await ProductHealth.find({}).populate('productId', 'name price lastPriceCheck');
       res.json({ success: true, data: reports });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to retrieve product health details' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7496,7 +7512,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const rules = await AutomationRule.find({});
       res.json({ success: true, data: rules });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch automation rules' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7513,7 +7529,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       }
       res.json({ success: true, data: rule });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to save automation rule' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7523,7 +7539,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       await AutomationRule.findByIdAndDelete(req.params.id);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to delete automation rule' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7540,7 +7556,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         }
       });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch timeline and historical price series' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7550,7 +7566,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const result = await syncService.runLiveProductSync(req.params.productId, req.body);
       res.json({ success: true, data: result });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Product synchronization run failed' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7560,7 +7576,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const result = syncService.validateAffiliateLink(affiliateLink, affiliateCode);
       res.json({ success: true, data: result });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Link validation processing failed' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7570,7 +7586,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const logs = await NotificationHistory.find({}).sort({ timestamp: -1 }).limit(100);
       res.json({ success: true, data: logs });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch notification and automation execution history' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7580,10 +7596,11 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
   app.get('/api/admin/marketplace/analytics', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      if (!isMongoConnected) return res.json({ success: true, data: { totalProducts: 0, overallSuccessRate: 0, providersCount: 0, providers: [] } });
       const stats = await marketplaceService.getAnalytics();
       res.json({ success: true, data: stats });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch marketplace analytics' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7593,7 +7610,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const providers = await MarketplaceProviderModel.find({});
       res.json({ success: true, data: providers });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to retrieve marketplace providers' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7609,7 +7626,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       if (!provider) return res.status(404).json({ error: 'Marketplace provider not found' });
       res.json({ success: true, data: provider });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to toggle marketplace provider' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7653,7 +7670,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       });
       res.json({ success: true, data: sanitized });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch marketplace settings' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7698,7 +7715,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       );
       res.json({ success: true, data: settings });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to save marketplace settings' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7708,7 +7725,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const profiles = await AffiliateProfilesModel.find({});
       res.json({ success: true, data: profiles });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch affiliate profiles' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7723,7 +7740,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       );
       res.json({ success: true, data: profile });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to save affiliate profile' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7733,7 +7750,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const settings = await getSiteSettingsData();
       res.json({ success: true, data: settings });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch site settings' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7743,7 +7760,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const settings = await getSiteSettingsData();
       res.json({ success: true, data: settings });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch admin settings' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7778,7 +7795,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       res.json({ success: true, data: updatedData, message: 'Site & AdSense settings saved and updated in real-time!' });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to save settings' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7795,7 +7812,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const state = await priceScannerService.startScanCycle();
       res.json({ success: true, data: state });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to start price scanner' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7814,7 +7831,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const state = await priceScannerService.resetScanCycle();
       res.json({ success: true, data: state });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to reset price scanner' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7881,7 +7898,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       res.setHeader('Content-Disposition', `attachment; filename="product-price-scanner-report-${Date.now()}.csv"`);
       res.status(200).send(csvContent);
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to generate CSV export' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7932,7 +7949,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         products: exportedProducts
       });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to generate JSON export' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7942,7 +7959,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const status = await MarketplaceHealthModel.find({});
       res.json({ success: true, data: status });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to retrieve marketplace health status' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7952,7 +7969,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const logs = await ProviderLogsModel.find({}).sort({ timestamp: -1 }).limit(100);
       res.json({ success: true, data: logs });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to fetch provider logs' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7965,7 +7982,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const result = await marketplaceService.importProduct(url, categoryId, forceUpdate);
       res.json({ success: true, data: result });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Marketplace import failed' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7979,7 +7996,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const result = await marketplaceService.bulkImportProducts(urls, categoryId);
       res.json({ success: true, data: result });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Bulk marketplace import failed' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -7993,7 +8010,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const result = await marketplaceService.mergeProducts(primaryId, duplicateId, strategy || 'combine');
       res.json({ success: true, data: result });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to merge duplicate products' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -8003,7 +8020,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const comparison = await marketplaceService.compareCrossMarketplace(req.params.productId);
       res.json({ success: true, data: comparison });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Cross-marketplace comparison failed' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -8018,7 +8035,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       }
       res.json({ success: true, data: rates });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to retrieve currency rates' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -8028,7 +8045,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const rates = await marketplaceService.refreshExchangeRates(true);
       res.json({ success: true, message: 'Exchange rates refreshed successfully', data: rates });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to refresh currency rates' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -8044,7 +8061,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const converted = await marketplaceService.convertCurrency(amount, from.trim().toUpperCase(), to.trim().toUpperCase());
       res.json({ success: true, data: { amount, from: from.trim().toUpperCase(), to: to.trim().toUpperCase(), converted } });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Currency conversion failed' });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -8264,7 +8281,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         }
       });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: 'An internal error occurred.' });
     }
   });
 
@@ -8306,7 +8323,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         }
       });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: 'An internal error occurred.' });
     }
   });
 
@@ -9494,7 +9511,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         message
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message || 'Failed to process message reply' });
+      res.status(500).json({ error: 'Failed to process message reply' });
     }
   });
 
@@ -9572,7 +9589,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         user: { _id: targetUser._id || targetUser.id, email: targetUser.email, role }
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -9586,7 +9603,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         res.json(localSecurityLogs);
       }
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 
@@ -9596,7 +9613,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       const mongoLogs = await SundayAutomationLog.find().sort({ runAt: -1 }).populate('productsAdded');
       return res.json(mongoLogs);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: 'An internal error occurred.' });
     }
   });
 

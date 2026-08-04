@@ -337,17 +337,18 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
             </div>
           )}
 
-          {/* Yellow floating "+" circular relative action button at bottom-right of the image stage container */}
+          {/* Floating quick action button at bottom-right of the image stage container */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               handleCardClick();
             }}
-            className="absolute bottom-1.5 right-1.5 w-7.5 h-7.5 rounded-full bg-amber-300 active:scale-90 text-slate-950 flex items-center justify-center hover:bg-amber-200 transition-all duration-300 font-bold shadow-md z-25 cursor-pointer border-none"
-            title="Read Technical Specifications"
+            className="absolute bottom-1.5 right-1.5 w-7.5 h-7.5 rounded-full bg-indigo-600 active:scale-90 text-white flex items-center justify-center hover:bg-indigo-700 transition-all duration-300 shadow-md z-25 cursor-pointer border-none"
+            aria-label="View product details"
+            title="View product details"
           >
-            <Plus className="h-4 w-4 stroke-[3]" />
+            <ArrowRight className="h-4 w-4 stroke-[2.5]" />
           </button>
         </div>
 

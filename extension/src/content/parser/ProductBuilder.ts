@@ -7,7 +7,7 @@ export class ProductBuilder {
   private supportedDomains: string[];
 
   constructor(private log: (msg: string) => void, settings?: ExtensionSettings) {
-    this.affiliateTag = settings?.affiliateTag || 'gadgetspro-20';
+    this.affiliateTag = settings?.affiliateTag || 'gadgetsprohub-21';
     this.supportedDomains = settings?.supportedDomains || ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca'];
   }
 
@@ -73,7 +73,6 @@ export class ProductBuilder {
       title, // Backward compatibility with previous schema
       brand,
       asin,
-      price: currentPrice,
       currentPrice,
       originalPrice,
       discount,

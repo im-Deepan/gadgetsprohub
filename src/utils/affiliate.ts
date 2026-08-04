@@ -7,7 +7,7 @@ export function getCleanAffiliateUrl(
   asin?: string,
   affiliateCode?: string
 ): string {
-  const defaultTag = (affiliateCode && affiliateCode !== 'gadgetspro-20') ? affiliateCode : 'gadgetsprohub-21';
+  const defaultTag = affiliateCode || 'gadgetsprohub-21';
   let raw = (affiliateLink || '').trim();
 
   // Fallback to ASIN if affiliateLink is missing or placeholder

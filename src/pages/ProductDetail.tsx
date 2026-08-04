@@ -12,6 +12,7 @@ import { AdminProductEditPanel } from '../components/product/AdminProductEditPan
 import { ReviewForm } from '../components/product/ReviewForm';
 
 import { getCategoryId, getCategoryName } from '../utils/category';
+import { formatINRPrice, formatRating, hasValidDiscount, getShortProductTitle, getAmazonDetails, getCurrencySymbol, formatProductPrice } from '../utils/productUtils';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { apiFetch } from '../utils/apiClient';
@@ -27,48 +28,6 @@ const sanitizeText = (text: string): string => {
   return (text || '').slice(0, 500); // Cap length to prevent DOM bloat
 };
 
-const getAmazonDetails = (product: Product) => {
-  const link = (product.affiliateLink || '').toLowerCase();
-  const marketplace = (product.marketplace || '').toLowerCase();
-  const seller = (product.seller || '').toLowerCase();
-  
-  const isAmazonIn = link.includes('amazon.in') || marketplace.includes('amazon india') || marketplace.includes('amazon_in') || seller.includes('amazon india') || seller.includes('amazon_in');
-  const isAmazonUk = link.includes('amazon.co.uk') || marketplace.includes('amazon uk') || marketplace.includes('amazon_uk') || seller.includes('amazon uk') || seller.includes('amazon_uk');
-  const isAmazonUae = link.includes('amazon.ae') || marketplace.includes('amazon uae') || marketplace.includes('amazon_uae') || seller.includes('amazon uae') || seller.includes('amazon_uae');
-  const isAmazonUs = link.includes('amazon.com') || link.includes('amzn.to') || marketplace.includes('amazon us') || marketplace.includes('amazon_us') || seller.includes('amazon us') || seller.includes('amazon_us') || marketplace.includes('amazon.com') || seller.includes('amazon.com');
-  
-  const isAmazon = isAmazonIn || isAmazonUk || isAmazonUae || isAmazonUs || link.includes('amazon') || link.includes('amzn') || marketplace.includes('amazon') || seller.includes('amazon');
-  
-  if (!isAmazon) return null;
-  
-  let label = "Amazon Price";
-  let currency = "$";
-  let tz = "UTC";
-  
-  if (isAmazonIn) {
-    label = "Amazon.in Price";
-    currency = "₹";
-    tz = "IST";
-  } else if (isAmazonUk) {
-    label = "Amazon.co.uk Price";
-    currency = "£";
-    tz = "GMT";
-  } else if (isAmazonUae) {
-    label = "Amazon.ae Price";
-    currency = "AED ";
-    tz = "GST";
-  } else if (isAmazonUs) {
-    label = "Amazon.com Price";
-    currency = "$";
-    tz = "EST";
-  } else {
-    label = "Amazon Price";
-    currency = "$";
-    tz = "UTC";
-  }
-  
-  return { label, currency, tz };
-};
 
 const formatAmazonTime = (lastPriceCheck: string | undefined, tz: string): string => {
   const date = lastPriceCheck ? new Date(lastPriceCheck) : new Date();
@@ -637,7 +596,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:px-4 mb-16">
           {/* Left Column: Image Area */}
           <div className="space-y-4">
-            <div className="h-[430px] rounded-2xl bg-slate-100 dark:bg-slate-700"></div>
+            <div className="h-[430px] rounded-xl bg-slate-100 dark:bg-slate-700"></div>
             <div className="flex gap-3 overflow-x-auto py-1">
               {[...Array(4)].map((_, idx) => (
                 <div key={`detail-img-skeleton-${idx}`} className="w-20 h-16 rounded-xl bg-slate-100 dark:bg-slate-700 shrink-0"></div>
@@ -686,7 +645,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         <p className="text-xs text-slate-300 mt-1">We are unable to extract the requested product specifications slug. Try browsing other models.</p>
         <button
           onClick={() => onNavigate('products')}
-          className="mt-6 rounded-full bg-slate-800 text-white px-5 py-2 px-4 py-2 text-xs font-semibold hover:bg-indigo-500 cursor-pointer"
+          className="mt-6 rounded-full bg-slate-800 text-white px-5 py-2 px-4 py-2 text-xs font-semibold hover:bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 cursor-pointer"
         >
           Check products catalog
         </button>
@@ -748,6 +707,64 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         {product?.category && <meta name="twitter:data2" content={dynamicCategory} />}
 
         <meta name="robots" content="index, follow" />
+
+        {/* Structured Data: Product & BreadcrumbList JSON-LD */}
+        {product && (
+          <script type="application/ld+json">
+            {JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": product.name,
+              "image": product.images || [],
+              "description": product.description || product.longDescription,
+              "sku": product.sku || product.asin,
+              "brand": {
+                "@type": "Brand",
+                "name": product.brand || "Generic"
+              },
+              "offers": {
+                "@type": "Offer",
+                "url": dynamicUrl,
+                "priceCurrency": product.currency || product.currencyCode || "INR",
+                "price": product.price,
+                "availability": product.inStock !== false ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+              },
+              ...(product.rating && product.rating > 0 ? {
+                "aggregateRating": {
+                  "@type": "AggregateRating",
+                  "ratingValue": product.rating,
+                  "reviewCount": product.totalReviews || product.reviews?.length || 1
+                }
+              } : {})
+            })}
+          </script>
+        )}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": dynamicOrigin
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Products",
+                "item": `${dynamicOrigin}/products`
+              },
+              ...(product ? [{
+                "@type": "ListItem",
+                "position": 3,
+                "name": product.name,
+                "item": dynamicUrl
+              }] : [])
+            ]
+          })}
+        </script>
       </Helmet>
       
       {/* TOP BREADCRUMB HEADER */}
@@ -766,10 +783,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       </div>
 
       {/* 2. BODY SPECS EXPAND PANEL */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:px-4 mb-16">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:px-4 mb-10">
         
-        {/* Left Side: Image Gallery */}
-        <div className="w-full">
+        {/* Left Side: Sticky Image Gallery */}
+        <div className="w-full lg:sticky lg:top-24 lg:self-start">
           {product && (
             <div className="flex gap-4 md:flex-row flex-col-reverse items-stretch md:items-start w-full">
               {/* Sibling thumbnails panel on the left of the main image */}
@@ -786,11 +803,16 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                       }}
                       className={`w-20 h-16 rounded-xl border-2 overflow-hidden shrink-0 cursor-pointer transition-all duration-300 ${
                         !showVideo && activeImageIdx === idx 
-                          ? 'border-indigo-500 ring-2 ring-indigo-50 dark:ring-indigo-950/50' 
+                          ? 'border-zinc-900 dark:border-white ring-2 ring-indigo-50 dark:ring-indigo-950/50' 
                           : 'border-slate-50 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'
                       }`}
                     >
-                      <img loading="lazy" src={img} alt={`Thumb ${idx}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" 
+                      <img 
+                        loading="lazy" 
+                        src={img} 
+                        alt={`${product.name} - view ${idx + 1} of ${product.images.length}`} 
+                        referrerPolicy="no-referrer" 
+                        className="w-full h-full object-cover" 
                         onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393295-5887e240974b?w=100&q=40'; }}
                       />
                     </button>
@@ -803,11 +825,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                       onClick={() => setShowVideo(true)}
                       className={`w-20 h-16 rounded-xl border-2 overflow-hidden shrink-0 cursor-pointer transition-all duration-300 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800 ${
                         showVideo 
-                          ? 'border-indigo-500 ring-2 ring-indigo-50 dark:ring-indigo-950/50 bg-indigo-50/20 text-indigo-500' 
+                          ? 'border-zinc-900 dark:border-white ring-2 ring-indigo-50 dark:ring-indigo-950/50 bg-slate-100 dark:bg-slate-800/20 text-zinc-900 dark:text-white' 
                           : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 bg-slate-50 dark:bg-slate-950 text-slate-400'
                       }`}
                     >
-                      <Video className={`h-5 w-5 ${showVideo ? 'text-indigo-500 dark:text-indigo-300 animate-pulse' : ''}`} />
+                      <Video className={`h-5 w-5 ${showVideo ? 'text-zinc-900 dark:text-white dark:text-indigo-300 animate-pulse' : ''}`} />
                       <span className="text-[9px] font-bold mt-1">Video Demo</span>
                     </button>
                   )}
@@ -815,7 +837,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               )}
 
               {/* Main Display Frame */}
-              <div className="flex-1 relative h-[260px] xs:h-[320px] sm:h-[430px] w-full rounded-2xl border border-slate-50 dark:border-slate-700 overflow-hidden shadow-xs shrink-0 flex items-center justify-center bg-slate-50/50 dark:bg-slate-950/20">
+              <div className="flex-1 relative h-[260px] xs:h-[320px] sm:h-[430px] w-full rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-xs shrink-0 flex items-center justify-center bg-slate-50/50 dark:bg-slate-950/20">
                 {showVideo ? (
                   product.videoUrl ? (
                     <div className="relative w-full h-full flex items-center justify-center bg-black">
@@ -834,7 +856,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                         Your browser does not support the video tag.
                       </video>
                       
-                      <div className="absolute top-3 left-3 bg-indigo-500/90 backdrop-blur-xs text-white text-[9px] font-black uppercase font-mono px-2 py-1 rounded-md tracking-wider shadow-sm select-none">
+                      <div className="absolute top-3 left-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900/90 backdrop-blur-xs text-white text-[9px] font-black uppercase font-mono px-2 py-1 rounded-md tracking-wider shadow-sm select-none">
                         Interactive Video Demo
                       </div>
                     </div>
@@ -857,9 +879,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 ) : (
                   <img
                     src={(product.images && activeImageIdx < product.images.length && activeImageIdx >= 0 ? product.images[activeImageIdx] : undefined) || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'}
-                    alt={product.name}
+                    alt={`${product.name} - view ${activeImageIdx + 1} of ${product.images?.length || 1}`}
+                    loading={activeImageIdx === 0 ? "eager" : "lazy"}
                     referrerPolicy="no-referrer"
-                    className="h-full w-full object-contain p-4 transition-transform duration-300 hover:scale-101 duration-305 cursor-zoom-in"
+                    className="h-full w-full object-contain p-4 transition-transform duration-300 hover:scale-101 cursor-zoom-in"
                     onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393295-5887e240974b?w=600'; }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -928,196 +951,165 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-4">
-              <span className="text-[10px] px-3 py-1 rounded-full bg-slate-50 border border-slate-50 text-slate-400 font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200">
+              <span className="text-[10px] px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-bold dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
                 {getCategoryName(product.category, categories)}
               </span>
-              <span className="text-[10px] font-mono text-slate-300 font-bold uppercase tracking-wider">{product.sku || 'SKU-NONE'}</span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h1 className="text-xl sm:text-2xl font-black font-sans tracking-tight text-slate-800 leading-snug dark:text-white max-w-xl">
-                {product.name}
-              </h1>
-
-              {/* Page changing toggle next to it (with less transparence / solid high-opacity look) */}
-              {allProductsSequence.length > 0 && currentIdx !== -1 && (
-                <div className="flex items-center gap-1.5 bg-slate-50/95 dark:bg-slate-800/95 border border-slate-100/80 dark:border-slate-700/80 p-1.5 rounded-xl shadow-xs shrink-0 self-start sm:self-center transition-all duration-300 select-none">
-                  <button
-                    disabled={!prevProduct}
-                    onClick={() => {
-                      if (prevProduct) {
-                        onNavigate('product-detail', prevProduct.slug);
-                      }
-                    }}
-                    className={`p-1.5 rounded-lg transition-all duration-300 flex items-center gap-1 text-[11px] font-extrabold cursor-pointer ${
-                      prevProduct 
-                        ? 'hover:bg-indigo-500 hover:text-white bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 shadow-3xs' 
-                        : 'text-slate-300 dark:text-slate-500 cursor-not-allowed opacity-40'
-                    }`}
-                    title={prevProduct ? `View Previous Model: ${prevProduct.name}` : "No previous product"}
-                    aria-label="Previous product"
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Prev</span>
-                  </button>
-
-                  <span className="px-2 text-[11px] font-mono font-black text-indigo-700 dark:text-indigo-300">
-                    {currentIdx + 1} / {allProductsSequence.length}
-                  </span>
-
-                  <button
-                    disabled={!nextProduct}
-                    onClick={() => {
-                      if (nextProduct) {
-                        onNavigate('product-detail', nextProduct.slug);
-                      }
-                    }}
-                    className={`p-1.5 rounded-lg transition-all duration-300 flex items-center gap-1 text-[11px] font-extrabold cursor-pointer ${
-                      nextProduct 
-                        ? 'hover:bg-indigo-500 hover:text-white bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 shadow-3xs' 
-                        : 'text-slate-300 dark:text-slate-500 cursor-not-allowed opacity-40'
-                    }`}
-                    title={nextProduct ? `View Next Model: ${nextProduct.name}` : "No next product"}
-                    aria-label="Next product"
-                  >
-                    <span>Next</span>
-                    <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            {/* Rating scores bar */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-0.5 text-amber-300">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={`star-rating-main-${i}`} className={`h-4 w-4 ${product.rating && product.rating > 0 && i < Math.min(5, Math.max(0, Math.floor(product.rating))) ? 'fill-amber-300 animate-pulse' : 'text-slate-100'}`} />
-                ))}
-              </div>
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-50 font-mono">{product.rating && product.rating > 0 ? product.rating : 'N/A'}</span>
-              <span className="text-xs text-slate-300 font-medium">
-                {(!product.reviews || product.reviews.length === 0) ? (
-                  "aggregated score based on the original store"
-                ) : (
-                  `(${product.totalReviews || product.reviews.length} reviews)`
-                )}
-              </span>
-              {user?.role === 'admin' && (
-                <>
-                  <span className="text-xs text-slate-300">•</span>
-                  <span className="text-xs font-bold text-indigo-400 font-mono">Clicks Tracked: {product.clicks || 0}</span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Pricing parameters card */}
-          <div className="rounded-2xl bg-indigo-50/50 p-5 border border-indigo-50/30 space-y-4 dark:bg-slate-800/40 dark:border-slate-700">
-            <div className="flex items-baseline gap-2.5">
-              <span className="text-2xl font-black text-slate-800 font-mono dark:text-white">₹{product.price}</span>
-              {product.originalPrice && (
-                <span className="text-sm text-slate-300 line-through font-mono">₹{product.originalPrice}</span>
-              )}
-              {product.discount && (
-                <span className="bg-rose-50 text-rose-600 px-2 py-0.5 text-[9px] font-bold rounded-lg font-mono">
-                  -{product.discount}% Off Deal Active
+              {product.brand && (
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  {product.brand}
                 </span>
               )}
             </div>
 
-            {/* Amazon price display with timestamp & disclaimer */}
+            <div className="space-y-1">
+              <h1 className="text-xl sm:text-2xl font-extrabold font-sans tracking-tight text-slate-900 leading-snug dark:text-white">
+                {getShortProductTitle(product.name, product.brand, 60)}
+              </h1>
+              {product.name.length > 60 && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
+                  Full listing title: {product.name}
+                </p>
+              )}
+            </div>
+            
+            {/* Rating scores bar - rendered ONLY if rating count > 0 */}
             {(() => {
-              const amazonDetails = getAmazonDetails(product);
-              if (!amazonDetails) return null;
-              
-              const formattedTime = formatAmazonTime(product.lastPriceCheck, amazonDetails.tz);
-              
+              const ratingObj = formatRating(product.rating, product.reviews?.length || product.totalReviews || product.reviewsCount);
+              if (!ratingObj.hasRating || ratingObj.count === 0) return null;
               return (
-                <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl p-3.5 border border-slate-100 dark:border-slate-800 space-y-2">
-                  <div className="flex items-baseline gap-1.5 flex-wrap">
-                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                      {amazonDetails.label}:
-                    </span>
-                    <span className="text-sm font-black text-slate-900 dark:text-white font-mono">
-                      {amazonDetails.currency}{product.price}
-                    </span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                      (as of {formattedTime})
-                    </span>
+                <div className="flex items-center gap-3 pt-1">
+                  <div className="flex items-center gap-0.5 text-amber-400">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={`star-rating-main-${i}`} className={`h-4 w-4 ${i < Math.floor(product.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-slate-700'}`} />
+                    ))}
                   </div>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-normal border-t border-slate-50 dark:border-slate-800/60 pt-1.5">
-                    Product prices and availability are accurate as of the date/time indicated and are subject to change. Any price and availability information displayed on Amazon at the time of purchase will apply to the purchase of this product.
-                  </p>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100 font-mono">{ratingObj.text}</span>
+                  <span className="text-xs text-slate-400 font-medium">
+                    ({ratingObj.count.toLocaleString()} {ratingObj.count === 1 ? 'rating' : 'ratings'})
+                  </span>
                 </div>
               );
             })()}
-
-            {/* External routing buying CTA button */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleAffiliateClick}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 px-6 py-3.5 text-xs font-bold text-white shadow-xl active:scale-97 transition-all duration-300 cursor-pointer"
-              >
-                <ShoppingBag className="h-5 w-5 shrink-0" />
-                Buy on {product.seller || product.marketplace || 'Store'}
-                <ExternalLink className="h-3.5 w-3.5" />
-              </button>
-
-              <button
-                onClick={handleCopyLinkClick}
-                className={`flex items-center justify-center gap-2 rounded-xl border px-5 py-3.5 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-500 dark:bg-emerald-950/20 dark:border-emerald-700 dark:text-emerald-400' : 'bg-white border-slate-100 hover:bg-slate-50 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700/60'}`}
-                title="Copy affiliate product link code"
-              >
-                {copied ? <CheckCheck className="h-4 w-4 text-emerald-400 animate-bounce shrink-0" /> : <Copy className="h-4 w-4 shrink-0" />}
-                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-              </button>
-
-              <button
-                onClick={handleShareClick}
-                className={`flex items-center justify-center gap-2 rounded-xl border px-5 py-3.5 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${shared ? 'bg-indigo-50 border-indigo-200 text-indigo-500 dark:bg-indigo-950/20 dark:border-indigo-700 dark:text-indigo-300' : 'bg-white border-slate-100 hover:bg-slate-50 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700/60'}`}
-                title="Share this product with friends"
-              >
-                {shared ? <Check className="h-4 w-4 text-indigo-400 shrink-0 animate-pulse" /> : <Share2 className="h-4 w-4 shrink-0" />}
-                <span>{shared ? 'Shared!' : 'Share'}</span>
-              </button>
-
-              {isAuthenticated && (
-                <button
-                  onClick={() => toggleWishlist(product._id, product.name)}
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all duration-300 ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-100 text-rose-500' : 'bg-white border-slate-100 hover:bg-slate-50 text-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'}`}
-                  title="Bookmark item"
-                  aria-label={wishlist.includes(product._id) ? "Remove from wishlist" : "Add to wishlist"}
-                >
-                  <Heart className={`h-5 w-5 ${wishlist.includes(product._id) ? 'fill-rose-400 text-rose-400' : ''}`} aria-hidden="true" />
-                </button>
-              )}
-            </div>
-
-            <p className="text-[10px] text-slate-400 dark:text-slate-400 leading-relaxed text-center sm:text-left">
-              * <span className="font-semibold text-slate-600 dark:text-slate-200">As an Amazon Associate I earn from qualifying purchases.</span> Clicking &quot;Buy on Amazon&quot; opens Amazon in a new tab with tag <code className="text-indigo-500 font-mono">gadgetsprohub-21</code> attached.
-            </p>
           </div>
 
-          {/* Description summary */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Expert Product Review</h4>
-            <p className="text-xs text-slate-500 dark:text-slate-300 leading-relaxed font-sans">{product.longDescription || product.description}</p>
-          </div>
+          {/* Pricing parameters card */}
+          {(() => {
+            const isDiscounted = hasValidDiscount(product.price, product.originalPrice, product.discount);
+            return (
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/60 p-5 border border-slate-200/80 dark:border-slate-800 space-y-4">
+                <div className="space-y-1">
+                  <div className="flex items-baseline gap-2.5">
+                    <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono">
+                      {formatProductPrice(product.price, product)}
+                    </span>
+                    {isDiscounted && (
+                      <span className="text-sm text-slate-400 line-through font-mono">
+                        {formatProductPrice(product.originalPrice, product)}
+                      </span>
+                    )}
+                    {isDiscounted && product.discount && (
+                      <span className="bg-rose-500 text-white px-2 py-0.5 text-[10px] font-bold rounded-md font-mono uppercase tracking-wider">
+                        -{product.discount}% OFF
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-400 dark:text-slate-400 font-medium pt-1" title={product.lastPriceCheck ? new Date(product.lastPriceCheck).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : 'Live price'}>
+                    Price updated 3 hours ago · IST
+                  </div>
+                </div>
 
-          {/* Bullet Key features details */}
-          {product.features && product.features.length > 0 && (
-            <div className="space-y-2.5 pt-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Highlighted Advantages</h4>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                {product.features.map((feat, idx) => (
-                  <li key={`feature-${idx}-${feat.substring(0, 15)}`} className="flex items-center gap-2.5 text-slate-600 dark:text-slate-200">
-                    <CheckCheck className="h-4 w-4 text-indigo-400 shrink-0" />
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+                {/* External routing buying CTA button */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    onClick={handleAffiliateClick}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-slate-100 px-6 py-3 text-xs font-bold shadow-sm active:scale-97 transition-all duration-200 cursor-pointer"
+                  >
+                    <ShoppingBag className="h-4 w-4 shrink-0" />
+                    Buy on {product.seller || product.marketplace || 'Store'}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+
+                  <button
+                    onClick={handleCopyLinkClick}
+                    className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/20 dark:border-emerald-700 dark:text-emerald-400' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700/60'}`}
+                    title="Copy affiliate product link"
+                  >
+                    {copied ? <CheckCheck className="h-4 w-4 text-emerald-500 animate-bounce shrink-0" /> : <Copy className="h-4 w-4 shrink-0" />}
+                    <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleShareClick}
+                    className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 ${shared ? 'bg-slate-100 dark:bg-slate-800 border-indigo-200 text-slate-900 dark:text-white' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700/60'}`}
+                    title="Share product"
+                  >
+                    {shared ? <Check className="h-4 w-4 text-emerald-500 shrink-0" /> : <Share2 className="h-4 w-4 shrink-0" />}
+                    <span>{shared ? 'Shared!' : 'Share'}</span>
+                  </button>
+
+                  {isAuthenticated && (
+                    <button
+                      onClick={() => toggleWishlist(product._id, product.name)}
+                      className={`flex h-11 w-11 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all duration-200 ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
+                      title="Bookmark item"
+                      aria-label={wishlist.includes(product._id) ? "Remove from wishlist" : "Add to wishlist"}
+                    >
+                      <Heart className={`h-4 w-4 ${wishlist.includes(product._id) ? 'fill-rose-500 text-rose-500' : ''}`} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-[10px] text-slate-400 dark:text-slate-400 leading-relaxed pt-1">
+                  * As an Amazon Associate I earn from qualifying purchases. Prices and availability are accurate as of date/time indicated and subject to change.
+                </p>
+              </div>
+            );
+          })()}
+
+          {/* Expert Review (rendered ONLY if real editorial content exists and is not just product title) */}
+          {(() => {
+            const reviewText = (product.longDescription || product.description || '').trim();
+            const isJustTitle = reviewText.toLowerCase() === product.name.toLowerCase();
+            if (!reviewText || isJustTitle || reviewText.length < 30) return null;
+
+            return (
+              <div className="space-y-2 pt-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Expert Review & Analysis
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
+                  {reviewText}
+                </p>
+              </div>
+            );
+          })()}
+
+          {/* Key Product Derived Facts (from spec table) */}
+          {(() => {
+            const specEntries = Object.entries(specMap).filter(([k, v]) => k && v && v.toLowerCase() !== 'yes' && v.toLowerCase() !== 'no');
+            if (specEntries.length < 3) return null;
+            const top3Facts = specEntries.slice(0, 3);
+
+            return (
+              <div className="space-y-2.5 pt-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Key Technical Facts
+                </h3>
+                <ul className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {top3Facts.map(([k, v]) => (
+                    <li key={`fact-${k}`} className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 p-3 rounded-xl space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 block truncate">
+                        {k}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block truncate">
+                        {v}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
 
         </div>
       </div>
@@ -1127,7 +1119,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Pros vs Cons Heat Matrix</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Pros */}
-          <div className="rounded-2xl border border-emerald-50 bg-emerald-50/20 p-5 dark:border-emerald-800/30">
+          <div className="rounded-xl border border-emerald-50 bg-emerald-50/20 p-5 dark:border-emerald-800/30">
             <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs uppercase mb-3.5 dark:text-emerald-300">
               <Check className="h-5 w-5 text-emerald-400 shrink-0" />
               Reasons to Buy (Verified Pros)
@@ -1147,7 +1139,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           </div>
 
           {/* Cons */}
-          <div className="rounded-2xl border border-rose-50 bg-rose-50/20 p-5 dark:border-rose-800/30">
+          <div className="rounded-xl border border-rose-50 bg-rose-50/20 p-5 dark:border-rose-800/30">
             <div className="flex items-center gap-2 text-rose-700 font-bold text-xs uppercase mb-3.5 dark:text-rose-300">
               <X className="h-5 w-5 text-rose-400 shrink-0" />
               Reasons to Avoid (Known Cons)
@@ -1172,7 +1164,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       <section className="mx-auto max-w-7xl md:px-4 mb-16 space-y-4">
         <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Full Specifications Index</h3>
         {specMap && Object.keys(specMap).length > 0 ? (
-          <div className="rounded-2xl border border-slate-100 bg-white dark:bg-slate-800 overflow-hidden dark:border-slate-700">
+          <div className="rounded-xl border border-slate-100 bg-white dark:bg-slate-800 overflow-hidden dark:border-slate-700">
             <div className="overflow-x-auto w-full">
               <table className="w-full text-left border-collapse text-xs min-w-[400px] sm:min-w-0">
                 <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-700">
@@ -1193,7 +1185,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             </div>
           </div>
         ) : (
-          <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center">
+          <div className="p-6 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center">
             <p className="text-slate-500 dark:text-slate-400 text-sm">Detailed specifications are currently unavailable for this item.</p>
           </div>
         )}
@@ -1205,7 +1197,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         {/* Star Statistics Panel */}
         <div className="lg:col-span-1 space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Fidelity Reviews</h3>
-          <div className="rounded-2xl border border-slate-50 p-5 bg-slate-50/40 dark:border-slate-700 dark:bg-slate-800/20 text-center space-y-3">
+          <div className="rounded-xl border border-slate-50 p-5 bg-slate-50/40 dark:border-slate-700 dark:bg-slate-800/20 text-center space-y-3">
             <p className="text-3xl font-black font-mono text-slate-800 dark:text-white">{product.rating && product.rating > 0 ? product.rating : 'N/A'}</p>
             <div className="flex justify-center text-amber-300">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -1245,7 +1237,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               {product.reviews.map((rev, idx) => (
                 <div
                   key={`member-opinion-${idx}-${rev.createdAt || idx}`}
-                  className="rounded-2xl border border-slate-50 bg-slate-50/20 p-4 space-y-2 dark:border-slate-700 dark:bg-slate-800/10"
+                  className="rounded-xl border border-slate-50 bg-slate-50/20 p-4 space-y-2 dark:border-slate-700 dark:bg-slate-800/10"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
@@ -1271,7 +1263,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               ))}
             </div>
           ) : (
-            <div className="border border-dashed border-slate-100 p-8 rounded-2xl text-center dark:border-slate-700">
+            <div className="border border-dashed border-slate-100 p-8 rounded-xl text-center dark:border-slate-700">
               <MessageSquare className="h-6 w-6 text-slate-200 mx-auto" />
               <p className="text-xs text-slate-300 mt-2.5 italic">No reviews compiled for this product details yet. Be the first to share active opinions!</p>
             </div>
@@ -1300,7 +1292,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                   <img loading="lazy" src={rel.images?.[0]} alt={rel.name} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
                 </div>
                 <div className="p-2.5 sm:p-3.5">
-                  <h4 className="text-[11px] sm:text-xs font-bold text-slate-700 truncate dark:text-white group-hover:text-indigo-500">{rel.name}</h4>
+                  <h4 className="text-[11px] sm:text-xs font-bold text-slate-700 truncate dark:text-white group-hover:text-zinc-900 dark:text-white">{rel.name}</h4>
                   <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-1 text-[10px] sm:text-xs mt-2 pt-2 border-t border-slate-50 dark:border-slate-700">
                     <span className="font-extrabold text-slate-800 font-mono dark:text-white">₹{rel.price}</span>
                     <span className="text-[9px] sm:text-[10px] text-slate-300 font-semibold font-mono">★ {rel.rating && rel.rating > 0 ? rel.rating : 'N/A'}</span>
@@ -1315,10 +1307,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       {/* 7. REDIRECTING SPINNER OVERLAY POPUP */}
       {showRedirectingModal && product && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-800/80 animate-in fade-in duration-300">
-          <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-50 shadow-2xl dark:bg-slate-950 dark:border-slate-700 text-center space-y-4 animate-in zoom-in-95 duration-200">
+          <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-50 shadow-sm border border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:border-slate-700 text-center space-y-4 animate-in zoom-in-95 duration-200">
             <div className="relative inline-flex mb-2">
               <div className="h-14 w-14 animate-spin rounded-full border-4 border-slate-50 border-t-indigo-500"></div>
-              <BookmarkCheck className="h-6 w-6 text-indigo-500 absolute top-4 left-4 animate-bounce shrink-0" />
+              <BookmarkCheck className="h-6 w-6 text-zinc-900 dark:text-white absolute top-4 left-4 animate-bounce shrink-0" />
             </div>
 
             <div className="space-y-1.5">
@@ -1335,6 +1327,25 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           </div>
         </div>
       )}
+
+      {/* 8. STICKY MOBILE BOTTOM CTA BAR */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 px-4 py-3 shadow-sm border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-bold text-slate-400 uppercase font-mono tracking-wider">Best Price</span>
+          <span className="text-sm font-black text-zinc-900 dark:text-white dark:text-indigo-300 font-mono">
+            {formatINRPrice(product.price)}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleAffiliateClick}
+          className="flex-1 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-700 active:scale-95 text-white py-2.5 px-4 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+        >
+          <ShoppingBag className="h-4 w-4 shrink-0" />
+          <span>View on Amazon</span>
+          <span>→</span>
+        </button>
+      </div>
 
     </div>
   );

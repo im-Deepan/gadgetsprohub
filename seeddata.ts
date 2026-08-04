@@ -1184,30 +1184,7 @@ export const seedBlogs = [
   }
 ];
 
-export const seedUsers: LocalUserType[] = [
-  {
-    _id: "665a0006bc93ef2d8c000060",
-    email: 'admin@affiliate.com',
-    password: 'adminSecretPass',
-    name: 'Admin Strator',
-    role: 'user',
-    wishlist: [] as any[],
-    recentlyViewed: [] as any[],
-    district: 'Chennai',
-    createdAt: new Date()
-  },
-  {
-    _id: "665a0006bc93ef2d8c000061",
-    email: 'tester@example.com',
-    password: 'securePassword123',
-    name: 'API Tester',
-    role: 'user',
-    wishlist: [] as any[],
-    recentlyViewed: [] as any[],
-    district: 'Chennai',
-    createdAt: new Date()
-  }
-];
+export const seedUsers: LocalUserType[] = [];
 
 export const seedMessages = [
   {

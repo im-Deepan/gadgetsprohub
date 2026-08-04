@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Search, Heart, User, LogOut, Menu, X, LayoutDashboard, Sun, Moon, Monitor, Keyboard } from 'lucide-react';
-import { Category, Product, Blog } from '../types';
+import { Heart, User, LogOut, Menu, X, LayoutDashboard, Sun, Moon, Monitor, Keyboard } from 'lucide-react';
+import { Category } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../context/ThemeContext';
 import { apiFetch } from '../utils/apiClient';
+import { fetchCategoriesShared } from '../utils/category';
 import { SearchAutocompleteInput } from './SearchAutocompleteInput';
 
 interface NavbarProps {
@@ -25,9 +26,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
     showToast("You have successfully signed out of your account.", "success", 4000, "User Action");
   };
   
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showResults, setShowResults] = useState(false);
-  const [searchResults, setSearchResults] = useState<{ products: Product[]; blogs: Blog[] }>({ products: [], blogs: [] });
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -66,10 +64,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
       clearInterval(interval);
     };
   }, []);
-
-  // Interactive search bar Refs for global power user focus shortcuts
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const mobileSearchInputRef = React.useRef<HTMLInputElement>(null);
 
   // Global power users keyboard shortcuts help state
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
@@ -124,10 +118,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
       if (target) {
         const tagName = target.tagName.toLowerCase();
         if (tagName === 'input' || tagName === 'textarea' || target.getAttribute('contenteditable') === 'true') {
-          // Pressing escape inside the input blurs it & closes live search
+          // Pressing escape inside the input blurs it
           if (e.key === 'Escape') {
             target.blur();
-            setShowResults(false);
           }
           return;
         }
@@ -259,8 +252,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
   useEffect(() => {
     const controller = new AbortController();
-    apiFetch('/api/categories', { signal: controller.signal })
-      .then(r => r.json())
+    fetchCategoriesShared(controller.signal)
       .then(data => {
         if (Array.isArray(data) && !controller.signal.aborted) {
           setCategories(data);
@@ -275,61 +267,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
       controller.abort();
     };
   }, []);
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
-
-  // Debounce search query to prevent flooding the backend API on rapid user typing
-  useEffect(() => {
-    const trimmed = searchQuery.trim();
-    if (trimmed.length > 1) {
-      const controller = new AbortController();
-      const timer = setTimeout(async () => {
-        try {
-          const res = await apiFetch(`/api/search?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal });
-          if (res.ok) {
-            const data = await res.json();
-            if (!controller.signal.aborted) {
-              setSearchResults(data);
-              setShowResults(true);
-            }
-          }
-        } catch (err: unknown) {
-          const e = err as { name?: string; message?: string };
-          if (e.name !== 'AbortError') {
-            console.warn('Navbar search fetch failed:', e.message);
-          }
-        }
-      }, 300); // 300ms debounce input typing rate
-      return () => {
-        clearTimeout(timer);
-        controller.abort();
-      };
-    } else {
-      setShowResults(false);
-      return;
-    }
-  }, [searchQuery]);
-
-  const handleResultClick = (view: string, slug?: string) => {
-    if (slug) {
-      onNavigate(view, slug);
-    } else {
-      onNavigate(view);
-    }
-    setSearchQuery('');
-    setShowResults(false);
-  };
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim().length > 0) {
-      onNavigate('products', `search-${searchQuery}`);
-      setSearchQuery('');
-      setShowResults(false);
-    }
-  };
 
   return (
     <nav className="sticky top-0 z-50 w-full animate-fade-in">
@@ -367,14 +304,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             </button>
             
             <div className="flex items-center gap-1.5 sm:gap-2.5">
-              <button 
-                onClick={() => onNavigate('home')} 
-                className="flex items-center text-sm sm:text-lg font-bold tracking-tight cursor-pointer group"
+              <a 
+                href="/"
+                onClick={(e) => { e.preventDefault(); onNavigate('home'); }} 
+                className="flex items-center gap-2 font-display text-base sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white cursor-pointer group"
               >
-                <span className={`from-pink-400 via-rose-400 via-amber-300 via-emerald-300 via-teal-400 via-indigo-400 via-purple-500 to-pink-400 bg-clip-text text-transparent font-black tracking-tight text-sm sm:text-xl transition-all duration-300 group-hover:scale-[1.02] ${getGradientClass(colorFlowDir)}`}>
-                  gadgetsprohub
-                </span>
-              </button>
+                <div className="h-7 w-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-xs">
+                  G
+                </div>
+                <span>GadgetsProHub</span>
+              </a>
 
               {/* Real-time DB Connection status badge */}
               {isAdmin && (
@@ -411,13 +350,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
           {/* Navigation Links - Desktop */}
           <div className="hidden lg:flex items-center gap-6 text-sm font-medium">
-            <button 
-              onClick={() => onNavigate('home')}
+            <a 
+              href="/"
+              onClick={(e) => { e.preventDefault(); onNavigate('home'); }}
               onMouseEnter={() => onPreload?.('home')}
-              className={`transition-colors duration-300 hover:text-indigo-500 cursor-pointer ${currentView === 'home' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
+              className={`transition-colors duration-300 hover:text-indigo-600 cursor-pointer ${currentView === 'home' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-200'}`}
             >
               Home
-            </button>
+            </a>
             <div 
               className="relative flex items-center h-full"
               onMouseEnter={() => {
@@ -426,49 +366,54 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               }}
               onMouseLeave={() => setShowCategoryDropdown(false)}
             >
-              <button 
-                onClick={() => onNavigate('products')}
+              <a 
+                href="/products"
+                onClick={(e) => { e.preventDefault(); onNavigate('products'); }}
                 onMouseEnter={() => onPreload?.('products')}
-                className={`transition-colors duration-300 hover:text-indigo-500 cursor-pointer py-2 ${currentView === 'products' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
+                className={`transition-colors duration-300 hover:text-indigo-600 cursor-pointer py-2 ${currentView === 'products' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-200'}`}
               >
                 Products
-              </button>
+              </a>
               
               {showCategoryDropdown && categories.length > 0 && (
                 <div className="absolute top-full left-0 mt-0 w-48 rounded-xl border border-slate-100 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-800 z-50 animate-in fade-in slide-in-from-top-2">
                   <div className="flex flex-col gap-1">
                     {categories.map((cat: Category) => (
-                      <button
+                      <a
                         key={cat._id}
-                        onClick={() => {
+                        href={`/products/category-${cat.slug}`}
+                        onClick={(e) => {
+                          e.preventDefault();
                           setShowCategoryDropdown(false);
                           if (cat.slug) onNavigate('products', `category-${cat.slug}`);
                         }}
                         onMouseEnter={() => onPreload?.('products')}
-                        className="w-full text-left rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-indigo-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-indigo-300 cursor-pointer"
+                        className="w-full text-left rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-indigo-300 cursor-pointer block"
                       >
                         {cat.name}
-                      </button>
+                      </a>
                     ))}
                   </div>
                 </div>
               )}
             </div>
 
-            <button 
-              onClick={() => onNavigate('blogs')}
+            <a 
+              href="/blogs"
+              onClick={(e) => { e.preventDefault(); onNavigate('blogs'); }}
               onMouseEnter={() => onPreload?.('blogs')}
-              className={`transition-colors duration-300 hover:text-indigo-500 cursor-pointer ${currentView === 'blogs' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
+              className={`transition-colors duration-300 hover:text-indigo-600 cursor-pointer ${currentView === 'blogs' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-200'}`}
             >
               Blog
-            </button>
-            <button 
-              onClick={() => onNavigate('contact')}
+            </a>
+            <a 
+              href="/contact"
+              onClick={(e) => { e.preventDefault(); onNavigate('contact'); }}
               onMouseEnter={() => onPreload?.('contact')}
-              className={`transition-colors duration-300 hover:text-indigo-500 cursor-pointer ${currentView === 'contact' ? 'text-indigo-500 font-semibold' : 'text-slate-500 dark:text-slate-200'}`}
+              className={`transition-colors duration-300 hover:text-indigo-600 cursor-pointer ${currentView === 'contact' ? 'text-indigo-600 font-semibold' : 'text-slate-600 dark:text-slate-200'}`}
             >
               Contact
-            </button>
+            </a>
           </div>
 
           {/* Search Bar Input - Desktop */}
@@ -476,7 +421,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             <SearchAutocompleteInput
               onNavigate={onNavigate}
               variant="navbar"
-              placeholder="Find products, tech gadgets..."
+              placeholder="Search gadgets & reviews..."
             />
           </div>
 
@@ -489,33 +434,36 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
                 else if (theme === 'dark') setTheme('system');
                 else setTheme('light');
               }}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-all duration-300 cursor-pointer"
               title={`Current theme: ${theme}. Click to change.`}
               aria-label="Toggle theme"
             >
               {theme === 'system' ? (
-                <Monitor className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-500 dark:text-indigo-400" />
+                <Monitor className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               ) : theme === 'dark' ? (
-                <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-300" />
+                <Moon className="h-4 w-4 text-indigo-300" />
               ) : (
-                <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+                <Sun className="h-4 w-4 text-amber-500" />
               )}
-            </button>            {/* Wishlist Link - Desktop */}
+            </button>
+
+            {/* Wishlist Link - Desktop */}
             {isAuthenticated && (
-              <button
-                onClick={() => onNavigate('profile')}
+              <a
+                href="/profile"
+                onClick={(e) => { e.preventDefault(); onNavigate('profile'); }}
                 onMouseEnter={() => onPreload?.('profile')}
                 aria-label="Your bookmarks"
-                className="hidden sm:flex relative h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-50 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors duration-300 cursor-pointer"
+                className="hidden sm:flex relative h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors duration-300 cursor-pointer"
                 title="Your bookmarks"
               >
-                <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Heart className="h-4 w-4" />
                 {wishlist.length > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-rose-400 font-mono text-[8px] sm:text-[9px] font-bold text-white ring-2 ring-white dark:ring-slate-950">
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 font-mono text-[9px] font-bold text-white ring-2 ring-white dark:ring-slate-950">
                     {wishlist.length}
                   </span>
                 )}
-              </button>
+              </a>
             )}
 
             {/* Profile Menu tab */}
@@ -523,47 +471,50 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               {isAuthenticated ? (
                 <div className="flex items-center gap-1 sm:gap-2">
                   {isAdmin && (
-                    <button
-                      onClick={() => onNavigate('admin')}
+                    <a
+                      href="/admin"
+                      onClick={(e) => { e.preventDefault(); onNavigate('admin'); }}
                       onMouseEnter={() => onPreload?.('admin')}
                       aria-label="Admin Dashboard"
-                      className={`flex h-8 w-8 sm:h-auto sm:w-auto items-center justify-center sm:gap-1.5 rounded-full sm:px-3 sm:py-1.5 text-xs font-semibold cursor-pointer border ${currentView === 'admin' ? 'bg-indigo-50 border-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-700 dark:text-indigo-200' : 'bg-slate-50 hover:bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-700'}`}
+                      className={`flex h-9 sm:h-auto items-center justify-center sm:gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold cursor-pointer border ${currentView === 'admin' ? 'bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-700 dark:text-indigo-200' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100'}`}
                       title={isAdmin ? "Admin Dashboard" : undefined}
                     >
-                      <LayoutDashboard className="h-4 w-4 sm:h-3.5 sm:w-3.5 animate-pulse" />
+                      <LayoutDashboard className="h-3.5 w-3.5" />
                       <span className="hidden sm:inline">Admin</span>
-                    </button>
+                    </a>
                   )}
 
-                  <button
-                    onClick={() => onNavigate('profile')}
+                  <a
+                    href="/profile"
+                    onClick={(e) => { e.preventDefault(); onNavigate('profile'); }}
                     onMouseEnter={() => onPreload?.('profile')}
-                    className="flex h-8 w-8 sm:h-auto sm:w-auto items-center justify-center sm:gap-2 rounded-full border border-slate-50 bg-white sm:px-3 sm:py-1.5 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800 cursor-pointer"
+                    className="flex h-9 sm:h-auto items-center justify-center sm:gap-2 rounded-full border border-slate-200 bg-white sm:px-3 sm:py-1.5 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800 cursor-pointer"
                   >
-                    <div className="h-5 w-5 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-[10px] uppercase shrink-0">
+                    <div className="h-5 w-5 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-[10px] uppercase shrink-0">
                       {user?.name?.[0] || 'U'}
                     </div>
-                    <span className="hidden sm:inline text-xs font-medium text-slate-600 dark:text-slate-200 max-w-[120px] truncate">{user?.name?.split('@')[0]?.split(' ')?.[0] || 'User'}</span>
-                  </button>
+                    <span className="hidden sm:inline text-xs font-medium text-slate-700 dark:text-slate-200 max-w-[120px] truncate">{user?.name?.split('@')[0]?.split(' ')?.[0] || 'User'}</span>
+                  </a>
 
                   <button
                     onClick={handleLogout}
                     aria-label="Sign Out"
-                    className="hidden sm:flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-50 bg-white text-rose-400 shadow-sm hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-rose-950/30 transition-colors duration-300 cursor-pointer"
+                    className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-rose-500 hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-rose-950/30 transition-colors duration-300 cursor-pointer"
                     title="Sign Out"
                   >
                     <LogOut className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => onNavigate('login')}
+                <a
+                  href="/login"
+                  onClick={(e) => { e.preventDefault(); onNavigate('login'); }}
                   onMouseEnter={() => onPreload?.('login')}
-                  className="flex items-center gap-1.5 rounded-full bg-indigo-500 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-600 active:scale-95 transition-all duration-300 cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-95 transition-all duration-300 cursor-pointer min-h-[44px] min-w-[44px] justify-center"
                 >
                   <User className="h-3.5 w-3.5" />
-                  <span>Login</span>
-                </button>
+                  <span>Sign in</span>
+                </a>
               )}
             </div>
           </div>
@@ -597,9 +548,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
               {/* Drawer Header Brand & Close controller */}
               <div className="flex items-center justify-between border-b pb-4 dark:border-slate-700">
                 <div className="flex items-center">
-                  <span className={`from-pink-400 via-rose-400 via-amber-300 via-emerald-300 via-teal-400 via-indigo-400 via-purple-500 to-pink-400 bg-clip-text text-transparent font-black text-lg tracking-tight ${getGradientClass(colorFlowDir)}`}>
-                    gadgetsprohub
-                  </span>
+                  <span className="text-zinc-900 dark:text-white font-display font-black text-xl tracking-tight">gadgetsprohub</span>
                 </div>
                 <button
                   onClick={() => setShowMobileMenu(false)}
@@ -625,35 +574,39 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
               {/* Mobile Nav items */}
               <div className="flex flex-col gap-1 font-semibold flex-grow">
-                <button 
-                  onClick={() => { onNavigate('home'); setShowMobileMenu(false); }}
+                <a 
+                  href="/"
+                  onClick={(e) => { e.preventDefault(); onNavigate('home'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('home')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'home' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  className={`block text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'home' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   Home
-                </button>
-                <button 
-                  onClick={() => { onNavigate('products'); setShowMobileMenu(false); }}
+                </a>
+                <a 
+                  href="/products"
+                  onClick={(e) => { e.preventDefault(); onNavigate('products'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('products')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'products' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  className={`block text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'products' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   All Products
-                </button>
+                </a>
                 
-                <button 
-                  onClick={() => { onNavigate('blogs'); setShowMobileMenu(false); }}
+                <a 
+                  href="/blogs"
+                  onClick={(e) => { e.preventDefault(); onNavigate('blogs'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('blogs')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'blogs' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  className={`block text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'blogs' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   Blog Reviews
-                </button>
-                <button 
-                  onClick={() => { onNavigate('contact'); setShowMobileMenu(false); }}
+                </a>
+                <a 
+                  href="/contact"
+                  onClick={(e) => { e.preventDefault(); onNavigate('contact'); setShowMobileMenu(false); }}
                   onMouseEnter={() => onPreload?.('contact')}
-                  className={`text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'contact' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  className={`block text-left text-sm py-2 px-3 rounded-lg cursor-pointer transition-all duration-300 ${currentView === 'contact' ? 'bg-indigo-50 dark:bg-indigo-950/45 text-indigo-600 dark:text-indigo-200 font-bold' : 'text-slate-500 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   Contact Us
-                </button>
+                </a>
 
                 <button 
                   onClick={() => { setShowShortcutsModal(true); setShowMobileMenu(false); }}

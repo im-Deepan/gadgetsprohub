@@ -154,7 +154,7 @@ class StorageService {
       version: EXTENSION_VERSION,
       popupWidth: 360,
       popupHeight: 420,
-      affiliateTag: 'gadgetspro-20',
+      affiliateTag: 'gadgetsprohub-21',
       supportedDomains: ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca'],
       features: {
         enableDeveloperMode: false,

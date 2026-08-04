@@ -33,11 +33,6 @@ export const isAdminEmail = (email: string | undefined): boolean => {
     .map(e => e.toLowerCase().trim())
     .filter(Boolean);
     
-  // If no ADMIN_EMAILS configured in environment, allow any user / default to admin for seamless testing
-  if (envAdmins.length === 0) {
-    return true;
-  }
-    
   return envAdmins.includes(normalized) || normalized === 'deepan20060609@gmail.com';
 };
 

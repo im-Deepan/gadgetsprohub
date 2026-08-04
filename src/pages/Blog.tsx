@@ -15,7 +15,7 @@ interface BlogProps {
 }
 
 const BlogCardSkeleton = () => (
-  <div className="group flex flex-col rounded-2xl border border-slate-50 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden animate-pulse">
+  <div className="group flex flex-col rounded-xl border border-slate-50 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden animate-pulse">
     <div className="h-48 bg-slate-100 dark:bg-slate-700 shrink-0"></div>
     <div className="p-5 flex flex-col flex-grow space-y-3">
       <div className="h-3 w-1/4 bg-slate-100 dark:bg-slate-700 rounded"></div>
@@ -93,10 +93,10 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
       
       {/* Editorial Header */}
       <div className="text-center max-w-2xl mx-auto space-y-4 mb-12">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3.5 py-1 text-xs font-bold text-slate-600 dark:bg-indigo-950/40 dark:text-slate-200">
-          <BookOpen className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-300" />
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-3.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-900/40 dark:text-slate-200">
+          <BookOpen className="h-3.5 w-3.5 text-zinc-900 dark:text-white dark:text-indigo-300" />
           <span>The</span>
-          <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-amber-400 bg-clip-text text-transparent font-black tracking-wide">gadgetsprohub</span>
+          <span className="text-zinc-900 dark:text-white font-display font-black tracking-wide">gadgetsprohub</span>
           <span>Gazette</span>
         </span>
         <h1 className="text-2xl sm:text-3.5xl font-black font-sans tracking-tight text-slate-800 leading-normal dark:text-white">Shopping Guides & Helpful Tips</h1>
@@ -112,7 +112,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
             onNavigate={onNavigate}
             variant="blog"
             placeholder="Search guides, reviews, products..."
-            inputClassName="w-full text-xs rounded-full border border-slate-200/80 bg-white py-3 pl-10 pr-10 text-slate-800 shadow-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            inputClassName="w-full text-xs rounded-full border border-slate-200/80 bg-white py-3 pl-10 pr-10 text-slate-800 shadow-sm outline-none focus:border-zinc-900 dark:border-white focus:ring-1 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
             onClear={() => setSearch('')}
           />
         </div>
@@ -124,7 +124,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
           <button
             key={sub}
             onClick={() => setSelectedSub(sub)}
-            className={`rounded-full px-5 py-1.5 text-xs font-semibold shadow-sm cursor-pointer transition-all duration-300 ${selectedSub === sub ? 'bg-indigo-500 text-white shadow-indigo-500/10' : 'bg-white border border-slate-50 hover:bg-slate-50 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'}`}
+            className={`rounded-full px-5 py-1.5 text-xs font-semibold shadow-sm cursor-pointer transition-all duration-300 ${selectedSub === sub ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white shadow-indigo-500/10' : 'bg-white border border-slate-50 hover:bg-slate-50 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'}`}
           >
             {sub || '📁 All Manuals'}
           </button>
@@ -144,7 +144,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
           ))}
         </div>
       ) : blogs.length === 0 ? (
-        <div className="border border-dashed border-slate-100 p-12 text-center rounded-2xl dark:border-slate-700">
+        <div className="border border-dashed border-slate-100 p-12 text-center rounded-xl dark:border-slate-700">
           <Compass className="h-6 w-6 text-slate-200 mx-auto" />
           <h3 className="text-sm font-bold text-slate-700 mt-2 dark:text-white">No Matching Manuals Found</h3>
           <p className="text-xs text-slate-300">Try checking other keywords or clicking clear.</p>
@@ -161,7 +161,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
                 exit={{ opacity: 0, scale: 0.94 }}
                 whileHover={{ y: -6 }}
                 transition={{ type: 'spring', damping: 22, stiffness: 160 }}
-                className="group flex flex-col rounded-2xl border border-slate-50 bg-white hover:shadow-xl hover:border-slate-100/50 shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden cursor-pointer"
+                className="group flex flex-col rounded-xl border border-slate-50 bg-white hover:shadow-sm border border-slate-200 dark:border-slate-800 hover:border-slate-100/50 shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden cursor-pointer"
                 onClick={() => onNavigate('blog-detail', b.slug)}
                 onMouseEnter={() => {
                   if (b.slug) onPreload?.('blog-detail', b.slug);
@@ -187,7 +187,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
                   </div>
 
                   <h3
-                    className="text-xs sm:text-sm font-bold text-slate-800 mt-2.5 leading-snug line-clamp-2 group-hover:text-indigo-500 dark:text-white"
+                    className="text-xs sm:text-sm font-bold text-slate-800 mt-2.5 leading-snug line-clamp-2 group-hover:text-zinc-900 dark:text-white dark:text-white"
                   >
                     {b.title}
                   </h3>
@@ -199,7 +199,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
                   <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-700 flex justify-between items-center">
                     <span className="text-[10px] font-mono text-slate-300 font-bold">{b.createdAt && !isNaN(new Date(b.createdAt).getTime()) ? new Date(b.createdAt).toLocaleDateString() : 'Curated Deal'}</span>
                     <button
-                      className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 dark:text-indigo-300 cursor-pointer"
+                      className="flex items-center gap-1 text-[10px] font-bold text-zinc-900 dark:text-white hover:text-zinc-900 dark:text-white dark:text-indigo-300 cursor-pointer"
                     >
                       Read insight
                       <ChevronRight className="h-3.5 w-3.5" />

@@ -48,19 +48,19 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
       {/* Editorial Title Header */}
-      <div className="flex flex-col md:flex-row md:items-baseline justify-between mb-6 pb-3 border-b border-slate-100/60 dark:border-slate-700">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100/60 dark:border-slate-700">
+        <div className="flex items-center gap-2 flex-wrap">
           <History className="h-5 w-5 text-indigo-500 dark:text-indigo-300" />
-          <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white font-sans uppercase">
+          <h2 className="text-base sm:text-xl font-black tracking-tight text-slate-800 dark:text-white font-sans uppercase">
             Pick Where You Left
           </h2>
-          <span className="ml-2 rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800/80 dark:text-slate-200 font-mono uppercase tracking-wide">
+          <span className="hidden sm:inline-block rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800/80 dark:text-slate-200 font-mono uppercase tracking-wide">
             History Roll
           </span>
         </div>
         <button
           onClick={onClear}
-          className="text-xs font-bold text-slate-300 hover:text-rose-400 transition-colors duration-300 bg-transparent border-none cursor-pointer p-0 mt-1 md:mt-0"
+          className="text-xs font-bold text-slate-400 hover:text-rose-400 transition-colors duration-300 bg-transparent border-none cursor-pointer p-0 shrink-0"
         >
           Clear history
         </button>

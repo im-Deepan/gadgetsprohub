@@ -28,7 +28,7 @@ export const PrivacyPolicy: React.FC = () => {
             <span>1. Data Collection & Google Sign-In</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-200 leading-relaxed">
-            We prioritize minimalism in data collection. When you choose to authenticate via Google Sign-In, we securely request your basic profile information (such as your name and email address). This data is requested <strong>solely to enable your secure personalized profile and synchronize your product Wishlist</strong> across devices. You are never required to log in to browse the site. We do not collect sensitive personal information, identification documents, or payment details.
+            We prioritize transparency in data collection. When you choose to authenticate via Google Sign-In, we securely request your basic profile information (such as your name and email address). This data is used to enable your secure personalized profile, synchronize your product Wishlist across devices, and maintain session continuity across page analytics and service features. You are never required to log in to browse the site. We do not collect sensitive personal information, identification documents, or payment details.
           </p>
         </section>
 
@@ -50,13 +50,13 @@ export const PrivacyPolicy: React.FC = () => {
             <span>3. Analytics</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-200 leading-relaxed">
-            To better understand how our community interacts with content, we use anonymized analytics. This includes monitoring:
+            To better understand how our community interacts with content, optimize application performance, and provide tailored product insights, we collect interaction logs and usage analytics. This telemetry includes:
           </p>
           <ul className="list-disc pl-5 text-xs text-slate-500 dark:text-slate-200 space-y-1">
-            <li>Pages visited and time spent on page.</li>
-            <li>Button clicks for product and referral links.</li>
-            <li>Aggregated regional visitor counts (non-identifiable).</li>
-            <li>Browser type and device screen resolution for layout optimization.</li>
+            <li>Exact page URLs visited and interaction timestamps.</li>
+            <li>Button interactions and product affiliate link navigation.</li>
+            <li>IP address, regional district information, user agent, and browser specs.</li>
+            <li>Associated user identifier (userId) for signed-in sessions to track feature usage and platform health.</li>
           </ul>
         </section>
 

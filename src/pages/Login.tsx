@@ -321,7 +321,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         {/* Visual Brand Greeting */}
         <div className="text-center space-y-1.5 flex flex-col items-center">
           <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-300 flex items-center gap-1.5">
-            <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-amber-400 bg-clip-text text-transparent font-black">GADGETSPROHUB</span>
+            <span className="text-zinc-900 dark:text-white font-display font-black">GADGETSPROHUB</span>
             <span className="text-slate-300 dark:text-slate-400 font-bold">MEMBER PORTAL</span>
           </h2>
           <h1 className="text-lg font-black text-slate-800 dark:text-white">

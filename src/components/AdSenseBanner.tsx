@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, Tag, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface AdSenseBannerProps {
   slot: string;
@@ -45,6 +46,8 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   style = { display: 'block' },
   className = '',
 }) => {
+  const { user } = useAuth();
+  const isAdmin = Boolean(user && user.role === 'admin');
   const adElement = useRef<HTMLModElement>(null);
   const [adLoaded, setAdLoaded] = useState(false);
   const [isUnfilled, setIsUnfilled] = useState(false);
@@ -188,11 +191,13 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
       <div className="w-full flex items-center justify-between mb-2.5 px-1">
         <span className="text-[10px] font-mono tracking-widest text-slate-400 dark:text-slate-400 uppercase font-bold flex items-center gap-1.5">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          Advertisement {isTestMode || isUnfilled ? '(Sponsor Showcase)' : ''}
+          Sponsored Showcase
         </span>
-        <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 flex items-center gap-1">
-          <Tag className="w-3 h-3 text-indigo-400" /> Slot: {slot}
-        </span>
+        {isAdmin && (
+          <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 flex items-center gap-1">
+            <Tag className="w-3 h-3 text-indigo-400" /> Slot: {slot}
+          </span>
+        )}
       </div>
       
       <div className="w-full min-w-[250px] block relative text-center overflow-x-auto">
@@ -246,16 +251,18 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         )}
       </div>
 
-      <div className="w-full flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[9px] font-mono text-slate-400 dark:text-slate-500">
-        <span>Publisher: <strong className="text-slate-600 dark:text-slate-300">{publisherId}</strong></span>
-        <span>
-          {configuredPublisherId ? (
-            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">&check; Custom Publisher Configured</span>
-          ) : (
-            <span className="text-amber-600 dark:text-amber-400 font-medium">&bull; Add VITE_ADSENSE_CLIENT_ID or update Admin Settings</span>
-          )}
-        </span>
-      </div>
+      {isAdmin && (
+        <div className="w-full flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[9px] font-mono text-slate-400 dark:text-slate-500">
+          <span>Publisher: <strong className="text-slate-600 dark:text-slate-300">{publisherId}</strong></span>
+          <span>
+            {configuredPublisherId ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">&check; Custom Publisher Configured</span>
+            ) : (
+              <span className="text-amber-600 dark:text-amber-400 font-medium">&bull; Add VITE_ADSENSE_CLIENT_ID or update Admin Settings</span>
+            )}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

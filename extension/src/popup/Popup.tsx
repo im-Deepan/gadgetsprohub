@@ -60,7 +60,7 @@ export default function Popup() {
   const [features, setFeatures] = useState<any>({});
   
   // Customization States
-  const [affiliateTag, setAffiliateTag] = useState<string>('gadgetspro-20');
+  const [affiliateTag, setAffiliateTag] = useState<string>('gadgetsprohub-21');
   const [supportedDomains, setSupportedDomains] = useState<string>('amazon.com, amazon.in, amazon.co.uk, amazon.ca');
   const [popupWidth, setPopupWidth] = useState<number>(360);
   const [popupHeight, setPopupHeight] = useState<number>(420);
@@ -224,7 +224,7 @@ export default function Popup() {
     checkTokenExpiry(settings.tokenExpiresAt || null);
 
     // Load custom configuration fields
-    setAffiliateTag(settings.affiliateTag || 'gadgetspro-20');
+    setAffiliateTag(settings.affiliateTag || 'gadgetsprohub-21');
     setSupportedDomains((settings.supportedDomains || ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca']).join(', '));
     setPopupWidth(settings.popupWidth || 360);
     setPopupHeight(settings.popupHeight || 420);
@@ -312,7 +312,7 @@ export default function Popup() {
           setTokenExpiresAt(settings.tokenExpiresAt || null);
           checkTokenExpiry(settings.tokenExpiresAt || null);
           
-          setAffiliateTag(settings.affiliateTag || 'gadgetspro-20');
+          setAffiliateTag(settings.affiliateTag || 'gadgetsprohub-21');
           setSupportedDomains((settings.supportedDomains || ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca']).join(', '));
           setPopupWidth(settings.popupWidth || 360);
           setPopupHeight(settings.popupHeight || 420);
@@ -484,7 +484,7 @@ export default function Popup() {
         environment: environment,
         debugMode: debugMode,
         version: extVersion,
-        affiliateTag: affiliateTag.trim() || 'gadgetspro-20',
+        affiliateTag: affiliateTag.trim() || 'gadgetsprohub-21',
         supportedDomains: domainsArray,
         popupWidth: Number(popupWidth) || 360,
         popupHeight: Number(popupHeight) || 420
@@ -1129,7 +1129,7 @@ export default function Popup() {
                     type="text" 
                     value={affiliateTag}
                     onChange={(e) => setAffiliateTag(e.target.value)}
-                    placeholder="gadgetspro-20"
+                    placeholder="gadgetsprohub-21"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-200 text-[11px] bg-white text-slate-800 focus:outline-none focus:border-violet-500 transition-colors"
                   />
                 </div>

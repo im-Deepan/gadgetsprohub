@@ -12,79 +12,86 @@ export interface ViewMetadata {
  */
 export const DEFAULT_VIEW_METADATA: Record<string, ViewMetadata> = {
   home: {
-    title: 'gadgetsprohub | Premium Electronics & Smart Gear Directory',
-    description: 'Discover trending, premium electronics and detailed specifications. Find honest reviews and the best deals on smartphones, laptops, audio gear, and wearables at gadgetsprohub.',
-    keywords: 'electronics, smart gear, gadget directory, smartphones, laptops, audio gear, smartwatches, tech reviews, budget gadgets, gadgetsprohub',
+    title: 'GadgetsProHub | Top Electronics, Smart Gear & Tech Reviews',
+    description: 'Discover top-rated tech gadgets, electronics, and honest reviews. Compare specs and find the best prices on smartphones, laptops, audio gear, and more.',
+    keywords: 'electronics, gadgets, smartphones, laptops, audio gear, smartwatches, tech reviews, budget gadgets, GadgetsProHub',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   products: {
-    title: 'Products Directory - Explore Tech Specifications | gadgetsprohub',
-    description: 'Browse our full catalog of premium electronic products and compare specifications across phones, laptops, wearables, and other smart gadgets.',
+    title: 'All Products - Compare Tech Specs & Prices | GadgetsProHub',
+    description: 'Browse our full collection of gadgets and compare specifications across smartphones, laptops, audio gear, and smart accessories.',
     keywords: 'product directory, search gadgets, electronic specs, compare mobile phones, compare laptops',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   blogs: {
-    title: 'Editorial Blog & Expert Tech Guides | gadgetsprohub',
-    description: 'Read the latest technical insights, gadget buying guides, step-by-step tutorials, and electronics reviews curated by expert research analysts.',
+    title: 'Tech Guides & Product Reviews | GadgetsProHub',
+    description: 'Read the latest tech insights, buying guides, and step-by-step product comparisons from our editorial team.',
     keywords: 'tech blog, gadgets guide, buying guides, tech reviews, software guides',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   contact: {
-    title: 'Contact Support & Expert Inquiries | gadgetsprohub',
-    description: 'Contact our professional support team. We value your feedback and will handle all inquiries regarding product specs or advertising opportunities within 24 working hours.',
-    keywords: 'contact support, customer service, customer care, support gadgetsprohub, ask experts',
+    title: 'Contact Us | GadgetsProHub Support',
+    description: 'Have a question or feedback? Get in touch with our support team and we will respond promptly.',
+    keywords: 'contact support, customer service, customer care, support GadgetsProHub, ask experts',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   login: {
-    title: 'Secure Account Authentication | gadgetsprohub',
-    description: 'Sign into your credentialed profile safely using Google OAuth core services to synchronize your bookmarks, catalog preferences, and local cache.',
-    keywords: 'sign in, log in Google, oauth login, secure login',
+    title: 'Sign In | GadgetsProHub',
+    description: 'Sign in to your account to save your favorite products, manage price alerts, and sync your preferences across devices.',
+    keywords: 'sign in, log in, account login, secure sign in',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   profile: {
-    title: 'User Profile & Preferred Location Settings | gadgetsprohub',
-    description: 'Manage your synchronized account bookmarks, pre-preferred Tamil Nadu district settings, and review local usage sessions safely.',
-    keywords: 'user profile, my account, settings, local bookmarks',
+    title: 'Your Account | GadgetsProHub',
+    description: 'Manage your saved products, account profile settings, and location preferences.',
+    keywords: 'user profile, my account, settings, saved products',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   admin: {
-    title: 'Security Control Board & Product Feed Panel',
-    description: 'Authorized administrative session to curate products catalog list, manage reviews feed, and review global traffic telemetry safely.',
-    keywords: 'admin panel, management console, secure database, catalog inputs',
+    title: 'Admin Dashboard | GadgetsProHub',
+    description: 'Manage catalog products, user reviews, and site settings.',
+    keywords: 'admin panel, management console, catalog management',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   'privacy-policy': {
-    title: 'Privacy Policy & Data Protections | gadgetsprohub',
-    description: 'Learn about how gadgetsprohub handles user sign-in credentials, local preference data, and browser cache security with full procedural transparency.',
+    title: 'Privacy Policy | GadgetsProHub',
+    description: 'Read our privacy policy to understand how we protect your personal data and handle your account information.',
     keywords: 'privacy policy, safe browsing, data policy, terms, user safety',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   'about-us': {
-    title: 'About Our Technical Affiliate Mission | gadgetsprohub',
-    description: 'Learn about the professional research team behind gadgetsprohub, our rigorous specifications curation standard, and Tamil Nadu regional affiliate service.',
-    keywords: 'about gadgetsprohub, tech affiliate, affiliate mission, our project',
+    title: 'About Us | GadgetsProHub',
+    description: 'Learn about our mission to provide clear, honest product reviews and spec comparisons for tech enthusiasts.',
+    keywords: 'about GadgetsProHub, tech reviews team, our mission',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   'terms-conditions': {
-    title: 'Terms of Use & affiliate Agreements | gadgetsprohub',
-    description: 'Understand the legal conditions, usage rules, and reference constraints governing your access to gadgetsprohub interactive tools.',
+    title: 'Terms & Conditions | GadgetsProHub',
+    description: 'Review the terms and conditions for using our website and services.',
     keywords: 'terms of service, conditions of use, user agreement',
     ogType: 'website',
     ogImage: '/favicon.png'
   },
   disclaimer: {
-    title: 'Affiliate Commissions & Review Disclaimer | gadgetsprohub',
-    description: 'Full transparency disclosure concerning our affiliate links, advertising partners, and the objectivity of our product review ratings.',
-    keywords: 'affiliate disclaimer, review transparency, commission disclosures',
+    title: 'Affiliate Disclosure | GadgetsProHub',
+    description: 'Disclosure regarding our affiliate links, partner relationships, and editorial review standards.',
+    keywords: 'affiliate disclaimer, review transparency, commission disclosure',
+    ogType: 'website',
+    ogImage: '/favicon.png'
+  },
+  '404': {
+    title: '404 - Page Not Found | GadgetsProHub',
+    description: 'The page you requested could not be found. Search our catalog or return to the homepage.',
+    keywords: '404, page not found, GadgetsProHub',
     ogType: 'website',
     ogImage: '/favicon.png'
   }
