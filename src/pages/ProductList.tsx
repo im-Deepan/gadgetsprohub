@@ -394,35 +394,37 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           <GlareHover glareOpacity={0.15} glareSize={250} transitionDuration={700}>
           <div className={`flex w-full ${viewStyle === 'grid' ? 'flex-col h-full' : 'flex-col sm:flex-row'}`}>
             {/* Card Media Area */}
-            <div className={`bg-slate-50 dark:bg-slate-950 overflow-hidden relative shrink-0 transition-all duration-300 ${
+            <div className={`bg-slate-50 dark:bg-slate-950 overflow-hidden relative shrink-0 transition-all duration-300 flex items-center justify-center ${
               viewStyle === 'grid'
-                ? 'h-32 sm:h-44 w-full'
-                : 'w-full sm:w-48 h-40'
+                ? 'aspect-square w-full p-3'
+                : 'w-full sm:w-48 h-40 p-3'
             }`}>
               <img
                 src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500'}
                 alt={shortTitle}
                 referrerPolicy="no-referrer"
-                className="h-full w-full object-contain p-2 bg-slate-50/50 dark:bg-slate-950/20 group-hover:scale-103 transition-transform duration-500 cursor-pointer"
+                className="h-full w-full object-contain group-hover:scale-103 transition-transform duration-500 cursor-pointer"
               />
               
               {isDiscounted && (
-                <span className="absolute top-2.5 left-2.5 bg-rose-500 rounded px-1.5 py-0.5 text-[8px] font-bold text-white font-mono uppercase tracking-wider shadow-xs">
+                <span className="absolute top-2.5 left-2.5 bg-rose-500 rounded px-2 py-0.5 text-[11px] font-semibold text-white font-sans uppercase tracking-wide shadow-xs">
                   -{p.discount}% OFF
                 </span>
               )}
 
               {isAuthenticated && (
-                <button
+                <span
+                  role="button"
+                  tabIndex={0}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(p._id, p.name); }}
                   className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-xs hover:text-rose-400 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                 >
                   <Heart className={`h-4 w-4 ${wishlist.includes(p._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
-                </button>
+                </span>
               )}
 
               {ratingObj.hasRating && (
-                <div className="absolute bottom-2 left-2 bg-amber-400 text-slate-900 font-black font-mono text-[9px] rounded-md px-1.5 py-0.5 flex items-center gap-0.5 shadow-xs">
+                <div className="absolute bottom-2 left-2 bg-amber-400 text-slate-900 font-bold font-sans text-[10px] rounded-md px-1.5 py-0.5 flex items-center gap-0.5 shadow-xs">
                   {ratingObj.text}
                 </div>
               )}
@@ -431,26 +433,26 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             {/* Card Content Area */}
             <div className={`flex flex-col flex-grow justify-between font-sans ${viewStyle === 'grid' ? 'p-3 sm:p-4' : 'p-4'}`}>
               <div>
-                <div className="flex items-center justify-between gap-1 text-[9px] font-bold text-slate-400">
+                <div className="flex items-center justify-between gap-1 text-[9px] font-semibold font-sans text-slate-400 uppercase tracking-wider">
                   <span className="truncate flex-1">
                     {getCategoryName(p.category, categories)}
                   </span>
-                  <span className="uppercase font-mono truncate shrink-0 max-w-[60px] text-right">{p.brand || 'Premium'}</span>
+                  <span className="truncate shrink-0 max-w-[60px] text-right font-sans">{p.brand || 'Premium'}</span>
                 </div>
 
-                <h3 className={`font-bold text-slate-800 leading-snug mt-1.5 line-clamp-2 group-hover:text-zinc-900 dark:text-white transition-colors duration-300 ${
+                <h3 className={`font-display font-bold text-slate-800 leading-snug mt-1.5 line-clamp-2 group-hover:text-zinc-900 dark:text-white transition-colors duration-300 ${
                   viewStyle === 'grid' ? 'text-xs sm:text-sm' : 'text-sm'
                 }`}>
                   {shortTitle}
                 </h3>
                 
                 {!ratingObj.hasRating && (
-                  <span className="text-[10px] text-slate-400 italic block mt-0.5">
+                  <span className="text-[10px] font-sans text-slate-400 italic block mt-0.5">
                     No reviews yet
                   </span>
                 )}
 
-                <p className={`text-slate-500 line-clamp-2 mt-1 dark:text-slate-300 leading-relaxed ${
+                <p className={`text-slate-500 line-clamp-2 mt-1 dark:text-slate-300 leading-relaxed font-sans ${
                   viewStyle === 'grid' ? 'text-[10px] sm:text-[11px]' : 'text-xs'
                 }`}>
                   {p.description}
@@ -459,11 +461,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
               <div className="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
                 <div className="flex items-baseline gap-1.5 flex-wrap">
-                  <span className="text-xs sm:text-sm font-black font-mono text-zinc-900 dark:text-white">
+                  <span className="text-xs sm:text-sm font-bold font-sans tabular-nums text-zinc-900 dark:text-white">
                     {formatProductPrice(p.price, p)}
                   </span>
                   {isDiscounted && (
-                    <span className="text-[9px] sm:text-[10px] text-slate-400 line-through font-mono">
+                    <span className="text-[9px] sm:text-[10px] text-slate-400 line-through font-sans tabular-nums">
                       {formatProductPrice(p.originalPrice, p)}
                     </span>
                   )}
@@ -481,16 +483,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     </span>
                   )}
                   <span
+                    role="button"
+                    tabIndex={0}
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSpecModalProduct(p); }}
-                    className="rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 py-1 px-2 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors duration-300 inline-block"
+                    className="rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 py-1 px-2 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors duration-300 inline-block font-sans"
                   >
                     Specs
-                  </span>
-                  <span
-                    className="rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-zinc-100 text-[10px] font-extrabold text-zinc-900 dark:text-white py-1 px-2 cursor-pointer dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-900 transition-colors duration-300 flex items-center gap-1"
-                  >
-                    <span>View Product</span>
-                    <span>→</span>
                   </span>
                 </div>
               </div>
@@ -500,8 +498,8 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         </BorderGlow>
       </motion.div>
     </a>
-  );
-};
+    );
+  };
 
   const renderFilterControls = () => (
     <div className="space-y-6">
@@ -524,25 +522,25 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
       {/* Categories */}
       <div className="space-y-2">
-        <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Classifications</h4>
+        <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Categories</h4>
         <div className="flex flex-col gap-1 overflow-hidden">
           <button
             onClick={() => { setSelectedCategory(''); setSelectedSubcategory(''); setCurrentPage(1); }}
-            className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${!selectedCategory ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
+            className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${!selectedCategory ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
           >
             <span className="flex items-center gap-2">
               <CategoryIcon name="all" className="h-4 w-4" />
-              <span>All Classifications</span>
+              <span>All Categories</span>
             </span>
             {!selectedCategory && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
           </button>
           <button
             onClick={() => { setSearch(''); setSelectedCategory('trending'); setSelectedSubcategory(''); setCurrentPage(1); }}
-            className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === 'trending' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
+            className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === 'trending' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
           >
             <span className="flex items-center gap-2">
               <CategoryIcon name="trending" className="h-4 w-4 text-amber-500" />
-              <span>Trending Choices</span>
+              <span>Trending</span>
             </span>
             {selectedCategory === 'trending' && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
           </button>
@@ -550,7 +548,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             <button
               key={c._id}
               onClick={() => { setSearch(''); setSelectedCategory(c._id); setSelectedSubcategory(''); setCurrentPage(1); }}
-              className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${String(selectedCategory) === String(c._id) ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
+              className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${String(selectedCategory) === String(c._id) ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
             >
               <span className="truncate flex items-center gap-2">
                 <CategoryIcon name={c.name} className="h-4 w-4 shrink-0 text-slate-400" />
@@ -634,30 +632,6 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           />
         </div>
       </div>
-
-      {/* Minimum Rating - Hidden until rating data exists */}
-      <div className="hidden space-y-2">
-        <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Minimum Rating</h4>
-        <div className="flex flex-col gap-1 text-xs">
-          {[4, 3, 2].map((stars) => (
-            <button
-              key={stars}
-              onClick={() => { setMinRating(selected => selected === String(stars) ? '' : String(stars)); setCurrentPage(1); }}
-              className={`flex items-center justify-between py-2 px-3 rounded-lg w-full text-left cursor-pointer transition-all duration-200 ${minRating === String(stars) ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
-            >
-              <div className="flex items-center gap-1.5">
-                <div className="flex gap-0.5 text-amber-400">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={`star-${stars}-${i}`} className={`h-3 w-3 ${i < stars ? 'fill-current' : 'text-slate-200 dark:text-slate-700'}`} />
-                  ))}
-                </div>
-                <span>{stars}.0+ Stars</span>
-              </div>
-              {minRating === String(stars) && <span className="h-1.5 w-1.5 rounded-full bg-white block animate-pulse" />}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 
@@ -703,30 +677,29 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       </div>
 
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 md:px-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:px-4">
         <div>
-          <h1 className="text-2xl font-black font-sans tracking-tight text-slate-800 dark:text-white">
+          <h1 className="text-2xl font-display font-extrabold tracking-tight text-slate-900 dark:text-white">
             {selectedCategory === 'trending' 
-              ? 'Top Recommendations & Trending Choices'
+              ? 'Trending'
               : selectedCategory 
-                ? (categories.find(c => String(c._id) === String(selectedCategory))?.name || 'Curated Pack')
-                : 'Curated Directories'}
+                ? (categories.find(c => String(c._id) === String(selectedCategory))?.name || 'Category')
+                : 'All Products'}
           </h1>
-          <p className="text-xs text-slate-400 mt-1 font-medium">
-            Showing {products.length} {products.length === 1 ? 'product' : 'products'}
-            {productsData?.total ? ` of ${productsData.total}` : ''}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            All products
           </p>
         </div>
 
         {/* Top Control Bar */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Custom Filter Minimizer Trigger (Mobile & Tablet only) */}
+          {/* Custom Filter Minimizer Trigger (Mobile only) */}
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`lg:hidden flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs font-bold transition-all duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${
+            className={`md:hidden flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs font-bold transition-all duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${
               hasActiveFilters
-                ? 'border-zinc-700 bg-slate-100 dark:bg-slate-800/50 text-zinc-900 dark:text-white dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-200 font-black'
-                : 'border-slate-100 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                ? 'border-zinc-700 bg-slate-100 dark:bg-slate-800/50 text-zinc-900 dark:text-white dark:border-zinc-700 font-black'
+                : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
             }`}
           >
             <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-300" />
@@ -737,10 +710,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           </button>
 
           {/* Layout Controls */}
-          <div className="flex rounded-lg border border-slate-100 p-0.5 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 shrink-0">
+          <div className="flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 shrink-0">
             <button
               onClick={() => setViewStyle('grid')}
-              className={`p-1.5 px-2.5 rounded-md hover:text-zinc-900 dark:text-white transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${viewStyle === 'grid' ? 'bg-white shadow-xs text-zinc-900 dark:text-white dark:bg-slate-700' : 'text-slate-300'}`}
+              className={`p-1.5 px-2.5 rounded-md hover:text-zinc-900 dark:text-white transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${viewStyle === 'grid' ? 'bg-white shadow-xs text-zinc-900 dark:text-white dark:bg-slate-700' : 'text-slate-400'}`}
               title="Grid show"
               aria-label="Grid view"
             >
@@ -749,7 +722,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             </button>
             <button
               onClick={() => setViewStyle('list')}
-              className={`p-1.5 px-2.5 rounded-md hover:text-zinc-900 dark:text-white transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${viewStyle === 'list' ? 'bg-white shadow-xs text-zinc-900 dark:text-white dark:bg-slate-700' : 'text-slate-300'}`}
+              className={`p-1.5 px-2.5 rounded-md hover:text-zinc-900 dark:text-white transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${viewStyle === 'list' ? 'bg-white shadow-xs text-zinc-900 dark:text-white dark:bg-slate-700' : 'text-slate-400'}`}
               title="List show"
               aria-label="List view"
             >
@@ -760,11 +733,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
 
           {/* Sort Controller */}
           <div className="relative flex items-center shrink-0">
-            <ArrowUpDown className="absolute left-3.5 h-3.5 w-3.5 text-slate-300 pointer-events-none" />
+            <ArrowUpDown className="absolute left-3.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
             <select
               value={sortField}
               onChange={(e) => { setSortField(e.target.value); setCurrentPage(1); }}
-              className="rounded-lg border border-slate-100 bg-white py-1.5 pl-10 pr-4 text-xs font-semibold text-slate-600 outline-none focus:border-zinc-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors duration-300"
+              className="rounded-lg border border-slate-200 bg-white py-1.5 pl-10 pr-4 text-xs font-semibold text-slate-700 outline-none focus:border-zinc-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors duration-300"
             >
               <option value="newest">Sort: Newest First</option>
               <option value="price-asc">Sort: Price Low-High</option>
@@ -772,6 +745,59 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             </select>
           </div>
         </div>
+      </div>
+
+      {/* TABLET HORIZONTAL FILTER CHIP BAR (md: 768px - 1023px) */}
+      <div className="hidden md:flex lg:hidden flex-wrap items-center gap-3 p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mb-6 shadow-xs">
+        <div className="flex-1 min-w-[180px]">
+          <SearchAutocompleteInput
+            value={search}
+            onChange={(val) => { setSearch(val); setCurrentPage(1); }}
+            onNavigate={onNavigate}
+            variant="catalog"
+            placeholder="Search catalog..."
+            inputClassName="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 py-1.5 pl-8 pr-6 text-slate-800 dark:text-white"
+            onClear={() => setSearch('')}
+          />
+        </div>
+        <select
+          value={selectedCategory}
+          onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSubcategory(''); setCurrentPage(1); }}
+          className="text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-1.5 px-3 text-slate-700 dark:text-slate-200"
+        >
+          <option value="">All Categories</option>
+          <option value="trending">Trending</option>
+          {categories.map(c => (
+            <option key={c._id} value={c._id}>{c.name}</option>
+          ))}
+        </select>
+        <select
+          value={maxPrice ? `<=${maxPrice}` : minPrice ? `>=${minPrice}` : ''}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === '<=1000') { setMinPrice(''); setMaxPrice('1000'); }
+            else if (val === '<=5000') { setMinPrice(''); setMaxPrice('5000'); }
+            else if (val === '<=15000') { setMinPrice(''); setMaxPrice('15000'); }
+            else if (val === '>=15000') { setMinPrice('15000'); setMaxPrice(''); }
+            else { setMinPrice(''); setMaxPrice(''); }
+            setCurrentPage(1);
+          }}
+          className="text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-1.5 px-3 text-slate-700 dark:text-slate-200"
+        >
+          <option value="">All Prices</option>
+          <option value="<=1000">Under ₹1,000</option>
+          <option value="<=5000">Under ₹5,000</option>
+          <option value="<=15000">Under ₹15,000</option>
+          <option value=">=15000">₹15,000+</option>
+        </select>
+        {hasActiveFilters && (
+          <button
+            onClick={handleResetFilters}
+            className="text-xs font-bold text-rose-500 hover:underline px-2 py-1"
+          >
+            Reset
+          </button>
+        )}
       </div>
 
       {/* MAIN LAYOUT WITH DOCKED DESKTOP SIDEBAR */}
@@ -782,7 +808,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2 font-bold text-slate-800 text-xs uppercase tracking-wider dark:text-slate-100">
               <SlidersHorizontal className="h-4 w-4 text-zinc-900 dark:text-white" />
-              <span>Filter Matrix</span>
+              <span>Filters</span>
             </div>
             {hasActiveFilters && (
               <button
@@ -814,7 +840,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     <button
                       type="button"
                       onClick={handleClearSubcategoryFilter}
-                      className="text-[10px] font-black uppercase text-zinc-900 dark:text-white hover:text-zinc-900 dark:text-white dark:text-zinc-200 cursor-pointer"
+                      className="text-[10px] font-black uppercase text-zinc-900 dark:text-white hover:text-zinc-900 dark:text-white cursor-pointer"
                     >
                       Clear Filter
                     </button>
@@ -827,7 +853,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     onClick={handleClearSubcategoryFilter}
                     className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 cursor-pointer ${
                       !selectedSubcategory
-                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white shadow-xs'
+                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs'
                         : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 dark:bg-zinc-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
@@ -840,7 +866,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       onClick={() => { setSelectedSubcategory(sub); setCurrentPage(1); }}
                       className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 cursor-pointer ${
                         selectedSubcategory === sub
-                          ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white shadow-xs'
+                          ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs'
                           : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 dark:bg-zinc-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700'
                       }`}
                     >
@@ -852,10 +878,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             );
           })()}
           
-          {/* PRODUCT CARDS LIST / GRID AREA */}
+          {/* PRODUCT CARDS LIST / FLAT GRID AREA */}
           <div className="w-full space-y-8 min-h-0 h-auto">
             {loading && products.length === 0 ? (
-              <div className={`grid gap-6 ${viewStyle === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3' : 'grid-cols-1'}`}>
+              <div className={`grid gap-6 ${viewStyle === 'grid' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
                 {[...Array(6)].map((_, i) => (
                   <ProductCardSkeleton key={`skeleton-prod-${i}`} />
                 ))}
@@ -864,65 +890,31 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               <div className="flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-3xl p-12 text-center dark:border-slate-700">
                 <span className="text-3xl block">🔍</span>
                 <h3 className="text-sm font-bold text-slate-700 mt-3 dark:text-white">No products found</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm">Try loosening your search filters or browse all classifications.</p>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm">Try loosening your search filters or browse all categories.</p>
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="mt-4 px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white font-bold text-xs hover:bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 transition-all cursor-pointer"
+                  className="mt-4 px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-xs hover:bg-zinc-800 transition-all cursor-pointer"
                 >
                   Reset All Filters
                 </button>
               </div>
             ) : (
               
-              /* SECTIONS LAYOUT */
-              <div className="space-y-10">
-                {(Object.entries(classifiedSectionGroups) as [string, Product[]][]).map(([sectionName, sectionProds]) => {
-                  if (sectionProds.length === 0) return null;
-                  const isExpanded = Boolean(expandedSections[sectionName]);
-                  const visibleProds = isExpanded ? sectionProds : sectionProds.slice(0, 12);
-                  const hasMoreThan12 = sectionProds.length > 12;
-
-                  return (
-                    <div key={sectionName} className="space-y-4">
-                      <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-                        <CategoryIcon name={sectionName} className="h-5 w-5 text-zinc-900 dark:text-white" />
-                        <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">{sectionName}</h2>
-                        <span className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 dark:bg-zinc-800/50 text-zinc-900 dark:text-white dark:text-zinc-200 rounded-full px-2 py-0.5">
-                          {sectionProds.length} {sectionProds.length === 1 ? 'item' : 'items'}
-                        </span>
-                      </div>
-
-                      <div className={viewStyle === 'grid' 
-                        ? "grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-2 xl:grid-cols-3" 
-                        : "space-y-4"
-                      }>
-                        {visibleProds.map((p) => p ? renderProductCard(p) : null)}
-                      </div>
-
-                      {hasMoreThan12 && (
-                        <div className="flex items-center justify-start pt-2">
-                          <button
-                            type="button"
-                            onClick={() => setExpandedSections(prev => ({ ...prev, [sectionName]: !isExpanded }))}
-                            className="px-5 py-2 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 hover:bg-zinc-800/50 text-zinc-900 dark:text-white dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-200 text-xs font-bold transition-all duration-300 cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider flex items-center gap-2"
-                          >
-                            <span>{isExpanded ? 'See Less' : 'See More'}</span>
-                            <span className="bg-zinc-100 dark:bg-zinc-100 text-zinc-900 dark:text-zinc-900 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                              +{sectionProds.length - 12} More
-                            </span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              /* FLAT GRID LAYOUT (P7: Drop per-category section grouping for clean catalog) */
+              <div className="space-y-8">
+                <div className={viewStyle === 'grid' 
+                  ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" 
+                  : "space-y-4"
+                }>
+                  {products.map((p: Product) => p ? renderProductCard(p) : null)}
+                </div>
 
                 {/* SEE MORE / PAGINATION TRIGGERS */}
                 {totalPages > 1 && (
                   <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center pb-8">
                     {loading ? (
-                      <div className="flex items-center gap-2 text-xs font-bold text-zinc-900 dark:text-white dark:text-zinc-200 animate-pulse">
+                      <div className="flex items-center gap-2 text-xs font-bold text-zinc-900 dark:text-slate-200 animate-pulse">
                         <span className="h-4 w-4 rounded-full border-2 border-zinc-700 border-t-indigo-500 animate-spin"></span>
                         <span>Loading more items...</span>
                       </div>
@@ -930,12 +922,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       <button
                         type="button"
                         onClick={() => setCurrentPage(prev => prev + 1)}
-                        className="px-6 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 hover:bg-zinc-800/50 text-zinc-900 dark:text-white dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-200 text-xs font-bold transition-all duration-300 cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider"
+                        className="px-6 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 hover:bg-zinc-800/50 text-zinc-900 dark:text-white text-xs font-bold transition-all duration-300 cursor-pointer shadow-xs active:scale-95 uppercase tracking-wider"
                       >
                         See More
                       </button>
                     ) : (
-                      <p className="text-xs font-bold uppercase text-zinc-900 dark:text-white tracking-wider bg-slate-100 dark:bg-slate-800 dark:bg-zinc-800/50 px-4 py-2 border border-slate-200 dark:border-slate-700 dark:border-zinc-700 rounded-full font-mono">
+                      <p className="text-xs font-bold uppercase text-zinc-900 dark:text-white tracking-wider bg-slate-100 dark:bg-slate-800 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-full font-mono">
                         End of products
                       </p>
                     )}
@@ -948,14 +940,14 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         </div>
       </div>
 
-      {/* Touch Floating Filter Widget (Mobile & Tablet ONLY) */}
+      {/* Touch Floating Filter Widget (Mobile ONLY) */}
       <motion.button
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsFilterOpen(true)}
-        className="md:hidden fixed bottom-20 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white shadow-sm border border-slate-200 dark:border-slate-800 hover:bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 active:scale-95 transition-all duration-300 cursor-pointer"
+        className="md:hidden fixed bottom-20 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-sm border border-slate-200 dark:border-slate-800 hover:bg-zinc-900 active:scale-95 transition-all duration-300 cursor-pointer"
         aria-label="Open Filter Drawer"
         title="Open Filter Drawer"
       >
@@ -967,7 +959,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         )}
       </motion.button>
 
-      /* Dynamic Mobile Sliding Side Drawer Overlay */
+      {/* Mobile Drawer Overlay */}
       <AnimatePresence>
         {isFilterOpen && (
           <div className="lg:hidden">
@@ -987,13 +979,13 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 max-w-[85vw] border-r border-slate-100 bg-white shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col dark:border-slate-800 dark:bg-slate-950 overflow-y-auto h-auto max-h-screen"
+              className="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 max-w-[85vw] border-r border-slate-100 bg-white shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col dark:bg-slate-950 overflow-y-auto h-auto max-h-screen"
             >
               {/* Drawer Header */}
               <div className="flex items-center justify-between border-b p-4 dark:border-slate-800 shrink-0">
                 <div className="flex items-center gap-2 font-bold text-slate-800 text-xs uppercase tracking-wider dark:text-slate-100">
                   <SlidersHorizontal className="h-4 w-4 text-zinc-900 dark:text-white" />
-                  <span>Filter Matrix</span>
+                  <span>Filters</span>
                 </div>
                 <div className="flex items-center gap-3">
                   {hasActiveFilters && (

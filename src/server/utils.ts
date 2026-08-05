@@ -33,7 +33,7 @@ export const isAdminEmail = (email: string | undefined): boolean => {
     .map(e => e.toLowerCase().trim())
     .filter(Boolean);
     
-  return envAdmins.includes(normalized) || normalized === 'deepan20060609@gmail.com';
+  return envAdmins.includes(normalized);
 };
 
 import { TAMIL_NADU_DISTRICTS as SharedDistricts } from '../utils/districts';

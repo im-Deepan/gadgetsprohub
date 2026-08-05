@@ -275,55 +275,54 @@ export const seedProducts = [
   },
   {
     "_id": "665a0002bc93ef2d8c000012",
-    "name": "Comfortable Trail Running Shoes",
-    "slug": "comfortable-trail-running-shoes",
-    "description": "Professional-grade high-cushioned running shoes for rough mountain terrains.",
-    "longDescription": "Conquer the steep mountain trails or local asphalt paths with the Comfortable Trail Running Shoes. Formulated with breathable, ultra-light mesh material and heavy-duty, multi-pattern high traction rubber soles for superior traction control under wet or gravel trail situations.",
-    "category": "665a0001bc93ef2d8c000004",
-    "brand": "SportGear",
-    "price": 89.99,
-    "originalPrice": 119.99,
-    "discount": 25,
+    "name": "Smart Active Noise Cancelling Earbuds",
+    "slug": "smart-active-noise-cancelling-earbuds",
+    "description": "True wireless earbuds with adaptive spatial audio and ultra-low latency game mode.",
+    "longDescription": "Experience rich sound clarity with the Smart Active Noise Cancelling Earbuds. Featuring 10mm graphene drivers, active environmental noise reduction, wireless Qi charging case, 32-hour extended playback time, and IPX7 sweat resistance.",
+    "category": "665a0001bc93ef2d8c000001",
+    "brand": "AudioPro",
+    "price": 79.99,
+    "originalPrice": 109.99,
+    "discount": 27,
     "images": [
-      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=850",
-      "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=850"
+      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=850",
+      "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=850"
     ],
     "features": [
-      "High cushioned foam sole",
-      "Featherlight mesh composite fabric",
-      "High traction rubber spikes",
-      "Reinforced toe bump protection"
+      "Adaptive Hybrid ANC",
+      "Graphene Driver Sound Stage",
+      "Qi Wireless Charging Case",
+      "IPX7 Sweat & Water Proof"
     ],
     "specifications": {
-      "Material": "Breathable Composite Mesh / Organic Rubber",
-      "Weight": "280g/pair extremely light",
-      "Sole Tech": "High responsive recovery foam",
-      "Sizes Available": "US Mens 6 to 14"
+      "Battery Life": "32 hours total (8 hours per charge)",
+      "Connectivity": "Bluetooth 5.3 Low Energy",
+      "Water Resistance": "IPX7 certified",
+      "Driver Size": "10mm Graphene Composite"
     },
     "rating": 4.6,
     "totalReviews": 87,
     "affiliateLink": "https://www.amazon.com/dp/B08N5KWB9H/?tag=gadgetsprohub-21",
     "affiliateCode": "gadgetsprohub-21",
     "inStock": true,
-    "sku": "SHOE-TRAIL-RUN-2026",
+    "sku": "AUDIO-TWS-EARBUDS-2026",
     "tags": [
-      "shoes",
-      "running",
-      "trail",
-      "sports"
+      "audio",
+      "earbuds",
+      "wireless",
+      "electronics"
     ],
     "trending": false,
     "featured": true,
     "clicks": 98,
     "conversions": 18,
     "pros": [
-      "Phenomenal responsive springback cushioning",
-      "Wide stable toe box prevents pinching",
-      "Superb muddy/gravel traction"
+      "Immersive deep bass response",
+      "Compact ergonomic charging case",
+      "Clear call clarity with dual quad mics"
     ],
     "cons": [
-      "Not completely waterproofed (mesh absorbs fast)",
-      "Sizes scale somewhat smaller than industrial averages"
+      "Requires snug ear tip fitting for optimal ANC"
     ],
     "reviews": [] as any[],
     "createdAt": "2026-05-25T00:00:00.000Z"

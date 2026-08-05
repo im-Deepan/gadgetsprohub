@@ -67,7 +67,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
           <div className="flex items-start gap-3">
             <ShieldCheck className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Verified Merchant Spec Maps</h5>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Verified Specs</h5>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Every technical specification and benchmark is cross-referenced directly with official manufacturer datasheets.</p>
             </div>
           </div>
@@ -81,7 +81,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Unbiased Curation Standard</h5>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Honest Rankings</h5>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Products earn top rankings solely based on spec value, user satisfaction scores, and genuine pricing history.</p>
             </div>
           </div>

@@ -77,10 +77,10 @@ export const mapErrorToFriendly = (error: unknown, contextDescription?: string):
   ) {
     return {
       message: contextDescription
-        ? `A background system delay occurred while trying to ${contextDescription}. Our system has seamlessly loaded secure backup content.`
-        : 'A background synchronization event occurred. Secure system backups have been activated.',
+        ? `A database or server error occurred while trying to ${contextDescription}. Please try again later.`
+        : 'A server or database error occurred. Please try again later or contact support if the problem persists.',
       category: 'System Status',
-      type: 'info'
+      type: 'error'
     };
   }
 

@@ -83,9 +83,6 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else if (msg.includes('unauthorized') || msg.includes('jwt') || msg.includes('token expired')) {
       refinedMessage = 'Your session has expired. Please sign in again to continue.';
       if (!isExplicitCategory) mappedCategory = 'User Action';
-    } else if (msg.includes('mongoose') || msg.includes('mongodb') || msg.includes('database error')) {
-      refinedMessage = 'A resource synchronization issue occurred. Restoring cached local backup data.';
-      if (!isExplicitCategory) mappedCategory = 'System Status';
     }
 
     setToasts((prev) => [...prev, { id, message: refinedMessage, type, duration, category: mappedCategory, onUndo }]);

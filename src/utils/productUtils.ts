@@ -48,17 +48,20 @@ export const getShortProductTitle = (fullName: string, brand?: string, maxLen = 
 
 /**
  * Formats price cleanly in Indian Rupees (INR) using standard Intl.NumberFormat.
- * Example: 12499 -> "₹12,499"
+ * Example: 14999 -> "₹14,999"
  */
 export const formatINR = (price: number | undefined | null): string => {
   if (price === undefined || price === null || isNaN(price) || price < 0) {
     return '₹0';
   }
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0
-  }).format(price);
+  // Convert legacy USD values (<1000) to INR if needed
+  const numericINR = price < 1000 ? Math.round(price * 83) : Math.round(price);
+  const formatted = new Intl.NumberFormat('en-IN', {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0
+  }).format(numericINR);
+
+  return `₹${formatted}`;
 };
 
 export const formatINRPrice = formatINR;
@@ -146,7 +149,7 @@ export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?
   if (!isAmazon) return null;
   
   let label = "Amazon Price";
-  let currency = "$";
+  let currency = "₹";
   let tz = "UTC";
   
   if (isAmazonIn) {
@@ -161,13 +164,9 @@ export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?
     label = "Amazon.ae Price";
     currency = "AED ";
     tz = "GST";
-  } else if (isAmazonUs) {
-    label = "Amazon.com Price";
-    currency = "$";
-    tz = "EST";
   } else {
     label = "Amazon Price";
-    currency = "$";
+    currency = "₹";
     tz = "UTC";
   }
   
@@ -179,40 +178,35 @@ export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?
  */
 export const getCurrencySymbol = (product: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
   if (product?.currency) {
-    if (product.currency === 'USD' || product.currency === '$') return '$';
-    if (product.currency === 'INR' || product.currency === '₹') return '₹';
     if (product.currency === 'GBP' || product.currency === '£') return '£';
     if (product.currency === 'AED') return 'AED ';
-    return product.currency;
+    return '₹';
   }
   if (product?.currencyCode) {
-    if (product.currencyCode === 'USD') return '$';
-    if (product.currencyCode === 'INR') return '₹';
     if (product.currencyCode === 'GBP') return '£';
     if (product.currencyCode === 'AED') return 'AED ';
   }
-  const details = getAmazonDetails(product);
-  if (details) return details.currency;
-  
   const marketplace = (product?.marketplace || '').toLowerCase();
   if (marketplace.includes('uk')) return '£';
   if (marketplace.includes('uae') || marketplace.includes('ae')) return 'AED ';
-  if (marketplace.includes('us') || marketplace.includes('com')) return '$';
   
   return '₹';
 };
 
 /**
- * Formats a price with the correct currency symbol based on the product.
+ * Formats a price with the correct currency symbol based on the product, converting dollar amounts to Indian amounts.
  */
-export const formatProductPrice = (price: number | undefined | null, product: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
+export const formatProductPrice = (price: number | undefined | null, product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
   if (price === undefined || price === null || isNaN(price) || price < 0) {
-    const symbol = getCurrencySymbol(product);
-    return symbol + '0';
+    return '₹0';
   }
-  const symbol = getCurrencySymbol(product);
+  const symbol = product ? getCurrencySymbol(product) : '₹';
+  if (symbol === '₹') {
+    return formatINR(price);
+  }
+  const numericVal = price < 1000 ? Math.round(price * 83) : Math.round(price);
   const formattedNumber = new Intl.NumberFormat('en-IN', {
-    maximumFractionDigits: price % 1 === 0 ? 0 : 2
-  }).format(price);
+    maximumFractionDigits: 0
+  }).format(numericVal);
   return symbol + formattedNumber;
 };
