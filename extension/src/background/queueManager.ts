@@ -226,11 +226,13 @@ class QueueManager {
   }
 
   private scrapeViaTab(url: string): Promise<any> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
         const parsedUrl = new URL(url);
         const hostname = parsedUrl.hostname.toLowerCase();
-        const isSupported = CONFIG.SUPPORTED_AMAZON_DOMAINS.some(domain => 
+        const settings = await extensionStorage.getSettings();
+        const supportedDomains = settings.supportedDomains || CONFIG.SUPPORTED_AMAZON_DOMAINS;
+        const isSupported = supportedDomains.some(domain => 
           hostname === domain || hostname.endsWith('.' + domain)
         );
         if (!isSupported) {

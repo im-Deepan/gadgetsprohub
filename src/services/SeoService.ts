@@ -692,7 +692,7 @@ export class SeoService {
         const Category = mongoose.model('Category');
         const Blog = mongoose.model('Blog');
         
-        productsList = await Product.find({}, 'slug updatedAt createdAt').lean();
+        productsList = await Product.find({ publishingStatus: { $ne: 'draft' } }, 'slug updatedAt createdAt').lean();
         blogsList = await Blog.find({ published: true }, 'slug updatedAt createdAt').lean();
         categoriesList = await Category.find({}, 'slug').lean();
 

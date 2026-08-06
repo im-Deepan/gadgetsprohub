@@ -7,6 +7,7 @@ import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { Search, Package, Sparkles, Filter, ArrowRight, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { matchProductByTokens } from '../utils/searchMatcher';
 
 interface SearchPageProps {
   onNavigate: (view: AppView, slug?: string) => void;
@@ -46,14 +47,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
           const allProds: Product[] = data.products || data.data || (Array.isArray(data) ? data : []);
 
           if (currentQ.trim()) {
-            const qLower = currentQ.trim().toLowerCase();
-            const matched = allProds.filter(p => 
-              p.name?.toLowerCase().includes(qLower) ||
-              p.brand?.toLowerCase().includes(qLower) ||
-              p.description?.toLowerCase().includes(qLower) ||
-              (typeof p.category === 'string' && p.category.toLowerCase().includes(qLower)) ||
-              (typeof p.category === 'object' && p.category?.name?.toLowerCase().includes(qLower))
-            );
+            const matched = allProds.filter(p => matchProductByTokens(p, currentQ));
             setProducts(matched);
           } else {
             setProducts([]);
@@ -109,7 +103,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
         <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 max-w-2xl">
           <span className="text-xs font-bold uppercase tracking-widest text-indigo-400 font-sans">
-            Catalog Search Engine
+            Search Products
           </span>
           <h1 className="mt-1 text-2xl sm:text-3xl font-display font-extrabold tracking-tight">
             {query ? `Search Results for "${query}"` : 'Search Gadget Catalog'}

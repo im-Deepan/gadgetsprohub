@@ -630,10 +630,22 @@ export default function Popup() {
     setImporting(true);
     setStatusMessage(null);
 
+    let finalAffiliateLink = scrapedProduct.affiliateLink || scrapedProduct.productUrl || '';
+    if (finalAffiliateLink && scrapedProduct.asin) {
+      try {
+        const urlObj = new URL(finalAffiliateLink);
+        urlObj.searchParams.set('tag', affiliateTag);
+        finalAffiliateLink = urlObj.toString();
+      } catch (e) {
+        // Fallback
+      }
+    }
+    const importPayload = { ...scrapedProduct, affiliateLink: finalAffiliateLink };
+
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       const msg: ExtensionMessage = {
         action: 'EXECUTE_PRODUCT_IMPORT',
-        payload: scrapedProduct
+        payload: importPayload
       };
       
       chrome.runtime.sendMessage(msg, (response: ExtensionResponse) => {
@@ -673,11 +685,23 @@ export default function Popup() {
     setShowDuplicateDialog(false);
     setStatusMessage(null);
 
+    let finalAffiliateLink = scrapedProduct.affiliateLink || scrapedProduct.productUrl || '';
+    if (finalAffiliateLink && scrapedProduct.asin) {
+      try {
+        const urlObj = new URL(finalAffiliateLink);
+        urlObj.searchParams.set('tag', affiliateTag);
+        finalAffiliateLink = urlObj.toString();
+      } catch (e) {
+        // Fallback
+      }
+    }
+    const importPayload = { ...scrapedProduct, affiliateLink: finalAffiliateLink };
+
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       const msg: ExtensionMessage = {
         action: 'EXECUTE_PRODUCT_IMPORT',
         payload: {
-          product: scrapedProduct,
+          product: importPayload,
           strategy: selectedStrategy,
           options: {
             overwriteDescription,

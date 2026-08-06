@@ -5,6 +5,11 @@ import { prefetchData } from './utils/prefetcher';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider, useToast } from './context/ToastContext';
+import { CompareProvider } from './context/CompareContext';
+import { CompareBar } from './components/CompareBar';
+import { CompareModal } from './components/CompareModal';
+import { WishlistModal } from './components/WishlistModal';
+import { initWebVitals } from './utils/webVitals';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { ScrollToTop } from './components/ScrollToTop';
@@ -289,6 +294,11 @@ const ViewLoader: React.FC = () => {
 const AppContent: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+
+  useEffect(() => {
+    initWebVitals();
+  }, []);
 
   const isFetching = useIsFetching();
   const isMutating = useIsMutating();
@@ -569,7 +579,7 @@ const AppContent: React.FC = () => {
                 keywords: `${product.name}, ${product.brand || ''}, ${categoryName}, technical specs, gadget comparison`,
                 ogType: 'product',
                 ogUrl: dynamicUrl,
-                ogImage: product.images?.[0] || '/favicon.png'
+                ogImage: product.images?.[0] || '/og-banner.png'
               });
             }
             return;
@@ -598,7 +608,7 @@ const AppContent: React.FC = () => {
                 keywords: `${blog.title}, expert guides, editorial blog, specs breakdown`,
                 ogType: 'article',
                 ogUrl: dynamicUrl,
-                ogImage: blog.imageUrl || blog.featured_image || '/favicon.png'
+                ogImage: blog.imageUrl || blog.featured_image || '/og-banner.png'
               });
             }
             return;
@@ -827,7 +837,12 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Structural Header Navigation */}
-      <Navbar currentView={activeView} onNavigate={navigateToView} onPreload={preloadView} />
+      <Navbar
+        currentView={activeView}
+        onNavigate={navigateToView}
+        onPreload={preloadView}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
+      />
 
       {/* Main viewport area */}
       <main id="main-content" className="flex-grow overflow-x-hidden relative flex flex-col">
@@ -851,6 +866,15 @@ const AppContent: React.FC = () => {
       <Footer onNavigate={navigateToView} isHomePage={activeView === 'home'} />
       <ScrollToTop />
       <ImageLightbox />
+
+      {/* Modals & Floating Tools */}
+      <WishlistModal
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        onNavigate={navigateToView}
+      />
+      <CompareModal onNavigate={navigateToView} />
+      <CompareBar />
 
     </div>
   );
@@ -914,7 +938,9 @@ export default function App() {
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>
-              <AppContent />
+              <CompareProvider>
+                <AppContent />
+              </CompareProvider>
             </AuthProvider>
           </ToastProvider>
         </ThemeProvider>

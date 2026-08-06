@@ -26,6 +26,15 @@ export const getShortProductTitle = (fullName: string, brand?: string, maxLen = 
   if (!fullName) return 'Product Item';
   let clean = fullName.trim();
 
+  // If title looks like a kebab-case slug (contains hyphens and no spaces), convert to title case
+  if (clean.includes('-') && !clean.includes(' ')) {
+    clean = clean
+      .split('-')
+      .map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '')
+      .filter(Boolean)
+      .join(' ');
+  }
+
   // Strip extraneous promotional filler suffixes after common separators
   clean = clean.split(' - ')[0];
   if (clean.length > maxLen) {
@@ -122,18 +131,83 @@ export const formatRating = (rating: number | undefined | null, reviewCount?: nu
 };
 
 /**
- * Checks whether a discount is real and positive.
+ * Checks whether a discount is real and positive (price < originalPrice).
  */
-export const hasValidDiscount = (price?: number, originalPrice?: number, discount?: number): boolean => {
-  if (!price || !originalPrice) return false;
-  if (originalPrice <= price) return false;
-  if (discount !== undefined && discount <= 0) return false;
-  return true;
+export const hasValidDiscount = (price?: number, originalPrice?: number, _legacyDiscount?: number): boolean => {
+  if (price === undefined || price === null || originalPrice === undefined || originalPrice === null) return false;
+  if (price <= 0 || originalPrice <= 0) return false;
+  return price < originalPrice;
 };
 
 /**
- * Resolves the correct currency symbol and time zone based on the affiliate link, marketplace, or seller.
+ * Dynamically computes discount percentage from (price, originalPrice).
+ * If price > originalPrice, logs a data warning and returns 0.
+ * If price >= originalPrice, returns 0.
  */
+export const calculateDiscountPercent = (price?: number, originalPrice?: number, productTitle?: string): number => {
+  if (price === undefined || price === null || originalPrice === undefined || originalPrice === null) return 0;
+  if (price <= 0 || originalPrice <= 0) return 0;
+
+  if (price > originalPrice) {
+    console.warn(`[Data Warning] Product "${productTitle || 'Unknown'}" has sale price (₹${price}) > MRP (₹${originalPrice})`);
+    return 0;
+  }
+
+  if (price >= originalPrice) {
+    return 0;
+  }
+
+  return Math.round(((originalPrice - price) / originalPrice) * 100);
+};
+
+/**
+ * Validates and sanitizes a product's pricing and discount data.
+ * If sale price >= MRP, suppresses strikethrough and discount badge completely,
+ * and logs a data warning if price > originalPrice.
+ */
+export const getValidatedPricing = (product: { price?: number; originalPrice?: number; discount?: number; name?: string }) => {
+  const price = product?.price ?? 0;
+  let originalPrice = product?.originalPrice;
+  
+  if (!originalPrice || originalPrice <= price) {
+    if (originalPrice && price > originalPrice) {
+      console.warn(`[Data Warning] Product "${product?.name || 'Unknown'}" has sale price (₹${price}) > MRP (₹${originalPrice}). Suppressing discount badge.`);
+    }
+    return {
+      price,
+      originalPrice: undefined,
+      isDiscounted: false,
+      discount: 0
+    };
+  }
+
+  const computedDiscount = calculateDiscountPercent(price, originalPrice, product?.name);
+
+  return {
+    price,
+    originalPrice,
+    isDiscounted: computedDiscount > 0,
+    discount: computedDiscount
+  };
+};
+
+/**
+ * Normalizes a product object by validating pricing, discount, title, and rating.
+ */
+export const sanitizeProductData = <T extends Record<string, any>>(product: T): T => {
+  if (!product) return product;
+
+  const pricing = getValidatedPricing(product);
+
+  return {
+    ...product,
+    price: pricing.price,
+    originalPrice: pricing.originalPrice,
+    discount: pricing.discount,
+    isDiscounted: pricing.isDiscounted
+  };
+};
+
 export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?: string, seller?: string }) => {
   const link = (product.affiliateLink || '').toLowerCase();
   const marketplace = (product.marketplace || '').toLowerCase();
@@ -158,11 +232,11 @@ export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?
     tz = "IST";
   } else if (isAmazonUk) {
     label = "Amazon.co.uk Price";
-    currency = "£";
+    currency = "₹";
     tz = "GMT";
   } else if (isAmazonUae) {
     label = "Amazon.ae Price";
-    currency = "AED ";
+    currency = "₹";
     tz = "GST";
   } else {
     label = "Amazon Price";
@@ -176,37 +250,13 @@ export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?
 /**
  * Returns the currency symbol for the product based on explicit currency/currencyCode, or marketplace/affiliate link, or defaults to ₹.
  */
-export const getCurrencySymbol = (product: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
-  if (product?.currency) {
-    if (product.currency === 'GBP' || product.currency === '£') return '£';
-    if (product.currency === 'AED') return 'AED ';
-    return '₹';
-  }
-  if (product?.currencyCode) {
-    if (product.currencyCode === 'GBP') return '£';
-    if (product.currencyCode === 'AED') return 'AED ';
-  }
-  const marketplace = (product?.marketplace || '').toLowerCase();
-  if (marketplace.includes('uk')) return '£';
-  if (marketplace.includes('uae') || marketplace.includes('ae')) return 'AED ';
-  
+export const getCurrencySymbol = (_product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
   return '₹';
 };
 
 /**
- * Formats a price with the correct currency symbol based on the product, converting dollar amounts to Indian amounts.
+ * Formats a price consistently in Indian Rupee (INR) format across the entire site.
  */
-export const formatProductPrice = (price: number | undefined | null, product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
-  if (price === undefined || price === null || isNaN(price) || price < 0) {
-    return '₹0';
-  }
-  const symbol = product ? getCurrencySymbol(product) : '₹';
-  if (symbol === '₹') {
-    return formatINR(price);
-  }
-  const numericVal = price < 1000 ? Math.round(price * 83) : Math.round(price);
-  const formattedNumber = new Intl.NumberFormat('en-IN', {
-    maximumFractionDigits: 0
-  }).format(numericVal);
-  return symbol + formattedNumber;
+export const formatProductPrice = (price: number | undefined | null, _product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
+  return formatINR(price);
 };

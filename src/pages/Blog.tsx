@@ -68,7 +68,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
         <meta property="og:url" content="https://gadgetsprohub.com/blogs" />
         <meta property="og:title" content="Tech Insights, Buyer Guides & News | gadgetsprohub" />
         <meta property="og:description" content="Stay updated with ultimate buying guides, detailed comparisons, and current consumer technology insights on the gadgetsprohub blog." />
-        <meta property="og:image" content="/favicon.png" />
+        <meta property="og:image" content="/og-banner.png" />
         <meta property="og:site_name" content="gadgetsprohub" />
 
         {/* Twitter */}
@@ -76,7 +76,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
         <meta name="twitter:url" content="https://gadgetsprohub.com/blogs" />
         <meta name="twitter:title" content="Tech Insights & News | gadgetsprohub" />
         <meta name="twitter:description" content="Stay updated with ultimate buying guides, detailed comparisons, and tech news on the gadgetsprohub blog." />
-        <meta name="twitter:image" content="/favicon.png" />
+        <meta name="twitter:image" content="/og-banner.png" />
 
         <meta name="robots" content="index, follow" />
       </Helmet>
@@ -86,7 +86,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
         className="mb-8 max-w-2xl mx-auto"
         items={[
         { label: 'Home', onClick: () => onNavigate('home') },
-        { label: 'Buying Manuals', onClick: () => onNavigate('blogs'), isCurrentPage: !search && !selectedSub },
+        { label: 'Blog', onClick: () => onNavigate('blogs'), isCurrentPage: !search && !selectedSub },
         ...(selectedSub ? [{ label: selectedSub, isCurrentPage: !search }] : []),
         ...(search ? [{ label: `Search: ${search}`, isCurrentPage: true }] : [])
       ]} />
@@ -95,9 +95,8 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
       <div className="text-center max-w-2xl mx-auto space-y-4 mb-12">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-3.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-900/40 dark:text-slate-200">
           <BookOpen className="h-3.5 w-3.5 text-zinc-900 dark:text-white dark:text-indigo-300" />
-          <span>The</span>
           <span className="text-zinc-900 dark:text-white font-display font-black tracking-wide">gadgetsprohub</span>
-          <span>Gazette</span>
+          <span>Blog</span>
         </span>
         <h1 className="text-2xl sm:text-3.5xl font-black font-sans tracking-tight text-slate-800 leading-normal dark:text-white">Shopping Guides & Helpful Tips</h1>
         <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed dark:text-slate-300">

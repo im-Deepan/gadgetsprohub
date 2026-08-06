@@ -22,9 +22,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm, 
   onCancel 
 }) => {
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setErrorMsg(null);
+      return;
+    }
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
     };
@@ -44,6 +48,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <div className="space-y-1 my-1">
             <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider font-sans">{title}</h3>
             <p className="text-xs text-slate-400 dark:text-slate-300 font-medium leading-relaxed font-sans">{message}</p>
+            {errorMsg && (
+              <p className="text-[10px] font-bold text-rose-500 mt-2 p-2 bg-rose-50 dark:bg-rose-950/30 rounded">{errorMsg}</p>
+            )}
           </div>
         </div>
         
@@ -60,10 +67,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             onClick={async () => {
               if (onConfirm) {
                 try {
+                  setErrorMsg(null);
                   await Promise.resolve(onConfirm());
                   onCancel(); // Only close if successful
-                } catch (e) {
+                } catch (e: any) {
                   console.error('[ConfirmDialog Error]', e);
+                  setErrorMsg(e?.message || 'An error occurred during this action. Please try again.');
                 }
               } else {
                 onCancel();

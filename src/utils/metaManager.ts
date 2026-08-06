@@ -17,35 +17,35 @@ export const DEFAULT_VIEW_METADATA: Record<string, ViewMetadata> = {
     description: 'Discover top-rated tech gadgets, electronics, and honest reviews. Compare specs and find the best prices on smartphones, laptops, audio gear, and more.',
     keywords: 'electronics, gadgets, smartphones, laptops, audio gear, smartwatches, tech reviews, budget gadgets, GadgetsProHub',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/og-banner.png'
   },
   products: {
     title: 'All Products - Compare Tech Specs & Prices | GadgetsProHub',
     description: 'Browse our full collection of gadgets and compare specifications across smartphones, laptops, audio gear, and smart accessories.',
     keywords: 'product directory, search gadgets, electronic specs, compare mobile phones, compare laptops',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/og-banner.png'
   },
   blogs: {
     title: 'Tech Guides & Product Reviews | GadgetsProHub',
     description: 'Read the latest tech insights, buying guides, and step-by-step product comparisons from our editorial team.',
     keywords: 'tech blog, gadgets guide, buying guides, tech reviews, software guides',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/og-banner.png'
   },
   contact: {
     title: 'Contact Us | GadgetsProHub Support',
     description: 'Have a question or feedback? Get in touch with our support team and we will respond promptly.',
     keywords: 'contact support, customer service, customer care, support GadgetsProHub, ask experts',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/og-banner.png'
   },
   login: {
     title: 'Sign In | GadgetsProHub',
     description: 'Sign in to your account to save your favorite products, manage price alerts, and sync your preferences across devices.',
     keywords: 'sign in, log in, account login, secure sign in',
     ogType: 'website',
-    ogImage: '/favicon.png',
+    ogImage: '/og-banner.png',
     noindex: true
   },
   profile: {
@@ -53,7 +53,7 @@ export const DEFAULT_VIEW_METADATA: Record<string, ViewMetadata> = {
     description: 'Manage your saved products, account profile settings, and location preferences.',
     keywords: 'user profile, my account, settings, saved products',
     ogType: 'website',
-    ogImage: '/favicon.png',
+    ogImage: '/og-banner.png',
     noindex: true
   },
   admin: {
@@ -61,7 +61,7 @@ export const DEFAULT_VIEW_METADATA: Record<string, ViewMetadata> = {
     description: 'Manage catalog products, user reviews, and site settings.',
     keywords: 'admin panel, management console, catalog management',
     ogType: 'website',
-    ogImage: '/favicon.png',
+    ogImage: '/og-banner.png',
     noindex: true
   },
   'privacy-policy': {
@@ -69,35 +69,35 @@ export const DEFAULT_VIEW_METADATA: Record<string, ViewMetadata> = {
     description: 'Read our privacy policy to understand how we protect your personal data and handle your account information.',
     keywords: 'privacy policy, safe browsing, data policy, terms, user safety',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/og-banner.png'
   },
   'about-us': {
     title: 'About Us | GadgetsProHub',
     description: 'Learn about our mission to provide clear, honest product reviews and spec comparisons for tech enthusiasts.',
     keywords: 'about GadgetsProHub, tech reviews team, our mission',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/og-banner.png'
   },
   'terms-conditions': {
     title: 'Terms & Conditions | GadgetsProHub',
     description: 'Review the terms and conditions for using our website and services.',
     keywords: 'terms of service, conditions of use, user agreement',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/og-banner.png'
   },
   disclaimer: {
     title: 'Affiliate Disclosure | GadgetsProHub',
     description: 'Disclosure regarding our affiliate links, partner relationships, and editorial review standards.',
     keywords: 'affiliate disclaimer, review transparency, commission disclosure',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/og-banner.png'
   },
   '404': {
     title: '404 - Page Not Found | GadgetsProHub',
     description: 'The page you requested could not be found. Search our catalog or return to the homepage.',
     keywords: '404, page not found, GadgetsProHub',
     ogType: 'website',
-    ogImage: '/favicon.png',
+    ogImage: '/og-banner.png',
     noindex: true
   }
 };

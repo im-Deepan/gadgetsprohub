@@ -3689,26 +3689,77 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         if (inStock === 'true') filter.inStock = true;
         if (trending === 'true' || category === 'trending') filter.trending = true;
         
+        // Exclude draft products for non-admin requests
+        if (req.query.includeDrafts !== 'true') {
+          filter.publishingStatus = { $ne: 'draft' };
+        }
+        
         if (search) {
-          const searchStr = String(search).trim();
-          const searchRegex = new RegExp(searchStr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
+          const searchStr = String(search).trim().toLowerCase();
+          const rawTokens = searchStr.split(/\s+/).filter(t => t.length > 0);
+          
+          const SYNONYMS: Record<string, string[]> = {
+            headphones: ['headset', 'earbuds', 'earphone', 'tws', 'audio', 'wireless', 'over-ear', 'in-ear', 'anc'],
+            headset: ['headphones', 'earbuds', 'earphone', 'tws', 'audio'],
+            earbuds: ['headphones', 'headset', 'earphone', 'tws', 'airpods', 'buds'],
+            tws: ['earbuds', 'headphones', 'wireless', 'audio', 'buds'],
+            audio: ['headphones', 'headset', 'earbuds', 'speaker', 'tws'],
+            phone: ['smartphone', 'mobile', 'cellular', 'android', 'iphone', '5g'],
+            smartphone: ['phone', 'mobile', 'cellular', 'android', 'iphone'],
+            mobile: ['phone', 'smartphone', 'cellular', 'handset'],
+            laptop: ['notebook', 'macbook', 'pc', 'computer', 'ultrabook'],
+            notebook: ['laptop', 'macbook', 'pc', 'computer'],
+            watch: ['smartwatch', 'band', 'fitness tracker', 'wearable'],
+            smartwatch: ['watch', 'band', 'fitness tracker', 'wearable'],
+            shoe: ['shoes', 'sneaker', 'sneakers', 'footwear', 'bata', 'formal', 'oxford', 'running'],
+            shoes: ['shoe', 'sneaker', 'sneakers', 'footwear', 'bata', 'formal', 'oxford', 'running'],
+            footwear: ['shoe', 'shoes', 'sneakers', 'bata'],
+            mouse: ['gaming mouse', 'accessory', 'pointing device'],
+            keyboard: ['gaming keyboard', 'mechanical', 'accessory']
+          };
+
+          const expandedSearchTerms = new Set<string>();
+          rawTokens.forEach(token => {
+            expandedSearchTerms.add(token);
+            if (SYNONYMS[token]) {
+              SYNONYMS[token].forEach(syn => expandedSearchTerms.add(syn));
+            }
+            Object.entries(SYNONYMS).forEach(([key, list]) => {
+              if (list.includes(token)) {
+                expandedSearchTerms.add(key);
+                list.forEach(syn => expandedSearchTerms.add(syn));
+              }
+            });
+          });
+
+          const searchPatterns = Array.from(expandedSearchTerms).map(term =>
+            new RegExp(term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i')
+          );
           
           let categoryIds: any[] = [];
           try {
-            const matchedCats = await Category.find({ name: { $regex: searchRegex } });
+            const matchedCats = await Category.find({
+              $or: searchPatterns.map(pattern => ({ name: { $regex: pattern } }))
+            });
             categoryIds = matchedCats.map((c: any) => c._id);
           } catch (err: any) {
             captureError(err, { context: 'Category search mapping' });
           }
 
-          filter.$or = [
-            { name: { $regex: searchRegex } },
-            { brand: { $regex: searchRegex } },
-            { sku: { $regex: searchRegex } },
-            { tags: { $in: [searchRegex] } }
-          ];
-          if (categoryIds.length > 0) {
-            filter.$or.push({ category: { $in: categoryIds } });
+          const tokenConditions = searchPatterns.map(pattern => ({
+            $or: [
+              { name: { $regex: pattern } },
+              { brand: { $regex: pattern } },
+              { description: { $regex: pattern } },
+              { features: { $regex: pattern } },
+              { tags: { $regex: pattern } },
+              { sku: { $regex: pattern } },
+              ...(categoryIds.length > 0 ? [{ category: { $in: categoryIds } }] : [])
+            ]
+          }));
+
+          if (tokenConditions.length > 0) {
+            filter.$or = tokenConditions;
           }
         }
 
@@ -3761,6 +3812,13 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       
       if (!product) {
         return res.status(404).json({ error: 'Product catalog item not found' });
+      }
+
+      if (product.publishingStatus === 'draft' && req.query.includeDrafts !== 'true') {
+        const adminToken = req.headers.authorization?.replace('Bearer ', '');
+        if (!adminToken || adminToken !== process.env.ADMIN_JWT_SECRET) {
+          return res.status(404).json({ error: 'Product catalog item not found' });
+        }
       }
       
       // --- Real-time Price Update Trigger ---
@@ -4045,10 +4103,10 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   app.get('/api/featured', async (_req: express.Request, res: express.Response) => {
     try {
       if (isMongoConnected) {
-        const products = await Product.find({ featured: true }).limit(6).populate('category');
+        const products = await Product.find({ featured: true, publishingStatus: { $ne: 'draft' } }).limit(6).populate('category');
         res.json(products);
       } else {
-        const list = localProducts.filter((p: any) => p.featured).slice(0, 6).map((p: any) => {
+        const list = localProducts.filter((p: any) => p.featured && p.publishingStatus !== 'draft').slice(0, 6).map((p: any) => {
           const catId = typeof p.category === 'object' && p.category ? (p.category as any)._id : p.category;
           const catObj = localCategories.find((c: any) => c._id === catId);
           return { ...p, category: catObj || { name: 'General' } };
@@ -4064,10 +4122,10 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     try {
       await cleanExpiredTrendingProducts();
       if (isMongoConnected) {
-        const products = await Product.find({ trending: true }).limit(8).populate('category');
+        const products = await Product.find({ trending: true, publishingStatus: { $ne: 'draft' } }).limit(8).populate('category');
         res.json(products);
       } else {
-        const list = localProducts.filter((p: any) => p.trending).slice(0, 8).map((p: any) => {
+        const list = localProducts.filter((p: any) => p.trending && p.publishingStatus !== 'draft').slice(0, 8).map((p: any) => {
           const catId = typeof p.category === 'object' && p.category ? (p.category as any)._id : p.category;
           const catObj = localCategories.find((c: any) => c._id === catId);
           return { ...p, category: catObj || { name: 'General' } };
@@ -4630,13 +4688,51 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
         return res.json({ products, blogs, categories: categoryNames, brands });
       } else {
+        const searchSynonymGroups = [
+          ['headphones', 'headset', 'earbuds', 'tws', 'earphone', 'earphones', 'audio', 'anc', 'in-ear', 'over-ear'],
+          ['phone', 'smartphone', 'mobile', 'cellphone', 'cell'],
+          ['laptop', 'notebook', 'macbook', 'pc', 'computer'],
+          ['mouse', 'mice', 'pointer', 'trackball'],
+          ['keyboard', 'keypad', 'switches', 'mechanical'],
+          ['watch', 'smartwatch', 'wearable', 'tracker', 'fitness'],
+          ['speaker', 'soundbar', 'audio', 'bluetooth'],
+          ['charger', 'charging', 'powerbank', 'adapter', 'cable'],
+          ['camera', 'webcam', 'lens', 'video']
+        ];
+
+        const getTokensWithSynonyms = (str: string): string[] => {
+          const rawTokens = str.toLowerCase().trim().split(/\s+/).filter(Boolean);
+          const expanded = new Set<string>();
+          for (const token of rawTokens) {
+            expanded.add(token);
+            for (const group of searchSynonymGroups) {
+              if (group.some(item => item === token || token.includes(item) || item.includes(token))) {
+                group.forEach(s => expanded.add(s));
+              }
+            }
+          }
+          return Array.from(expanded);
+        };
+
+        const searchTokens = getTokensWithSynonyms(queryStr);
+
         const matchedProducts = localProducts.filter((p: any) => {
-          const catName = typeof p.category === 'object' && p.category ? (p.category as any).name : '';
-          return p.name?.toLowerCase().includes(queryStr) || 
-                 p.brand?.toLowerCase().includes(queryStr) ||
-                 p.sku?.toLowerCase().includes(queryStr) ||
-                 p.tags?.some((t: any) => t.toLowerCase().includes(queryStr)) ||
-                 catName?.toLowerCase().includes(queryStr);
+          const catName = typeof p.category === 'object' && p.category ? (p.category as any).name : (typeof p.category === 'string' ? p.category : '');
+          const tagStr = Array.isArray(p.tags) ? p.tags.join(' ') : '';
+          const fullText = [
+            p.name || p.title || '',
+            p.brand || '',
+            p.sku || '',
+            catName,
+            tagStr,
+            p.description || ''
+          ].join(' ').toLowerCase();
+
+          const queryTokens = queryStr.toLowerCase().trim().split(/\s+/).filter(Boolean);
+          return queryTokens.every(qTok => {
+            const syns = getTokensWithSynonyms(qTok);
+            return syns.some(syn => fullText.includes(syn));
+          });
         }).slice(0, 10);
 
         const matchedBlogs = localBlogs.filter((b: any) => 
@@ -7869,6 +7965,14 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         'Affiliate Link'
       ];
 
+      const escapeCSV = (val: any) => {
+        let str = String(val || '').replace(/"/g, '""');
+        if (/^[=\-+\@\t\r]/.test(str)) {
+          str = "'" + str;
+        }
+        return `"${str}"`;
+      };
+
       const rows = products.map((p, index) => {
         const id = p._id ? p._id.toString() : p.id;
         const isScanned = scannedSet.has(id);
@@ -7878,18 +7982,18 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
         return [
           index + 1,
-          `"${id}"`,
-          `"${(p.name || '').replace(/"/g, '""')}"`,
-          `"${p.asin || ''}"`,
-          `"${(p.brand || '').replace(/"/g, '""')}"`,
-          `"${(catName || '').replace(/"/g, '""')}"`,
+          escapeCSV(id),
+          escapeCSV(p.name),
+          escapeCSV(p.asin),
+          escapeCSV(p.brand),
+          escapeCSV(catName),
           p.price ?? 0,
           p.originalPrice ?? p.price ?? 0,
           p.discount ?? 0,
           p.inStock !== false ? 'In Stock' : 'Out of Stock',
-          `"${lastCheck}"`,
-          `"${scanStatus}"`,
-          `"${p.affiliateLink || ''}"`
+          escapeCSV(lastCheck),
+          escapeCSV(scanStatus),
+          escapeCSV(p.affiliateLink)
         ].join(',');
       });
 

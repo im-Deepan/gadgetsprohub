@@ -13,9 +13,10 @@ interface NavbarProps {
   currentView: string;
   onNavigate: (view: string, slug?: string) => void;
   onPreload?: (view: any, slug?: string) => void;
+  onOpenWishlist?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPreload }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPreload, onOpenWishlist }) => {
   const { user, isAuthenticated, isAdmin, logout, wishlist } = useAuth();
   const { showToast } = useToast();
   const { isDark, theme, toggleTheme, setTheme } = useTheme();
@@ -449,23 +450,23 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
             </button>
 
             {/* Wishlist Link - Desktop */}
-            {isAuthenticated && (
-              <a
-                href="/profile"
-                onClick={(e) => { e.preventDefault(); onNavigate('profile'); }}
-                onMouseEnter={() => onPreload?.('profile')}
-                aria-label="Your bookmarks"
-                className="hidden sm:flex relative h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors duration-300 cursor-pointer"
-                title="Your bookmarks"
-              >
-                <Heart className="h-4 w-4" />
-                {wishlist.length > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 font-mono text-[9px] font-bold text-white ring-2 ring-white dark:ring-slate-950">
-                    {wishlist.length}
-                  </span>
-                )}
-              </a>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenWishlist) onOpenWishlist();
+                else onNavigate('profile');
+              }}
+              aria-label="Your saved wishlist"
+              className="hidden sm:flex relative h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors duration-300 cursor-pointer"
+              title="Your saved wishlist"
+            >
+              <Heart className="h-4 w-4" />
+              {wishlist.length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 font-mono text-[9px] font-bold text-white ring-2 ring-white dark:ring-slate-950">
+                  {wishlist.length}
+                </span>
+              )}
+            </button>
 
             {/* Profile Menu tab */}
             <div className="relative">

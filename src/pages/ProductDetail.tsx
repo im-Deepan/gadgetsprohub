@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Product, Category } from '../types';
-import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, CheckCheck, MessageSquare, Check, X, BookmarkCheck, Video, Copy, Share2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, CheckCheck, MessageSquare, Check, X, BookmarkCheck, Video, Copy, Share2, Scale } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCompare } from '../context/CompareContext';
 import { useToast } from '../context/ToastContext';
 import { Helmet } from '../components/Helmet';
 import { AdSenseBanner } from '../components/AdSenseBanner';
@@ -12,7 +13,7 @@ import { AdminProductEditPanel } from '../components/product/AdminProductEditPan
 import { ReviewForm } from '../components/product/ReviewForm';
 
 import { getCategoryId, getCategoryName } from '../utils/category';
-import { formatINRPrice, formatRating, hasValidDiscount, getShortProductTitle, getAmazonDetails, getCurrencySymbol, formatProductPrice } from '../utils/productUtils';
+import { formatINRPrice, formatRating, hasValidDiscount, getShortProductTitle, getAmazonDetails, getCurrencySymbol, formatProductPrice, getValidatedPricing } from '../utils/productUtils';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { apiFetch } from '../utils/apiClient';
@@ -68,6 +69,7 @@ const formatAmazonTime = (lastPriceCheck: string | undefined, tz: string): strin
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNavigate }) => {
   const { wishlist, toggleWishlist, isAuthenticated, user, token } = useAuth();
+  const { toggleCompare, isInCompare } = useCompare();
   const isAdmin = Boolean(user && (user.id || user._id) && token && user.role === 'admin');
   const { showToast } = useToast();
   
@@ -516,7 +518,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     // Trigger visual overlay popup and open link
     setShowRedirectingModal(true);
     setTimeout(() => {
-      window.open(validatedUrl, '_blank', 'noreferrer,noopener');
+      window.open(validatedUrl, '_blank', 'noopener');
       setShowRedirectingModal(false);
     }, 2200);
   };
@@ -993,22 +995,22 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
           {/* Pricing parameters card */}
           {(() => {
-            const isDiscounted = hasValidDiscount(product.price, product.originalPrice, product.discount);
+            const pricing = getValidatedPricing(product);
             return (
               <div className="rounded-xl bg-slate-50 dark:bg-slate-900/60 p-5 border border-slate-200/80 dark:border-slate-800 space-y-4">
                 <div className="space-y-1">
                   <div className="flex items-baseline gap-2.5">
                     <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono">
-                      {formatProductPrice(product.price, product)}
+                      {formatProductPrice(pricing.price, product)}
                     </span>
-                    {isDiscounted && (
+                    {pricing.isDiscounted && pricing.originalPrice && (
                       <span className="text-sm text-slate-400 line-through font-mono">
-                        {formatProductPrice(product.originalPrice, product)}
+                        {formatProductPrice(pricing.originalPrice, product)}
                       </span>
                     )}
-                    {isDiscounted && product.discount && (
+                    {pricing.isDiscounted && (
                       <span className="bg-rose-500 text-white px-2 py-0.5 text-[10px] font-bold rounded-md font-mono uppercase tracking-wider">
-                        -{product.discount}% OFF
+                        -{pricing.discount}% OFF
                       </span>
                     )}
                   </div>
@@ -1047,16 +1049,25 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                       <span>{shared ? 'Shared!' : 'Share'}</span>
                     </button>
 
-                    {isAuthenticated && (
-                      <button
-                        onClick={() => toggleWishlist(product._id, product.name)}
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all duration-200 ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
-                        title="Bookmark item"
-                        aria-label={wishlist.includes(product._id) ? "Remove from wishlist" : "Add to wishlist"}
-                      >
-                        <Heart className={`h-4 w-4 ${wishlist.includes(product._id) ? 'fill-rose-500 text-rose-500' : ''}`} aria-hidden="true" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => toggleCompare(product)}
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all duration-200 ${isInCompare(product._id) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
+                      title={isInCompare(product._id) ? "In comparison list" : "Compare specs"}
+                      aria-label={isInCompare(product._id) ? "Remove from comparison" : "Add to comparison"}
+                    >
+                      <Scale className="h-4 w-4" aria-hidden="true" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleWishlist(product._id, product.name)}
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border cursor-pointer active:scale-95 transition-all duration-200 ${wishlist.includes(product._id) ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
+                      title="Bookmark item"
+                      aria-label={wishlist.includes(product._id) ? "Remove from wishlist" : "Add to wishlist"}
+                    >
+                      <Heart className={`h-4 w-4 ${wishlist.includes(product._id) ? 'fill-rose-500 text-rose-500' : ''}`} aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
 
@@ -1295,7 +1306,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 <div className="p-2.5 sm:p-3.5">
                   <h4 className="text-[11px] sm:text-xs font-bold text-slate-700 truncate dark:text-white group-hover:text-zinc-900 dark:text-white">{rel.name}</h4>
                   <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-1 text-[10px] sm:text-xs mt-2 pt-2 border-t border-slate-50 dark:border-slate-700">
-                    <span className="font-extrabold text-slate-800 font-mono dark:text-white">₹{rel.price}</span>
+                    <span className="font-extrabold text-slate-800 font-mono dark:text-white">{formatProductPrice(rel.price, rel)}</span>
                     <span className="text-[9px] sm:text-[10px] text-slate-300 font-semibold font-mono">★ {rel.rating && rel.rating > 0 ? rel.rating : 'N/A'}</span>
                   </div>
                 </div>

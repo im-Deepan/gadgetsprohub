@@ -3,7 +3,7 @@ import { Play, Pause, Square, Upload, RefreshCw, AlertCircle } from 'lucide-reac
 import { extensionStorage } from '../../services/storage';
 import { CONFIG } from '../../config';
 
-const isValidAmazonUrl = (input: string): boolean => {
+const isValidAmazonUrl = (input: string, supportedDomains: string[]): boolean => {
   let urlStr = input.trim();
   if (!urlStr.startsWith('http://') && !urlStr.startsWith('https://')) {
     urlStr = 'https://' + urlStr;
@@ -11,7 +11,7 @@ const isValidAmazonUrl = (input: string): boolean => {
   try {
     const urlObj = new URL(urlStr);
     const hostname = urlObj.hostname.toLowerCase();
-    return CONFIG.SUPPORTED_AMAZON_DOMAINS.some(domain => 
+    return supportedDomains.some(domain => 
       hostname === domain || hostname.endsWith('.' + domain)
     );
   } catch {
@@ -40,7 +40,7 @@ export function BulkImportTab() {
     });
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
     const rawItems = inputText.split('\n').map(l => l.trim()).filter(l => l);
     if (rawItems.length === 0) return alert("Please enter at least one ASIN or URL.");
     
@@ -49,12 +49,15 @@ export function BulkImportTab() {
     const seen = new Set();
     const asinRegex = /^[A-Z0-9]{10}$/;
     let errors = 0;
+    
+    const settings = await extensionStorage.getSettings();
+    const supportedDomains = settings.supportedDomains || CONFIG.SUPPORTED_AMAZON_DOMAINS;
 
     for (let raw of rawItems) {
       let asin = '';
       let url = '';
       
-      if (isValidAmazonUrl(raw)) {
+      if (isValidAmazonUrl(raw, supportedDomains)) {
         url = raw;
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
           url = 'https://' + url;

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
 import { Product, Category } from '../types';
-import { Search, Heart, SlidersHorizontal, ArrowUpDown, Grid, List, Star, X, CheckCheck, ShieldCheck, ShoppingBag, ExternalLink } from 'lucide-react';
+import { Search, Heart, SlidersHorizontal, ArrowUpDown, Grid, List, Star, X, CheckCheck, ShieldCheck, ShoppingBag, ExternalLink, Scale } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCompare } from '../context/CompareContext';
 import { useToast } from '../context/ToastContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from '../components/Helmet';
@@ -13,7 +14,7 @@ import { GlareHover } from '../components/GlareHover';
 import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 
 import { getCategoryName, filterCategoriesForUI } from '../utils/category';
-import { getShortProductTitle, formatProductPrice, formatRating, hasValidDiscount } from '../utils/productUtils';
+import { getShortProductTitle, formatProductPrice, formatRating, hasValidDiscount, getValidatedPricing } from '../utils/productUtils';
 import { parseSpecificationsString } from '../utils/specParser';
 import { getCleanAffiliateUrl } from '../utils/affiliate';
 import { CategoryIcon } from '../components/CategoryIcon';
@@ -60,6 +61,7 @@ const getCategoryEmoji = (categoryName: string | undefined | null) => {
 
 export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavigate, onPreload }) => {
   const { wishlist, toggleWishlist, isAuthenticated } = useAuth();
+  const { toggleCompare, isInCompare } = useCompare();
   const { showToast } = useToast();
   
   // States
@@ -358,8 +360,8 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   };
 
   const renderProductCard = (p: Product) => {
+    const pricing = getValidatedPricing(p);
     const ratingObj = formatRating(p.rating, p.totalReviews || p.reviewsCount || p.reviewCount);
-    const isDiscounted = hasValidDiscount(p.price, p.originalPrice, p.discount);
     const shortTitle = getShortProductTitle(p.name, p.brand, 55);
 
     return (
@@ -396,7 +398,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             {/* Card Media Area */}
             <div className={`bg-slate-50 dark:bg-slate-950 overflow-hidden relative shrink-0 transition-all duration-300 flex items-center justify-center ${
               viewStyle === 'grid'
-                ? 'aspect-square w-full p-3'
+                ? 'aspect-square w-full p-2.5 sm:p-3'
                 : 'w-full sm:w-48 h-40 p-3'
             }`}>
               <img
@@ -406,22 +408,36 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 className="h-full w-full object-contain group-hover:scale-103 transition-transform duration-500 cursor-pointer"
               />
               
-              {isDiscounted && (
-                <span className="absolute top-2.5 left-2.5 bg-rose-500 rounded px-2 py-0.5 text-[11px] font-semibold text-white font-sans uppercase tracking-wide shadow-xs">
-                  -{p.discount}% OFF
+              {pricing.isDiscounted && (
+                <span className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 bg-rose-500 rounded px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold text-white font-sans uppercase tracking-wide shadow-xs">
+                  -{pricing.discount}% OFF
                 </span>
               )}
 
-              {isAuthenticated && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(p._id, p.name); }}
-                  className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-xs hover:text-rose-400 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+              <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-label={isInCompare(p._id) ? "Remove from comparison" : "Add to comparison"}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCompare(p); }}
+                  className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full shadow-xs transition-colors cursor-pointer ${
+                    isInCompare(p._id)
+                      ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+                      : 'bg-white text-slate-500 hover:text-indigo-600 dark:bg-slate-800 dark:text-slate-200'
+                  }`}
+                  title={isInCompare(p._id) ? "In comparison list" : "Compare specs"}
                 >
-                  <Heart className={`h-4 w-4 ${wishlist.includes(p._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
-                </span>
-              )}
+                  <Scale className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={wishlist.includes(p._id) ? "Remove from wishlist" : "Add to wishlist"}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(p._id, p.name); }}
+                  className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-xs hover:text-rose-400 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                  title={wishlist.includes(p._id) ? "In wishlist" : "Save to wishlist"}
+                >
+                  <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${wishlist.includes(p._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
+                </button>
+              </div>
 
               {ratingObj.hasRating && (
                 <div className="absolute bottom-2 left-2 bg-amber-400 text-slate-900 font-bold font-sans text-[10px] rounded-md px-1.5 py-0.5 flex items-center gap-0.5 shadow-xs">
@@ -431,7 +447,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             </div>
 
             {/* Card Content Area */}
-            <div className={`flex flex-col flex-grow justify-between font-sans ${viewStyle === 'grid' ? 'p-3 sm:p-4' : 'p-4'}`}>
+            <div className={`flex flex-col flex-grow justify-between font-sans ${viewStyle === 'grid' ? 'p-2.5 sm:p-4' : 'p-4'}`}>
               <div>
                 <div className="flex items-center justify-between gap-1 text-[9px] font-semibold font-sans text-slate-400 uppercase tracking-wider">
                   <span className="truncate flex-1">
@@ -440,7 +456,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   <span className="truncate shrink-0 max-w-[60px] text-right font-sans">{p.brand || 'Premium'}</span>
                 </div>
 
-                <h3 className={`font-display font-bold text-slate-800 leading-snug mt-1.5 line-clamp-2 group-hover:text-zinc-900 dark:text-white transition-colors duration-300 ${
+                <h3 className={`font-display font-bold text-slate-800 leading-snug mt-1 sm:mt-1.5 line-clamp-2 group-hover:text-zinc-900 dark:text-white transition-colors duration-300 ${
                   viewStyle === 'grid' ? 'text-xs sm:text-sm' : 'text-sm'
                 }`}>
                   {shortTitle}
@@ -459,14 +475,14 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 </p>
               </div>
 
-              <div className="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-                <div className="flex items-baseline gap-1.5 flex-wrap">
+              <div className="pt-2 mt-2 sm:pt-2.5 sm:mt-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                <div className="flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
                   <span className="text-xs sm:text-sm font-bold font-sans tabular-nums text-zinc-900 dark:text-white">
-                    {formatProductPrice(p.price, p)}
+                    {formatProductPrice(pricing.price, p)}
                   </span>
-                  {isDiscounted && (
+                  {pricing.isDiscounted && pricing.originalPrice && (
                     <span className="text-[9px] sm:text-[10px] text-slate-400 line-through font-sans tabular-nums">
-                      {formatProductPrice(p.originalPrice, p)}
+                      {formatProductPrice(pricing.originalPrice, p)}
                     </span>
                   )}
                 </div>
@@ -650,7 +666,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         <meta property="og:url" content="https://gadgetsprohub.com/products" />
         <meta property="og:title" content="Explore Premium Tech & Electronics Specs | gadgetsprohub" />
         <meta property="og:description" content="Browse our extensive directory of trending smartphones, laptops, wearables, audio gear, and smarter gadgets. Find full specifications and tech specs reviews." />
-        <meta property="og:image" content="/favicon.png" />
+        <meta property="og:image" content="/og-banner.png" />
         <meta property="og:site_name" content="gadgetsprohub" />
 
         {/* Twitter */}
@@ -658,7 +674,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         <meta name="twitter:url" content="https://gadgetsprohub.com/products" />
         <meta name="twitter:title" content="Explore Premium Tech & Electronics | gadgetsprohub" />
         <meta name="twitter:description" content="Browse our extensive directory of trending smartphones, laptops, wearables, and tech gear at gadgetsprohub." />
-        <meta name="twitter:image" content="/favicon.png" />
+        <meta name="twitter:image" content="/og-banner.png" />
 
         <meta name="robots" content="index, follow" />
       </Helmet>
@@ -905,7 +921,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               <div className="space-y-8">
                 {/* FLAT GRID LAYOUT */}
                 <div className={viewStyle === 'grid' 
-                  ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" 
+                  ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6" 
                   : "space-y-4"
                 }>
                   {products.map((p: Product) => p ? renderProductCard(p) : null)}
@@ -1255,7 +1271,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     });
                     const targetUrl = getCleanAffiliateUrl(specModalProduct.affiliateLink, specModalProduct.asin, specModalProduct.affiliateCode);
                     if (targetUrl) {
-                      window.open(targetUrl, '_blank', 'noreferrer,noopener');
+                      window.open(targetUrl, '_blank', 'noopener');
                     }
                   }}
                   className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white py-3 text-xs font-bold transition-all duration-300 cursor-pointer shadow-md"

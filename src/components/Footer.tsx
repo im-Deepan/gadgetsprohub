@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Instagram, Linkedin, BadgeAlert, ShieldCheck, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Instagram, Linkedin, BadgeAlert, ShieldCheck, CheckCircle2, RefreshCw, Home, ShoppingBag, BookOpen, Phone, Smartphone, Headphones, Watch, Laptop, Tag } from 'lucide-react';
 import { NewsletterSubscribe } from './NewsletterSubscribe';
 import { apiFetch } from '../utils/apiClient';
 import { Category } from '../types';
@@ -56,7 +56,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
             <span className="font-semibold uppercase tracking-wider">Amazon Associate Disclosure</span>
           </div>
           <p className="text-[11px] text-slate-500 max-w-2xl text-center md:text-right leading-relaxed dark:text-slate-300">
-            <span className="font-bold text-slate-700 dark:text-white">As an Amazon Associate I earn from qualifying purchases.</span> gadgetsprohub is an independent product reviews platform providing objective spec indexing and curated shopping recommendations.
+            <span className="font-bold text-slate-700 dark:text-white">As an Amazon Associate I earn from qualifying purchases.</span> gadgetsprohub provides spec indexing and shopping recommendations.
           </p>
         </div>
       </div>
@@ -67,22 +67,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
           <div className="flex items-start gap-3">
             <ShieldCheck className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Verified Specs</h5>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Every technical specification and benchmark is cross-referenced directly with official manufacturer datasheets.</p>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Product Specifications</h5>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Technical details and features indexed for quick side-by-side comparison.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <RefreshCw className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Real-Time Price Sync</h5>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Automated scanners sync current prices, lightning deal drops, and stock availability directly from Amazon.</p>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Price & Deal Tracking</h5>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Track price history, current deals, and stock status directly from Amazon.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Honest Rankings</h5>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Products earn top rankings solely based on spec value, user satisfaction scores, and genuine pricing history.</p>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Clear Comparisons</h5>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Product highlights, pros, and cons organized to help you choose the right gear.</p>
             </div>
           </div>
         </div>
@@ -100,7 +100,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
             </div>
             
             <p className="text-xs text-slate-400 max-w-sm leading-relaxed dark:text-slate-300">
-              Honest critiques, comprehensive spec maps, and direct buying links for electronic accessories, trendy apparel, home designs, and trail workout gear. Discover premium products with real value.
+              Spec comparisons, features indexing, and direct buying links for smart gadgets, headphones, wearables, and tech accessories.
             </p>
 
             <div className="flex gap-3">
@@ -109,7 +109,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                 target="_blank" 
                 rel="noopener noreferrer" 
                 onClick={() => trackSocialClick('instagram')}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-500 hover:text-white dark:bg-slate-800 transition-colors duration-300 cursor-pointer"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-500 hover:text-white dark:bg-slate-800 transition-colors duration-300 cursor-pointer"
                 title="Follow us on Instagram"
                 aria-label="Follow us on Instagram"
               >
@@ -120,7 +120,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
                 target="_blank" 
                 rel="noopener noreferrer" 
                 onClick={() => trackSocialClick('linkedin')}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-500 hover:text-white dark:bg-slate-800 transition-colors duration-300 cursor-pointer"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-500 hover:text-white dark:bg-slate-800 transition-colors duration-300 cursor-pointer"
                 title="Connect with us on LinkedIn"
                 aria-label="Connect with us on LinkedIn"
               >
@@ -132,27 +132,27 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
           {/* Quick NavLinks */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-900 dark:text-white mb-4">
-              Explore Portal
+              Navigation
             </h4>
-            <ul className="space-y-2.5 text-xs">
+            <ul className="space-y-1 text-xs">
               <li>
-                <button onClick={() => onNavigate('home')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
-                  <span>🏠</span> Home Hub
+                <button onClick={() => onNavigate('home')} className="min-h-[44px] hover:text-indigo-500 cursor-pointer flex items-center gap-2 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 w-full">
+                  <Home className="h-4 w-4 text-slate-400 shrink-0" /> Home
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
-                  <span>🛒</span> Product Selections
+                <button onClick={() => onNavigate('products')} className="min-h-[44px] hover:text-indigo-500 cursor-pointer flex items-center gap-2 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 w-full">
+                  <ShoppingBag className="h-4 w-4 text-slate-400 shrink-0" /> Products
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('blogs')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
-                  <span>✍️</span> Blog Feed
+                <button onClick={() => onNavigate('blogs')} className="min-h-[44px] hover:text-indigo-500 cursor-pointer flex items-center gap-2 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 w-full">
+                  <BookOpen className="h-4 w-4 text-slate-400 shrink-0" /> Blog
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('contact')} className="hover:text-indigo-500 cursor-pointer flex items-center gap-1.5 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300">
-                  <span>📞</span> Contact Desk
+                <button onClick={() => onNavigate('contact')} className="min-h-[44px] hover:text-indigo-500 cursor-pointer flex items-center gap-2 font-medium transition-colors duration-300 text-left bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 w-full">
+                  <Phone className="h-4 w-4 text-slate-400 shrink-0" /> Contact
                 </button>
               </li>
             </ul>
@@ -161,40 +161,35 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
           {/* Categories select */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-900 dark:text-white mb-4">
-              {categories.length > 0 ? "Product Categories" : "Featured Categories"}
+              Categories
             </h4>
-            <ul className="space-y-2.5 text-xs">
+            <ul className="space-y-1 text-xs">
               {categories.length > 0 ? (
                 categories.map(cat => (
                   <li key={cat._id}>
                     <button 
                       onClick={() => onNavigate('products', `category-${cat._id}`)} 
-                      className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5"
+                      className="min-h-[44px] hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-2 w-full"
                     >
-                      <span>{cat.icon || '📦'}</span> {cat.name}
+                      <Tag className="h-4 w-4 text-slate-400 shrink-0" /> {cat.name}
                     </button>
                   </li>
                 ))
               ) : (
                 <>
                   <li>
-                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
-                      <span>📱</span> Electronics
+                    <button onClick={() => onNavigate('products')} className="min-h-[44px] hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-2 w-full">
+                      <Smartphone className="h-4 w-4 text-slate-400 shrink-0" /> Electronics
                     </button>
                   </li>
                   <li>
-                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
-                      <span>👔</span> Fashion Wear
+                    <button onClick={() => onNavigate('products')} className="min-h-[44px] hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-2 w-full">
+                      <Headphones className="h-4 w-4 text-slate-400 shrink-0" /> Audio Gear
                     </button>
                   </li>
                   <li>
-                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
-                      <span>🏡</span> Home & Kitchen
-                    </button>
-                  </li>
-                  <li>
-                    <button onClick={() => onNavigate('products')} className="hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-1.5">
-                      <span>⚽</span> Athletics Gear
+                    <button onClick={() => onNavigate('products')} className="min-h-[44px] hover:text-indigo-500 cursor-pointer transition-colors duration-300 text-left font-medium bg-transparent border-none p-0 text-slate-500 dark:text-slate-300 hover:dark:text-indigo-300 flex items-center gap-2 w-full">
+                      <Watch className="h-4 w-4 text-slate-400 shrink-0" /> Wearables
                     </button>
                   </li>
                 </>
@@ -208,7 +203,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
               Weekly Deals Feed
             </h4>
             <p className="text-[11px] text-slate-400 mb-3 leading-relaxed dark:text-slate-300">
-              Get honest product comparisons and buying guides directly in your inbox. Zero clutter.
+              Get product comparisons and buying guides directly in your inbox.
             </p>
 
             <NewsletterSubscribe variant="minimal" />
@@ -219,16 +214,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
         <hr className="my-8 border-slate-100 dark:border-slate-700" />
 
         {/* Bottom copyright */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-300">
-          <p>© 2026 gadgetsprohub Review Platform. All rights reserved.</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center sm:justify-start">
-            <button onClick={() => onNavigate('about-us')} className="hover:text-slate-500 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">About Us</button>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
+          <p>© 2026 gadgetsprohub. All rights reserved.</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 items-center justify-center sm:justify-start">
+            <button onClick={() => onNavigate('about-us')} className="min-h-[44px] flex items-center hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">About Us</button>
             <span>•</span>
-            <button onClick={() => onNavigate('privacy-policy')} className="hover:text-slate-500 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Privacy Statement</button>
+            <button onClick={() => onNavigate('privacy-policy')} className="min-h-[44px] flex items-center hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Privacy Policy</button>
             <span>•</span>
-            <button onClick={() => onNavigate('terms-conditions')} className="hover:text-slate-500 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Terms & Conditions</button>
+            <button onClick={() => onNavigate('terms-conditions')} className="min-h-[44px] flex items-center hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Terms & Conditions</button>
             <span>•</span>
-            <button onClick={() => onNavigate('disclaimer')} className="hover:text-slate-500 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Commission Disclosure</button>
+            <button onClick={() => onNavigate('disclaimer')} className="min-h-[44px] flex items-center hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Disclosure</button>
           </div>
         </div>
       </div>

@@ -322,10 +322,9 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         <div className="text-center space-y-1.5 flex flex-col items-center">
           <div className="text-[11px] font-extrabold uppercase tracking-widest text-slate-300 flex items-center gap-1.5">
             <span className="text-zinc-900 dark:text-white font-display font-black">GADGETSPROHUB</span>
-            <span className="text-slate-300 dark:text-slate-400 font-bold">MEMBER PORTAL</span>
           </div>
           <h1 className="text-lg font-black text-slate-800 dark:text-white">
-            {activeTab === 'login' ? 'Sign In to Your Account' : 'Create New Account'}
+            {activeTab === 'login' ? 'Sign in to your account' : 'Create an account'}
           </h1>
         </div>
 
@@ -335,13 +334,13 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
             onClick={() => { setActiveTab('login'); setAuthError(''); setRegisteredEmail(''); setSimulatedVerificationUrl(''); setSmtpError(''); }}
             className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'login' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-400'}`}
           >
-            Access Sign In
+            Sign In
           </button>
           <button
             onClick={() => { setActiveTab('register'); setAuthError(''); setRegisteredEmail(''); setSimulatedVerificationUrl(''); setSmtpError(''); }}
             className={`flex-1 py-2 text-center text-xs font-bold rounded-lg cursor-pointer transition-colors duration-300 ${activeTab === 'register' ? 'bg-white shadow-xs text-indigo-500 dark:bg-slate-700' : 'text-slate-400'}`}
           >
-            Register Account
+            Register
           </button>
         </div>
 
@@ -544,7 +543,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
               </div>
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Secure Password</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Password</label>
                   {activeTab === 'login' && (
                     <button type="button" onClick={() => setIsForgotPassword(true)} className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline">
                       Forgot password?
@@ -640,8 +639,8 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
 
         {/* Registration Note */}
         <div className="text-center">
-          <p className="text-[10px] text-slate-300 dark:text-slate-400 uppercase tracking-widest font-bold">
-            Secure Member Authentication
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+            Protected by SSL encryption
           </p>
         </div>
 

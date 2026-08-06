@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
 import { AppView } from '../App';
 import { ArrowRight, ShoppingBag, TrendingUp, Sparkles, X, History, Trash2, Cpu, Smartphone, Headphones, Laptop, Watch, Gamepad, Search } from 'lucide-react';
-import { getShortProductTitle, formatINRPrice } from '../utils/productUtils';
+import { getShortProductTitle, formatINRPrice, getValidatedPricing } from '../utils/productUtils';
 import type { Product, Category } from '../types';
 
 interface HomeProps {
@@ -77,6 +77,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
   });
 
   const renderProductCard = (p: Product) => {
+    const pricing = getValidatedPricing(p);
     return (
       <a
         key={p._id}
@@ -92,9 +93,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         <BorderGlow className="h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col hover:-translate-y-1 transition-transform" borderRadius={12}>
           <div className="relative aspect-square p-3 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
             <img loading="lazy" src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400'} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
-            {p.discount && p.discount > 0 ? (
+            {pricing.isDiscounted ? (
               <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white font-sans font-semibold text-[11px] tracking-wide uppercase px-2 py-0.5 rounded shadow-xs">
-                -{p.discount}%
+                -{pricing.discount}%
               </div>
             ) : null}
           </div>
@@ -103,9 +104,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white line-clamp-2 mb-3 leading-snug">{getShortProductTitle(p.name, p.brand)}</h3>
             <div className="mt-auto flex items-end justify-between flex-wrap gap-2">
               <div className="flex flex-col">
-                <div className="text-base sm:text-lg font-sans font-bold tabular-nums text-zinc-900 dark:text-white">{formatINRPrice(p.price)}</div>
-                {p.originalPrice && p.originalPrice > p.price && (
-                  <div className="text-[11px] font-sans text-slate-400 line-through tabular-nums">{formatINRPrice(p.originalPrice)}</div>
+                <div className="text-base sm:text-lg font-sans font-bold tabular-nums text-zinc-900 dark:text-white">{formatINRPrice(pricing.price)}</div>
+                {pricing.isDiscounted && pricing.originalPrice && (
+                  <div className="text-[11px] font-sans text-slate-400 line-through tabular-nums">{formatINRPrice(pricing.originalPrice)}</div>
                 )}
               </div>
               {p.rating && p.rating > 0 ? (
@@ -123,8 +124,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
 
   return (
     <div className="w-full flex flex-col bg-slate-50 dark:bg-black font-sans min-h-screen">
-      {/* 1. HERO SECTION (Capped Sizing & Centered) */}
-      <section className="relative w-full max-h-[52vh] md:max-h-[620px] md:min-h-[420px] flex items-center justify-center py-8 md:py-12 px-4 overflow-hidden border-b border-slate-100 dark:border-slate-800">
+      {/* 1. HERO SECTION (Compact Sizing & Centered) */}
+      <section className="relative w-full py-6 md:py-8 px-4 overflow-hidden border-b border-slate-100 dark:border-slate-800">
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-slate-50 dark:from-indigo-950/20 dark:to-black z-0 pointer-events-none" />
         
         <div className="relative z-10 w-full max-w-4xl mx-auto flex flex-col items-center text-center">
@@ -132,7 +133,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-2xl sm:text-3xl md:text-5xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mb-4"
+            className="text-xl sm:text-2xl md:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mb-3"
           >
             Find the right gadget. <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
