@@ -709,59 +709,58 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         <meta name="robots" content="index, follow" />
 
         {/* Structured Data: Product & BreadcrumbList JSON-LD */}
-        {product && (
-          <script type="application/ld+json">
-            {JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Product",
-              "name": product.name,
-              "image": product.images || [],
-              "description": product.description || product.longDescription,
-              "sku": product.sku || product.asin,
-              "brand": {
-                "@type": "Brand",
-                "name": product.brand || "Generic"
-              },
-              "offers": {
-                "@type": "Offer",
-                "url": dynamicUrl,
-                "priceCurrency": product.currency || product.currencyCode || "INR",
-                "price": product.price,
-                "availability": product.inStock !== false ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-              },
-              ...(product.rating && product.rating > 0 ? {
-                "aggregateRating": {
-                  "@type": "AggregateRating",
-                  "ratingValue": product.rating,
-                  "reviewCount": product.totalReviews || product.reviews?.length || 1
-                }
-              } : {})
-            })}
-          </script>
-        )}
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            "itemListElement": [
-              {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "Home",
-                "item": dynamicOrigin
-              },
-              {
-                "@type": "ListItem",
-                "position": 2,
-                "name": "Products",
-                "item": `${dynamicOrigin}/products`
-              },
+            "@graph": [
               ...(product ? [{
-                "@type": "ListItem",
-                "position": 3,
+                "@type": "Product",
                 "name": product.name,
-                "item": dynamicUrl
-              }] : [])
+                "image": product.images || [],
+                "description": product.description || product.longDescription,
+                "sku": product.sku || product.asin,
+                "brand": {
+                  "@type": "Brand",
+                  "name": product.brand || "Generic"
+                },
+                "offers": {
+                  "@type": "Offer",
+                  "url": dynamicUrl,
+                  "priceCurrency": product.currency || product.currencyCode || "INR",
+                  "price": product.price,
+                  "availability": product.inStock !== false ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                },
+                ...(product.rating && product.rating > 0 ? {
+                  "aggregateRating": {
+                    "@type": "AggregateRating",
+                    "ratingValue": product.rating,
+                    "reviewCount": product.totalReviews || product.reviews?.length || 1
+                  }
+                } : {})
+              }] : []),
+              {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                  {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Home",
+                    "item": dynamicOrigin
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Products",
+                    "item": `${dynamicOrigin}/products`
+                  },
+                  ...(product ? [{
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": product.name,
+                    "item": dynamicUrl
+                  }] : [])
+                ]
+              }
             ]
           })}
         </script>

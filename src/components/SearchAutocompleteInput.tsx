@@ -16,7 +16,7 @@ import {
 interface SearchAutocompleteInputProps {
   value?: string;
   onChange?: (value: string) => void;
-  onNavigate: (view: string, slug?: string) => void;
+  onNavigate: (view: any, slug?: string) => void;
   placeholder?: string;
   className?: string;
   inputClassName?: string;
@@ -232,7 +232,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
       externalOnChange(query);
     }
     setIsOpen(false);
-    onNavigate('products', `search-${query}`);
+    onNavigate('search', query);
   };
 
   const handleSelectProduct = (product: Product) => {
@@ -277,7 +277,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
     if (trimmedQuery.length > 0) {
       addRecentSearch(trimmedQuery);
       setIsOpen(false);
-      onNavigate('products', `search-${trimmedQuery}`);
+      onNavigate('search', trimmedQuery);
     }
   };
 
@@ -325,7 +325,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
-      <form onSubmit={handleFormSubmit} className="relative w-full">
+      <form name="header-search-form" onSubmit={handleFormSubmit} className="relative w-full">
         <div className="relative flex items-center w-full">
           <Search className={`absolute left-3.5 h-4 w-4 pointer-events-none text-slate-400 transition-colors duration-300 ${isOpen ? 'text-indigo-500 dark:text-indigo-400' : ''}`} />
           
@@ -337,6 +337,7 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
             onKeyDown={handleKeyDown}
             onFocus={() => setIsOpen(true)}
             placeholder={placeholder}
+            aria-label={placeholder || "Search catalog"}
             autoFocus={autoFocus}
             className={inputClassName || (variant === 'hero' 
               ? `w-full rounded-2xl border border-slate-200/90 bg-white/95 py-3.5 pl-11 pr-11 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-sm transition-all duration-300 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/15 dark:border-slate-700/90 dark:bg-slate-800/95 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-indigo-400 dark:focus:bg-slate-900`

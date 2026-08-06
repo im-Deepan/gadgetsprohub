@@ -1,6 +1,5 @@
 import React from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 
 interface TabErrorProps {
   message: string;
@@ -9,9 +8,6 @@ interface TabErrorProps {
 }
 
 export const TabErrorView: React.FC<TabErrorProps> = ({ message, title, onRetry }) => {
-  const { isAdmin } = useAuth();
-  if (!isAdmin) return null;
-
   return (
     <div className="border border-rose-50 dark:border-rose-950/60 bg-rose-50/10 dark:bg-rose-950/10 p-8 rounded-2xl text-center space-y-4 my-4 max-w-2xl mx-auto">
       <AlertTriangle className="h-8 w-8 text-rose-400 mx-auto animate-bounce shrink-0" />

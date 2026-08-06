@@ -16,10 +16,10 @@ export const safeSetItem = (key: string, value: string): boolean => {
         return true;
       } catch (innerE) {
         try {
-          // If still failing, keep only auth token, preferred city, etc.
+          // If still failing, keep essential preference keys
           const keys = Object.keys(localStorage);
           for (const k of keys) {
-            if (k !== 'aff_preferred_city' && k !== key) {
+            if (k !== 'aff_preferred_city' && k !== 'aff_theme_pref' && k !== key) {
               localStorage.removeItem(k);
             }
           }

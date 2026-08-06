@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -9,7 +8,7 @@ interface ConfirmDialogProps {
   isDestructive: boolean;
   cancelText: string;
   confirmText: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -23,7 +22,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm, 
   onCancel 
 }) => {
-  const { isAdmin } = useAuth();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -34,7 +32,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, onCancel]);
 
-  if (!isOpen || !isAdmin) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
@@ -63,11 +61,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               if (onConfirm) {
                 try {
                   await Promise.resolve(onConfirm());
+                  onCancel(); // Only close if successful
                 } catch (e) {
                   console.error('[ConfirmDialog Error]', e);
                 }
+              } else {
+                onCancel();
               }
-              onCancel();
             }}
             className={`rounded-lg py-2 px-3.5 text-xs font-bold text-white transition-all duration-300 shadow-sm active:scale-95 cursor-pointer ${
               isDestructive 

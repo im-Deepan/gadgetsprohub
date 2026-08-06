@@ -320,12 +320,12 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         
         {/* Visual Brand Greeting */}
         <div className="text-center space-y-1.5 flex flex-col items-center">
-          <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-300 flex items-center gap-1.5">
+          <div className="text-[11px] font-extrabold uppercase tracking-widest text-slate-300 flex items-center gap-1.5">
             <span className="text-zinc-900 dark:text-white font-display font-black">GADGETSPROHUB</span>
             <span className="text-slate-300 dark:text-slate-400 font-bold">MEMBER PORTAL</span>
-          </h2>
+          </div>
           <h1 className="text-lg font-black text-slate-800 dark:text-white">
-            {activeTab === 'login' ? 'Welcome Back, Explorer' : 'Create New Account'}
+            {activeTab === 'login' ? 'Sign In to Your Account' : 'Create New Account'}
           </h1>
         </div>
 
@@ -461,6 +461,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                       className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-400 dark:hover:text-slate-200 transition-colors"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -563,6 +564,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 focus:outline-none cursor-pointer transition-colors duration-300"
                     title={showPassword ? "Hide password" : "Show password"}
                   >

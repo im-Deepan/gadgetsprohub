@@ -5,6 +5,7 @@ export interface ViewMetadata {
   ogType?: string;
   ogUrl?: string;
   ogImage?: string;
+  noindex?: boolean;
 }
 
 /**
@@ -44,21 +45,24 @@ export const DEFAULT_VIEW_METADATA: Record<string, ViewMetadata> = {
     description: 'Sign in to your account to save your favorite products, manage price alerts, and sync your preferences across devices.',
     keywords: 'sign in, log in, account login, secure sign in',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/favicon.png',
+    noindex: true
   },
   profile: {
     title: 'Your Account | GadgetsProHub',
     description: 'Manage your saved products, account profile settings, and location preferences.',
     keywords: 'user profile, my account, settings, saved products',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/favicon.png',
+    noindex: true
   },
   admin: {
     title: 'Admin Dashboard | GadgetsProHub',
     description: 'Manage catalog products, user reviews, and site settings.',
     keywords: 'admin panel, management console, catalog management',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/favicon.png',
+    noindex: true
   },
   'privacy-policy': {
     title: 'Privacy Policy | GadgetsProHub',
@@ -93,7 +97,8 @@ export const DEFAULT_VIEW_METADATA: Record<string, ViewMetadata> = {
     description: 'The page you requested could not be found. Search our catalog or return to the homepage.',
     keywords: '404, page not found, GadgetsProHub',
     ogType: 'website',
-    ogImage: '/favicon.png'
+    ogImage: '/favicon.png',
+    noindex: true
   }
 };
 
@@ -130,6 +135,12 @@ export function updateDocumentMetadata(meta: ViewMetadata): void {
   setMetaTag('meta[name="description"]', 'name', 'description', meta.description);
   setMetaTag('meta[name="keywords"]', 'name', 'keywords', meta.keywords);
 
+  if (meta.noindex) {
+    setMetaTag('meta[name="robots"]', 'name', 'robots', 'noindex, nofollow');
+  } else {
+    setMetaTag('meta[name="robots"]', 'name', 'robots', 'index, follow');
+  }
+
   // Open Graph / Facebook Meta Tags
   setMetaTag('meta[property="og:title"]', 'property', 'og:title', meta.title);
   setMetaTag('meta[property="og:description"]', 'property', 'og:description', meta.description);
@@ -142,6 +153,9 @@ export function updateDocumentMetadata(meta: ViewMetadata): void {
   }
 
   if (meta.ogImage) {
-    setMetaTag('meta[property="og:image"]', 'property', 'og:image', meta.ogImage);
+    const absoluteOgImage = meta.ogImage.startsWith('http://') || meta.ogImage.startsWith('https://')
+      ? meta.ogImage
+      : `${window.location.origin}${meta.ogImage.startsWith('/') ? '' : '/'}${meta.ogImage}`;
+    setMetaTag('meta[property="og:image"]', 'property', 'og:image', absoluteOgImage);
   }
 }

@@ -27,90 +27,26 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     : (context && typeof context === 'object' && 'context' in context ? String(context.context) : '');
   const normalizedContext = contextStr.toLowerCase();
 
-  // Suppress expected/normal request cancellation, abort error, and third-party iframe sandbox noise
+  // Suppress only expected request aborts, empty/blank errors, and third-party extension/ad script noise
   if (
     normalizedName === 'aborterror' ||
     normalizedName === 'abort' ||
     normalizedName === 'cancelederror' ||
     normalizedMessage === 'canceled' ||
-    normalizedMessage === 'undefined' ||
-    normalizedMessage === 'null' ||
-    normalizedMessage === 'error' ||
-    normalizedMessage === '[object promise]' ||
-    normalizedMessage === '[object object]' ||
-    normalizedMessage.includes('abort') ||
-    normalizedMessage.includes('canceled') ||
-    normalizedMessage.includes('cancelled') ||
     normalizedMessage.includes('aborted') ||
-    normalizedMessage === 'query was cancelled by user' ||
-    normalizedMessage.includes('failed to fetch') ||
-    normalizedMessage.includes('networkerror') ||
-    normalizedMessage.includes('network error') ||
-    normalizedMessage.includes('load failed') ||
-    normalizedMessage.includes('connection lost') ||
-    normalizedMessage.includes('connection closed') ||
-    normalizedMessage.includes('connection reset') ||
-    normalizedMessage.includes('timed out') ||
-    normalizedMessage.includes('timeout') ||
-    normalizedMessage.includes('offline mode') ||
-    normalizedMessage.includes('extension') ||
     normalizedMessage.includes('chrome-extension') ||
     normalizedMessage.includes('safari-extension') ||
     normalizedMessage.includes('moz-extension') ||
     normalizedMessage.includes('content-script') ||
-    normalizedMessage.includes('inject') ||
-    normalizedMessage.includes('clipboard') ||
-    normalizedMessage.includes('writetext') ||
-    normalizedMessage.includes('share') ||
-    normalizedMessage.includes('permission') ||
-    normalizedMessage.includes('sandbox') ||
-    normalizedMessage.includes('cross-origin') ||
     message === '' ||
     message === 'Error' ||
     message === '[object Object]' ||
-    // Suppress unhandled promise rejection with empty/generic error
-    (normalizedContext === 'unhandled promise rejection' && (
-      !message || 
-      message === 'Error' || 
-      message === '[object Object]' || 
-      normalizedMessage === '' || 
-      normalizedMessage === 'error' ||
-      normalizedName === 'error' ||
-      normalizedName === ''
-    )) ||
-    // Third-party AdSense / Doubleclick / Google adtrafficquality sandbox noise
+    (normalizedContext === 'unhandled promise rejection' && (!message || message === 'Error' || message === '[object Object]')) ||
     normalizedMessage.includes('adsbygoogle') ||
-    normalizedMessage.includes('adsense') ||
-    normalizedMessage.includes('google adsense') ||
-    normalizedMessage.includes('failed to load google adsense script') ||
-    normalizedMessage.includes('script error') ||
-    normalizedMessage.includes('failed to load') ||
-    normalizedMessage.includes('script load') ||
     normalizedMessage.includes('googlesyndication') ||
-    normalizedMessage.includes('doubleclick') ||
-    normalizedMessage.includes('adtrafficquality') ||
-    normalizedMessage.includes('pagead') ||
-    normalizedMessage.includes('google-analytics') ||
-    normalizedMessage.includes('postmessage') ||
-    normalizedMessage.includes('cross-origin') ||
-    normalizedMessage.includes('window.closed') ||
-    normalizedMessage.includes('coop') ||
-    normalizedStack.includes('adsbygoogle') ||
-    normalizedStack.includes('adsense') ||
-    normalizedStack.includes('googlesyndication') ||
-    normalizedStack.includes('doubleclick') ||
-    normalizedStack.includes('adtrafficquality') ||
-    normalizedStack.includes('pagead') ||
-    normalizedStack.includes('google-analytics') ||
-    normalizedStack.includes('postmessage') ||
-    normalizedStack.includes('cross-origin') ||
-    normalizedStack.includes('extension') ||
     normalizedStack.includes('chrome-extension') ||
-    normalizedStack.includes('safari-extension') ||
     normalizedStack.includes('moz-extension') ||
-    normalizedStack.includes('webkit-masked-url') ||
-    normalizedStack.includes('content-script') ||
-    normalizedStack.includes('inject')
+    normalizedStack.includes('safari-extension')
   ) {
     return;
   }

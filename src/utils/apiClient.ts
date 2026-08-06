@@ -59,6 +59,9 @@ export async function diagnosticCheckProducts(): Promise<{
 let memoryToken: string | null = null;
 
 export function setGlobalAuthToken(token: string | null) {
+  if (memoryToken !== token) {
+    clearApiCache();
+  }
   memoryToken = token;
 }
 
@@ -66,10 +69,23 @@ export function setGlobalAuthToken(token: string | null) {
  * Generates a unique deterministic key for a request to identify duplicates
  */
 function getRequestKey(url: string, options: ApiFetchOptions = {}): string {
-  const method = options.method || 'GET';
+  const method = (options.method || 'GET').toUpperCase();
   const body = typeof options.body === 'string' ? options.body : '';
-  const headers = options.headers ? JSON.stringify(options.headers) : '';
-  return `${method}:${url}:${body}:${headers}`;
+  let headersStr = '';
+  if (options.headers) {
+    if (options.headers instanceof Headers) {
+      headersStr = JSON.stringify(Array.from(options.headers.entries()).sort(([a], [b]) => a.localeCompare(b)));
+    } else if (Array.isArray(options.headers)) {
+      headersStr = JSON.stringify([...options.headers].sort(([a], [b]) => a[0].localeCompare(b[0])));
+    } else if (typeof options.headers === 'object') {
+      const sortedObj: Record<string, string> = {};
+      Object.keys(options.headers).sort().forEach(k => {
+        sortedObj[k] = (options.headers as Record<string, string>)[k];
+      });
+      headersStr = JSON.stringify(sortedObj);
+    }
+  }
+  return `${method}:${url}:${body}:${headersStr}`;
 }
 
 /**
@@ -85,7 +101,7 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
     ...fetchOptions
   } = options;
 
-  // Copy and handle headers to inject Authorization Bearer token from localStorage if available
+  // Copy and handle headers to inject Authorization Bearer token from memoryToken if available
   const originalHeaders = fetchOptions.headers;
   let headersObj: any;
   if (originalHeaders instanceof Headers) {

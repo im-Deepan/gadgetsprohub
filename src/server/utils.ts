@@ -33,6 +33,10 @@ export const isAdminEmail = (email: string | undefined): boolean => {
     .map(e => e.toLowerCase().trim())
     .filter(Boolean);
     
+  if (envAdmins.length === 0) {
+    return false;
+  }
+
   return envAdmins.includes(normalized);
 };
 

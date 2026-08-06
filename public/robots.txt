@@ -1,4 +1,9 @@
 User-agent: *
+Disallow: /admin
+Disallow: /admin/
+Disallow: /login
+Disallow: /profile
+Disallow: /search
 Allow: /
 Allow: /og-banner.png
 Allow: /favicon.png

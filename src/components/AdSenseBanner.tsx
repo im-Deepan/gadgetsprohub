@@ -89,9 +89,21 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
 
     try {
       if (typeof window !== 'undefined') {
-        // Ensure AdSense script tag is present in document head
-        const existingScript = document.querySelector(`script[src*="pagead2.googlesyndication.com"]`);
-        if (!existingScript) {
+        // Ensure AdSense script tag is present in document head with correct publisherId
+        const existingScript = document.querySelector<HTMLScriptElement>(`script[src*="pagead2.googlesyndication.com"]`);
+        if (existingScript) {
+          if (publisherId && !existingScript.src.includes(`client=${publisherId}`)) {
+            existingScript.remove();
+            const script = document.createElement('script');
+            script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}`;
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            script.onerror = () => {
+              if (!isUnmounted) setIsUnfilled(true);
+            };
+            document.head.appendChild(script);
+          }
+        } else {
           const script = document.createElement('script');
           script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}`;
           script.async = true;

@@ -10,10 +10,7 @@ export const CONFIG = {
   
   // Storage Keys
   STORAGE_KEYS: {
-    AUTH_TOKEN: "authToken",
-    ADMIN_EMAIL: "adminEmail",
     LAST_IMPORTED_ASIN: "lastImportedAsin",
-    CUSTOM_API_URL: "customApiUrl",
   },
 
   // Extension default settings

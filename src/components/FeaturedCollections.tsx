@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Sparkles, Flame, Laptop, Smartphone, Headphones, Watch, ArrowRight, Grid, Plus } from 'lucide-react';
 import { Product, Category } from '../types';
 import { getCategoryId } from '../utils/category';
+import { formatProductPrice } from '../utils/productUtils';
 
 interface FeaturedCollectionsProps {
   onNavigate: (view: string, id?: string) => void;
@@ -370,11 +371,11 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
             </span>
           )}
           <span className="text-xs font-black text-slate-800 dark:text-white">
-            ₹{currentProduct.price}
+            {formatProductPrice(currentProduct.price)}
           </span>
           {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
             <span className="text-[10px] text-slate-300 line-through dark:text-slate-500 font-medium">
-              ₹{currentProduct.originalPrice}
+              {formatProductPrice(currentProduct.originalPrice)}
             </span>
           )}
         </div>
@@ -615,11 +616,11 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
             </span>
             <div className="flex items-baseline gap-1">
               <span className="text-sm font-black text-slate-800 dark:text-white">
-                ₹{currentProduct.price}
+                {formatProductPrice(currentProduct.price)}
               </span>
               {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
                 <span className="text-[10px] text-slate-300 line-through dark:text-slate-500">
-                  ₹{currentProduct.originalPrice}
+                  {formatProductPrice(currentProduct.originalPrice)}
                 </span>
               )}
             </div>

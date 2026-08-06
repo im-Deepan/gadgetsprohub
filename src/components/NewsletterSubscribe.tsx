@@ -75,11 +75,12 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
   if (variant === 'minimal') {
     return (
       <div id="newsletter-form-minimal" className={`w-full ${className}`}>
-        <form onSubmit={handleSubscribe} className="relative mt-2 flex items-center gap-2">
+        <form name="footer-newsletter-form" onSubmit={handleSubscribe} className="relative mt-2 flex items-center gap-2">
           <div className="relative flex-grow">
             <input
               type="email"
               placeholder="Enter your email"
+              aria-label="Email address for newsletter"
               value={email}
               disabled={loading || subscribed}
               onChange={(e) => {
@@ -159,11 +160,12 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
             </div>
 
             <div className="w-full md:max-w-xs shrink-0">
-              <form onSubmit={handleSubscribe} className="space-y-3">
+              <form name="inline-newsletter-form" onSubmit={handleSubscribe} className="space-y-3">
                 <div className="relative">
                   <input
                     type="email"
                     placeholder="name@email.com"
+                    aria-label="Email address for newsletter"
                     value={email}
                     disabled={loading}
                     onChange={(e) => {

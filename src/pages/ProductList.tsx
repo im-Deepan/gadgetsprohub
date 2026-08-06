@@ -620,6 +620,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             value={minPrice}
             onChange={(e) => { setMinPrice(e.target.value); setCurrentPage(1); }}
             placeholder="Min"
+            aria-label="Minimum price in INR"
             className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2 text-center text-slate-800 outline-none focus:border-zinc-700 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
           />
           <span className="text-slate-300">-</span>
@@ -628,6 +629,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             value={maxPrice}
             onChange={(e) => { setMaxPrice(e.target.value); setCurrentPage(1); }}
             placeholder="Max"
+            aria-label="Maximum price in INR"
             className="w-full text-xs rounded-lg border border-slate-200 bg-white p-2 text-center text-slate-800 outline-none focus:border-zinc-700 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
           />
         </div>
@@ -900,9 +902,8 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 </button>
               </div>
             ) : (
-              
-              /* FLAT GRID LAYOUT (P7: Drop per-category section grouping for clean catalog) */
               <div className="space-y-8">
+                {/* FLAT GRID LAYOUT */}
                 <div className={viewStyle === 'grid' 
                   ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" 
                   : "space-y-4"

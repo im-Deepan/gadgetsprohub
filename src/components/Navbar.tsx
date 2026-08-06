@@ -269,9 +269,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 w-full animate-fade-in">
+    <header className="sticky top-0 z-50 w-full animate-fade-in">
       {/* Scrollable translated header panel */}
-      <div 
+      <nav 
+        aria-label="Main navigation"
         className={`w-full border-b border-slate-100/50 bg-white/80 dark:border-slate-700/50 dark:bg-black/85 backdrop-blur-xl shadow-xs transition-transform duration-300 ease-in-out transform ${
           isVisible ? 'translate-y-0' : '-translate-y-full'
         }`}
@@ -520,7 +521,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
           </div>
         </div>
       </div>
-    </div>
+    </nav>
 
       {/* Mobile Drawer Navigation overlay (rendered independently of sliding header panel) */}
       <AnimatePresence>
@@ -771,6 +772,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
           </div>
         )}
       </AnimatePresence>
-    </nav>
+    </header>
   );
 };

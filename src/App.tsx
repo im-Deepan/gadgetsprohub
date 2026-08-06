@@ -63,6 +63,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 export const ALLOWED_VIEWS = [
   'home',
   'products',
+  'search',
   'product-detail',
   'blogs',
   'blog',
@@ -153,6 +154,7 @@ const dynamicLoadWithPreload = <T extends React.ComponentType<any>>(factory: () 
 // Code-Split Dynamic Page Imports
 const Home = dynamicLoadWithPreload(() => import('./pages/Home').then(m => ({ default: m.Home })));
 const ProductList = dynamicLoadWithPreload(() => import('./pages/ProductList').then(m => ({ default: m.ProductList })));
+const SearchPage = dynamicLoadWithPreload(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })));
 const ProductDetail = dynamicLoadWithPreload(() => import('./pages/ProductDetail').then(m => ({ default: m.ProductDetail })));
 const BlogList = dynamicLoadWithPreload(() => import('./pages/Blog').then(m => ({ default: m.BlogList })));
 const BlogDetail = dynamicLoadWithPreload(() => import('./pages/BlogDetail').then(m => ({ default: m.BlogDetail })));
@@ -319,7 +321,7 @@ const AppContent: React.FC = () => {
         if (!response.ok) {
           await response.json().catch(() => ({}));
           
-          showToast("Reconnecting to the primary data system. Working securely with local cache.", "warning", 5000, "Connectivity");
+          showToast("Server health check returned a warning status. Attempting to reconnect...", "warning", 5000, "Connectivity");
         } else {
           
         }
@@ -327,7 +329,7 @@ const AppContent: React.FC = () => {
         const errorObj = err as { name?: string };
         if (errorObj.name !== 'AbortError') {
           
-          showToast("Synchronized successfully in offline mode. Accessing local catalog backups.", "info", 4000, "Connectivity");
+          showToast("Unable to reach primary server. Please check your network connection.", "warning", 4000, "Connectivity");
         }
       }
     };
@@ -373,14 +375,16 @@ const AppContent: React.FC = () => {
       adsenseScriptLoaded = true;
 
       try {
-        const publisherId = import.meta.env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-1234567890123456';
-        const existingScript = document.querySelector(`script[src*="pagead2.googlesyndication.com"]`);
-        if (!existingScript) {
-          const script = document.createElement('script');
-          script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}`;
-          script.async = true;
-          script.crossOrigin = 'anonymous';
-          document.head.appendChild(script);
+        const publisherId = import.meta.env.VITE_ADSENSE_CLIENT_ID;
+        if (publisherId && publisherId !== 'ca-pub-1234567890123456') {
+          const existingScript = document.querySelector(`script[src*="pagead2.googlesyndication.com"]`);
+          if (!existingScript) {
+            const script = document.createElement('script');
+            script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}`;
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            document.head.appendChild(script);
+          }
         }
       } catch (err) {
         captureError(err, { context: 'Failed to load Google AdSense script' });
@@ -744,6 +748,13 @@ const AppContent: React.FC = () => {
           </Suspense>
         );
         break;
+      case 'search':
+        content = (
+          <Suspense fallback={<ProductPageSkeleton />}>
+            <SearchPage onNavigate={navigateToView} onPreload={preloadView} />
+          </Suspense>
+        );
+        break;
       case 'product-detail':
         content = (
           <Suspense fallback={<ProductPageSkeleton />}>
@@ -802,6 +813,12 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col text-slate-700 dark:text-slate-50 transition-colors duration-300 ${activeView === 'login' ? 'bg-slate-50 dark:bg-black' : 'bg-slate-50 dark:bg-black'}`}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[10000] focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none font-bold text-xs"
+      >
+        Skip to main content
+      </a>
       
       {isGlobalLoading && (
         <div className="fixed top-0 left-0 right-0 h-[3px] bg-slate-100/50 dark:bg-slate-700/50 z-[9999] overflow-hidden">
@@ -813,7 +830,7 @@ const AppContent: React.FC = () => {
       <Navbar currentView={activeView} onNavigate={navigateToView} onPreload={preloadView} />
 
       {/* Main viewport area */}
-      <main className="flex-grow overflow-x-hidden relative flex flex-col">
+      <main id="main-content" className="flex-grow overflow-x-hidden relative flex flex-col">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeView + (selectedSlug || '')}
@@ -831,7 +848,7 @@ const AppContent: React.FC = () => {
       </main>
 
       {/* Structural Footer */}
-      {activeView !== 'login' && <Footer onNavigate={navigateToView} isHomePage={activeView === 'home'} />}
+      <Footer onNavigate={navigateToView} isHomePage={activeView === 'home'} />
       <ScrollToTop />
       <ImageLightbox />
 

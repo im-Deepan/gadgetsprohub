@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 
 interface AlertDialogProps {
   isOpen: boolean;
@@ -10,8 +9,7 @@ interface AlertDialogProps {
 }
 
 export const AlertDialog: React.FC<AlertDialogProps> = ({ isOpen, title, message, onDismiss }) => {
-  const { isAdmin } = useAuth();
-  
+
   useEffect(() => {
     if (!isOpen) return;
     const handleEscape = (e: KeyboardEvent) => {
@@ -21,7 +19,7 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({ isOpen, title, message
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, onDismiss]);
 
-  if (!isOpen || !isAdmin) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">

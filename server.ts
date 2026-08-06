@@ -2408,7 +2408,7 @@ async function startServer() {
   // SEO Routes (Robots & Sitemap)
   app.get('/robots.txt', (_req: express.Request, res: express.Response) => {
     res.type('text/plain');
-    res.send('User-agent: *\nAllow: /\nSitemap: /sitemap.xml');
+    res.send('User-agent: *\nDisallow: /admin\nDisallow: /admin/\nDisallow: /login\nDisallow: /profile\nDisallow: /search\nAllow: /\nSitemap: /sitemap.xml');
   });
 
   app.get('/.well-known/security.txt', (_req: express.Request, res: express.Response) => {

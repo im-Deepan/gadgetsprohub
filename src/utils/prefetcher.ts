@@ -130,7 +130,6 @@ export const prefetchData = async (view: string, slug?: string): Promise<void> =
     else if (view === 'product-detail' && slug) {
       // Product detail pages load using standard apiFetch. Warming this API caches it inside apiClient!
       apiFetch(`/api/products/${slug}`).catch(() => {});
-      apiFetch(`/api/products/click/${slug}`, { method: 'POST' }).catch(() => {}); // Optional click analytics warm-up
     }
   } catch (err) {
     console.warn('[Prefetcher] Error prefetching data:', err);
