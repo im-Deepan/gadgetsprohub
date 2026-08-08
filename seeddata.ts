@@ -31,9 +31,9 @@ export const seedOrders = [
       }
     ],
     totalAmount: 449.98,
-    status: 'In Transit',
-    trackingNumber: 'TRK9928371556',
-    carrier: 'FedEx Express',
+    status: 'PENDING',
+    trackingNumber: 'PENDING',
+    carrier: 'Awaiting Carrier Assignment',
     estimatedDelivery: new Date("2026-06-05"),
     createdAt: new Date("2026-05-30T10:00:00Z")
   },
@@ -48,9 +48,9 @@ export const seedOrders = [
       }
     ],
     totalAmount: 149.99,
-    status: 'Delivered',
-    trackingNumber: 'TRK1122334412',
-    carrier: 'DHL Express',
+    status: 'PENDING',
+    trackingNumber: 'PENDING',
+    carrier: 'Awaiting Carrier Assignment',
     estimatedDelivery: new Date("2026-05-29"),
     createdAt: new Date("2026-05-27T14:30:00Z")
   },
@@ -65,9 +65,9 @@ export const seedOrders = [
       }
     ],
     totalAmount: 599.98,
-    status: 'Processing',
-    trackingNumber: 'TRK4481923011',
-    carrier: 'UPS Ground',
+    status: 'PENDING',
+    trackingNumber: 'PENDING',
+    carrier: 'Awaiting Carrier Assignment',
     estimatedDelivery: new Date("2026-06-03"),
     createdAt: new Date("2026-05-31T01:15:00Z")
   }

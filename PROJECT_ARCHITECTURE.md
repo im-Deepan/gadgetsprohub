@@ -57,7 +57,7 @@ The application strictly mandates **MongoDB Atlas** for persistent storage to gu
    - Classification system. Fields: `name`, `slug` (unique), `description`, `icon`, `clicks`, `conversions`.
 
 4. **Order Schema (`Order`)**
-   - Purchases. Fields: `userId` (ref `User`), `items` (array of product refs and quantities), `totalAmount`, `status` (`'Processing' | 'Shipped' | 'Delivered'`), `trackingNumber`, `carrier`, `estimatedDelivery`, `createdAt`.
+   - Purchases. Fields: `userId` (ref `User`), `items` (array of product refs and quantities), `totalAmount`, `status` (`'PENDING' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled'`), `trackingNumber` (default `'PENDING'`), `carrier` (default `'Awaiting Carrier Assignment'`), `estimatedDelivery`, `createdAt`.
 
 5. **Analytics Schema (`Analytics`)**
    - Telemetry. Fields: `productId` (ref `Product`), `clicks`, `conversions`, `revenue`, `timestamp`.
@@ -69,7 +69,7 @@ The application strictly mandates **MongoDB Atlas** for persistent storage to gu
    - Tracking edits. Fields: `productId` (ref `Product`), `field` (e.g., `'price'`), `oldValue`, `newValue`, `timestamp`.
 
 8. **AlertRule Schema (`AlertRule`)**
-   - Triggers for monitoring. Fields: `name`, `productId` (ref `Product`), `triggerType` (`'price_drop' | 'stock_status'`), `triggerThreshold`, `active`, `createdAt`.
+   - Triggers for monitoring. Fields: `name`, `productId` (ref `Product`), `triggerType` (`'price_drop_pct' | 'out_of_stock' | 'back_in_stock'`), `triggerThreshold`, `active`, `createdAt`.
 
 ---
 
@@ -81,18 +81,19 @@ The backend features an automatic background cron-like coordinator running every
 - **Auto-Seeding**: Checks category densities. If any category contains no products, the engine uses `generateUniqueProduct` to populate authentic seed placeholders, protecting visual integrity.
 - **BSON Error Prevention**: Filters all mapped IDs using `mongoose.Types.ObjectId.isValid(id)` before instantiation. This completely stops system crashes from corrupted string parsing or invalid hex lengths during bulk indexing.
 
-### 2. High-Availability Synchronous Boot Controls
-- **Mandatory MongoDB**: Runs strict connection validations. If MongoDB Atlas is unreachable on startup, the application exits immediately with `process.exit(1)` and logs a critical error. This enforces complete transactional durability and avoids ephemeral fallbacks.
-- **Administrative Offline Block**: The database toggle command `/api/admin/db-toggle` rejects requests to simulate `'offline'` states, ensuring that sessions, catalog data, and analytics remain fully persistent in production.
+### 2. High-Availability Boot & Dual-Mode Local Resilience
+- **Dual-Mode Architecture**: The application starts asynchronously with instant HTTP port availability. In environments where MongoDB Atlas is unavailable or delayed, the server seamlessly utilizes in-memory local state collections (`localOrders`, `localProducts`, `localUsers`) backed by file-system persistence.
+- **Non-Blocking Connection Retry**: `connectWithRetry()` handles MongoDB connection attempts asynchronously in the background. If Atlas is unreachable after repeated exponential backoffs, connection state transitions cleanly while local fallback stores keep the API operational.
+- **Administrative Offline Block**: The database toggle command `/api/admin/db-toggle` protects database mode transitions, ensuring that sessions, catalog data, and analytics remain consistent.
 
 ---
 
 ## 🔐 Advanced Security Controls
 
-### 1. Affiliate Hijacking Prevention
-To eliminate the risk of malicious URL-injection where a user attempts to override affiliate commission tags with their own tracking IDs:
-- **Enforced Rewriting**: The product import router `/api/admin/products/import` parses incoming product URLs and **ignores** any client-submitted `tag` parameters.
-- **Mandatory Binding**: Automatically overrides and reconstructs all affiliate links to use the platform owner's official merchant `resolvedAffiliateCode` derived from secure server-side profiles.
+### 1. Affiliate Link Processing & Profile Enforcing
+To eliminate link ambiguity and ensure commission attribution:
+- **Enforced Tracking Injection**: Product import routes parse incoming URLs and apply the platform's active site tag (`AMAZON_AFFILIATE_TAG` or configured provider profile) to guarantee valid commission tracking.
+- **Restricted Access**: Administrative import endpoints are strictly guarded by `adminOnly` middleware requiring authenticated admin JWT credentials.
 
 ### 2. Chrome Extension Storage Obfuscation
 To protect administrative credentials and JWTs stored on the user's disk from extraction or standard signature scans:
@@ -135,11 +136,11 @@ To protect administrative credentials and JWTs stored on the user's disk from ex
 ## 🔌 Integrated Automation Pipelines
 
 ### 1. n8n Scraping Webhooks
-- **Scheduled Checks**: Scans inventory for outdated prices.
-- **Mutual Exclusion Lock**: Uses a `RequestLock` database schema to serialize concurrent requests on identical ASINs, avoiding duplicate scraper runs and protecting affiliate merchants.
+- **Scheduled Checks**: Scans inventory for outdated prices and inventory changes.
+- **Deduplicated Queue Pipeline**: Deduplicates product URLs during extraction jobs to avoid redundant requests to merchant sites.
 
 ### 2. Telegram Bot Interface (`/api/webhooks/telegram`)
-- **Conversational Admin**: Provides `/add`, `/list`, `/price`, and `/delete` commands for quick administrative adjustments over chat.
+- **Conversational Admin**: Provides `/start` and `/cancel` commands for a guided, step-by-step product creation conversation over chat.
 
 ---
 

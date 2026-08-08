@@ -77,6 +77,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
   const [savingSettings, setSavingSettings] = useState<boolean>(false);
 
   // Affiliate Profiles State
+  const [selectedAffProvId, setSelectedAffProvId] = useState<string>('');
   const [affRegion, setAffRegion] = useState<string>('US');
   const [affTrackingId, setAffTrackingId] = useState<string>('');
   const [affCampaign, setAffCampaign] = useState<string>('');
@@ -130,6 +131,15 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
   const [manualPrice, setManualPrice] = useState<string>('');
   const [manualStock, setManualStock] = useState<boolean>(true);
   const [syncingProduct, setSyncingProduct] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (selectedProductId && products.length > 0) {
+      const p = products.find((item: any) => item._id === selectedProductId);
+      if (p) {
+        setManualStock(p.inStock !== false);
+      }
+    }
+  }, [selectedProductId, products]);
 
   useEffect(() => {
     loadData();
@@ -215,8 +225,9 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
         const json = await pRes.json();
         const providersList = Array.isArray(json?.data) ? json.data : [];
         setMProviders(providersList);
-        if (providersList.length > 0 && !selectedProvId) {
-          setSelectedProvId(providersList[0].providerId);
+        if (providersList.length > 0) {
+          if (!selectedProvId) setSelectedProvId(providersList[0].providerId);
+          if (!selectedAffProvId) setSelectedAffProvId(providersList[0].providerId);
         }
       }
       const sRes = await apiFetch('/api/admin/marketplace/settings');
@@ -494,7 +505,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
 
   const handleSaveAffiliateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProvId) {
+    if (!selectedAffProvId) {
       showNotice('error', 'Please select a marketplace provider first.');
       return;
     }
@@ -503,7 +514,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
       const res = await apiFetch('/api/admin/marketplace/affiliate', {
         method: 'POST',
         body: JSON.stringify({
-          providerId: selectedProvId,
+          providerId: selectedAffProvId,
           region: affRegion,
           affiliateId: affTrackingId,
           campaignName: affCampaign
@@ -548,11 +559,14 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
           setDuplicateInfo(json.data);
           setDuplicateWarning(true);
           showNotice('info', 'Potential duplicate product match identified.');
-        } else {
+        } else if (json.data && json.data.name && json.data.name.trim().length > 0) {
           setImportResult({ success: true, message: `Successfully imported product: "${json.data.name}"`, data: json.data });
           showNotice('success', 'Product imported successfully.');
           setSingleUrl('');
           await fetchMarketplaceData();
+        } else {
+          setImportResult({ success: false, message: 'Extraction returned empty or invalid product data from this URL. Please verify the URL is a valid product page (e.g. Amazon).' });
+          showNotice('error', 'Extraction returned incomplete product data.');
         }
       } else {
         const json = await res.json();
@@ -1231,7 +1245,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                       </h3>
                       {scannerState.currentlyScanning && (
                         <span className="px-2 py-0.5 bg-indigo-950 text-indigo-300 text-[10px] font-mono rounded border border-indigo-800/40">
-                          Rank #${scannerState.currentlyScanning.index} (Price Descending)
+                          Rank #{scannerState.currentlyScanning.index} (Price Descending)
                         </span>
                       )}
                     </div>
@@ -1806,6 +1820,29 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                           className="w-full bg-slate-900 border border-slate-800 text-slate-200 rounded-lg p-2 text-xs outline-none"
                         />
                       </div>
+
+                      <div className="space-y-1 md:col-span-3">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Delivery Notification Channels</label>
+                        <div className="flex flex-wrap gap-4 pt-1">
+                          {['browser', 'email', 'telegram', 'discord', 'slack'].map((ch) => (
+                            <label key={ch} className="inline-flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={editingAlert.channels?.includes(ch)}
+                                onChange={(e) => {
+                                  const current = editingAlert.channels || [];
+                                  const next = e.target.checked
+                                    ? [...current, ch]
+                                    : current.filter((c: string) => c !== ch);
+                                  setEditingAlert({ ...editingAlert, channels: next.length > 0 ? next : ['browser'] });
+                                }}
+                                className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <span className="capitalize">{ch}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex gap-2 justify-end pt-2">
@@ -1894,8 +1931,22 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                         >
                           <option value="price_drop_pct">IF price drops by %</option>
                           <option value="out_of_stock">IF inventory drops to OUT OF STOCK</option>
+                          <option value="back_in_stock">IF item returns BACK IN STOCK</option>
                         </select>
                       </div>
+
+                      {editingRule.triggerType === 'price_drop_pct' && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trigger Threshold (%)</label>
+                          <input
+                            type="number"
+                            required
+                            value={editingRule.triggerThreshold ?? 20}
+                            onChange={(e) => setEditingRule({ ...editingRule, triggerThreshold: Number(e.target.value) })}
+                            className="w-full bg-slate-900 border border-slate-800 text-slate-200 rounded-lg p-2 text-xs outline-none"
+                          />
+                        </div>
+                      )}
 
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">THEN Apply Action</label>
@@ -1989,7 +2040,15 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                             {log.message}
                           </td>
                           <td className="p-3">
-                            <span className="text-emerald-400 text-[10px] font-bold">Sent successfully</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              log.status === 'failed' || log.status === 'error'
+                                ? 'bg-rose-950/60 text-rose-400 border border-rose-900/40'
+                                : log.status === 'pending'
+                                ? 'bg-amber-950/60 text-amber-400 border border-amber-900/40'
+                                : 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/40'
+                            }`}>
+                              {log.status ? (log.status === 'sent' || log.status === 'success' ? 'Sent successfully' : log.status) : 'Sent successfully'}
+                            </span>
                           </td>
                           <td className="p-3 text-right text-[11px] text-slate-500">
                             {new Date(log.timestamp).toLocaleString()}
@@ -2060,7 +2119,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                   <div className="flex items-start gap-3">
                     <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                     <div className="space-y-1">
-                      <p className="text-xs font-bold text-amber-200 uppercase tracking-wide">Duplicate Product Conflict Resolved</p>
+                      <p className="text-xs font-bold text-amber-200 uppercase tracking-wide">Duplicate Product Conflict Detected</p>
                       <p className="text-[11px] text-slate-400">
                         An existing catalog item shares resemblance (GTIN/EAN or Brand match) with your extracted target. Configure collision mapping:
                       </p>
@@ -2133,7 +2192,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                       <label className="text-[10px] font-bold text-slate-400 uppercase">Product URL</label>
                       <input
                         type="url"
-                        placeholder="Paste Amazon, Flipkart, eBay, Walmart, Meesho, Ajio, Croma link..."
+                        placeholder="Paste Amazon product link (e.g. https://www.amazon.com/dp/B08N5WRWNW)..."
                         required
                         value={singleUrl}
                         onChange={(e) => setSingleUrl(e.target.value)}
@@ -2194,7 +2253,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                       <label className="text-[10px] font-bold text-slate-400 uppercase">Extract Targets (One URL per line)</label>
                       <textarea
                         rows={4}
-                        placeholder="https://www.flipkart.com/item-1&#10;https://www.ebay.com/itm/2&#10;https://www.meesho.com/p-3"
+                        placeholder="https://www.amazon.com/dp/B08N5WRWNW&#10;https://www.amazon.in/dp/B09G9FPHY6&#10;https://www.amazon.co.uk/dp/B08N5WRWNW"
                         required
                         value={bulkUrlsText}
                         onChange={(e) => setBulkUrlsText(e.target.value)}
@@ -2321,8 +2380,8 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase">Target Marketplace</label>
                         <select
-                          value={selectedProvId}
-                          onChange={(e) => setSelectedProvId(e.target.value)}
+                          value={selectedAffProvId}
+                          onChange={(e) => setSelectedAffProvId(e.target.value)}
                           className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded p-1.5 text-xs outline-none"
                         >
                           {mProviders.map(p => (
@@ -2544,9 +2603,14 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                           <tr key={log._id} className="hover:bg-slate-900/40">
                             <td className="p-2.5 font-bold text-slate-200 uppercase text-[10px]">{log.providerId}</td>
                             <td className="p-2.5">
-                              <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${log.status === 'success' ? 'bg-emerald-950 text-emerald-400 border border-emerald-900/30' : 'bg-red-950 text-red-400 border border-red-900/30'}`}>
-                                {log.action}
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${
+                                log.status === 'failed' || log.status === 'error'
+                                  ? 'bg-red-950 text-red-400 border border-red-900/30'
+                                  : 'bg-emerald-950 text-emerald-400 border border-emerald-900/30'
+                              }`}>
+                                {log.status ? log.status.toUpperCase() : 'SUCCESS'}
                               </span>
+                              <span className="ml-2 font-mono text-[10px] text-slate-400">{log.action}</span>
                             </td>
                             <td className="p-2.5 text-slate-400 text-[11px] max-w-md truncate">{log.message}</td>
                             <td className="p-2.5 text-indigo-400">{log.latencyMs ? `${log.latencyMs}ms` : 'N/A'}</td>

@@ -93,6 +93,28 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 transition-colors duration-300">
+      {/* Structured Data: Breadcrumb JSON-LD */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": typeof window !== "undefined" ? window.location.origin : "https://gadgetsprohub.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Search Results",
+              "item": typeof window !== "undefined" ? window.location.href : "https://gadgetsprohub.com/search"
+            }
+          ]
+        })}
+      </script>
+
       {/* Breadcrumb */}
       <div className="mb-4">
         <Breadcrumb items={breadcrumbItems} />
@@ -228,7 +250,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
         </div>
       ) : (
         /* Zero Results State */
-        <div className="py-12 px-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/40 border border-slate-200/80 dark:border-slate-800 text-center">
+        <div className="py-16 px-6 rounded-2xl bg-slate-50 dark:bg-zinc-900/40 border border-slate-200/80 dark:border-slate-800 text-center min-h-[500px] flex flex-col justify-center items-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 mb-4">
             <Package className="h-7 w-7" />
           </div>
@@ -243,19 +265,19 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button
               onClick={() => onNavigate('products')}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-md cursor-pointer font-sans"
+              className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-md cursor-pointer font-sans min-h-[44px]"
             >
               Browse Full Catalog
             </button>
             <button
               onClick={() => onNavigate('products', 'category-smartphones')}
-              className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer font-sans"
+              className="px-5 py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer font-sans min-h-[44px]"
             >
               Explore Smartphones
             </button>
             <button
               onClick={() => onNavigate('products', 'category-audio')}
-              className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer font-sans"
+              className="px-5 py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer font-sans min-h-[44px]"
             >
               Explore Audio & Headphones
             </button>

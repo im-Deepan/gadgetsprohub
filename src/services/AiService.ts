@@ -508,8 +508,9 @@ export class AiService {
 
   public async invalidateCache(pattern?: string): Promise<void> {
     if (pattern) {
-      // Clear specific matches
-      await AiCache.deleteMany({ prompt: new RegExp(pattern, 'i') });
+      // Clear specific matches. Escape regex to prevent ReDoS attacks.
+      const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      await AiCache.deleteMany({ prompt: new RegExp(escapedPattern, 'i') });
     } else {
       // Clear all
       await AiCache.deleteMany({});
@@ -831,10 +832,10 @@ export class AiService {
     }
 
     // Profanity / offensive terms detector (lightweight)
-    const offensiveWords = ['offensivephrase1', 'offensivephrase2']; // stub for enterprise compliance
+    const offensiveWords = ['fuck', 'shit', 'bitch', 'asshole', 'cunt', 'dick', 'pussy', 'nigger', 'faggot', 'bastard', 'slut', 'whore']; // Basic safety blocklist
     for (const off of offensiveWords) {
       if (text.toLowerCase().includes(off)) {
-        issues.push(`Safety risk: flag offensive term`);
+        issues.push(`Safety risk: contains flagged offensive term`);
         offensiveFlag = true;
       }
     }

@@ -677,6 +677,49 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         <meta name="twitter:image" content="/og-banner.png" />
 
         <meta name="robots" content="index, follow" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "ItemList",
+                "itemListElement": (products || []).slice(0, 12).map((p: Product, idx: number) => ({
+                  "@type": "ListItem",
+                  "position": idx + 1,
+                  "item": {
+                    "@type": "Product",
+                    "name": p.name,
+                    "description": p.description,
+                    "image": p.images?.[0],
+                    "offers": {
+                      "@type": "Offer",
+                      "priceCurrency": "INR",
+                      "price": p.price,
+                      "availability": p.inStock !== false ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                    }
+                  }
+                }))
+              },
+              {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                  {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Home",
+                    "item": typeof window !== "undefined" ? window.location.origin : "https://gadgetsprohub.com"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Products",
+                    "item": typeof window !== "undefined" ? `${window.location.origin}/products` : "https://gadgetsprohub.com/products"
+                  }
+                ]
+              }
+            ]
+          })}
+        </script>
       </Helmet>
       
       {/* BREADCRUMB */}
@@ -714,7 +757,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           {/* Custom Filter Minimizer Trigger (Mobile only) */}
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`md:hidden flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs font-bold transition-all duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${
+            className={`md:hidden flex items-center gap-1.5 rounded-lg border px-4 py-3 text-xs font-bold transition-all duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 min-h-[44px] ${
               hasActiveFilters
                 ? 'border-zinc-700 bg-slate-100 dark:bg-slate-800/50 text-zinc-900 dark:text-white dark:border-zinc-700 font-black'
                 : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
@@ -728,10 +771,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           </button>
 
           {/* Layout Controls */}
-          <div className="flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 shrink-0">
+          <div className="flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 shrink-0 min-h-[44px] items-center">
             <button
               onClick={() => setViewStyle('grid')}
-              className={`p-1.5 px-2.5 rounded-md hover:text-zinc-900 dark:text-white transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${viewStyle === 'grid' ? 'bg-white shadow-xs text-zinc-900 dark:text-white dark:bg-slate-700' : 'text-slate-400'}`}
+              className={`p-2 px-3 rounded-md hover:text-zinc-900 dark:text-white transition-all duration-300 cursor-pointer flex items-center gap-1.5 min-h-[38px] ${viewStyle === 'grid' ? 'bg-white shadow-xs text-zinc-900 dark:text-white dark:bg-slate-700' : 'text-slate-400'}`}
               title="Grid show"
               aria-label="Grid view"
             >
@@ -740,7 +783,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             </button>
             <button
               onClick={() => setViewStyle('list')}
-              className={`p-1.5 px-2.5 rounded-md hover:text-zinc-900 dark:text-white transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${viewStyle === 'list' ? 'bg-white shadow-xs text-zinc-900 dark:text-white dark:bg-slate-700' : 'text-slate-400'}`}
+              className={`p-2 px-3 rounded-md hover:text-zinc-900 dark:text-white transition-all duration-300 cursor-pointer flex items-center gap-1.5 min-h-[38px] ${viewStyle === 'list' ? 'bg-white shadow-xs text-zinc-900 dark:text-white dark:bg-slate-700' : 'text-slate-400'}`}
               title="List show"
               aria-label="List view"
             >
@@ -750,12 +793,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           </div>
 
           {/* Sort Controller */}
-          <div className="relative flex items-center shrink-0">
+          <div className="relative flex items-center shrink-0 min-h-[44px]">
             <ArrowUpDown className="absolute left-3.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
             <select
               value={sortField}
               onChange={(e) => { setSortField(e.target.value); setCurrentPage(1); }}
-              className="rounded-lg border border-slate-200 bg-white py-1.5 pl-10 pr-4 text-xs font-semibold text-slate-700 outline-none focus:border-zinc-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors duration-300"
+              className="rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-slate-700 outline-none focus:border-zinc-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 cursor-pointer transition-colors duration-300 min-h-[44px]"
             >
               <option value="newest">Sort: Newest First</option>
               <option value="price-asc">Sort: Price Low-High</option>
@@ -774,14 +817,14 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             onNavigate={onNavigate}
             variant="catalog"
             placeholder="Search catalog..."
-            inputClassName="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 py-1.5 pl-8 pr-6 text-slate-800 dark:text-white"
+            inputClassName="w-full text-xs rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 py-2.5 pl-8 pr-6 text-slate-800 dark:text-white min-h-[44px]"
             onClear={() => setSearch('')}
           />
         </div>
         <select
           value={selectedCategory}
           onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSubcategory(''); setCurrentPage(1); }}
-          className="text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-1.5 px-3 text-slate-700 dark:text-slate-200"
+          className="text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-2.5 px-3 text-slate-700 dark:text-slate-200 min-h-[44px]"
         >
           <option value="">All Categories</option>
           <option value="trending">Trending</option>
@@ -822,7 +865,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       <div className="flex flex-col md:flex-row md:items-start md:gap-6 lg:gap-8 w-full md:px-4 relative">
         
         {/* PERMANENTLY DOCKED DESKTOP LEFT SIDEBAR (>=1024px) */}
-        <aside className="hidden lg:block w-70 xl:w-72 shrink-0 sticky top-20 rounded-xl bg-white dark:bg-slate-900/60 p-5 border border-slate-200/80 dark:border-slate-800 space-y-5 h-fit">
+        <aside className={`${(products || []).length === 0 ? 'hidden' : 'hidden lg:block'} w-70 xl:w-72 shrink-0 sticky top-20 rounded-xl bg-white dark:bg-slate-900/60 p-5 border border-slate-200/80 dark:border-slate-800 space-y-5 h-fit`}>
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2 font-bold text-slate-800 text-xs uppercase tracking-wider dark:text-slate-100">
               <SlidersHorizontal className="h-4 w-4 text-zinc-900 dark:text-white" />
@@ -897,22 +940,22 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           })()}
           
           {/* PRODUCT CARDS LIST / FLAT GRID AREA */}
-          <div className="w-full space-y-8 min-h-0 h-auto">
+          <div className="w-full space-y-8 min-h-[600px] flex flex-col">
             {loading && products.length === 0 ? (
-              <div className={`grid gap-6 ${viewStyle === 'grid' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
+              <div className={`grid gap-6 ${viewStyle === 'grid' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'} grow`}>
                 {[...Array(6)].map((_, i) => (
                   <ProductCardSkeleton key={`skeleton-prod-${i}`} />
                 ))}
               </div>
             ) : products.length === 0 ? (
-              <div className="flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-3xl p-12 text-center dark:border-slate-700">
+              <div className="flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-3xl p-12 text-center dark:border-slate-700 grow">
                 <span className="text-3xl block">🔍</span>
                 <h3 className="text-sm font-bold text-slate-700 mt-3 dark:text-white">No products found</h3>
                 <p className="text-xs text-slate-400 mt-1 max-w-sm">Try loosening your search filters or browse all categories.</p>
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="mt-4 px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-xs hover:bg-zinc-800 transition-all cursor-pointer"
+                  className="mt-4 px-5 py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-xs hover:bg-zinc-800 transition-all cursor-pointer min-h-[44px]"
                 >
                   Reset All Filters
                 </button>

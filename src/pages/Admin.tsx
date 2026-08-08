@@ -206,46 +206,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [socialClicks, setSocialClicks] = useState({ instagram: 0, linkedin: 0 });
 
   const resolvedProducts = useMemo(() => {
-    if (!analyticsData || analyticsData.length === 0) {
-      return products.map(p => ({
-        ...p,
-        clicks: p?.clicks || 0,
-        conversions: p?.conversions || 0
-      }));
-    }
-
-    const clicksMap = new Map<string, number>();
-    const convsMap = new Map<string, number>();
-
-    for (let i = 0; i < analyticsData.length; i++) {
-      const a = analyticsData[i];
-      if (!a) continue;
-      const aProdId = (a.productId as { _id?: string })?._id || a.productId;
-      const targetId = typeof aProdId === 'object' && aProdId !== null ? (aProdId as { _id?: string })._id : aProdId;
-      if (!targetId) continue;
-      const idStr = String(targetId);
-
-      if (a.eventType === 'click') {
-        clicksMap.set(idStr, (clicksMap.get(idStr) || 0) + 1);
-      } else if (a.eventType === 'conversion') {
-        convsMap.set(idStr, (convsMap.get(idStr) || 0) + 1);
-      }
-    }
-
-    const hasAnalytics = analyticsData.length > 0;
-
-    return products.map(p => {
-      const pIdStr = p?._id ? String(p._id) : '';
-      const dynamicClicks = hasAnalytics ? (clicksMap.get(pIdStr) || 0) : (p?.clicks || 0);
-      const dynamicConversions = hasAnalytics ? (convsMap.get(pIdStr) || 0) : (p?.conversions || 0);
-
-      return {
-        ...p,
-        clicks: dynamicClicks,
-        conversions: dynamicConversions
-      };
-    });
-  }, [products, analyticsData]);
+    return products.map(p => ({
+      ...p,
+      clicks: p?.clicks || 0,
+      conversions: p?.conversions || 0
+    }));
+  }, [products]);
 
   // Modals show control
   const [showProductModal, setShowProductModal] = useState(false);
@@ -262,12 +228,15 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [slugChecking, setSlugChecking] = useState(false);
   const [slugCheckError, setSlugCheckError] = useState('');
   const [suggestedSlug, setSuggestedSlug] = useState('');
+  const [slugVerified, setSlugVerified] = useState(false);
 
   useEffect(() => {
     const rawVal = prodForm.slug || prodForm.name;
     if (!rawVal || rawVal.trim().length < 3) {
       setSlugCheckError('');
       setSuggestedSlug('');
+      setSlugChecking(false);
+      setSlugVerified(false);
       return;
     }
 
@@ -275,11 +244,18 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     if (!proposed) {
       setSlugCheckError('');
       setSuggestedSlug('');
+      setSlugChecking(false);
+      setSlugVerified(false);
       return;
     }
 
+    // Indicate that checking is in progress immediately upon changes (during the 500ms debounce window)
+    setSlugChecking(true);
+    setSlugVerified(false);
+    setSlugCheckError('');
+    setSuggestedSlug('');
+
     const delayDebounce = setTimeout(async () => {
-      setSlugChecking(true);
       try {
         const excludeQuery = editingProduct ? `&excludeId=${editingProduct._id}` : '';
         const res = await apiFetch(`/api/admin/check-slug?slug=${encodeURIComponent(proposed)}&type=product${excludeQuery}`, {
@@ -292,9 +268,11 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           if (data.exists) {
             setSlugCheckError(`⚠️ This Web Link Name already exists.`);
             setSuggestedSlug(data.suggestedSlug);
+            setSlugVerified(false);
           } else {
             setSlugCheckError('');
             setSuggestedSlug('');
+            setSlugVerified(true);
           }
         }
       } catch (err) {
@@ -315,6 +293,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [catImage, setCatImage] = useState('');
   const [catSubcategories, setCatSubcategories] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+  // Form fields for manual blogs
+  const [blogTitle, setBlogTitle] = useState('');
+  const [blogContent, setBlogContent] = useState('');
+  const [blogCategory, setBlogCategory] = useState('');
+  const [blogExcerpt, setBlogExcerpt] = useState('');
+  const [blogAuthor, setBlogAuthor] = useState('');
+  const [blogFeaturedImage, setBlogFeaturedImage] = useState('');
+  const [blogTags, setBlogTags] = useState('');
+  const [blogPublished, setBlogPublished] = useState(true);
+  const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
 
   // States for Security Logs Tab (declared at top-level to comply with Rules of Hooks)
   const [selectedActionType, setSelectedActionType] = useState<string>('all');
@@ -705,7 +694,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
     const escapeCsv = (val: any) => {
       if (val === null || val === undefined) return '""';
-      const str = String(val).replace(/"/g, '""');
+      let str = String(val);
+      // Neutralize leading Excel/Sheets formula injection triggers (=, +, -, @, \t, \r)
+      if (/^[=\-+\@\t\r]/.test(str)) {
+        str = "'" + str;
+      }
+      str = str.replace(/"/g, '""');
       return `"${str}"`;
     };
 
@@ -756,7 +750,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       `Total Visitors: ${stats.totalVisitors}`,
       `Total Clicks: ${stats.totalClicks}`,
       `Total Conversions: ${stats.totalConversions}`,
-      `Estimated Earnings: ₹${stats.estimatedEarnings}`,
+      `Estimated Earnings Projection (Flat Rate Model: ₹0.08/click, ₹4.5/conv): ₹${stats.estimatedEarnings}`,
       `Export Date: ${new Date().toLocaleString()}`
     ].map(escapeCsv).join(',');
 
@@ -790,9 +784,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         clearApiCache();
         setMessages(prev => prev.map(m => m?._id === msgId ? { ...m, read: true } : m));
         setStats(prev => ({ ...prev, unreadMessages: Math.max(prev.unreadMessages - 1, 0) }));
+      } else {
+        const err = await res.json().catch(() => ({}));
+        triggerAlert("Action Failed", err.error || "The server rejected the message status update request.");
       }
-    } catch (e) {
-      console.warn('Silent read status update failed:', e);
+    } catch (e: unknown) {
+      const errorObj = e as { message?: string };
+      triggerAlert("Network Error", errorObj.message || "Failed to communicate with the message status update server.");
     }
   };
 
@@ -1143,6 +1141,139 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     );
   };
 
+  // Blog Add/Edit/Delete handles
+  const handleAddBlog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      clearApiCache();
+      const url = editingBlog ? `/api/admin/blogs/${editingBlog._id}` : '/api/admin/blogs';
+      const method = editingBlog ? 'PUT' : 'POST';
+      const parsedTags = blogTags.split(',').map(t => t.trim()).filter(Boolean);
+      
+      const res = await apiFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: blogTitle,
+          content: blogContent,
+          category: blogCategory,
+          excerpt: blogExcerpt,
+          author: blogAuthor || 'Admin',
+          featured_image: blogFeaturedImage,
+          tags: parsedTags,
+          published: blogPublished
+        })
+      });
+      
+      if (res.ok) {
+        clearApiCache();
+        const saved = await res.json();
+        await fetchBlogsTabData();
+        setBlogTitle('');
+        setBlogContent('');
+        setBlogCategory('');
+        setBlogExcerpt('');
+        setBlogAuthor('');
+        setBlogFeaturedImage('');
+        setBlogTags('');
+        setBlogPublished(true);
+        setEditingBlog(null);
+        triggerAlert("Blog Saved", `The blog manual "${saved.title || 'Untitled'}" has been successfully saved to the database!`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        triggerAlert("Failed to Save Blog", err.error || "The server rejected the blog manual request.");
+      }
+    } catch (e: unknown) {
+      const errorObj = e as { message?: string };
+      triggerAlert("Network Error", errorObj.message || "Failed to communicate with the database server.");
+    }
+  };
+
+  const startEditBlog = (b: Blog) => {
+    setEditingBlog(b);
+    setBlogTitle(b.title || '');
+    setBlogContent(b.content || '');
+    setBlogCategory(b.category || '');
+    setBlogExcerpt(b.excerpt || '');
+    setBlogAuthor(b.author || '');
+    setBlogFeaturedImage(b.featured_image || b.imageUrl || '');
+    setBlogTags(Array.isArray(b.tags) ? b.tags.join(', ') : '');
+    setBlogPublished(b.published !== false);
+  };
+
+  const cancelEditBlog = () => {
+    setEditingBlog(null);
+    setBlogTitle('');
+    setBlogContent('');
+    setBlogCategory('');
+    setBlogExcerpt('');
+    setBlogAuthor('');
+    setBlogFeaturedImage('');
+    setBlogTags('');
+    setBlogPublished(true);
+  };
+
+  const handleDeleteBlog = (id: string) => {
+    requestConfirmation(
+      "Confirm Blog Deletion",
+      "Are you sure you want to delete this blog manual? This action cannot be undone.",
+      async () => {
+        try {
+          clearApiCache();
+          const res = await apiFetch(`/api/admin/blogs/${id}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            clearApiCache();
+            await fetchBlogsTabData();
+            triggerAlert("Blog Deleted", "The blog manual has been removed successfully.");
+          } else {
+            const err = await res.json().catch(() => ({}));
+            triggerAlert("Deletion Failed", err.error || "The server rejected the deletion request.");
+          }
+        } catch (e: unknown) {
+          const errorObj = e as { message?: string };
+          triggerAlert("Network Error", errorObj.message || "Failed to contact the backend server.");
+        }
+      },
+      { isDestructive: true, confirmText: 'Yes, Delete Blog' }
+    );
+  };
+
+  const handleUpdateUserRole = (userId: string, targetRole: 'user' | 'admin', userEmail: string) => {
+    const actionText = targetRole === 'admin' ? "Promote to Administrator" : "Revoke Administrator Privilege";
+    const bodyText = targetRole === 'admin' 
+      ? `Are you sure you want to promote ${userEmail} to a full Platform Administrator? They will have full read/write and security capabilities.`
+      : `Are you sure you want to securely revoke administrator credentials for ${userEmail}? This will instantly demote them to a Standard User.`;
+    
+    requestConfirmation(
+      actionText,
+      bodyText,
+      async () => {
+        try {
+          clearApiCache();
+          const res = await apiFetch(`/api/admin/users/${userId}/role`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: targetRole })
+          });
+          if (res.ok) {
+            clearApiCache();
+            await fetchUsersTabData();
+            triggerAlert("Security Action Complete", `The user's privilege has been successfully updated to ${targetRole}.`);
+          } else {
+            const err = await res.json().catch(() => ({}));
+            triggerAlert("Action Failed", err.error || "The server rejected the user role update request.");
+          }
+        } catch (e: unknown) {
+          const errorObj = e as { message?: string };
+          triggerAlert("Network Error", errorObj.message || "Failed to contact the backend server.");
+        }
+      },
+      { isDestructive: targetRole === 'user', confirmText: targetRole === 'user' ? 'Yes, Revoke Privilege' : 'Yes, Promote User' }
+    );
+  };
+
   const handleSimulateSunday = async (targetSundayStr?: string, forceEmail?: boolean) => {
     setSimulatingSunday(true);
     try {
@@ -1154,7 +1285,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       if (res.ok) {
         clearApiCache();
         const bodyObj = await res.json();
-        triggerAlert("Simulation Completed", `Sunday automated scheduler event completed! Created ${bodyObj.log?.productsAdded?.length || 0} unpublished draft product items queued for review.`);
+        triggerAlert("Simulation Completed", `Sunday automated scheduler event completed! Created ${bodyObj.log?.productsAdded?.length || 0} product items and published them directly to the storefront catalog.`);
         await loadAdminMetrics();
       } else {
         const errJson = await res.json().catch(() => ({}));
@@ -1211,7 +1342,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 <span>Direct Live Storefront Mode Active</span>
               </div>
               <p className="text-[11px] text-slate-400 dark:text-slate-300 leading-relaxed font-sans">
-                Automatic seed resets, randomized trending traffic logs, and bulk catalog wipe functions have been completely disabled as requested. This prevents unintended overwrites of your handmade affiliate products.
+                Automated weekly catalog updates are actively managed by the Sunday scheduler. Bulk catalog wipe functions and database seed routines are strictly protected by administrative confirmation to prevent unintended data loss.
               </p>
               <div className="text-[10px] text-slate-300 flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-50 dark:border-slate-700 rounded-lg p-2 font-mono">
                 <span>ℹ Mode: Secure Manual Entry Enabled</span>
@@ -1438,8 +1569,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
           aria-label="View estimated curator commissions"
         >
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-teal-500 transition-colors duration-300">Estimated Curator Commission</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-teal-500 transition-colors duration-300">Estimated Earnings (Projection)</p>
             <h3 className="text-lg font-mono font-black text-teal-500 dark:text-teal-300">₹{stats.estimatedEarnings}</h3>
+            <span className="text-[9px] text-slate-400 block font-sans font-medium mt-0.5 leading-tight">Flat simulation model (₹0.08/click + ₹4.50/conv)</span>
           </div>
           <div className="h-10 w-10 rounded-lg bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center text-teal-500 group-hover:scale-110 transition-transform duration-300">
             <Coins className="h-5 w-5 shrink-0" />
@@ -2046,8 +2178,125 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 onRetry={() => loadAdminMetrics()} 
               />
             ) : (
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-slate-50 bg-white overflow-hidden shadow-xs dark:border-slate-700 dark:bg-zinc-800/40">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Blog form */}
+                <div className="rounded-2xl border bg-white p-5 dark:border-slate-700 dark:bg-zinc-800/40 col-span-1 space-y-4 h-fit">
+                  <h4 className="text-xs font-bold uppercase text-slate-700 mb-2 dark:text-white">
+                    {editingBlog ? 'Edit Blog Manual' : 'Add Blog Manual'}
+                  </h4>
+                  <form onSubmit={handleAddBlog} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Title</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Best Noise Cancelling Headphones"
+                        value={blogTitle}
+                        onChange={(e) => setBlogTitle(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Category</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Headphones"
+                        value={blogCategory}
+                        onChange={(e) => setBlogCategory(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Author</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Admin or TechSpec Curators"
+                        value={blogAuthor}
+                        onChange={(e) => setBlogAuthor(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 font-sans">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Excerpt</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. A quick summary of the manual post"
+                        value={blogExcerpt}
+                        onChange={(e) => setBlogExcerpt(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 font-sans">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Featured Image URL</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. https://images.unsplash.com/..."
+                        value={blogFeaturedImage}
+                        onChange={(e) => setBlogFeaturedImage(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 font-sans">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Tags (Comma separated)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. tech, audio, guides"
+                        value={blogTags}
+                        onChange={(e) => setBlogTags(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 font-sans">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Content (Markdown / HTML / Plain text)</label>
+                      <textarea
+                        rows={5}
+                        placeholder="Enter full blog article body content..."
+                        value={blogContent}
+                        onChange={(e) => setBlogContent(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="blogPublished"
+                        checked={blogPublished}
+                        onChange={(e) => setBlogPublished(e.target.checked)}
+                        className="h-4 w-4 text-indigo-600 border-slate-200 rounded focus:ring-indigo-500"
+                      />
+                      <label htmlFor="blogPublished" className="text-xs font-bold text-slate-700 dark:text-slate-200">Publish immediately</label>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        className="flex-1 rounded-xl bg-slate-950 hover:bg-indigo-500 text-white font-bold text-xs py-2.5 cursor-pointer transition-colors duration-300"
+                      >
+                        {editingBlog ? 'Update Blog' : 'Create Blog'}
+                      </button>
+                      {editingBlog && (
+                        <button
+                          type="button"
+                          onClick={cancelEditBlog}
+                          className="rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-xs px-3 py-2.5 cursor-pointer transition-colors duration-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                </div>
+
+                {/* Table list */}
+                <div className="rounded-2xl border border-slate-50 bg-white overflow-hidden shadow-xs dark:border-slate-700 dark:bg-zinc-800/40 col-span-2">
                   {isMobile ? (
                     <div className="divide-y divide-slate-50 dark:divide-slate-700/80 p-5 space-y-4">
                       {blogs.map((b, idx) => (
@@ -2056,6 +2305,22 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
                             <span className="px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-200">{b?.category}</span>
                             <span className="font-mono text-indigo-500 dark:text-indigo-300">👀 {b?.views || 0} views</span>
+                          </div>
+                          <div className="flex gap-2 justify-end pt-1">
+                            <button
+                              onClick={() => startEditBlog(b)}
+                              className="text-indigo-500 hover:text-indigo-600 p-1.5 bg-indigo-50 dark:bg-indigo-950/40 rounded cursor-pointer"
+                              title="Edit Blog"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBlog(b._id)}
+                              className="text-rose-500 hover:text-rose-600 p-1.5 bg-rose-50 dark:bg-rose-950/40 rounded cursor-pointer"
+                              title="Delete Blog"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -2069,15 +2334,34 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                             <th className="py-2.5 px-4 font-bold">Category</th>
                             <th className="py-2.5 px-4 font-mono font-bold">Views</th>
                             <th className="py-2.5 px-4 font-bold">Author</th>
+                            <th className="py-2.5 px-4 font-bold">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                           {blogs.map((b, idx) => (
                             <tr key={b?._id || `blog-desk-${idx}`} className="hover:bg-slate-50/20">
-                              <td className="py-3 px-4 font-bold text-slate-800 truncate max-w-sm dark:text-white">{b?.title}</td>
+                              <td className="py-3 px-4 font-bold text-slate-800 truncate max-w-xs dark:text-white">{b?.title}</td>
                               <td className="py-3 px-4 text-slate-400 font-semibold">{b?.category}</td>
                               <td className="py-3 px-4 font-mono font-bold text-slate-600 dark:text-slate-200">{b?.views || 0}</td>
                               <td className="py-3 px-4 text-slate-300 font-semibold">{b?.author || 'Admin'}</td>
+                              <td className="py-3 px-4">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => startEditBlog(b)}
+                                    className="text-indigo-500 hover:text-indigo-600 p-1 bg-indigo-50 dark:bg-indigo-950/40 rounded shadow-xs cursor-pointer"
+                                    title="Edit Blog"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteBlog(b._id)}
+                                    className="text-rose-500 hover:text-rose-600 p-1 bg-rose-50 dark:bg-rose-950/40 rounded shadow-xs cursor-pointer"
+                                    title="Delete Blog"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -2085,8 +2369,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     </div>
                   )}
                 </div>
-
-            </div>
+              </div>
             )
           ) : activeTab === 'messages' ? (
             messagesError ? (
@@ -2563,6 +2846,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                               <th className="py-3 px-4 font-bold">Member Information</th>
                               <th className="py-3 px-4 font-bold">Region/District</th>
                               <th className="py-3 px-4 font-bold">Role Privilege</th>
+                              <th className="py-3 px-4 font-bold text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
@@ -2617,7 +2901,25 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                       </span>
                                     )}
                                   </td>
-
+                                  <td className="py-3.5 px-4 text-right">
+                                    {isSelf ? (
+                                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic">Self (Unmodifiable)</span>
+                                    ) : isCurrentAdmin ? (
+                                      <button
+                                        onClick={() => handleUpdateUserRole(String(usrId), 'user', usr?.email || 'N/A')}
+                                        className="inline-flex items-center gap-1 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 px-2.5 py-1 text-[10px] font-bold text-rose-600 dark:text-rose-300 cursor-pointer transition-colors animate-fadeIn"
+                                      >
+                                        Revoke Admin
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleUpdateUserRole(String(usrId), 'admin', usr?.email || 'N/A')}
+                                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 px-2.5 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-300 cursor-pointer transition-colors animate-fadeIn"
+                                      >
+                                        Promote Admin
+                                      </button>
+                                    )}
+                                  </td>
                                 </tr>
                               );
                             })}
@@ -2673,7 +2975,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <h4 className="text-xs font-black uppercase text-indigo-500 tracking-wider">Security & Compliance Audit Trail</h4>
-                      <p className="text-[11px] text-slate-300 mt-0.5 font-sans font-medium">Immutable trace log recording sensitive administrative actions and privilege changes.</p>
+                      <p className="text-[11px] text-slate-300 mt-0.5 font-sans font-medium">Rolling 90-day compliance audit trail recording sensitive administrative actions and privilege changes.</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <div className="rounded-lg bg-slate-50 border border-slate-50 px-3 py-1.5 dark:bg-slate-800 dark:border-slate-700">
@@ -2904,7 +3206,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                     <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                      Stored in real-time database and applied instantly across client banner slots and crawler <code className="text-indigo-400">/ads.txt</code>.
+                      Saved to database immediately. Active upon the next page reload for slot renderers, while crawler <code className="text-indigo-400">/ads.txt</code> authorization is subject to standard Google AdSense caching delays (up to 24 hours).
                     </p>
                   </div>
                 </div>
@@ -3674,7 +3976,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                           )}
                         </div>
                       )}
-                      {!slugChecking && !slugCheckError && (prodForm.slug || prodForm.name).trim().length >= 3 && (
+                      {!slugChecking && !slugCheckError && slugVerified && (prodForm.slug || prodForm.name).trim().length >= 3 && (
                         <p className="text-[10px] text-emerald-500 dark:text-emerald-400 font-bold mt-1 flex items-center gap-1">✓ Web Link Name is available!</p>
                       )}
                     </div>
@@ -3826,9 +4128,10 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       />
                     </div>
                     <div className="space-y-1 sm:col-span-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Coupon Code</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Amazon Associate / Affiliate Tag</label>
                       <input
                         type="text"
+                        placeholder="e.g. AFFIL_HUB_26"
                         value={prodForm.affiliateCode}
                         onChange={(e) => setProdForm({ ...prodForm, affiliateCode: e.target.value })}
                         className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono text-center"
@@ -3912,14 +4215,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block">Detailed Description & Review</label>
                     <textarea
-                      rows={3}
+                      rows={4}
                       required
-                      maxLength={500}
+                      maxLength={20000}
                       value={prodForm.longDescription}
-                      onChange={(e) => setProdForm({ ...prodForm, longDescription: e.target.value.slice(0, 500) })}
+                      onChange={(e) => setProdForm({ ...prodForm, longDescription: e.target.value.slice(0, 20000) })}
                       className="w-full text-xs rounded-lg border border-slate-100 bg-slate-50 text-slate-800 p-2 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
                     />
-                    <p className="text-[10px] text-slate-300 text-right mt-0.5 font-mono">{(prodForm.longDescription || '').length}/500</p>
+                    <p className="text-[10px] text-slate-300 text-right mt-0.5 font-mono">{(prodForm.longDescription || '').length}/20,000</p>
                   </div>
 
                   <div className="flex items-center gap-6 py-2">

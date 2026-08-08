@@ -78,6 +78,13 @@ cacheEntrySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 export const CacheEntry = mongoose.models.CacheEntry || mongoose.model('CacheEntry', cacheEntrySchema);
 
 
+// 4. Feature Flags Schema (for L2 distributed persistence)
+const featureFlagsSchema = new mongoose.Schema({
+  flags: { type: mongoose.Schema.Types.Mixed, default: {} },
+  updatedAt: { type: Date, default: Date.now }
+});
+export const FeatureFlags = mongoose.models.FeatureFlags || mongoose.model('FeatureFlags', featureFlagsSchema);
+
 // ========== CORE SERVICES ==========
 
 // 1. Feature Flags and Configuration Service
@@ -95,11 +102,16 @@ export class ConfigurationService {
   };
   private static isInitialized = false;
 
-  private static initFlags(): void {
+  private static async initFlagsAsync(): Promise<void> {
     if (this.isInitialized) return;
     this.isInitialized = true;
     try {
-      if (fs.existsSync(FLAGS_FILE_PATH)) {
+      if (mongoose.connection.readyState === 1) {
+        const doc = await FeatureFlags.findOne({});
+        if (doc && doc.flags) {
+          this.flags = { ...this.flags, ...doc.flags };
+        }
+      } else if (fs.existsSync(FLAGS_FILE_PATH)) {
         const fileData = fs.readFileSync(FLAGS_FILE_PATH, 'utf8');
         const parsed = JSON.parse(fileData);
         if (parsed && typeof parsed === 'object') {
@@ -107,19 +119,40 @@ export class ConfigurationService {
         }
       }
     } catch (err: any) {
-      console.warn('[ConfigurationService] Failed to load persisted feature flags from disk:', err.message);
+      console.warn('[ConfigurationService] Failed to load persisted feature flags:', err.message);
     }
   }
 
-  private static saveFlags(): void {
+  public static initFlags(): void {
+    // This is a synchronous fallback since some getters are synchronous.
+    // In a real startup sequence, initFlagsAsync should be awaited first.
+    if (!this.isInitialized) {
+      this.isInitialized = true;
+      try {
+        if (fs.existsSync(FLAGS_FILE_PATH)) {
+          const fileData = fs.readFileSync(FLAGS_FILE_PATH, 'utf8');
+          const parsed = JSON.parse(fileData);
+          if (parsed && typeof parsed === 'object') {
+            this.flags = { ...this.flags, ...parsed };
+          }
+        }
+      } catch (err: any) {}
+    }
+  }
+
+  private static async saveFlagsAsync(): Promise<void> {
     try {
       const dir = path.dirname(FLAGS_FILE_PATH);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
       fs.writeFileSync(FLAGS_FILE_PATH, JSON.stringify(this.flags, null, 2), 'utf8');
+
+      if (mongoose.connection.readyState === 1) {
+        await FeatureFlags.findOneAndUpdate({}, { flags: this.flags, updatedAt: new Date() }, { upsert: true });
+      }
     } catch (err: any) {
-      console.warn('[ConfigurationService] Failed to persist feature flags to disk:', err.message);
+      console.warn('[ConfigurationService] Failed to persist feature flags:', err.message);
     }
   }
 
@@ -128,14 +161,14 @@ export class ConfigurationService {
     return this.flags[flag] ?? false;
   }
 
-  public static setFlag(flag: string, value: boolean): void {
-    this.initFlags();
+  public static async setFlag(flag: string, value: boolean): Promise<void> {
+    await this.initFlagsAsync();
     this.flags[flag] = value;
-    this.saveFlags();
+    await this.saveFlagsAsync();
   }
 
-  public static getAllFlags(): Record<string, boolean> {
-    this.initFlags();
+  public static async getAllFlags(): Promise<Record<string, boolean>> {
+    await this.initFlagsAsync();
     return { ...this.flags };
   }
 }

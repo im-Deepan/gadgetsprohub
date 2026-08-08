@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import * as dns from 'dns';
 import sharp from 'sharp';
 import mongoose from 'mongoose';
 
@@ -21,6 +22,60 @@ const logStructured = (level: 'info' | 'warn' | 'error', message: string, contex
   }));
 };
 
+// Helper to determine if an IP address is private, loopback, link-local, multicast, etc.
+export function isIpPrivate(ipAddress: string): boolean {
+  if (!ipAddress) return true;
+  
+  // Clean up bracketed IPv6
+  const cleanIp = ipAddress.replace(/^\[|\]$/g, '').trim().toLowerCase();
+  
+  if (cleanIp === 'localhost' || cleanIp === '::' || cleanIp === '::1' || cleanIp === '0.0.0.0') {
+    return true;
+  }
+
+  // IPv4 check
+  const ipv4Parts = cleanIp.split('.').map(Number);
+  if (ipv4Parts.length === 4 && !ipv4Parts.some(isNaN)) {
+    const [oct1, oct2, oct3, oct4] = ipv4Parts;
+    // Loopback: 127.0.0.0/8
+    if (oct1 === 127) return true;
+    // Class A private: 10.0.0.0/8
+    if (oct1 === 10) return true;
+    // Class B private: 172.16.0.0/12
+    if (oct1 === 172 && oct2 >= 16 && oct2 <= 31) return true;
+    // Class C private: 192.168.0.0/16
+    if (oct1 === 192 && oct2 === 168) return true;
+    // Link-local: 169.254.0.0/16
+    if (oct1 === 169 && oct2 === 254) return true;
+    // Current network/broadcast/invalid: 0.0.0.0/8
+    if (oct1 === 0) return true;
+    // Shared address space: 100.64.0.0/10
+    if (oct1 === 100 && oct2 >= 64 && oct2 <= 127) return true;
+    // IETF Protocol Assignments: 192.0.0.0/24
+    if (oct1 === 192 && oct2 === 0 && oct3 === 0) return true;
+    // TEST-NET-1: 192.0.2.0/24
+    if (oct1 === 192 && oct2 === 0 && oct3 === 2) return true;
+    // IPv6 to IPv4 relay: 192.88.99.0/24
+    if (oct1 === 192 && oct2 === 88 && oct3 === 99) return true;
+    // Benchmark testing: 198.18.0.0/15
+    if (oct1 === 198 && oct2 >= 18 && oct2 <= 19) return true;
+    // TEST-NET-2: 198.51.100.0/24
+    if (oct1 === 198 && oct2 === 51 && oct3 === 100) return true;
+    // TEST-NET-3: 203.0.113.0/24
+    if (oct1 === 203 && oct2 === 0 && oct3 === 113) return true;
+    // Multicast/Reserved/Experimental: 224.0.0.0/4 and 240.0.0.0/4
+    if (oct1 >= 224) return true;
+  }
+
+  // IPv6 check (very basic prefixes)
+  // Private/Unique Local Address (ULA): fc00::/7 (fc00:: to fdff::)
+  if (cleanIp.startsWith('fc') || cleanIp.startsWith('fd')) return true;
+  // Link-local address: fe80::/10
+  if (cleanIp.startsWith('fe8') || cleanIp.startsWith('fe9') || cleanIp.startsWith('fea') || cleanIp.startsWith('feb')) return true;
+
+  return false;
+}
+
 // Helper to validate URL scheme and block SSRF (loopback, private IPs, metadata)
 function isSafeUrl(urlString: string): boolean {
   if (!urlString || typeof urlString !== 'string') return false;
@@ -32,25 +87,8 @@ function isSafeUrl(urlString: string): boolean {
     const hostname = parsed.hostname.toLowerCase().trim();
     if (!hostname) return false;
 
-    if (hostname === 'localhost' || hostname === '0.0.0.0' || hostname === '::1' || hostname === '[::1]') {
+    if (isIpPrivate(hostname)) {
       return false;
-    }
-
-    const cleanHost = hostname.replace(/^\[|\]$/g, '');
-    if (cleanHost.startsWith('169.254.') || cleanHost.startsWith('127.')) {
-      return false;
-    }
-
-    if (cleanHost.startsWith('10.') || cleanHost.startsWith('192.168.')) {
-      return false;
-    }
-
-    const ipParts = cleanHost.split('.').map(Number);
-    if (ipParts.length === 4 && !ipParts.some(isNaN)) {
-      if (ipParts[0] === 172 && ipParts[1] >= 16 && ipParts[1] <= 31) {
-        return false;
-      }
-      if (ipParts[0] === 0) return false;
     }
 
     return true;
@@ -136,20 +174,24 @@ export class MediaService {
          throw new Error('Only HTTP/HTTPS URLs are allowed');
       }
       
-      const isPrivateIP = (hostname: string) => {
-         const parts = hostname.split('.');
-         if (parts.length === 4 && parts.every(p => !isNaN(Number(p)))) {
-            const ip = parts.map(Number);
-            if (ip[0] === 10 || (ip[0] === 172 && ip[1] >= 16 && ip[1] <= 31) || (ip[0] === 192 && ip[1] === 168) || ip[0] === 127 || ip[0] === 0 || ip[0] === 169) return true;
-         }
-         return ['localhost', '::1'].includes(hostname);
-      };
-      
-      if (isPrivateIP(urlObj.hostname)) {
+      const hostname = urlObj.hostname.toLowerCase().trim();
+      if (isIpPrivate(hostname)) {
          throw new Error('Private/Link-local IPs are not allowed');
       }
+
+      // Resolve DNS to verify the resolved IP is not private (to defend against DNS-rebinding SSRF)
+      const lookupResult = await dns.promises.lookup(hostname, { all: true });
+      if (lookupResult && lookupResult.length > 0) {
+        for (const addr of lookupResult) {
+          if (isIpPrivate(addr.address)) {
+            throw new Error(`The resolved IP address (${addr.address}) for hostname (${hostname}) is private or local.`);
+          }
+        }
+      } else {
+        throw new Error(`Could not resolve hostname: ${hostname}`);
+      }
     } catch (e: any) {
-       throw new Error(`Invalid URL: ${e.message}`);
+       throw new Error(`Invalid URL or DNS check failed: ${e.message}`);
     }
 
     const controller = new AbortController();

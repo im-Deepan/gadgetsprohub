@@ -125,7 +125,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
   return (
     <div className="w-full flex flex-col bg-slate-50 dark:bg-black font-sans min-h-screen">
       {/* 1. HERO SECTION (Compact Sizing & Centered) */}
-      <section className="relative w-full py-6 md:py-8 px-4 overflow-hidden border-b border-slate-100 dark:border-slate-800">
+      <section className="relative w-full py-4 md:py-6 px-4 overflow-hidden border-b border-slate-100 dark:border-slate-800">
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-slate-50 dark:from-indigo-950/20 dark:to-black z-0 pointer-events-none" />
         
         <div className="relative z-10 w-full max-w-4xl mx-auto flex flex-col items-center text-center">
@@ -133,7 +133,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-xl sm:text-2xl md:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mb-3"
+            className="text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mb-2"
           >
             Find the right gadget. <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
@@ -141,14 +141,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             </span>
           </motion.h1>
 
-          {/* Category Chip Scroll Rail with right fade mask */}
+          {/* Category Chip Scroll Rail with right fade mask and snap scroll */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="relative w-full max-w-3xl mt-2"
+            className="relative w-full max-w-3xl mt-1.5 px-4 sm:px-0"
           >
-            <div className="flex overflow-x-auto snap-x scroll-smooth -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-center gap-2 pb-2 hide-scrollbar">
+            <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-center gap-2.5 pb-2.5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
               {[
                 { id: 'smartphones', name: 'Smartphones', icon: Smartphone, color: 'text-blue-500' },
                 { id: 'laptops', name: 'Laptops', icon: Laptop, color: 'text-zinc-900 dark:text-white' },
@@ -162,14 +162,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                     e.preventDefault();
                     onNavigate('products', `category-${cat.id}`);
                   }}
-                  className="snap-start flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-zinc-900 dark:border-white hover:shadow-xs whitespace-nowrap shrink-0 transition-all cursor-pointer group text-xs"
+                  className="snap-center flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-zinc-900 dark:border-white hover:shadow-xs whitespace-nowrap shrink-0 transition-all cursor-pointer group text-xs min-h-[44px]"
                 >
                   <cat.icon size={15} className={`${cat.color} group-hover:scale-110 transition-transform`} />
                   <span className="font-semibold text-slate-700 dark:text-slate-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-300">{cat.name}</span>
                 </a>
               ))}
             </div>
-            <div className="sm:hidden absolute top-0 right-0 bottom-2 w-8 bg-gradient-to-l from-slate-50 dark:from-black pointer-events-none" />
+            {/* Elegant right-edge fade mask for horizontal scroll on mobile */}
+            <div className="sm:hidden absolute top-0 right-0 bottom-2.5 w-10 bg-gradient-to-l from-slate-50 dark:from-black pointer-events-none" />
+            <div className="sm:hidden absolute top-0 left-0 bottom-2.5 w-10 bg-gradient-to-r from-slate-50 dark:from-black pointer-events-none" />
           </motion.div>
         </div>
       </section>
@@ -204,14 +206,13 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
           <div>
             <h2 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
               <TrendingUp className="h-7 w-7 text-zinc-900 dark:text-white shrink-0" />
-              All Products
+              Trending Now
             </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Browse the latest tech gear, compared and reviewed.</p>
           </div>
           <a
             href="/products"
             onClick={(e) => { e.preventDefault(); onNavigate('products'); }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-700 text-sm font-semibold transition-colors cursor-pointer shadow-sm shrink-0"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-700 text-sm font-semibold transition-colors cursor-pointer shadow-sm shrink-0 min-h-[44px]"
           >
             <ShoppingBag size={16} />
             <span>View Catalog</span>
@@ -232,8 +233,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         ) : (
           <div className="p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-900/30">
             <ShoppingBag className="h-10 w-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-            <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">Catalog Currently Updating</h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">Our automated scanners are updating live inventory prices. Please check back shortly or explore our buying guides.</p>
+            <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">We're refreshing prices — back in a few minutes</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">Our catalog is currently compiling real-time specifications and deal tracking. Please explore our buying guides below.</p>
           </div>
         )}
       </section>

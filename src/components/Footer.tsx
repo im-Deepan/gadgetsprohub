@@ -67,22 +67,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
           <div className="flex items-start gap-3">
             <ShieldCheck className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Product Specifications</h5>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Technical details and features indexed for quick side-by-side comparison.</p>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Deep Technical Indexing</h5>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">We catalog and structure hardware parameters, screen architectures, and sensor specifications into clean, standard-aligned comparison matrices.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <RefreshCw className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Price & Deal Tracking</h5>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Track price history, current deals, and stock status directly from Amazon.</p>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Automated Price Diagnostics</h5>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Continuous tracking of retail prices, active deal thresholds, and merchant listings directly from Amazon to ensure reliable pricing insights.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Clear Comparisons</h5>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Product highlights, pros, and cons organized to help you choose the right gear.</p>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Unbiased Spec Distillations</h5>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Synthesizing thousands of user reviews and expert editorials to yield objective, zero-hype highlights of pros, cons, and performance.</p>
             </div>
           </div>
         </div>
@@ -200,7 +200,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
           {/* Newsletter Input */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-800 dark:text-white mb-4">
-              Weekly Deals Feed
+              Weekly Tech Feed
             </h4>
             <p className="text-[11px] text-slate-400 mb-3 leading-relaxed dark:text-slate-300">
               Get product comparisons and buying guides directly in your inbox.

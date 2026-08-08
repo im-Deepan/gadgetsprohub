@@ -13,6 +13,7 @@ import {
   Tag,
   DollarSign,
   Layers,
+  List,
   Image as ImageIcon,
   Key,
   History,
@@ -375,6 +376,29 @@ export default function Popup() {
           return next;
         });
       }
+
+      // Command Palette Shortcuts: Cmd/Ctrl + 1..8
+      if (e.metaKey || e.ctrlKey) {
+        const num = parseInt(e.key, 10);
+        if (!isNaN(num) && num >= 1 && num <= 8) {
+          e.preventDefault();
+          const targetIndex = num - 1;
+          const cmdList = [
+            () => setActiveTab('scraper'),
+            () => setActiveTab('bulk'),
+            () => isAuthenticated && setActiveTab('history'),
+            () => isAuthenticated && setActiveTab('analytics'),
+            () => setTheme(prev => { const next = prev === 'dark' ? 'light' : 'dark'; extensionStorage.set('gph_theme', next); return next; }),
+            () => { setShowSettings(true); setShowDevMode(false); setShowHealthCheck(false); },
+            () => { setShowHealthCheck(true); setShowSettings(false); setShowDevMode(false); runHealthCheck(); },
+            () => checkCurrentTab()
+          ];
+          if (cmdList[targetIndex]) {
+            cmdList[targetIndex]();
+            setShowCommandPalette(false);
+          }
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -389,7 +413,7 @@ export default function Popup() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [isAuthenticated, apiUrl, environment]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -871,6 +895,17 @@ export default function Popup() {
           >
             <BarChart2 className="w-3.5 h-3.5" />
             Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('bulk')}
+            className={`flex-1 py-2 text-center text-xs font-semibold border-b-2 transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'bulk'
+                ? 'border-violet-600 text-violet-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            Bulk
           </button>
         </div>
       )}
@@ -1669,7 +1704,7 @@ export default function Popup() {
             </div>
             <div className="flex items-center space-x-1">
               <Database className="w-3.5 h-3.5 text-violet-600" />
-              <span>Host: <strong className="text-slate-700 font-mono">Dev</strong></span>
+              <span>Host: <strong className="text-slate-700 font-mono">{environment || 'Dev'}</strong></span>
             </div>
           </div>
         </div>

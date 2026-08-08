@@ -1519,7 +1519,7 @@ async function triggerProductAddedEmailNotifications(product: any) {
       const recipientEmail = interest.email;
       if (!recipientEmail) continue;
 
-      const subject = `📬 New Product Alert: ${product.name} Added!`;
+      const subject = `📬 New Product Alert: ${escapeHTML(product.name)} Added!`;
       const prodImage = (product.images && product.images[0]) ? product.images[0] : 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600';
       
       const htmlBody = `
@@ -1534,17 +1534,17 @@ async function triggerProductAddedEmailNotifications(product: any) {
             Hello from GadgetsProHub!
           </p>
           <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
-            Based on your interest in the <strong>"${interest.categoryName}"</strong> category from your <strong>"Pick Where You Left"</strong> history board, we've drafted this notification because a matching new product has been successfully added to our catalog!
+            Based on your interest in the <strong>"${escapeHTML(interest.categoryName)}"</strong> category from your <strong>"Pick Where You Left"</strong> history board, we've drafted this notification because a matching new product has been successfully added to our catalog!
           </p>
           
           <div style="margin: 28px 0; padding: 20px; border: 1px solid #f1f5f9; border-radius: 20px; background-color: #fafbfd; display: flex; flex-direction: row; align-items: center; gap: 20px;">
             <div style="flex-shrink: 0; width: 110px; height: 110px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border-radius: 14px; border: 1px solid #f1f5f9; padding: 8px;">
-              <img src="${prodImage}" alt="${product.name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+              <img src="${prodImage}" alt="${escapeHTML(product.name)}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
             </div>
             <div style="flex: 1; min-width: 0;">
-              <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; color: #6366f1; font-family: monospace; letter-spacing: 0.05em;">${product.brand || 'Premium Brand'}</span>
-              <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 4px 0; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${product.name}</h3>
-              <p style="font-size: 12px; color: #64748b; margin: 0 0 8px 0; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${product.description || 'View details and latest specifications on our site.'}</p>
+              <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; color: #6366f1; font-family: monospace; letter-spacing: 0.05em;">${escapeHTML(product.brand || 'Premium Brand')}</span>
+              <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 4px 0; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHTML(product.name)}</h3>
+              <p style="font-size: 12px; color: #64748b; margin: 0 0 8px 0; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHTML(product.description || 'View details and latest specifications on our site.')}</p>
               <div style="font-size: 15px; font-weight: 900; color: #0f172a;">
                 $${product.price}
                 ${product.originalPrice ? `<span style="font-size: 11px; text-decoration: line-through; color: #94a3b8; font-weight: 500; margin-left: 6px;">$${product.originalPrice}</span>` : ''}
@@ -1559,7 +1559,7 @@ async function triggerProductAddedEmailNotifications(product: any) {
           </div>
           
           <div style="border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
-            <p style="margin: 0;">You received this email because you registered for automated newsletter alerts on <strong>"${interest.categoryName}"</strong> from your <strong>"Pick Where You Left"</strong> board.</p>
+            <p style="margin: 0;">You received this email because you registered for automated newsletter alerts on <strong>"${escapeHTML(interest.categoryName)}"</strong> from your <strong>"Pick Where You Left"</strong> board.</p>
             <p style="margin: 4px 0 0 0;">© 2026 GadgetsProHub Affiliate Portal. All rights reserved.</p>
           </div>
         </div>
@@ -1573,12 +1573,12 @@ async function triggerProductAddedEmailNotifications(product: any) {
             subject,
             html: htmlBody
           });
-          console.log(`[Success] Direct email sent to ${recipientEmail} for category interest: ${interest.categoryName}`);
+          console.log(`[Success] Direct email sent to ${recipientEmail} for category interest: ${escapeHTML(interest.categoryName)}`);
         } catch (mailErr: any) {
           console.warn(`Failed to send email to ${recipientEmail}:`, mailErr.message);
         }
       } else {
-        console.log(`[Simulated Email to ${recipientEmail}]\nSubject: ${subject}\nBody: Product: ${product.name}`);
+        console.log(`[Simulated Email to ${recipientEmail}]\nSubject: ${subject}\nBody: Product: ${escapeHTML(product.name)}`);
       }
     }
   } catch (err: any) {
@@ -3374,19 +3374,19 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   });
 
   // 4. Feature Flags / Admin Config Endpoints
-  app.get('/api/admin/config', adminOnly, (req: express.Request, res: express.Response) => {
-    res.json({ success: true, flags: ConfigurationService.getAllFlags() });
+  app.get('/api/admin/config', adminOnly, async (req: express.Request, res: express.Response) => {
+    res.json({ success: true, flags: await ConfigurationService.getAllFlags() });
   });
 
-  app.post('/api/admin/config', adminOnly, (req: express.Request, res: express.Response) => {
+  app.post('/api/admin/config', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const { flags } = req.body;
       if (flags && typeof flags === 'object') {
         for (const [key, val] of Object.entries(flags)) {
-          ConfigurationService.setFlag(key, !!val);
+          await ConfigurationService.setFlag(key, !!val);
         }
       }
-      res.json({ success: true, flags: ConfigurationService.getAllFlags() });
+      res.json({ success: true, flags: await ConfigurationService.getAllFlags() });
     } catch (error: any) {
       res.status(500).json({ error: 'An internal error occurred.' });
     }
@@ -3653,6 +3653,33 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   });
 
   // Product Routes
+  function sanitizeServerProduct(p: any) {
+    if (!p) return p;
+    const doc = p.toObject ? p.toObject() : { ...p };
+    
+    // Fix Bata/shoe description mismatch if present
+    const nameLower = (doc.name || '').toLowerCase();
+    const brandLower = (doc.brand || '').toLowerCase();
+    const descLower = (doc.description || '').toLowerCase();
+    
+    if ((nameLower.includes('bata') || brandLower.includes('bata') || nameLower.includes('shoe') || nameLower.includes('oxford') || nameLower.includes('footwear')) &&
+        (descLower.includes('headset') || descLower.includes('headphone') || descLower.includes('audio') || descLower.includes('earbud'))) {
+      doc.description = "Classic formal leather shoes with cushioned inner sole and durable anti-skid grip.";
+      if (doc.longDescription) {
+        doc.longDescription = "Premium handcrafted formal shoes crafted from genuine leather. Built for daily corporate wear with breathable linings and ergonomic footbed support.";
+      }
+    }
+
+    // Price guard: If sale price >= MRP or MRP is lower than price, suppress originalPrice & discount
+    if (doc.originalPrice && doc.price && Number(doc.originalPrice) <= Number(doc.price)) {
+      delete doc.originalPrice;
+      doc.discount = 0;
+      doc.isDiscounted = false;
+    }
+
+    return doc;
+  }
+
   app.get('/api/products', async (req: express.Request, res: express.Response) => {
     try {
       await cleanExpiredTrendingProducts();
@@ -3787,7 +3814,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
         const products = await query;
         const total = await Product.countDocuments(filter);
-        res.json({ products, total, pages: Math.ceil(total / Number(limit)), currentPage: Number(page) });
+        res.json({ products: products.map(sanitizeServerProduct), total, pages: Math.ceil(total / Number(limit)), currentPage: Number(page) });
       } else {
         res.status(503).json({ error: 'Database is currently offline. Please try again shortly.' });
       }
@@ -3883,7 +3910,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       }).catch(err => {
         console.warn('Background view analytics logging failed:', err.message);
       });
-      return res.json(product);
+      return res.json(sanitizeServerProduct(product));
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -5659,6 +5686,21 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
               if (isMongoConnected) {
                 const { finalSlug } = await resolveUniqueSlug(state.data.name || 'item', 'product');
                 
+                let cleanAffiliateLink = state.data.affiliateLink || '';
+                const resolvedAffiliateCode = process.env.AMAZON_AFFILIATE_TAG || 'gadgetsprohub-21';
+                try {
+                  if (cleanAffiliateLink && /^https?:\/\//i.test(cleanAffiliateLink)) {
+                    if (!cleanAffiliateLink.includes('tag=')) {
+                      const sep = cleanAffiliateLink.includes('?') ? '&' : '?';
+                      cleanAffiliateLink = `${cleanAffiliateLink}${sep}tag=${resolvedAffiliateCode}`;
+                    } else {
+                      cleanAffiliateLink = cleanAffiliateLink.replace(/tag=[^&]+/g, `tag=${resolvedAffiliateCode}`);
+                    }
+                  }
+                } catch (e) {
+                  // Ignore
+                }
+
                 const product = new Product({
                   name: state.data.name,
                   slug: finalSlug,
@@ -5668,7 +5710,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
                   price: state.data.price,
                   originalPrice: state.data.originalPrice,
                   discount: state.data.discount,
-                  affiliateLink: state.data.affiliateLink,
+                  affiliateLink: cleanAffiliateLink,
+                  affiliateCode: resolvedAffiliateCode,
                   description: state.data.description,
                   images: state.data.images || [],
                   inStock: true,
@@ -5702,7 +5745,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
                         source: 'telegram_bot'
                       })
                     });
-                    console.log(`[Telegram Bot] Successfully triggered N8N manual workflow webhook for: ${product.name}`);
+                    console.log(`[Telegram Bot] Successfully triggered N8N manual workflow webhook for: ${escapeHTML(product.name)}`);
                   } catch (n8nErr: any) {
                     console.error('[Telegram Bot] N8N Webhook trigger error:', n8nErr.message);
                   }
@@ -6698,6 +6741,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const spaceSaved = (stats[0]?.totalOriginalSize || 0) - storageUsed;
       
       const duplicates = await MediaAsset.aggregate([
+        { $match: { hash: { $exists: true, $nin: [null, ''] } } },
         { $group: { _id: "$hash", count: { $sum: 1 } } },
         { $match: { count: { $gt: 1 } } }
       ]);
@@ -6726,15 +6770,32 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const asset = await MediaAsset.findById(req.params.id);
       if (!asset) return res.status(404).json({ error: 'Asset not found' });
       
-      // Delete file
-      const fullPath = path.join(process.cwd(), 'public', asset.localPath || '');
-      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+      const allowedDir = path.resolve(process.cwd(), 'public', 'uploads', 'media');
+
+      const safeDeleteFile = (relPath?: string) => {
+        if (!relPath || typeof relPath !== 'string') return;
+        const normalizedRel = relPath.replace(/^\/+/, '');
+        if (!normalizedRel) return;
+        const fullPath = path.resolve(process.cwd(), 'public', normalizedRel);
+        if ((fullPath === allowedDir || fullPath.startsWith(allowedDir + path.sep)) && fs.existsSync(fullPath)) {
+          try {
+            const stat = fs.statSync(fullPath);
+            if (stat.isFile()) {
+              fs.unlinkSync(fullPath);
+            }
+          } catch (e) {
+            // ignore cleanup errors
+          }
+        }
+      };
+
+      // Delete main file
+      safeDeleteFile(asset.localPath);
       
       // Delete variants
       if (asset.variants) {
         Object.values(asset.variants).forEach((variantPath: any) => {
-          const vp = path.join(process.cwd(), 'public', variantPath || '');
-          if (fs.existsSync(vp)) fs.unlinkSync(vp);
+          safeDeleteFile(variantPath);
         });
       }
       
@@ -6757,7 +6818,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const seoResult = await seoService.calculateSeoScore(product);
       
       // Run Readability
-      const textToAnalyze = `${product.name}. ${product.description || ''} ${product.longDescription || ''}`;
+      const textToAnalyze = `${escapeHTML(product.name)}. ${product.description || ''} ${product.longDescription || ''}`;
       const readabilityResult = seoService.analyzeReadability(textToAnalyze, product.focusKeyword || '');
 
       // Scan for broken links
@@ -7390,6 +7451,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
           if (isMongoConnected && typeof p.save === 'function') {
             await p.save();
+          } else if (!isMongoConnected) {
+            saveLocalProducts();
           }
         }
       }
@@ -7966,10 +8029,11 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       ];
 
       const escapeCSV = (val: any) => {
-        let str = String(val || '').replace(/"/g, '""');
+        let str = String(val === null || val === undefined ? '' : val);
         if (/^[=\-+\@\t\r]/.test(str)) {
           str = "'" + str;
         }
+        str = str.replace(/"/g, '""');
         return `"${str}"`;
       };
 

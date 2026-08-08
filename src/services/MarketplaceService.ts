@@ -1237,13 +1237,17 @@ export class MarketplaceService {
     });
     await check.save();
 
+    const hasPartners = offers.length > 1;
+
     return {
       productId: product._id,
       name: product.name,
-      bestMarketplace,
+      bestMarketplace: hasPartners ? bestMarketplace : (product.brand || 'Primary Retailer'),
       bestPrice: sorted[0]?.convertedPrice || product.price,
-      savingsAmount: offers.length > 1 ? Math.max(...offers.map(o => o.price)) - Math.min(...offers.map(o => o.price)) : 0,
-      offers
+      savingsAmount: hasPartners ? Math.max(0, Math.max(...offers.map(o => o.price)) - Math.min(...offers.map(o => o.price))) : 0,
+      offers,
+      offersCount: offers.length,
+      note: hasPartners ? undefined : 'No partner marketplace comparisons currently linked for this item.'
     };
   }
 
@@ -1266,7 +1270,7 @@ export class MarketplaceService {
     try {
       // 1. Fetch matching affiliate profile if exists to append tag
       const affiliateProfile = await AffiliateProfilesModel.findOne({ providerId: provider.providerId }) as any;
-      const affiliateCode = affiliateProfile?.affiliateId || 'partner-21';
+      const affiliateCode = affiliateProfile?.affiliateId || process.env.AMAZON_AFFILIATE_TAG || 'gadgetsprohub-21';
 
       // 2. Perform secure scraping extraction
       const extracted = await provider.extractProduct(url, affiliateCode);

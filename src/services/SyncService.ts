@@ -360,9 +360,10 @@ export class SyncService {
   /**
    * Validates Amazon Affiliate link structure and tracking tag correctness.
    */
-  public validateAffiliateLink(link: string, tag: string = 'gadgetsprohub-21'): { valid: boolean; issues: string[]; suggestions: string[] } {
+  public validateAffiliateLink(link: string, tag?: string): { valid: boolean; issues: string[]; suggestions: string[] } {
     const issues: string[] = [];
     const suggestions: string[] = [];
+    const activeSiteTag = process.env.AMAZON_AFFILIATE_TAG || 'gadgetsprohub-21';
 
     if (!link) {
       return { valid: false, issues: ['Affiliate link is missing completely.'], suggestions: ['Add a valid Amazon link.'] };
@@ -374,18 +375,17 @@ export class SyncService {
       suggestions.push('Verify the link is imported from an official Amazon marketplace (e.g. amazon.in, amazon.com).');
     }
 
-    // Check for tracking code / tag
-    if (tag) {
-      const tagParam = `tag=${tag}`;
-      if (!link.includes(tagParam)) {
-        issues.push(`The required tracking code parameter "${tagParam}" was not found in the redirect parameters.`);
-        suggestions.push(`Append "&tag=${tag}" or "?tag=${tag}" to ensure commission referral credits are tracked.`);
-      }
-    } else {
-      if (!link.includes('tag=')) {
-        issues.push('No tracking tag detected in link.');
-        suggestions.push('Provide a standard Amazon Associate tracking tag like "yourtag-20".');
-      }
+    // Check if link contains active site tracking tag
+    const activeTagParam = `tag=${activeSiteTag}`;
+    if (!link.includes(activeTagParam)) {
+      issues.push(`The active site tracking code parameter "${activeTagParam}" was not found in the link.`);
+      suggestions.push(`Append "&tag=${activeSiteTag}" or "?tag=${activeSiteTag}" to ensure commission referral credits are tracked.`);
+    }
+
+    // Check if product's stored affiliate code mismatches active site tag
+    if (tag && tag !== activeSiteTag) {
+      issues.push(`Product affiliate tag "${tag}" mismatches the active site tag "${activeSiteTag}".`);
+      suggestions.push(`Update the product affiliate code to "${activeSiteTag}".`);
     }
 
     // Check link length or possible broken params

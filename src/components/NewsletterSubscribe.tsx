@@ -149,7 +149,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
             <div className="max-w-md space-y-2 text-center md:text-left">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-500 dark:bg-indigo-950/50 dark:text-indigo-300">
                 <Sparkles size={12} className="animate-spin-slow" />
-                <span>Exclusive Deals & Updates</span>
+                <span>Exclusive Specs & Digests</span>
               </div>
               <h3 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white sm:text-2xl">
                 Stay updated with premium specs
@@ -200,7 +200,7 @@ export const NewsletterSubscribe: React.FC<NewsletterSubscribeProps> = ({
                     </>
                   ) : (
                     <>
-                      <span>Sign up for Deals</span>
+                      <span>Join Tech Feed</span>
                       <ArrowRight size={16} />
                     </>
                   )}

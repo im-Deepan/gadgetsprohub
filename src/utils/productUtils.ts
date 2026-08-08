@@ -124,7 +124,7 @@ export const formatRating = (rating: number | undefined | null, reviewCount?: nu
   }
   return {
     hasRating: false,
-    text: 'No reviews yet',
+    text: '',
     numericRating: 0,
     count: countVal
   };
@@ -148,12 +148,10 @@ export const calculateDiscountPercent = (price?: number, originalPrice?: number,
   if (price === undefined || price === null || originalPrice === undefined || originalPrice === null) return 0;
   if (price <= 0 || originalPrice <= 0) return 0;
 
-  if (price > originalPrice) {
-    console.warn(`[Data Warning] Product "${productTitle || 'Unknown'}" has sale price (₹${price}) > MRP (₹${originalPrice})`);
-    return 0;
-  }
-
   if (price >= originalPrice) {
+    if (price > originalPrice) {
+      console.warn(`[Data Warning] Product "${productTitle || 'Unknown'}" has sale price (₹${price}) > MRP (₹${originalPrice}). Suppressing invalid discount.`);
+    }
     return 0;
   }
 
@@ -162,17 +160,13 @@ export const calculateDiscountPercent = (price?: number, originalPrice?: number,
 
 /**
  * Validates and sanitizes a product's pricing and discount data.
- * If sale price >= MRP, suppresses strikethrough and discount badge completely,
- * and logs a data warning if price > originalPrice.
+ * If sale price >= MRP, suppresses strikethrough and discount badge completely.
  */
 export const getValidatedPricing = (product: { price?: number; originalPrice?: number; discount?: number; name?: string }) => {
   const price = product?.price ?? 0;
   let originalPrice = product?.originalPrice;
   
   if (!originalPrice || originalPrice <= price) {
-    if (originalPrice && price > originalPrice) {
-      console.warn(`[Data Warning] Product "${product?.name || 'Unknown'}" has sale price (₹${price}) > MRP (₹${originalPrice}). Suppressing discount badge.`);
-    }
     return {
       price,
       originalPrice: undefined,

@@ -82,6 +82,11 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
 
   useEffect(() => {
     if (!adsEnabled) return;
+    
+    if (isTestMode) {
+      setIsUnfilled(true);
+      return;
+    }
 
     let isUnmounted = false;
     let observer: MutationObserver | null = null;
