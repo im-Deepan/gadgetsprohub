@@ -97,12 +97,12 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         </form>
       ) : (
         <div className="text-center p-4">
-          <p className="text-xs text-slate-300 mb-3.5 leading-relaxed">Login with your account to leave a star rating and review.</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3.5 leading-relaxed">Sign in with your account to leave a rating and review.</p>
           <button
             onClick={() => onNavigate('login')}
-            className="rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-600 py-1.5 px-4 text-[10px] font-bold cursor-pointer transition-all duration-300 active:scale-95 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-200 dark:hover:bg-indigo-900/60"
+            className="rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-600 py-2 px-4 text-xs font-bold cursor-pointer transition-all duration-300 active:scale-95 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-200 dark:hover:bg-indigo-900/60 min-h-[44px]"
           >
-            Go to Login Drawer
+            Sign in to write a review
           </button>
         </div>
       )}

@@ -38,10 +38,22 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
     normalizedMessage.includes('safari-extension') ||
     normalizedMessage.includes('moz-extension') ||
     normalizedMessage.includes('content-script') ||
+    normalizedMessage.includes('failed to fetch') ||
+    normalizedMessage.includes('networkerror') ||
+    normalizedMessage.includes('load failed') ||
     message === '' ||
     message === 'Error' ||
     message === '[object Object]' ||
-    (normalizedContext === 'unhandled promise rejection' && (!message || message === 'Error' || message === '[object Object]')) ||
+    (normalizedContext.includes('unhandled promise rejection') && (
+      !message ||
+      message === 'Error' ||
+      message === '[object Object]' ||
+      normalizedName === 'error' ||
+      normalizedMessage === 'error' ||
+      normalizedMessage.includes('failed to fetch') ||
+      normalizedMessage.includes('load failed') ||
+      normalizedMessage.includes('networkerror')
+    )) ||
     normalizedMessage.includes('adsbygoogle') ||
     normalizedMessage.includes('googlesyndication') ||
     normalizedStack.includes('chrome-extension') ||

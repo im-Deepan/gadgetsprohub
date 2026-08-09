@@ -166,32 +166,36 @@ export const hasValidDiscount = (price?: number, originalPrice?: number, _legacy
 };
 
 /**
- * Dynamically computes discount percentage from (price, originalPrice).
- * If price > originalPrice, logs a data warning and returns 0.
- * If price >= originalPrice, returns 0.
+ * Normalizes price and MRP pairs:
+ * - Converts raw numbers to clean INR integers.
+ * - If salePrice > MRP, swaps them so salePrice is strictly lower than MRP.
+ * - Suppresses discount badges and strikethroughs if discount is >90% or <=0%.
  */
-export const calculateDiscountPercent = (price?: number, originalPrice?: number, productTitle?: string): number => {
-  if (price === undefined || price === null || originalPrice === undefined || originalPrice === null) return 0;
-  if (price <= 0 || originalPrice <= 0) return 0;
+export const normalizePricePair = (
+  rawPrice?: number | null,
+  rawOriginalPrice?: number | null,
+  productTitle?: string
+) => {
+  let price = getNormalizedINRPrice(rawPrice);
+  let originalPrice = getNormalizedINRPrice(rawOriginalPrice);
 
-  if (price >= originalPrice) {
-    if (price > originalPrice) {
-      console.warn(`[Data Warning] Product "${productTitle || 'Unknown'}" has sale price (₹${price}) > MRP (₹${originalPrice}). Suppressing invalid discount.`);
-    }
-    return 0;
+  if (!price && !originalPrice) {
+    return { price: 0, originalPrice: undefined, isDiscounted: false, discount: 0 };
   }
 
-  return Math.round(((originalPrice - price) / originalPrice) * 100);
-};
+  if (price === 0 && originalPrice > 0) {
+    price = originalPrice;
+    originalPrice = 0;
+  }
 
-/**
- * Validates and sanitizes a product's pricing and discount data.
- * If sale price >= MRP, suppresses strikethrough and discount badge completely.
- */
-export const getValidatedPricing = (product: { price?: number; originalPrice?: number; discount?: number; name?: string }) => {
-  const price = product?.price ?? 0;
-  let originalPrice = product?.originalPrice;
-  
+  // Swap inverted prices where sale price exceeds MRP
+  if (originalPrice > 0 && price > originalPrice) {
+    console.warn(`[Price Normalizer] Inverted prices for "${productTitle || 'Product'}": Sale ₹${price} > MRP ₹${originalPrice}. Swapping.`);
+    const temp = price;
+    price = originalPrice;
+    originalPrice = temp;
+  }
+
   if (!originalPrice || originalPrice <= price) {
     return {
       price,
@@ -201,14 +205,42 @@ export const getValidatedPricing = (product: { price?: number; originalPrice?: n
     };
   }
 
-  const computedDiscount = calculateDiscountPercent(price, originalPrice, product?.name);
+  const computedDiscount = Math.round(((originalPrice - price) / originalPrice) * 100);
+
+  // Suppress discount badge and strikethrough if discount is unrealistically high (>90%) or invalid (<=0%)
+  if (computedDiscount > 90 || computedDiscount <= 0) {
+    return {
+      price,
+      originalPrice: undefined,
+      isDiscounted: false,
+      discount: 0
+    };
+  }
 
   return {
     price,
     originalPrice,
-    isDiscounted: computedDiscount > 0,
+    isDiscounted: true,
     discount: computedDiscount
   };
+};
+
+/**
+ * Dynamically computes discount percentage from (price, originalPrice).
+ */
+export const calculateDiscountPercent = (price?: number, originalPrice?: number, productTitle?: string): number => {
+  return normalizePricePair(price, originalPrice, productTitle).discount;
+};
+
+/**
+ * Validates and sanitizes a product's pricing and discount data.
+ * If sale price >= MRP, suppresses strikethrough and discount badge completely.
+ */
+export const getValidatedPricing = (product: { price?: number; originalPrice?: number; discount?: number; name?: string }) => {
+  if (!product) {
+    return { price: 0, originalPrice: undefined, isDiscounted: false, discount: 0 };
+  }
+  return normalizePricePair(product.price, product.originalPrice, product.name);
 };
 
 /**

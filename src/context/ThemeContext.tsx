@@ -47,26 +47,51 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return false;
   });
 
+  const updateDOMAndState = useCallback((newTheme: Theme) => {
+    let nextIsDark = false;
+    if (newTheme === 'dark') {
+      nextIsDark = true;
+    } else if (newTheme === 'light') {
+      nextIsDark = false;
+    } else {
+      nextIsDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    setIsDark(nextIsDark);
+    setThemeState(newTheme);
+    safeSetItem('aff_theme_pref', newTheme);
+
+    if (typeof document !== 'undefined') {
+      if (nextIsDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
-    const applyTheme = (currentTheme: Theme) => {
-      if (currentTheme === 'dark') {
-        setIsDark(true);
-      } else if (currentTheme === 'light') {
-        setIsDark(false);
-      } else {
-        setIsDark(mediaQuery.matches);
-      }
-    };
-
-    applyTheme(theme);
+    // Initial sync
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+    } else if (theme === 'light') {
+      document.documentElement.classList.remove('dark');
+      setIsDark(false);
+    } else {
+      const systemDark = mediaQuery.matches;
+      document.documentElement.classList.toggle('dark', systemDark);
+      setIsDark(systemDark);
+    }
 
     const handleChange = (e: MediaQueryListEvent) => {
       if (theme === 'system') {
         setIsDark(e.matches);
+        document.documentElement.classList.toggle('dark', e.matches);
       }
     };
 
@@ -85,22 +110,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [theme]);
 
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
-
   const setTheme = useCallback((newTheme: Theme) => {
-    safeSetItem('aff_theme_pref', newTheme);
-    setThemeState(newTheme);
-  }, []);
+    updateDOMAndState(newTheme);
+  }, [updateDOMAndState]);
 
   const toggleTheme = useCallback(() => {
-    setTheme(isDark ? 'light' : 'dark');
-  }, [isDark, setTheme]);
+    const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    updateDOMAndState(nextTheme);
+  }, [theme, updateDOMAndState]);
 
   return (
     <ThemeContext.Provider value={{ isDark, theme, toggleTheme, setTheme }}>

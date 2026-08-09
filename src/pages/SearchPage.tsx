@@ -5,6 +5,7 @@ import { formatProductPrice } from '../utils/productUtils';
 import { apiFetch } from '../utils/apiClient';
 import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { Helmet } from '../components/Helmet';
 import { Search, Package, Sparkles, Filter, ArrowRight, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { matchProductByTokens } from '../utils/searchMatcher';
@@ -93,6 +94,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 transition-colors duration-300">
+      <Helmet>
+        <title>{query ? `Search: "${query}" | GadgetsProHub` : 'Search Products | GadgetsProHub'}</title>
+        <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href="https://gadgetsprohub.onrender.com/search" />
+      </Helmet>
+
       {/* Structured Data: Breadcrumb JSON-LD */}
       <script type="application/ld+json">
         {JSON.stringify({

@@ -543,7 +543,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         <div className="flex flex-col gap-1 overflow-hidden">
           <button
             onClick={() => { setSelectedCategory(''); setSelectedSubcategory(''); setCurrentPage(1); }}
-            className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${!selectedCategory ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
+            className={`w-full text-left rounded-lg text-xs py-2.5 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between min-h-[44px] ${!selectedCategory ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
           >
             <span className="flex items-center gap-2">
               <CategoryIcon name="all" className="h-4 w-4" />
@@ -553,7 +553,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
           </button>
           <button
             onClick={() => { setSearch(''); setSelectedCategory('trending'); setSelectedSubcategory(''); setCurrentPage(1); }}
-            className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${selectedCategory === 'trending' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
+            className={`w-full text-left rounded-lg text-xs py-2.5 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between min-h-[44px] ${selectedCategory === 'trending' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
           >
             <span className="flex items-center gap-2">
               <CategoryIcon name="trending" className="h-4 w-4 text-amber-500" />
@@ -565,7 +565,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             <button
               key={c._id}
               onClick={() => { setSearch(''); setSelectedCategory(c._id); setSelectedSubcategory(''); setCurrentPage(1); }}
-              className={`w-full text-left rounded-lg text-xs py-2 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between ${String(selectedCategory) === String(c._id) ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
+              className={`w-full text-left rounded-lg text-xs py-2.5 px-3 transition-all duration-200 cursor-pointer flex items-center justify-between min-h-[44px] ${String(selectedCategory) === String(c._id) ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/50'}`}
             >
               <span className="truncate flex items-center gap-2">
                 <CategoryIcon name={c.name} className="h-4 w-4 shrink-0 text-slate-400" />
@@ -582,7 +582,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Price Brackets (₹)</h4>
         
         {/* Presets */}
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-2">
           {[1000, 5000, 15000].map((limitValue) => {
             const isActive = maxPrice === String(limitValue) && minPrice === '';
             return (
@@ -598,10 +598,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   }
                   setCurrentPage(1);
                 }}
-                className={`py-1.5 px-2 text-[10px] font-bold rounded-lg border text-center transition-all duration-200 cursor-pointer ${
+                className={`py-2.5 px-3 text-xs font-bold rounded-lg border text-center transition-all duration-200 cursor-pointer min-h-[44px] flex items-center justify-center ${
                   isActive
                     ? 'bg-zinc-900 border-zinc-900 text-white shadow-xs font-bold dark:bg-white dark:border-white dark:text-zinc-900'
-                    : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
                 }`}
               >
                 Under ₹{limitValue.toLocaleString('en-IN')}
@@ -620,10 +620,10 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               }
               setCurrentPage(1);
             }}
-            className={`py-1.5 px-2 text-[10px] font-bold rounded-lg border text-center transition-all duration-200 cursor-pointer ${
+            className={`py-2.5 px-3 text-xs font-bold rounded-lg border text-center transition-all duration-200 cursor-pointer min-h-[44px] flex items-center justify-center ${
               minPrice === '15000' && maxPrice === ''
                 ? 'bg-zinc-900 border-zinc-900 text-white shadow-xs font-bold dark:bg-white dark:border-white dark:text-zinc-900'
-                : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
             }`}
           >
             ₹15,000+
@@ -992,6 +992,24 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                         End of products
                       </p>
                     )}
+                  </div>
+                )}
+
+                {/* BROWSE BY CATEGORY WHEN RESULTS < 8 */}
+                {products.length > 0 && products.length < 8 && categories.length > 0 && (
+                  <div className="mt-10 pt-8 border-t border-slate-200/80 dark:border-slate-800">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Explore Other Categories</h4>
+                    <div className="flex flex-wrap gap-2.5">
+                      {categories.map((cat) => (
+                        <button
+                          key={`cat-rec-${cat._id}`}
+                          onClick={() => { setSelectedCategory(cat._id); setSelectedSubcategory(''); setCurrentPage(1); }}
+                          className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer min-h-[44px] shadow-2xs"
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

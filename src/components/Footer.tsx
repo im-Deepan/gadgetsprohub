@@ -67,22 +67,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
           <div className="flex items-start gap-3">
             <ShieldCheck className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Deep Technical Indexing</h5>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">We catalog and structure hardware parameters, screen architectures, and sensor specifications into clean, standard-aligned comparison matrices.</p>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Real specs, side by side</h5>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Compare hardware parameters, screen architectures, and specs in clean, easy-to-read comparison views.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <RefreshCw className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Automated Price Diagnostics</h5>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Continuous tracking of retail prices, active deal thresholds, and merchant listings directly from Amazon to ensure reliable pricing insights.</p>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Prices checked daily</h5>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Daily tracking of prices, active deal thresholds, and merchant listings directly from major retailers.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Unbiased Spec Distillations</h5>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Synthesizing thousands of user reviews and expert editorials to yield objective, zero-hype highlights of pros, cons, and performance.</p>
+              <h5 className="font-bold text-slate-800 dark:text-slate-100 mb-0.5">Honest pros and cons</h5>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Synthesizing reviews and specs to give you transparent highlights of advantages and drawbacks.</p>
             </div>
           </div>
         </div>

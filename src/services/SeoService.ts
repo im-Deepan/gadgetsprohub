@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { GoogleGenAI, Type } from '@google/genai';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getValidatedPricing } from '../utils/productUtils';
 
 export interface SeoMetadataPayload {
   seoTitle?: string;
@@ -370,17 +371,20 @@ export class SeoService {
       };
     }
 
+    // Validate and normalize pricing for schema
+    const validatedPricing = getValidatedPricing(product);
+
     // Offers (Affiliate Offer)
     schema.offers = {
       '@type': 'Offer',
-      'url': product.affiliateLink,
-      'priceCurrency': 'USD',
-      'price': product.price,
+      'url': product.affiliateLink || `${siteUrl}/products/${product.slug}`,
+      'priceCurrency': 'INR',
+      'price': validatedPricing.price,
       'itemCondition': 'https://schema.org/NewCondition',
-      'availability': product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      'availability': product.inStock !== false ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       'seller': {
         '@type': 'Organization',
-        'name': 'Amazon'
+        'name': product.seller || 'Amazon'
       }
     };
 

@@ -899,10 +899,18 @@ const setupGlobalErrorTracking = () => {
       !reason ||
       reason.name === 'AbortError' ||
       reason.name === 'CanceledError' ||
-      (typeof reason === 'string' && (reason.includes('abort') || reason.includes('canceled') || reason.includes('cancelled'))) ||
+      (typeof reason === 'string' && (
+        reason.includes('abort') || 
+        reason.includes('canceled') || 
+        reason.includes('cancelled') ||
+        reason.includes('failed to fetch') ||
+        reason.includes('load failed')
+      )) ||
       (reason && typeof reason === 'object' && (
         reason.name === 'AbortError' ||
         reason.name === 'CanceledError' ||
+        String(reason.name || '').toLowerCase() === 'aborterror' ||
+        (String(reason.name || '').toLowerCase() === 'error' && (!reason.message || reason.message === 'Error')) ||
         String(reason.message || '').toLowerCase().includes('abort') ||
         String(reason.message || '').toLowerCase().includes('canceled') ||
         String(reason.message || '').toLowerCase().includes('cancelled') ||

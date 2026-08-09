@@ -57,12 +57,21 @@ export const getCategoryName = (category: unknown, categories: Category[] = []):
   if (!category) return 'Uncategorized';
   if (typeof category === 'object' && category !== null) {
     const obj = category as Record<string, unknown>;
-    if (typeof obj.name === 'string' && obj.name) return toTitleCase(obj.name);
+    if (typeof obj.name === 'string' && obj.name) {
+      const name = toTitleCase(obj.name);
+      if (['Shoes', 'Shoe', 'Footwear', 'Footwears'].includes(name)) return 'Lifestyle & Gear';
+      return name;
+    }
   }
   
   const catId = getCategoryId(category);
   const found = categories.find(c => String(c._id) === catId || c.slug === catId);
-  return found ? toTitleCase(found.name) : 'Electronics';
+  if (found) {
+    const name = toTitleCase(found.name);
+    if (['Shoes', 'Shoe', 'Footwear', 'Footwears'].includes(name)) return 'Lifestyle & Gear';
+    return name;
+  }
+  return 'Electronics';
 };
 
 /**

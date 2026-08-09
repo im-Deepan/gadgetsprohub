@@ -663,6 +663,38 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   // Specifications fields map with exhaustive, safe, multi-format parsing
   let specMap: Record<string, string> = parseSpecificationsString(product?.specifications);
 
+  // Fallback: If no specifications found in specifications string, parse key details from name, brand, category, features & description
+  if (!specMap || Object.keys(specMap).length === 0) {
+    specMap = {};
+    if (product?.brand) specMap['Brand'] = product.brand;
+    const catName = (typeof product?.category === 'object' && product?.category !== null) ? product.category.name : (product?.category || '');
+    if (catName) specMap['Category'] = String(catName);
+    if ((product as any)?.model) specMap['Model'] = (product as any).model;
+    if ((product as any)?.sku) specMap['SKU / Part No.'] = (product as any).sku;
+
+    // Parse key-value bullet pairs from features or title
+    const featureLines = [
+      ...(Array.isArray(product?.features) ? product.features : []),
+      ...(product?.description ? product.description.split('\n') : []),
+      ...(product?.name ? product.name.split(/[-|,]/) : [])
+    ];
+
+    featureLines.forEach(line => {
+      const trimmed = line.replace(/^[•\-\*\s]+/, '').trim();
+      if (!trimmed) return;
+      if (trimmed.includes(':')) {
+        const [k, v] = trimmed.split(':');
+        if (k && v && k.trim().length < 35 && v.trim().length > 0) {
+          specMap[k.trim()] = v.trim();
+        }
+      } else if (trimmed.match(/\d+(\.\d+)?\s*(dpi|hz|gb|mb|tb|mah|w|mm|cm|inches|inch|oz|g|kg|mp)/i)) {
+        if (trimmed.length < 60) {
+          specMap[`Key Feature ${Object.keys(specMap).length + 1}`] = trimmed;
+        }
+      }
+    });
+  }
+
   // Resolve dynamic URL based on current host origin
   const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
   const dynamicUrl = `${dynamicOrigin}/products/${product?.slug || ''}`;
@@ -1173,9 +1205,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       </section>
 
       {/* 4. SPECIFICATIONS GRID */}
-      <section className="mx-auto max-w-7xl md:px-4 mb-16 space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300">Specifications</h3>
-        {specMap && Object.keys(specMap).length > 0 ? (
+      {specMap && Object.keys(specMap).length > 0 && (
+        <section className="mx-auto max-w-7xl md:px-4 mb-16 space-y-4">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300">Specifications</h3>
           <div className="rounded-xl border border-slate-200 bg-white dark:bg-slate-900 overflow-hidden dark:border-slate-800">
             <div className="overflow-x-auto w-full">
               <table className="w-full text-left border-collapse text-xs min-w-[400px] sm:min-w-0">
@@ -1196,26 +1228,20 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
               </table>
             </div>
           </div>
-        ) : (
-          <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center">
-            <p className="text-slate-500 dark:text-slate-400 text-sm">Detailed specifications are currently unavailable for this item.</p>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      {/* 5. CUSTOMER REVIEWS & FEEDBACK */}
-      <section className="mx-auto max-w-7xl md:px-4 mb-16 grid grid-cols-1 lg:grid-cols-3 gap-10">
+      {/* 5. UNIFIED REVIEWS & RATINGS */}
+      <section className="mx-auto max-w-7xl md:px-4 mb-16">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300 mb-4">Customer Reviews & Ratings</h3>
         
-        {/* Ratings Breakdown Panel */}
-        <div className="lg:col-span-1 space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300">Customer Reviews</h3>
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-slate-50/60 dark:bg-slate-900/60 text-center space-y-4">
-            
-            {/* Retailer Store Rating */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Rating Score & Review Form */}
+          <div className="lg:col-span-1 space-y-6">
             {product.rating && product.rating > 0 ? (
-              <div className="space-y-1 pb-3 border-b border-slate-200 dark:border-slate-800">
-                <p className="text-2xl font-black font-mono text-slate-800 dark:text-white">
-                  {product.rating.toFixed(1)} / 5
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 bg-slate-50/60 dark:bg-slate-900/60 text-center space-y-2">
+                <p className="text-3xl font-black font-mono text-slate-900 dark:text-white">
+                  {product.rating.toFixed(1)} <span className="text-sm text-slate-400 font-normal">/ 5</span>
                 </p>
                 <div className="flex justify-center text-amber-400">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -1223,90 +1249,68 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                   ))}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  {getAmazonDetails(product) ? `${getAmazonDetails(product)?.label.split(' ')[0]} Rating` : 'Retailer Store Rating'}
+                  {getAmazonDetails(product) ? `${getAmazonDetails(product)?.label.split(' ')[0]} Overall Rating` : 'Aggregate Rating'}
                 </p>
               </div>
             ) : null}
 
-            {/* GadgetsProHub Onsite Reviews */}
-            <div className="space-y-1 pt-1">
-              {product.reviews && product.reviews.length > 0 ? (
-                <>
-                  <p className="text-xl font-bold font-mono text-slate-800 dark:text-white">
-                    {(product.reviews.reduce((acc: number, r: any) => acc + (r.rating || 5), 0) / product.reviews.length).toFixed(1)} / 5
-                  </p>
-                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
-                    {product.reviews.length} {product.reviews.length === 1 ? 'review' : 'reviews'} on GadgetsProHub
-                  </p>
-                </>
-              ) : (
-                <div className="py-2">
-                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No GadgetsProHub reviews yet</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Be the first to share your experience below!</p>
-                </div>
-              )}
-            </div>
+            <ReviewForm
+              isAuthenticated={isAuthenticated}
+              reviewSuccess={reviewSuccess}
+              reviewError={reviewError}
+              reviewLoading={reviewLoading}
+              reviewRating={reviewRating}
+              setReviewRating={setReviewRating}
+              reviewTitle={reviewTitle}
+              setReviewTitle={setReviewTitle}
+              reviewContent={reviewContent}
+              setReviewContent={setReviewContent}
+              handleReviewSubmit={handleReviewSubmit}
+              onNavigate={onNavigate}
+            />
           </div>
 
-          {/* Add Review Form */}
-          <ReviewForm
-            isAuthenticated={isAuthenticated}
-            reviewSuccess={reviewSuccess}
-            reviewError={reviewError}
-            reviewLoading={reviewLoading}
-            reviewRating={reviewRating}
-            setReviewRating={setReviewRating}
-            reviewTitle={reviewTitle}
-            setReviewTitle={setReviewTitle}
-            reviewContent={reviewContent}
-            setReviewContent={setReviewContent}
-            handleReviewSubmit={handleReviewSubmit}
-            onNavigate={onNavigate}
-          />
-        </div>
-
-        {/* Map Feedbacks Columns */}
-        <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300">Onsite Community Reviews</h3>
-          
-          {product.reviews && product.reviews.length > 0 ? (
-            <div className="space-y-4">
-              {product.reviews.map((rev, idx) => (
-                <div
-                  key={`member-opinion-${idx}-${rev.createdAt || idx}`}
-                  className="rounded-xl border border-slate-50 bg-slate-50/20 p-4 space-y-2 dark:border-slate-700 dark:bg-slate-800/10"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center uppercase font-bold text-[10px] dark:bg-slate-700 dark:text-slate-200">
-                        {rev.userId?.name ? rev.userId.name.trim().charAt(0).toUpperCase() || 'U' : 'U'}
+          {/* Right Column: Verified Reviews List */}
+          <div className="lg:col-span-2 space-y-4">
+            {product.reviews && product.reviews.length > 0 ? (
+              <div className="space-y-4">
+                {product.reviews.map((rev, idx) => (
+                  <div
+                    key={`member-opinion-${idx}-${rev.createdAt || idx}`}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 dark:border-slate-800 dark:bg-slate-900/50 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
+                          {rev.userId?.name ? rev.userId.name.trim().charAt(0).toUpperCase() || 'U' : 'U'}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{rev.userId?.name || 'Verified Buyer'}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : 'Verified Review'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-700 dark:text-slate-50">{rev.userId?.name || 'Verified Explorer'}</p>
-                        <p className="text-[9px] text-slate-300 font-medium font-mono">{rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : 'Active Member'}</p>
+
+                      <div className="flex items-center gap-0.5 text-amber-400 shrink-0">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={`opinion-star-${idx}-${i}`} className={`h-3.5 w-3.5 ${i < Math.min(5, Math.max(0, Math.floor(rev.rating || 5))) ? 'fill-amber-400' : 'text-slate-200 dark:text-slate-700'}`} />
+                        ))}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-0.5 text-amber-300 shrink-0">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={`opinion-star-${idx}-${i}`} className={`h-3 w-3 ${i < Math.min(5, Math.max(0, Math.floor(rev.rating || 5))) ? 'fill-amber-300' : 'text-slate-50'}`} />
-                      ))}
-                    </div>
+                    {rev.title && <p className="text-xs font-bold text-slate-900 dark:text-white pt-1">{sanitizeText(rev.title)}</p>}
+                    <p className="text-xs text-slate-600 leading-relaxed dark:text-slate-300">{rev.content ? sanitizeText(rev.content) : ''}</p>
                   </div>
-
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-50">{rev.title ? sanitizeText(rev.title) : ''}</p>
-                  <p className="text-[11px] text-slate-500 leading-relaxed dark:text-slate-300 italic">"{rev.content ? sanitizeText(rev.content) : ''}"</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="border border-dashed border-slate-100 p-8 rounded-xl text-center dark:border-slate-700">
-              <MessageSquare className="h-6 w-6 text-slate-200 mx-auto" />
-              <p className="text-xs text-slate-300 mt-2.5 italic">No reviews compiled for this product details yet. Be the first to share active opinions!</p>
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="border border-dashed border-slate-200 p-8 rounded-2xl text-center dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+                <MessageSquare className="h-8 w-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">No community reviews yet</p>
+                <p className="text-[11px] text-slate-400 mt-1">Be the first to share your experience with this gadget!</p>
+              </div>
+            )}
+          </div>
         </div>
-
       </section>
 
       {/* Dynamic AdSense Slot Placement */}

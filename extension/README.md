@@ -31,8 +31,8 @@ This is a production-ready Chrome Extension (Manifest V3) integrated with the **
 
 ## File Map
 
-- `manifest.json`: Extends permissions for `activeTab`, `cookies`, and `storage`.
+- `manifest.json`: Defines permissions for `activeTab`, `storage`, `tabs`, `notifications`, and `alarms`.
 - `vite.config.ts`: Formulates modular compilation of separate background and content targets.
 - `src/background/index.ts`: Controls inter-script orchestration and tab probing.
 - `src/content/index.ts`: Injected script listener to execute lightweight telemetry.
-- `src/popup/Popup.tsx`: Beautifully crafted single-view cockpit for imports.
+- `src/popup/Popup.tsx`: Feature-rich popup interface featuring Scraper, Bulk Import, History, and Analytics tabs.
