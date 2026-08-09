@@ -1,5 +1,7 @@
 import { body, param, validationResult } from 'express-validator';
 import { Request, Response, NextFunction } from 'express';
+import { TAMIL_NADU_DISTRICTS } from '../utils/districts';
+import { sanitizeDistrict } from '../server/utils';
 
 /**
  * Middleware to handle express-validator validation results.
@@ -351,9 +353,18 @@ export const validateUserProfileUpdate = [
     .isString()
     .withMessage('District must be a string')
     .trim()
-    .escape()
     .isLength({ max: 128 })
-    .withMessage('District must be under 128 characters'),
+    .withMessage('District must be under 128 characters')
+    .customSanitizer((value) => sanitizeDistrict(value))
+    .custom((value) => {
+      if (!value) return true;
+      if (value === 'Unknown') return true;
+      const isValid = TAMIL_NADU_DISTRICTS.some(d => d.toLowerCase() === value.toLowerCase());
+      if (!isValid) {
+        throw new Error('District must be a valid Tamil Nadu district');
+      }
+      return true;
+    }),
   handleValidationErrors
 ];
 

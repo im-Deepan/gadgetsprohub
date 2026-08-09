@@ -91,6 +91,16 @@ export const FeatureFlags = mongoose.models.FeatureFlags || mongoose.model('Feat
 const FLAGS_FILE_PATH = path.join(process.cwd(), 'data', 'feature_flags.json');
 
 export class ConfigurationService {
+  private static readonly KNOWN_FLAGS = new Set([
+    'enable2fa',
+    'enableDeviceManagement',
+    'enableLoginHistory',
+    'enablePatAuthentication',
+    'enableBruteForceProtection',
+    'enableStructuredLogs',
+    'enableDependencyInjection'
+  ]);
+
   private static flags: Record<string, boolean> = {
     enable2fa: true,
     enableDeviceManagement: true,
@@ -162,6 +172,9 @@ export class ConfigurationService {
   }
 
   public static async setFlag(flag: string, value: boolean): Promise<void> {
+    if (!this.KNOWN_FLAGS.has(flag)) {
+      return;
+    }
     await this.initFlagsAsync();
     this.flags[flag] = value;
     await this.saveFlagsAsync();

@@ -14,7 +14,7 @@ import { GlareHover } from '../components/GlareHover';
 import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 
 import { getCategoryName, filterCategoriesForUI } from '../utils/category';
-import { getShortProductTitle, formatProductPrice, formatRating, hasValidDiscount, getValidatedPricing } from '../utils/productUtils';
+import { getShortProductTitle, formatProductPrice, formatRating, hasValidDiscount, getValidatedPricing, getThumbnailUrl } from '../utils/productUtils';
 import { parseSpecificationsString } from '../utils/specParser';
 import { getCleanAffiliateUrl } from '../utils/affiliate';
 import { CategoryIcon } from '../components/CategoryIcon';
@@ -402,8 +402,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 : 'w-full sm:w-48 h-40 p-3'
             }`}>
               <img
-                src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500'}
+                src={getThumbnailUrl(p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500', 400)}
                 alt={shortTitle}
+                loading="lazy"
                 referrerPolicy="no-referrer"
                 className="h-full w-full object-contain group-hover:scale-103 transition-transform duration-500 cursor-pointer"
               />
@@ -414,28 +415,28 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 </span>
               )}
 
-              <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 flex items-center gap-1">
+              <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 flex items-center gap-1.5 z-10">
                 <button
                   type="button"
                   aria-label={isInCompare(p._id) ? "Remove from comparison" : "Add to comparison"}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCompare(p); }}
-                  className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full shadow-xs transition-colors cursor-pointer ${
+                  className={`flex min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] items-center justify-center rounded-full shadow-xs transition-colors cursor-pointer ${
                     isInCompare(p._id)
                       ? 'bg-indigo-600 text-white dark:bg-indigo-500'
-                      : 'bg-white text-slate-500 hover:text-indigo-600 dark:bg-slate-800 dark:text-slate-200'
+                      : 'bg-white/90 backdrop-blur-xs text-slate-600 hover:text-indigo-600 dark:bg-slate-800/90 dark:text-slate-200'
                   }`}
                   title={isInCompare(p._id) ? "In comparison list" : "Compare specs"}
                 >
-                  <Scale className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Scale className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
                   aria-label={wishlist.includes(p._id) ? "Remove from wishlist" : "Add to wishlist"}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(p._id, p.name); }}
-                  className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-xs hover:text-rose-400 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                  className="flex min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] items-center justify-center rounded-full bg-white/90 backdrop-blur-xs text-slate-500 shadow-xs hover:text-rose-500 dark:bg-slate-800/90 dark:text-slate-200 cursor-pointer"
                   title={wishlist.includes(p._id) ? "In wishlist" : "Save to wishlist"}
                 >
-                  <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${wishlist.includes(p._id) ? 'fill-rose-400 text-rose-400' : ''}`} />
+                  <Heart className={`h-4 w-4 ${wishlist.includes(p._id) ? 'fill-rose-500 text-rose-500' : ''}`} />
                 </button>
               </div>
 

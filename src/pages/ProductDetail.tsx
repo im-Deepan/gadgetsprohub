@@ -13,7 +13,7 @@ import { AdminProductEditPanel } from '../components/product/AdminProductEditPan
 import { ReviewForm } from '../components/product/ReviewForm';
 
 import { getCategoryId, getCategoryName } from '../utils/category';
-import { formatINRPrice, formatRating, hasValidDiscount, getShortProductTitle, getAmazonDetails, getCurrencySymbol, formatProductPrice, getValidatedPricing } from '../utils/productUtils';
+import { formatINRPrice, formatRating, hasValidDiscount, getShortProductTitle, getAmazonDetails, getCurrencySymbol, formatProductPrice, getValidatedPricing, getNormalizedINRPrice } from '../utils/productUtils';
 import { safeSetItem, safeGetItem, safeRemoveItem } from '../utils/localStorage';
 import { mapErrorToFriendly } from '../utils/errorMapper';
 import { apiFetch } from '../utils/apiClient';
@@ -504,7 +504,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     }
 
     try {
-      const preferredCity = safeGetItem('aff_preferred_city') || 'Chennai';
+      const preferredCity = safeGetItem('aff_preferred_city') || 'Unknown';
       // Trigger API endpoint click tracking logging
       await apiFetch(`/api/products/click/${product.slug}`, {
         method: 'POST',
@@ -668,6 +668,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   const dynamicUrl = `${dynamicOrigin}/products/${product?.slug || ''}`;
   const dynamicCategory = (typeof product.category === 'object' && product.category !== null) ? product.category.name : (product.category || '');
 
+  const validatedPricing = getValidatedPricing(product);
+  const normalizedPriceValue = getNormalizedINRPrice(validatedPricing.price);
+  const shortTitleForMeta = getShortProductTitle(product?.name || 'Gadget', product?.brand, 20);
+  const pdpMetaTitle = `${shortTitleForMeta} – Price, Specs & Review | GadgetsProHub`;
+
   return (
     <div className="w-full mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 transition-colors duration-300">
       {/* Scroll Progress Bar */}
@@ -679,34 +684,29 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       </div>
 
       <Helmet>
-        <title>{product ? `${product.name} - Specifications, Price & Review` : 'Product Details'} | gadgetsprohub</title>
-        <meta name="description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
-        <meta name="keywords" content={product ? `${product.name}, ${product.brand || ''}, ${dynamicCategory}, specifications, review, manual, price gadgetsprohub` : "gadget specifications, tech spec reviews"} />
+        <title>{pdpMetaTitle}</title>
+        <meta name="description" content={product?.description ? product.description.slice(0, 155) : "Check out complete specifications, price, and reviews on GadgetsProHub."} />
+        <meta name="keywords" content={product ? `${product.name}, ${product.brand || ''}, ${dynamicCategory}, specifications, review, price, gadgetsprohub` : "gadget specifications, tech spec reviews"} />
         <link rel="canonical" href={dynamicUrl} />
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="product" />
         <meta property="og:url" content={dynamicUrl} />
-        <meta property="og:title" content={product ? `${product.name} Specs, Price & Reviews | gadgetsprohub` : 'Product Details'} />
-        <meta property="og:description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
+        <meta property="og:title" content={pdpMetaTitle} />
+        <meta property="og:description" content={product?.description ? product.description.slice(0, 155) : "Check out complete specifications, price, and reviews on GadgetsProHub."} />
         {product?.images?.[0] && <meta property="og:image" content={product.images[0]} />}
-        {product?.images?.[0] && <meta property="og:image:alt" content={product.name} />}
-        <meta property="og:site_name" content="gadgetsprohub" />
+        <meta property="og:site_name" content="GadgetsProHub" />
         
-        {/* Rich Product Details for Social Cards */}
-        {product?.price && <meta property="product:price:amount" content={String(product.price)} />}
+        {/* Rich Product Details matching normalized UI price */}
+        <meta property="product:price:amount" content={String(normalizedPriceValue)} />
         <meta property="product:price:currency" content="INR" />
         <meta property="og:availability" content={product?.inStock !== false ? 'instock' : 'outofstock'} />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={product ? `${product.name} Specs & Reviews` : 'Product Details'} />
-        <meta name="twitter:description" content={product?.description || "Check out this premium gadget on gadgetsprohub."} />
+        <meta name="twitter:title" content={pdpMetaTitle} />
+        <meta name="twitter:description" content={product?.description ? product.description.slice(0, 155) : "Check out complete specifications, price, and reviews on GadgetsProHub."} />
         {product?.images?.[0] && <meta name="twitter:image" content={product.images[0]} />}
-        {product?.brand && <meta name="twitter:label1" content="Brand" />}
-        {product?.brand && <meta name="twitter:data1" content={product.brand} />}
-        {product?.category && <meta name="twitter:label2" content="Category" />}
-        {product?.category && <meta name="twitter:data2" content={dynamicCategory} />}
 
         <meta name="robots" content="index, follow" />
 
@@ -723,13 +723,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 "sku": product.sku || product.asin,
                 "brand": {
                   "@type": "Brand",
-                  "name": product.brand || "Generic"
+                  "name": product.brand || "GadgetsProHub"
                 },
                 "offers": {
                   "@type": "Offer",
                   "url": dynamicUrl,
-                  "priceCurrency": product.currency || product.currencyCode || "INR",
-                  "price": product.price,
+                  "priceCurrency": "INR",
+                  "price": normalizedPriceValue,
                   "availability": product.inStock !== false ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
                 },
                 ...(product.rating && product.rating > 0 ? {
@@ -1126,70 +1126,70 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         </div>
       </div>
 
-      {/* 3. PROS AND CONS ADAPTIVE MATRIX SPLIT PANEL */}
+      {/* 3. PROS AND CONS PANEL */}
       <section className="mx-auto max-w-7xl md:px-4 mb-16 space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Pros vs Cons Heat Matrix</h3>
+        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300">Pros and Cons</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Pros */}
-          <div className="rounded-xl border border-emerald-50 bg-emerald-50/20 p-5 dark:border-emerald-800/30">
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-5 dark:border-emerald-800/40 dark:bg-emerald-950/20">
             <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs uppercase mb-3.5 dark:text-emerald-300">
-              <Check className="h-5 w-5 text-emerald-400 shrink-0" />
-              Reasons to Buy (Verified Pros)
+              <Check className="h-5 w-5 text-emerald-500 shrink-0" />
+              Reasons to Buy (Highlights)
             </div>
             {product.pros && product.pros.length > 0 ? (
               <ul className="space-y-2 text-xs">
                 {product.pros.map((p, idx) => (
-                  <li key={`pro-${idx}-${p.substring(0, 15)}`} className="flex items-start gap-2 text-emerald-700 dark:text-emerald-200">
-                    <span className="text-emerald-300 text-xs shrink-0 mt-0.5">●</span>
+                  <li key={`pro-${idx}-${p.substring(0, 15)}`} className="flex items-start gap-2 text-emerald-800 dark:text-emerald-200">
+                    <span className="text-emerald-500 text-xs shrink-0 mt-0.5">●</span>
                     <span className="leading-relaxed">{p}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-slate-300 italic">No specific positive claims compiled yet.</p>
+              <p className="text-xs text-slate-400 italic">Key advantages logged for this product.</p>
             )}
           </div>
 
           {/* Cons */}
-          <div className="rounded-xl border border-rose-50 bg-rose-50/20 p-5 dark:border-rose-800/30">
+          <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-5 dark:border-rose-800/40 dark:bg-rose-950/20">
             <div className="flex items-center gap-2 text-rose-700 font-bold text-xs uppercase mb-3.5 dark:text-rose-300">
-              <X className="h-5 w-5 text-rose-400 shrink-0" />
-              Reasons to Avoid (Known Cons)
+              <X className="h-5 w-5 text-rose-500 shrink-0" />
+              Things to Consider
             </div>
             {product.cons && product.cons.length > 0 ? (
               <ul className="space-y-2 text-xs">
                 {product.cons.map((c, idx) => (
-                  <li key={`con-${idx}-${c.substring(0, 15)}`} className="flex items-start gap-2 text-rose-700 dark:text-rose-200">
-                    <span className="text-rose-300 text-xs shrink-0 mt-0.5">■</span>
+                  <li key={`con-${idx}-${c.substring(0, 15)}`} className="flex items-start gap-2 text-rose-800 dark:text-rose-200">
+                    <span className="text-rose-500 text-xs shrink-0 mt-0.5">■</span>
                     <span className="leading-relaxed">{c}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-slate-300 italic">No critical vulnerabilities or cons logged.</p>
+              <p className="text-xs text-slate-400 italic">No significant drawbacks noted.</p>
             )}
           </div>
         </div>
       </section>
 
-      {/* 4. SPECIFICATIONS TABULAR MAP GRID */}
+      {/* 4. SPECIFICATIONS GRID */}
       <section className="mx-auto max-w-7xl md:px-4 mb-16 space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Full Specifications Index</h3>
+        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300">Specifications</h3>
         {specMap && Object.keys(specMap).length > 0 ? (
-          <div className="rounded-xl border border-slate-100 bg-white dark:bg-slate-800 overflow-hidden dark:border-slate-700">
+          <div className="rounded-xl border border-slate-200 bg-white dark:bg-slate-900 overflow-hidden dark:border-slate-800">
             <div className="overflow-x-auto w-full">
               <table className="w-full text-left border-collapse text-xs min-w-[400px] sm:min-w-0">
-                <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="py-3 px-4 font-bold text-slate-400 uppercase">Parameter</th>
-                    <th className="py-3 px-4 font-bold text-slate-400 uppercase">Specification Metrics</th>
+                    <th className="py-3 px-4 font-bold text-slate-500 dark:text-slate-400 uppercase">Parameter</th>
+                    <th className="py-3 px-4 font-bold text-slate-500 dark:text-slate-400 uppercase">Details</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {Object.entries(specMap).map(([key, value]) => (
-                    <tr key={key} className="hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors duration-300">
-                      <td className="py-3 px-4 font-semibold text-slate-700 dark:text-slate-100">{key}</td>
-                      <td className="py-3 px-4 text-slate-500 dark:text-slate-300 font-mono leading-relaxed">{String(value)}</td>
+                    <tr key={key} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors duration-200">
+                      <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{key}</td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-mono leading-relaxed">{String(value)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1197,30 +1197,55 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             </div>
           </div>
         ) : (
-          <div className="p-6 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center">
+          <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center">
             <p className="text-slate-500 dark:text-slate-400 text-sm">Detailed specifications are currently unavailable for this item.</p>
           </div>
         )}
       </section>
 
-      {/* 5. SELLER REVIEWS & ACTIVE COMMENDS INPUT */}
+      {/* 5. CUSTOMER REVIEWS & FEEDBACK */}
       <section className="mx-auto max-w-7xl md:px-4 mb-16 grid grid-cols-1 lg:grid-cols-3 gap-10">
         
-        {/* Star Statistics Panel */}
+        {/* Ratings Breakdown Panel */}
         <div className="lg:col-span-1 space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Fidelity Reviews</h3>
-          <div className="rounded-xl border border-slate-50 p-5 bg-slate-50/40 dark:border-slate-700 dark:bg-slate-800/20 text-center space-y-3">
-            <p className="text-3xl font-black font-mono text-slate-800 dark:text-white">{product.rating && product.rating > 0 ? product.rating : 'N/A'}</p>
-            <div className="flex justify-center text-amber-300">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={`stat-star-${i}`} className={`h-5 w-5 ${product.rating && product.rating > 0 && i < Math.min(5, Math.max(0, Math.floor(product.rating))) ? 'fill-amber-300' : 'text-slate-100'}`} />
-              ))}
+          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300">Customer Reviews</h3>
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-slate-50/60 dark:bg-slate-900/60 text-center space-y-4">
+            
+            {/* Retailer Store Rating */}
+            {product.rating && product.rating > 0 ? (
+              <div className="space-y-1 pb-3 border-b border-slate-200 dark:border-slate-800">
+                <p className="text-2xl font-black font-mono text-slate-800 dark:text-white">
+                  {product.rating.toFixed(1)} / 5
+                </p>
+                <div className="flex justify-center text-amber-400">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={`stat-star-${i}`} className={`h-4 w-4 ${i < Math.floor(product.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-slate-700'}`} />
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  {getAmazonDetails(product) ? `${getAmazonDetails(product)?.label.split(' ')[0]} Rating` : 'Retailer Store Rating'}
+                </p>
+              </div>
+            ) : null}
+
+            {/* GadgetsProHub Onsite Reviews */}
+            <div className="space-y-1 pt-1">
+              {product.reviews && product.reviews.length > 0 ? (
+                <>
+                  <p className="text-xl font-bold font-mono text-slate-800 dark:text-white">
+                    {(product.reviews.reduce((acc: number, r: any) => acc + (r.rating || 5), 0) / product.reviews.length).toFixed(1)} / 5
+                  </p>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
+                    {product.reviews.length} {product.reviews.length === 1 ? 'review' : 'reviews'} on GadgetsProHub
+                  </p>
+                </>
+              ) : (
+                <div className="py-2">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No GadgetsProHub reviews yet</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Be the first to share your experience below!</p>
+                </div>
+              )}
             </div>
-            {(!product.reviews || product.reviews.length === 0) ? (
-              <p className="text-xs text-slate-300 font-medium">aggregated score based on the original store</p>
-            ) : (
-              <p className="text-xs text-slate-300 font-medium">Aggregated score based on {product.reviews?.length || 0} user inputs.</p>
-            )}
           </div>
 
           {/* Add Review Form */}
@@ -1242,7 +1267,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
         {/* Map Feedbacks Columns */}
         <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">Member Opinions</h3>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300">Onsite Community Reviews</h3>
           
           {product.reviews && product.reviews.length > 0 ? (
             <div className="space-y-4">

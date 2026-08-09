@@ -10,6 +10,8 @@ export const CONFIG = {
   
   // Storage Keys
   STORAGE_KEYS: {
+    SETTINGS: "gph_settings",
+    AUTH_TOKEN: "gph_auth_token",
     LAST_IMPORTED_ASIN: "lastImportedAsin",
   },
 

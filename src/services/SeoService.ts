@@ -100,18 +100,23 @@ export class SeoService {
     if (!oldSlug || !newSlug || oldSlug === newSlug) return;
 
     const RedirectRule = mongoose.model('RedirectRule');
-    const source = `/product/${oldSlug}`;
-    const target = `/product/${newSlug}`;
+    const target = `/products/${newSlug}`;
 
     // Ensure we don't create circular redirects
     await RedirectRule.deleteMany({ sourceUrl: target });
+    await RedirectRule.deleteMany({ sourceUrl: `/product-detail/${newSlug}` });
+    await RedirectRule.deleteMany({ sourceUrl: `/product/${newSlug}` });
 
-    // Update or create redirect rule
-    await RedirectRule.findOneAndUpdate(
-      { sourceUrl: source },
-      { targetUrl: target, type: 301, updatedAt: new Date() },
-      { upsert: true, new: true }
-    );
+    // Sources to capture both primary (/products/) and secondary/legacy (/product-detail/, /product/) URL patterns
+    const sources = [`/products/${oldSlug}`, `/product-detail/${oldSlug}`, `/product/${oldSlug}`];
+
+    for (const source of sources) {
+      await RedirectRule.findOneAndUpdate(
+        { sourceUrl: source },
+        { targetUrl: target, type: 301, updatedAt: new Date() },
+        { upsert: true, new: true }
+      );
+    }
   }
 
   /**
@@ -335,7 +340,7 @@ export class SeoService {
    */
   public generateStructuredData(product: any, categoryName: string = ''): Record<string, any> {
     const siteUrl = process.env.SITE_URL || 'https://gadgetsprohub.com';
-    const productUrl = `${siteUrl}/product-detail/${product.slug}`;
+    const productUrl = `${siteUrl}/products/${product.slug}`;
     const images = (product.images || []).map((img: string) => img.startsWith('http') ? img : `${siteUrl}${img}`);
 
     // Create the core Product Schema
@@ -708,7 +713,7 @@ export class SeoService {
           bulkRecords.push({ loc: `${siteUrl}/category/${cat.slug}`, priority: 0.7, changefreq: 'daily', type: 'category' });
         }
         for (const p of productsList) {
-          bulkRecords.push({ loc: `${siteUrl}/product/${p.slug}`, priority: 0.8, changefreq: 'daily', lastmod: p.updatedAt || p.createdAt, type: 'product' });
+          bulkRecords.push({ loc: `${siteUrl}/products/${p.slug}`, priority: 0.8, changefreq: 'daily', lastmod: p.updatedAt || p.createdAt, type: 'product' });
         }
         for (const b of blogsList) {
           bulkRecords.push({ loc: `${siteUrl}/blog/${b.slug}`, priority: 0.7, changefreq: 'weekly', lastmod: b.updatedAt || b.createdAt, type: 'blog' });
@@ -791,7 +796,7 @@ export class SeoService {
         dateStr = todayStr;
       }
       xml += `  <url>\n`;
-      xml += `    <loc>${safeSiteUrl}/product-detail/${escapeXml(prod.slug)}</loc>\n`;
+      xml += `    <loc>${safeSiteUrl}/products/${escapeXml(prod.slug)}</loc>\n`;
       xml += `    <lastmod>${dateStr}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
       xml += `    <priority>0.8</priority>\n`;

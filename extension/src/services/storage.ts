@@ -5,11 +5,12 @@
  */
 
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, EXTENSION_VERSION } from '../config/environments';
+import { CONFIG } from '../config';
 import { ExtensionSettings } from '../types';
 import { logger } from './logger';
 
-const SETTINGS_KEY = 'gph_settings';
-const AUTH_TOKEN_KEY = 'gph_auth_token';
+const SETTINGS_KEY = CONFIG.STORAGE_KEYS.SETTINGS;
+const AUTH_TOKEN_KEY = CONFIG.STORAGE_KEYS.AUTH_TOKEN;
 
 class StorageService {
   /**
@@ -17,12 +18,14 @@ class StorageService {
    */
   public async set(key: string, value: any): Promise<void> {
     let finalValue = value;
-    let authTokenToSave = null;
+    let hasAuthTokenKey = false;
+    let authTokenToSave: string | null = null;
 
     if (key === SETTINGS_KEY && value && typeof value === 'object') {
       finalValue = { ...value };
       if ('authToken' in finalValue) {
-        authTokenToSave = finalValue.authToken;
+        hasAuthTokenKey = true;
+        authTokenToSave = finalValue.authToken || null;
         finalValue.authToken = null; // Never persist tokens to local disk
       }
     }
@@ -48,11 +51,15 @@ class StorageService {
     });
 
     const sessionPromises: Promise<void>[] = [];
-    if (key === SETTINGS_KEY && authTokenToSave !== null) {
+    if (key === SETTINGS_KEY && hasAuthTokenKey) {
       sessionPromises.push(
         new Promise<void>((resolve) => {
           if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.session) {
-            chrome.storage.session.set({ [AUTH_TOKEN_KEY]: authTokenToSave }, () => resolve());
+            if (authTokenToSave) {
+              chrome.storage.session.set({ [AUTH_TOKEN_KEY]: authTokenToSave }, () => resolve());
+            } else {
+              chrome.storage.session.remove([AUTH_TOKEN_KEY], () => resolve());
+            }
           } else {
             try {
               if (authTokenToSave) {
@@ -122,21 +129,42 @@ class StorageService {
    * Delete data from chrome storage.
    */
   public async remove(key: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.remove([key], () => {
-          if (chrome.runtime.lastError) {
-            logger.error(`Storage removal failed for key: ${key}`, chrome.runtime.lastError);
-            reject(chrome.runtime.lastError);
+    const promises: Promise<void>[] = [];
+
+    promises.push(
+      new Promise<void>((resolve, reject) => {
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+          chrome.storage.local.remove([key], () => {
+            if (chrome.runtime.lastError) {
+              logger.error(`Storage removal failed for key: ${key}`, chrome.runtime.lastError);
+              reject(chrome.runtime.lastError);
+            } else {
+              resolve();
+            }
+          });
+        } else {
+          localStorage.removeItem(key);
+          resolve();
+        }
+      })
+    );
+
+    if (key === SETTINGS_KEY || key === AUTH_TOKEN_KEY) {
+      promises.push(
+        new Promise<void>((resolve) => {
+          if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.session) {
+            chrome.storage.session.remove([AUTH_TOKEN_KEY], () => resolve());
           } else {
+            try {
+              sessionStorage.removeItem(AUTH_TOKEN_KEY);
+            } catch (e) { /* ignore */ }
             resolve();
           }
-        });
-      } else {
-        localStorage.removeItem(key);
-        resolve();
-      }
-    });
+        })
+      );
+    }
+
+    await Promise.all(promises);
   }
 
   /**

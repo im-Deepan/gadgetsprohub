@@ -379,6 +379,9 @@ const SocialClick = mongoose.model('SocialClick', socialClickSchema);
 // Subscriber Schema
 const subscriberSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true, lowercase: true },
+  isVerified: { type: Boolean, default: false },
+  verificationToken: { type: String },
+  tokenExpires: { type: Date },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -407,7 +410,10 @@ const saveLocalSubscribers = () => {
 const pickLeftInterestSchema = new mongoose.Schema({
   email: { type: String, required: true, lowercase: true },
   categoryName: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now }
+  isVerified: { type: Boolean, default: false },
+  verificationToken: { type: String },
+  tokenExpires: { type: Date },
+  createdAt: { type: Date, default: Date.now, expires: 86400 * 30 }
 });
 
 const PickLeftInterest = mongoose.model('PickLeftInterest', pickLeftInterestSchema);
@@ -1132,17 +1138,12 @@ const adminOnly = (req: express.Request, res: express.Response, next: express.Ne
         if (!user) return res.status(403).json({ error: 'Administrative privileges required' });
         
         (req as any).userEmail = user.email;
-        if (isAdminEmail(user.email)) {
-          if (user.role !== 'admin') {
-            await User.updateOne({ _id: user._id }, { $set: { role: 'admin' } });
-            user.role = 'admin';
-          }
+        if (!user.role) {
+          user.role = isAdminEmail(user.email) ? 'admin' : 'user';
+          await User.updateOne({ _id: user._id }, { $set: { role: user.role } }).catch(e => console.warn(e));
+        }
+        if (user.role === 'admin') {
           return next();
-        } else {
-          if (user.role === 'admin') {
-            await User.updateOne({ _id: user._id }, { $set: { role: 'user' } });
-            user.role = 'user';
-          }
         }
         
         return res.status(403).json({ error: 'Administrative privileges required' });
@@ -1151,17 +1152,12 @@ const adminOnly = (req: express.Request, res: express.Response, next: express.Ne
         if (!u) return res.status(403).json({ error: 'Administrative privileges required' });
         
         (req as any).userEmail = u.email;
-        if (isAdminEmail(u.email)) {
-          if (u.role !== 'admin') {
-            u.role = 'admin';
-            saveLocalUsers();
-          }
+        if (!u.role) {
+          u.role = isAdminEmail(u.email) ? 'admin' : 'user';
+          saveLocalUsers();
+        }
+        if (u.role === 'admin') {
           return next();
-        } else {
-          if (u.role === 'admin') {
-            u.role = 'user';
-            saveLocalUsers();
-          }
         }
         
         return res.status(403).json({ error: 'Administrative privileges required' });
@@ -1498,9 +1494,10 @@ async function triggerProductAddedEmailNotifications(product: any) {
       // Find matching interests: categoryName of the clicked interest matches product subcategory (case-insensitive) OR matching categoryName directly
       interests = await PickLeftInterest.find({
         $or: [
-          { categoryName: { $regex: new RegExp(`^${escapeRegExp(subcategoryName)}$`, 'i') } },
-          { categoryName: { $regex: new RegExp(`^${escapeRegExp(categoryName)}$`, 'i') } }
-        ]
+          { categoryName: { $regex: new RegExp('^' + escapeRegExp(subcategoryName) + '$', 'i') } },
+          { categoryName: { $regex: new RegExp('^' + escapeRegExp(categoryName) + '$', 'i') } }
+        ],
+        isVerified: true
       });
     } else {
       interests = localPickLeftInterests.filter(
@@ -1560,6 +1557,9 @@ async function triggerProductAddedEmailNotifications(product: any) {
           
           <div style="border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
             <p style="margin: 0;">You received this email because you registered for automated newsletter alerts on <strong>"${escapeHTML(interest.categoryName)}"</strong> from your <strong>"Pick Where You Left"</strong> board.</p>
+            <p style="margin: 4px 0 0 0;">
+              <a href="${process.env.APP_URL || 'https://gadgetsprohub.com'}/api/products/pick-left-unsubscribe?email=${encodeURIComponent(recipientEmail)}&category=${encodeURIComponent(interest.categoryName)}" style="color: #6366f1; text-decoration: underline;">Unsubscribe from this alert</a>
+            </p>
             <p style="margin: 4px 0 0 0;">© 2026 GadgetsProHub Affiliate Portal. All rights reserved.</p>
           </div>
         </div>
@@ -2152,6 +2152,17 @@ async function startServer() {
   app.use('/api/auth/google', loginLimiter);
 
   // Dedicated rate limiter for extension pairing (max 5 attempts / 10 mins)
+  const emailActionLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5,
+    message: { error: 'Too many email actions from this IP, please retry in 1 hour' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: { xForwardedForHeader: false, default: false }
+  });
+  app.use('/api/products/pick-left-click', emailActionLimiter);
+  app.use('/api/newsletter/subscribe', emailActionLimiter);
+  
   const pairLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
     max: 5,
@@ -2474,7 +2485,7 @@ async function startServer() {
           role: initialRole,
           wishlist: [] as string[],
           recentlyViewed: [] as any[],
-          district: 'Chennai',
+          district: req.body.district ? sanitizeDistrict(req.body.district) : 'Unknown',
           createdAt: new Date(),
           isVerified: false,
           verificationToken,
@@ -2715,7 +2726,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       }
 
       if (isMongoConnected) {
-        const user = await User.findOne({ verificationToken: token });
+        const user = await User.findOne({ verificationToken: String(token) });
         if (!user || (user.verificationExpiresAt && user.verificationExpiresAt < new Date())) {
           return res.status(400).send(`
             <div style="font-family: sans-serif; text-align: center; margin-top: 50px; padding: 20px;">
@@ -2966,10 +2977,9 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           });
         }
 
-        const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
-        if (user.role !== calculatedRole) {
-          await User.updateOne({ _id: user._id }, { $set: { role: calculatedRole } }).catch(e => console.warn(e));
-          user.role = calculatedRole;
+        if (!user.role) {
+          user.role = isAdminEmail(user.email) ? 'admin' : 'user';
+          await User.updateOne({ _id: user._id }, { $set: { role: user.role } }).catch(e => console.warn(e));
         }
 
         // Two-factor authentication verification if enabled
@@ -3051,9 +3061,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           });
         }
 
-        const calculatedRoleLocal = isAdminEmail(user.email) ? 'admin' : 'user';
-        if (user.role !== calculatedRoleLocal) {
-          user.role = calculatedRoleLocal;
+        if (!user.role) {
+          user.role = isAdminEmail(user.email) ? 'admin' : 'user';
           saveLocalUsers();
         }
         clearFailedLoginAttempts(storageEmail);
@@ -3064,7 +3073,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
-        return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
+        return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Unknown' } });
       }
     } catch (error: any) {
       res.status(500).json({ error: 'An unexpected authentication error occurred.' });
@@ -3110,10 +3119,9 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         if (!user) {
           return res.status(404).json({ error: 'User profile not found' });
         }
-        const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
-        if (user.role !== calculatedRole) {
-          await User.updateOne({ _id: user._id }, { $set: { role: calculatedRole } }).catch(e => console.warn(e));
-          user.role = calculatedRole;
+        if (!user.role) {
+          user.role = isAdminEmail(user.email) ? 'admin' : 'user';
+          await User.updateOne({ _id: user._id }, { $set: { role: user.role } }).catch(e => console.warn(e));
         }
         const token = signUserToken(user._id);
         res.cookie('token', token, {
@@ -3128,9 +3136,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         if (!user) {
           return res.status(404).json({ error: 'User profile not found' });
         }
-        const calculatedRoleLocal = isAdminEmail(user.email) ? 'admin' : 'user';
-        if (user.role !== calculatedRoleLocal) {
-          user.role = calculatedRoleLocal;
+        if (!user.role) {
+          user.role = isAdminEmail(user.email) ? 'admin' : 'user';
           saveLocalUsers();
         }
         const token = signUserToken(user._id);
@@ -3140,7 +3147,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
-        return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
+        return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Unknown' } });
       }
     } catch (error: any) {
       res.status(500).json({ error: 'Failed to exchange authorization code' });
@@ -3591,12 +3598,9 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           } catch (err: any) {
             return res.status(500).json({ error: 'Failed to create user account: ' });
           }
-        } else {
-          const calculatedRole = isAdminEmail(user.email) ? 'admin' : 'user';
-          if (user.role !== calculatedRole) {
-            await User.updateOne({ _id: user._id }, { $set: { role: calculatedRole } }).catch(e => console.warn(e));
-            user.role = calculatedRole;
-          }
+        } else if (!user.role) {
+          user.role = isAdminEmail(user.email) ? 'admin' : 'user';
+          await User.updateOne({ _id: user._id }, { $set: { role: user.role } }).catch(e => console.warn(e));
         }
         const token = signUserToken(user._id);
         res.cookie('token', token, {
@@ -3617,18 +3621,15 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
             role: initialRole,
             wishlist: [] as any[],
             recentlyViewed: [] as any[],
-            district: 'Chennai',
+            district: req.body.district ? sanitizeDistrict(req.body.district) : 'Unknown',
             createdAt: new Date(),
             isVerified: true
           };
           localUsers.push(user);
           saveLocalUsers();
-        } else {
-          const calculatedRoleLocal = isAdminEmail(user.email) ? 'admin' : 'user';
-          if (user.role !== calculatedRoleLocal) {
-            user.role = calculatedRoleLocal;
-            saveLocalUsers();
-          }
+        } else if (!user.role) {
+          user.role = isAdminEmail(user.email) ? 'admin' : 'user';
+          saveLocalUsers();
         }
         const token = signUserToken(user._id);
         res.cookie('token', token, {
@@ -3637,7 +3638,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
-        return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Chennai' } });
+        return res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role, district: user.district || 'Unknown' } });
       }
     } catch (error: any) {
       let friendlyError = error.message;
@@ -3994,6 +3995,9 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         return res.status(400).json({ error: 'Category could not be identified' });
       }
 
+      const token = crypto.randomBytes(32).toString('hex');
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
       // Save the interest
       if (isMongoConnected) {
         // Avoid duplicate interests for same email and category
@@ -4001,30 +4005,119 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           email: email.toLowerCase(),
           categoryName: resolvedCategory
         });
-        if (!existing) {
+        if (existing) {
+           if (existing.isVerified) {
+              return res.json({ success: true, message: `You are already subscribed to alerts for "${resolvedCategory}".` });
+           } else {
+              existing.verificationToken = token;
+              existing.tokenExpires = expires;
+              await existing.save();
+           }
+        } else {
           const interest = new PickLeftInterest({
             email: email.toLowerCase(),
-            categoryName: resolvedCategory
+            categoryName: resolvedCategory,
+            verificationToken: token,
+            tokenExpires: expires
           });
-          await interest.save();
+          await PickLeftInterest.updateOne({ _id: interest._id }, { $set: { isVerified: true }, $unset: { verificationToken: 1, tokenExpires: 1 } });
         }
       } else {
-        const existing = localPickLeftInterests.find(
+        const existingIdx = localPickLeftInterests.findIndex(
           (item: any) => item.email.toLowerCase() === email.toLowerCase() && item.categoryName === resolvedCategory
         );
-        if (!existing) {
+        if (existingIdx !== -1) {
+           if (localPickLeftInterests[existingIdx].isVerified) {
+              return res.json({ success: true, message: `You are already subscribed to alerts for "${resolvedCategory}".` });
+           } else {
+              localPickLeftInterests[existingIdx].verificationToken = token;
+              localPickLeftInterests[existingIdx].tokenExpires = expires;
+           }
+        } else {
           localPickLeftInterests.push({
             email: email.toLowerCase(),
             categoryName: resolvedCategory,
+            isVerified: false,
+            verificationToken: token,
+            tokenExpires: expires,
             createdAt: new Date()
           });
-          await syncPickLeftInterestsToLocalFile();
+        }
+        await syncPickLeftInterestsToLocalFile();
+      }
+
+      const verifyLink = `${process.env.APP_URL || 'https://gadgetsprohub.com'}/api/products/pick-left-verify?token=${token}&email=${encodeURIComponent(email)}&category=${encodeURIComponent(resolvedCategory)}`;
+      const htmlBody = `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>Verify Your Alert Subscription</h2>
+          <p>Please click the button below to verify your email address and subscribe to "Pick Where You Left" alerts for the <strong>${escapeHTML(resolvedCategory)}</strong> category.</p>
+          <a href="${verifyLink}" style="display: inline-block; padding: 10px 20px; background: #6366f1; color: white; text-decoration: none; border-radius: 6px;">Verify Email</a>
+        </div>
+      `;
+
+      const transporter = getMailTransport();
+      const sender = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'no-reply@gadgetsprohub.com';
+      if (transporter) {
+        try {
+          await transporter.sendMail({
+            from: `"GadgetsProHub" <${sender}>`,
+            to: email,
+            subject: 'Verify your Alert Subscription',
+            html: htmlBody
+          });
+        } catch (mailErr: any) {
+          console.warn(`Failed to send verification email to ${email}:`, mailErr.message);
         }
       }
 
-      return res.json({ success: true, message: `Newsletter alert registered for "${resolvedCategory}" using ${email}` });
+      return res.json({ success: true, message: `A verification link has been sent to ${email}. Please verify to complete subscription.` });
     } catch (error: any) {
       return res.status(500).json({ error: 'An internal error occurred.' });
+    }
+  });
+
+  app.get('/api/products/pick-left-verify', async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      const { email, token, category } = req.query;
+      if (!email || !token || !category) return res.status(400).send('Invalid verification link.');
+      
+      if (isMongoConnected) {
+         const interest = await PickLeftInterest.findOne({ email: String(email).toLowerCase(), categoryName: String(category), verificationToken: String(token) });
+         if (!interest) return res.status(400).send('Invalid or expired verification link.');
+         if (interest.tokenExpires && interest.tokenExpires < new Date()) return res.status(400).send('Verification link expired.');
+         interest.isVerified = true;
+         interest.verificationToken = undefined;
+         interest.tokenExpires = undefined;
+         await PickLeftInterest.updateOne({ _id: interest._id }, { $set: { isVerified: true }, $unset: { verificationToken: 1, tokenExpires: 1 } });
+      } else {
+         const idx = localPickLeftInterests.findIndex((i:any) => i.email === String(email).toLowerCase() && i.categoryName === String(category) && i.verificationToken === token);
+         if (idx === -1) return res.status(400).send('Invalid or expired verification link.');
+         if (localPickLeftInterests[idx].tokenExpires && new Date(localPickLeftInterests[idx].tokenExpires) < new Date()) return res.status(400).send('Verification link expired.');
+         localPickLeftInterests[idx].isVerified = true;
+         delete localPickLeftInterests[idx].verificationToken;
+         delete localPickLeftInterests[idx].tokenExpires;
+         await syncPickLeftInterestsToLocalFile();
+      }
+      res.send('<h1>Email Verified Successfully!</h1><p>You will now receive alerts for this category.</p><p><a href="/">Return to Home</a></p>');
+    } catch (e) {
+      res.status(500).send('Verification failed.');
+    }
+  });
+
+  app.get('/api/products/pick-left-unsubscribe', async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      const { email, category } = req.query;
+      if (!email || !category) return res.status(400).send('Email and category are required.');
+      
+      if (isMongoConnected) {
+         await PickLeftInterest.deleteOne({ email: String(email).toLowerCase(), categoryName: String(category) });
+      } else {
+         localPickLeftInterests = localPickLeftInterests.filter((i:any) => !(i.email === String(email).toLowerCase() && i.categoryName === String(category)));
+         await syncPickLeftInterestsToLocalFile();
+      }
+      res.send('<h1>Unsubscribed Successfully</h1><p>You will no longer receive alerts for this category.</p><p><a href="/">Return to Home</a></p>');
+    } catch (e) {
+      res.status(500).send('Unsubscribe failed.');
     }
   });
 
@@ -4234,11 +4327,9 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         const user = await User.findById(uId).populate('wishlist');
         if (!user) return res.status(200).json({ isAuthenticated: false });
         
-        if (isAdminEmail(user.email)) {
-          if (user.role !== 'admin') {
-            await User.updateOne({ _id: user._id }, { $set: { role: 'admin' } }).catch(e => console.warn(e));
-            user.role = 'admin';
-          }
+        if (!user.role) {
+          user.role = isAdminEmail(user.email) ? 'admin' : 'user';
+          await User.updateOne({ _id: user._id }, { $set: { role: user.role } }).catch(e => console.warn(e));
         }
         const userObj = user?.toObject ? user.toObject() : user;
         return res.json({ ...sanitizeUser(userObj), token, isAuthenticated: true });
@@ -4246,8 +4337,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         const user = localUsers.find(u => u._id === uId);
         if (!user) return res.status(200).json({ isAuthenticated: false });
         
-        if (isAdminEmail(user.email)) {
-          user.role = 'admin';
+        if (!user.role) {
+          user.role = isAdminEmail(user.email) ? 'admin' : 'user';
           saveLocalUsers();
         }
 
@@ -4640,30 +4731,118 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   app.post('/api/newsletter/subscribe', validateNewsletterSubscribe, async (req: express.Request, res: express.Response): Promise<any> => {
     try {
       const { email } = req.body;
+      const token = crypto.randomBytes(32).toString('hex');
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
       if (isMongoConnected) {
         const existing = await Subscriber.findOne({ email });
         if (existing) {
-          return res.status(400).json({ error: 'This email is already subscribed to our newsletter' });
+          if (existing.isVerified) {
+             return res.status(400).json({ error: 'This email is already subscribed to our newsletter' });
+          } else {
+             existing.verificationToken = token;
+             existing.tokenExpires = expires;
+             await existing.save();
+          }
+        } else {
+          const s = new Subscriber({ email, verificationToken: token, tokenExpires: expires });
+          await s.save();
         }
-        const s = new Subscriber({ email });
-        await s.save();
       } else {
-        const existing = localSubscribers.some(s => s.email === email);
-        if (existing) {
-          return res.status(400).json({ error: 'This email is already subscribed to our newsletter' });
+        const existingIdx = localSubscribers.findIndex(s => s.email === email);
+        if (existingIdx !== -1) {
+          if (localSubscribers[existingIdx].isVerified) {
+             return res.status(400).json({ error: 'This email is already subscribed to our newsletter' });
+          } else {
+             localSubscribers[existingIdx].verificationToken = token;
+             localSubscribers[existingIdx].tokenExpires = expires;
+          }
+        } else {
+          localSubscribers.unshift({
+            _id: "s_f_" + Math.random().toString(36).substring(2, 9),
+            email,
+            isVerified: false,
+            verificationToken: token,
+            tokenExpires: expires,
+            createdAt: new Date()
+          });
         }
-        localSubscribers.unshift({
-          _id: "s_f_" + Math.random().toString(36).substring(2, 9),
-          email,
-          createdAt: new Date()
-        });
         saveLocalSubscribers();
       }
 
-      res.json({ success: true, message: 'Thank you for subscribing to our newsletter!' });
+      const verifyLink = `${process.env.APP_URL || 'https://gadgetsprohub.com'}/api/newsletter/verify?token=${token}&email=${encodeURIComponent(email)}`;
+      const htmlBody = `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>Verify Your Newsletter Subscription</h2>
+          <p>Please click the button below to verify your email address and subscribe to our newsletter.</p>
+          <a href="${verifyLink}" style="display: inline-block; padding: 10px 20px; background: #6366f1; color: white; text-decoration: none; border-radius: 6px;">Verify Email</a>
+        </div>
+      `;
+
+      const transporter = getMailTransport();
+      const sender = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'no-reply@gadgetsprohub.com';
+      if (transporter) {
+        try {
+          await transporter.sendMail({
+            from: `"GadgetsProHub" <${sender}>`,
+            to: email,
+            subject: 'Verify your Newsletter Subscription',
+            html: htmlBody
+          });
+        } catch (mailErr: any) {
+          console.warn(`Failed to send verification email to ${email}:`, mailErr.message);
+        }
+      }
+
+      res.json({ success: true, message: 'A verification link has been sent to your email. Please verify to complete subscription.' });
     } catch (error: any) {
       res.status(400).json({ error: error.message || 'An error occurred during newsletter subscription' });
+    }
+  });
+
+  app.get('/api/newsletter/verify', async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      const { email, token } = req.query;
+      if (!email || !token) return res.status(400).send('Invalid verification link.');
+      
+      if (isMongoConnected) {
+         const sub = await Subscriber.findOne({ email: String(email).toLowerCase(), verificationToken: String(token) });
+         if (!sub) return res.status(400).send('Invalid or expired verification link.');
+         if (sub.tokenExpires && sub.tokenExpires < new Date()) return res.status(400).send('Verification link expired.');
+         sub.isVerified = true;
+         sub.verificationToken = undefined;
+         sub.tokenExpires = undefined;
+         await Subscriber.updateOne({ _id: sub._id }, { $set: { isVerified: true }, $unset: { verificationToken: 1, tokenExpires: 1 } });
+      } else {
+         const idx = localSubscribers.findIndex(s => s.email === String(email).toLowerCase() && s.verificationToken === token);
+         if (idx === -1) return res.status(400).send('Invalid or expired verification link.');
+         if (localSubscribers[idx].tokenExpires && new Date(localSubscribers[idx].tokenExpires) < new Date()) return res.status(400).send('Verification link expired.');
+         localSubscribers[idx].isVerified = true;
+         delete localSubscribers[idx].verificationToken;
+         delete localSubscribers[idx].tokenExpires;
+         saveLocalSubscribers();
+      }
+      res.send('<h1>Email Verified Successfully!</h1><p>You will now receive our newsletter.</p><p><a href="/">Return to Home</a></p>');
+    } catch (e) {
+      res.status(500).send('Verification failed.');
+    }
+  });
+
+  app.get('/api/newsletter/unsubscribe', async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      const { email } = req.query;
+      if (!email) return res.status(400).send('Email is required.');
+      
+      if (isMongoConnected) {
+         await Subscriber.deleteOne({ email: String(email).toLowerCase() });
+      } else {
+         const oldLen = localSubscribers.length;
+         localSubscribers = localSubscribers.filter(s => s.email !== String(email).toLowerCase());
+         if (localSubscribers.length !== oldLen) saveLocalSubscribers();
+      }
+      res.send('<h1>Unsubscribed Successfully</h1><p>You have been removed from our newsletter list.</p><p><a href="/">Return to Home</a></p>');
+    } catch (e) {
+      res.status(500).send('Unsubscribe failed.');
     }
   });
 
@@ -4781,7 +4960,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   // Proxy for geolocation APIs to bypass CORS, with automatic regional mapping to Tamil Nadu districts
   app.get('/api/proxy/location', async (_req: express.Request, res: express.Response) => {
     const mapToTamilNaduDistrict = (cityName: string): { city: string; isTamilNadu: boolean } => {
-      if (!cityName) return { city: "Chennai", isTamilNadu: true };
+      if (!cityName) return { city: "Unknown", isTamilNadu: false };
       const formatted = cityName.trim();
       const sanitized = sanitizeDistrict(formatted);
       const isTN = TAMIL_NADU_DISTRICTS.some(d => d.toLowerCase() === sanitized.toLowerCase());
@@ -4824,7 +5003,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     }
     
     // Final default fallback
-    res.json({ city: 'Chennai', isTamilNadu: true });
+    res.json({ city: 'Unknown', isTamilNadu: false, region: 'Unknown', country: 'Unknown' });
   });
 
   // Footer Social Clicks Tracking Endpoint
@@ -4926,8 +5105,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const ipAddress = (req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || '127.0.0.1').split(',')[0].trim();
       const userAgent = req.headers['user-agent'] || 'Browser Agent';
 
-      // Pick location (fallback to Chennai if user has no preferred list) and sanitize to Tamil Nadu cities
-      const selectedDistrict = sanitizeDistrict(district || 'Chennai');
+      // Pick location (fallback to Unknown if user has no preferred list) and sanitize to Tamil Nadu cities
+      const selectedDistrict = sanitizeDistrict(district || 'Unknown');
 
       if (isMongoConnected) {
         // Look back 15 minutes for similar page_visit log from the same client
@@ -5033,7 +5212,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         if (!user) return res.status(404).json({ error: 'User profile not found' });
         
         if (name) user.name = name;
-        if (district) user.district = district;
+        if (district) user.district = sanitizeDistrict(district);
         try {
           await user.save();
         } catch(error: any) {
@@ -5047,7 +5226,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         if (!user) return res.status(404).json({ error: 'User profile not found' });
         
         if (name) user.name = name;
-        if (district) user.district = district;
+        if (district) user.district = sanitizeDistrict(district);
         saveLocalUsers();
         
         // Map Wishlist Items
@@ -9221,6 +9400,14 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       }
 
       if (isMongoConnected) {
+        const existingProduct = await Product.findById(pId).lean();
+        if (!existingProduct) {
+          return res.status(404).json({ error: 'Product not found' });
+        }
+        const oldSlug = existingProduct.slug;
+        if (payload.slug && oldSlug && payload.slug !== oldSlug) {
+          await seoService.handleSlugChange(oldSlug, payload.slug);
+        }
         const product = await Product.findByIdAndUpdate(pId, { $set: payload }, { new: true });
         if (!product) {
           return res.status(404).json({ error: 'Product not found' });
@@ -9232,6 +9419,11 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         const index = localProducts.findIndex((p: any) => p._id === pId);
         if (index === -1) return res.status(404).json({ error: 'Product not found' });
         
+        const oldSlug = localProducts[index].slug;
+        if (payload.slug && oldSlug && payload.slug !== oldSlug) {
+          await seoService.handleSlugChange(oldSlug, payload.slug);
+        }
+
         localProducts[index] = {
           ...localProducts[index],
           ...payload,
@@ -9730,10 +9922,6 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         return res.status(404).json({ error: 'Target user account not found.' });
       }
 
-      if (role === 'admin' && !isAdminEmail(targetUser.email)) {
-        return res.status(400).json({ error: 'Security constraint: The target email address must be configured in the ADMIN_EMAILS environment variable configuration before they can be promoted to administrator.' });
-      }
-
       const oldRole = targetUser.role;
       if (isMongoConnected) {
         targetUser.role = role;
@@ -9762,13 +9950,15 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
   });
 
   // Admin Security Logs / Audit Trail
-  app.get('/api/admin/security-logs', adminOnly, async (_req: express.Request, res: express.Response) => {
+  app.get('/api/admin/security-logs', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      const limitVal = Math.min(parseInt(req.query.limit as string) || 100, 500);
       if (isMongoConnected) {
-        const logs = await SecurityLog.find().sort({ timestamp: -1 });
+        const logs = await SecurityLog.find().sort({ timestamp: -1 }).limit(limitVal);
         res.json(logs);
       } else {
-        res.json(localSecurityLogs);
+        const logs = [...localSecurityLogs].sort((a: any, b: any) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()).slice(0, limitVal);
+        res.json(logs);
       }
     } catch (error: any) {
       res.status(500).json({ error: 'An internal error occurred.' });
@@ -9985,12 +10175,12 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         });
  
         const distAggr = await Analytics.aggregate([
-          { $group: { _id: { id: { $ifNull: ["$userId", "$ipAddress"] }, dist: { $ifNull: ["$district", "Chennai"] } } } },
+          { $group: { _id: { id: { $ifNull: ["$userId", "$ipAddress"] }, dist: { $ifNull: ["$district", "Unknown"] } } } },
           { $group: { _id: "$_id.dist", count: { $sum: 1 } } }
         ]);
         
         distAggr.forEach(row => {
-          const dist = sanitizeDistrict(row._id || 'Chennai');
+          const dist = sanitizeDistrict(row._id || 'Unknown');
           if (districtCounts[dist] !== undefined) {
             districtCounts[dist] += row.count;
           } else {
@@ -10027,7 +10217,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             productId: item || (a.productId ? { _id: a.productId, name: "Deleted Product" } : undefined),
             userId: resolvedUser ? { _id: resolvedUser._id, name: resolvedUser.name, email: resolvedUser.email, district: resolvedUser.district } : null,
             eventType: a.eventType,
-            district: sanitizeDistrict(a.district || 'Chennai'),
+            district: sanitizeDistrict(a.district || 'Unknown'),
             ipAddress: a.ipAddress || '127.0.0.1',
             browser: a.browser || 'Chrome',
             device: a.device || 'Desktop',
@@ -10053,7 +10243,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
             identifier = `guest_${a.ipAddress || '127.0.0.1'}`;
           }
 
-          const dist = sanitizeDistrict(a.district || 'Chennai');
+          const dist = sanitizeDistrict(a.district || 'Unknown');
           const comboKey = `${identifier}_${dist}`;
 
           if (!seenKeys.has(comboKey)) {
@@ -10157,8 +10347,8 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
 
       const pathParts = rawPath.split('/').filter(Boolean);
 
-      // Dynamic metadata for Product Detail pages (/product-detail/:slug or /product/:slug)
-      if ((pathParts[0] === 'product-detail' || pathParts[0] === 'product') && pathParts[1]) {
+      // Dynamic metadata for Product Detail pages (/products/:slug or /product-detail/:slug or /product/:slug)
+      if ((pathParts[0] === 'products' || pathParts[0] === 'product-detail' || pathParts[0] === 'product') && pathParts[1]) {
         const slug = pathParts[1];
         let foundProduct: any = null;
         if (isMongoConnected) {

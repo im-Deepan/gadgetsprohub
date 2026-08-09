@@ -40,7 +40,28 @@ export const isMetadataSpecKey = (key: string): boolean => {
 };
 
 /**
- * Filters a specifications record, removing internal metadata keys.
+ * Detects if a text string contains raw JavaScript, tracking handlers, or scraped event listener fragments.
+ */
+export const isScriptOrTrackingCode = (text: string): boolean => {
+  if (!text || typeof text !== 'string') return false;
+  const s = text.trim();
+  if (
+    /^(var|let|const|function|window\.|document\.|P\.when|P\.register|dpAcr|aPage|ue_|amzn|amazon|jQuery|\$|eval\(|void\(|javascript:)/i.test(s) ||
+    /var\s+[a-zA-Z0-9_$]+/i.test(s) ||
+    /P\.when\(/i.test(s) ||
+    /dpAcrHasRegistered/i.test(s) ||
+    /onload|onclick|onerror|onmouseover/i.test(s) ||
+    /<script/i.test(s) ||
+    /\{\s*["']?[a-zA-Z0-9_$]+["']?\s*:/i.test(s) ||
+    /function\s*\(/i.test(s)
+  ) {
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Filters a specifications record, removing internal metadata keys, raw scripts, and tracking code.
  */
 export const cleanSpecificationsObj = (specs: Record<string, string>): Record<string, string> => {
   const result: Record<string, string> = {};
@@ -50,7 +71,21 @@ export const cleanSpecificationsObj = (specs: Record<string, string>): Record<st
     if (k && v !== undefined && v !== null && !isMetadataSpecKey(k)) {
       const cleanKey = decodeHTMLEntities(k.trim());
       const cleanVal = decodeHTMLEntities(String(v).trim());
-      result[cleanKey] = cleanVal;
+
+      // Reject keys or values that contain JavaScript code or tracking fragments
+      if (
+        !isScriptOrTrackingCode(cleanKey) &&
+        !isScriptOrTrackingCode(cleanVal) &&
+        cleanKey.length <= 150 &&
+        cleanVal.length <= 500
+      ) {
+        // Strip any remaining HTML tags
+        const sanitizedKey = cleanKey.replace(/<[^>]*>?/gm, '');
+        const sanitizedVal = cleanVal.replace(/<[^>]*>?/gm, '');
+        if (sanitizedKey && sanitizedVal) {
+          result[sanitizedKey] = sanitizedVal;
+        }
+      }
     }
   });
   return result;

@@ -227,8 +227,8 @@ export default function Popup() {
     // Load custom configuration fields
     setAffiliateTag(settings.affiliateTag || 'gadgetsprohub-21');
     setSupportedDomains((settings.supportedDomains || ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.ca']).join(', '));
-    setPopupWidth(settings.popupWidth || 360);
-    setPopupHeight(settings.popupHeight || 420);
+    setPopupWidth(settings.popupWidth || CONFIG.POPUP_WIDTH);
+    setPopupHeight(settings.popupHeight || CONFIG.POPUP_MIN_HEIGHT);
 
     if (settings.authToken) {
       verifyRemoteSession();

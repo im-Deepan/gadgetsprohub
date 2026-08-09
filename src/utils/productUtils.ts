@@ -3,6 +3,32 @@
  */
 
 /**
+ * Normalizes any price number into a clean integer INR value.
+ * Converts raw legacy USD values (<1000) to INR if necessary.
+ */
+export const getNormalizedINRPrice = (price: number | undefined | null): number => {
+  if (price === undefined || price === null || isNaN(price) || price <= 0) {
+    return 0;
+  }
+  return price < 1000 ? Math.round(price * 83) : Math.round(price);
+};
+
+/**
+ * Returns a compressed WebP/optimized thumbnail URL under 400px for catalog grids.
+ */
+export const getThumbnailUrl = (url?: string, width = 400): string => {
+  if (!url) return 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&q=80&auto=format';
+  if (url.includes('images.unsplash.com')) {
+    const clean = url.split('?')[0];
+    return `${clean}?w=${width}&q=80&auto=format`;
+  }
+  if (url.includes('media-amazon.com') || url.includes('ssl-images-amazon.com')) {
+    return url.replace(/\._AC_[A-Z0-9_]+_\./i, `._AC_UL${width}_.`);
+  }
+  return url;
+};
+
+/**
  * Truncates title cleanly at a word boundary up to maxLen, without breaking mid-word.
  */
 export const truncateAtWord = (text: string, maxLen = 60): string => {

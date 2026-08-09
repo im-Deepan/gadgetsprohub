@@ -34,10 +34,11 @@ const TAMIL_NADU_CITIES = [
 
 const mapToTamilNaduCity = (rawName: string): string => {
   if (!rawName) {
-    return "Chennai";
+    return "Unknown";
   }
   const raw = rawName.trim();
   const name = raw.toLowerCase();
+  if (name === 'unknown') return "Unknown";
   
   if (name.includes("trichy") || name.includes("tiruchirappalli") || name.includes("tiruchirapalli")) {
     return "Tiruchirappalli";
@@ -480,7 +481,7 @@ const AppContent: React.FC = () => {
   });
 
   const [detectedCity, setDetectedCity] = useState<string>(() => {
-    const raw = safeGetItem('aff_preferred_city') || 'Chennai';
+    const raw = safeGetItem('aff_preferred_city') || 'Unknown';
     return mapToTamilNaduCity(raw);
   });
 
@@ -542,7 +543,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const pageStartTime = Date.now();
     const currentPath = selectedSlug ? `${activeView}/${selectedSlug}` : activeView;
-    const viewCity = user?.district || detectedCity || 'Chennai';
+    const viewCity = user?.district || detectedCity || 'Unknown';
 
     // Log instantaneous visual landing (0 seconds spent)
     logVisit(0, currentPath, viewCity);

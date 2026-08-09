@@ -47,6 +47,7 @@ export const TAMIL_NADU_DISTRICTS = SharedDistricts;
 export const sanitizeDistrict = (name: string): string => {
   if (!name) return "Unknown";
   const formatted = name.trim().toLowerCase();
+  if (formatted === "unknown") return "Unknown";
   
   if (formatted.includes("trichy") || formatted.includes("tiruchirappalli") || formatted.includes("tiruchirapalli")) {
     return "Tiruchirappalli";
@@ -64,9 +65,7 @@ export const sanitizeDistrict = (name: string): string => {
     return found;
   }
   
-  // Return title-cased name if provided, or 'Unknown'
-  const words = name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-  return words.join(' ') || "Unknown";
+  return "Unknown";
 };
 export const getStorageEmail = (email: unknown): string | undefined => {
   if (typeof email !== 'string') return undefined;

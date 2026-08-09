@@ -138,6 +138,8 @@ export const Contact: React.FC = () => {
                 <label htmlFor="contact-name" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Full Name</label>
                 <input
                   id="contact-name"
+                  name="name"
+                  autoComplete="name"
                   type="text"
                   required
                   placeholder="John Doe"
@@ -151,6 +153,8 @@ export const Contact: React.FC = () => {
                 <label htmlFor="contact-email" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Email Address</label>
                 <input
                   id="contact-email"
+                  name="email"
+                  autoComplete="email"
                   type="email"
                   required
                   placeholder="you@example.com"
@@ -166,6 +170,8 @@ export const Contact: React.FC = () => {
                 <label htmlFor="contact-phone" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Phone (Optional)</label>
                 <input
                   id="contact-phone"
+                  name="phone"
+                  autoComplete="tel"
                   type="tel"
                   placeholder="+91 98765 43210"
                   value={phone}
@@ -178,6 +184,8 @@ export const Contact: React.FC = () => {
                 <label htmlFor="contact-subject" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Subject</label>
                 <input
                   id="contact-subject"
+                  name="subject"
+                  autoComplete="off"
                   type="text"
                   required
                   placeholder="How can we help?"
@@ -192,6 +200,8 @@ export const Contact: React.FC = () => {
               <label htmlFor="contact-message" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Message</label>
               <textarea
                 id="contact-message"
+                name="message"
+                autoComplete="off"
                 required
                 rows={5}
                 placeholder="Write your message here..."
