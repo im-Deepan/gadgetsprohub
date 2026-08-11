@@ -114,14 +114,6 @@ export async function handleLogin(payload: { email?: string; password?: string }
 export async function handleLogout(): Promise<ExtensionResponse> {
   try {
     await apiService.logout();
-    
-    // Clear credentials
-    await extensionStorage.updateSettings({
-      authToken: null,
-      adminEmail: null,
-      tokenExpiresAt: null
-    });
-
     return { success: true };
   } catch (err: any) {
     logger.error('Logout request failed in handler', err);
@@ -132,5 +124,12 @@ export async function handleLogout(): Promise<ExtensionResponse> {
         message: 'Failed to sign out'
       }
     };
+  } finally {
+    // Unconditionally wipe all session state & auth keys on client
+    await extensionStorage.updateSettings({
+      authToken: null,
+      adminEmail: null,
+      tokenExpiresAt: null
+    }).catch(() => {});
   }
 }

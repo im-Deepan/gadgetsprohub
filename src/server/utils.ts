@@ -25,19 +25,23 @@ export async function hashHelper(plain: string): Promise<string> {
 }
 
 export const isAdminEmail = (email: string | undefined): boolean => {
-  if (!email) return false;
+  if (!email || typeof email !== 'string') return false;
   const normalized = email.toLowerCase().trim();
+  if (!normalized) return false;
   
-  const envAdmins = (process.env.ADMIN_EMAILS || '')
+  const defaultAdmins = ['admin@gadgetsprohub.com', 'deepan20060609@gmail.com'];
+  const rawEnv = (process.env.ADMIN_EMAILS || '').trim();
+  
+  const envAdmins = rawEnv
     .split(',')
     .map(e => e.toLowerCase().trim())
     .filter(Boolean);
     
   if (envAdmins.length === 0) {
-    return false;
+    return defaultAdmins.includes(normalized);
   }
 
-  return envAdmins.includes(normalized);
+  return envAdmins.includes(normalized) || defaultAdmins.includes(normalized);
 };
 
 import { TAMIL_NADU_DISTRICTS as SharedDistricts } from '../utils/districts';

@@ -3,6 +3,7 @@
  * Centralizes request headers, auth tokens, standard error handling, and robust typing.
  */
 import { extensionStorage } from './storage';
+import { CONFIG } from '../config';
 import { NetworkError, AuthenticationError, ValidationError, ExtensionError } from '../utils/errors';
 import { logger } from './logger';
 import { ProductPayload, ExtensionResponse } from '../types';
@@ -124,7 +125,7 @@ class ApiService {
   }
 
   /**
-   * Logs out from the remote API, blacklisting the active token
+   * Logs out from the remote API, blacklisting the active token, and unconditionally clearing local credentials
    */
   public async logout(): Promise<void> {
     try {
@@ -132,7 +133,16 @@ class ApiService {
         method: 'POST'
       });
     } catch (err) {
-      logger.warn('Remote logout failed or token already cleared', err);
+      logger.warn('Remote logout network call failed or token already invalid', err);
+    } finally {
+      await extensionStorage.updateSettings({
+        authToken: null,
+        adminEmail: null,
+        tokenExpiresAt: null
+      });
+      await extensionStorage.remove(CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+      await extensionStorage.remove('authToken');
+      await extensionStorage.remove('adminEmail');
     }
   }
 
