@@ -321,13 +321,33 @@ export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?
 /**
  * Returns the currency symbol for the product based on explicit currency/currencyCode, or marketplace/affiliate link, or defaults to ₹.
  */
-export const getCurrencySymbol = (_product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
+export const getCurrencySymbol = (product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
+  if (!product) return '₹';
+  const code = (product.currencyCode || product.currency || '').toUpperCase().trim();
+  if (code === 'USD' || code === '$') return '$';
+  if (code === 'EUR' || code === '€') return '€';
+  if (code === 'GBP' || code === '£') return '£';
+  if (code === 'AED') return 'AED ';
+  
+  const amazon = getAmazonDetails(product);
+  if (amazon) {
+    if (amazon.isAmazonUs) return '$';
+    if (amazon.isAmazonUk) return '£';
+    if (amazon.isAmazonUae) return 'AED ';
+  }
   return '₹';
 };
 
 /**
- * Formats a price consistently in Indian Rupee (INR) format across the entire site.
+ * Formats a price consistently considering product marketplace/currency parameters or defaults to standard INR.
  */
-export const formatProductPrice = (price: number | undefined | null, _product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
+export const formatProductPrice = (price: number | undefined | null, product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
+  if (price === undefined || price === null || isNaN(price) || price < 0) {
+    return '₹0';
+  }
+  const symbol = getCurrencySymbol(product);
+  if (symbol !== '₹') {
+    return `${symbol}${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  }
   return formatINR(price);
 };
