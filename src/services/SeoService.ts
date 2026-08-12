@@ -90,10 +90,6 @@ export class SeoService {
     return resultWords.slice(0, 8).join('-'); // Limit to 8 words for slug simplicity
   }
 
-  public generateSeoSlog(text: string): string {
-    return this.generateSeoSlug(text);
-  }
-
   /**
    * Creates a 301 Redirect Rule if the product's slug has changed.
    */
@@ -101,14 +97,14 @@ export class SeoService {
     if (!oldSlug || !newSlug || oldSlug === newSlug) return;
 
     const RedirectRule = mongoose.model('RedirectRule');
-    const target = `/products/${newSlug}`;
+    const target = `/product-detail/${newSlug}`;
 
     // Ensure we don't create circular redirects
     await RedirectRule.deleteMany({ sourceUrl: target });
-    await RedirectRule.deleteMany({ sourceUrl: `/product-detail/${newSlug}` });
+    await RedirectRule.deleteMany({ sourceUrl: `/products/${newSlug}` });
     await RedirectRule.deleteMany({ sourceUrl: `/product/${newSlug}` });
 
-    // Sources to capture both primary (/products/) and secondary/legacy (/product-detail/, /product/) URL patterns
+    // Sources to capture both primary (/product-detail/) and secondary/legacy (/products/, /product/) URL patterns
     const sources = [`/products/${oldSlug}`, `/product-detail/${oldSlug}`, `/product/${oldSlug}`];
 
     for (const source of sources) {
@@ -341,7 +337,7 @@ export class SeoService {
    */
   public generateStructuredData(product: any, categoryName: string = ''): Record<string, any> {
     const siteUrl = process.env.SITE_URL || 'https://gadgetsprohub.com';
-    const productUrl = `${siteUrl}/products/${product.slug}`;
+    const productUrl = `${siteUrl}/product-detail/${product.slug}`;
     const images = (product.images || []).map((img: string) => img.startsWith('http') ? img : `${siteUrl}${img}`);
 
     // Create the core Product Schema
@@ -377,7 +373,7 @@ export class SeoService {
     // Offers (Affiliate Offer)
     schema.offers = {
       '@type': 'Offer',
-      'url': product.affiliateLink || `${siteUrl}/products/${product.slug}`,
+      'url': product.affiliateLink || `${siteUrl}/product-detail/${product.slug}`,
       'priceCurrency': 'INR',
       'price': validatedPricing.price,
       'itemCondition': 'https://schema.org/NewCondition',
@@ -714,10 +710,11 @@ export class SeoService {
           bulkRecords.push({ loc: `${siteUrl}${url}`, priority: url === '' ? 1.0 : 0.5, changefreq: 'weekly', type: 'static' });
         }
         for (const cat of categoriesList) {
-          bulkRecords.push({ loc: `${siteUrl}/category/${cat.slug}`, priority: 0.7, changefreq: 'daily', type: 'category' });
+          const catSlug = cat.slug ? cat.slug.replace(/^category-/, '') : '';
+          bulkRecords.push({ loc: `${siteUrl}/${catSlug}`, priority: 0.7, changefreq: 'daily', type: 'category' });
         }
         for (const p of productsList) {
-          bulkRecords.push({ loc: `${siteUrl}/products/${p.slug}`, priority: 0.8, changefreq: 'daily', lastmod: p.updatedAt || p.createdAt, type: 'product' });
+          bulkRecords.push({ loc: `${siteUrl}/product-detail/${p.slug}`, priority: 0.8, changefreq: 'daily', lastmod: p.updatedAt || p.createdAt, type: 'product' });
         }
         for (const b of blogsList) {
           bulkRecords.push({ loc: `${siteUrl}/blog/${b.slug}`, priority: 0.7, changefreq: 'weekly', lastmod: b.updatedAt || b.createdAt, type: 'blog' });
@@ -781,8 +778,9 @@ export class SeoService {
     // Dynamic Categories
     for (const cat of categoriesList) {
       if (!cat.slug) continue;
+      const catSlug = cat.slug.replace(/^category-/, '');
       xml += `  <url>\n`;
-      xml += `    <loc>${safeSiteUrl}/category/${escapeXml(cat.slug)}</loc>\n`;
+      xml += `    <loc>${safeSiteUrl}/${escapeXml(catSlug)}</loc>\n`;
       xml += `    <lastmod>${todayStr}</lastmod>\n`;
       xml += `    <changefreq>daily</changefreq>\n`;
       xml += `    <priority>0.7</priority>\n`;
@@ -800,7 +798,7 @@ export class SeoService {
         dateStr = todayStr;
       }
       xml += `  <url>\n`;
-      xml += `    <loc>${safeSiteUrl}/products/${escapeXml(prod.slug)}</loc>\n`;
+      xml += `    <loc>${safeSiteUrl}/product-detail/${escapeXml(prod.slug)}</loc>\n`;
       xml += `    <lastmod>${dateStr}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
       xml += `    <priority>0.8</priority>\n`;

@@ -60,10 +60,15 @@
     <script>
       (function() {
         try {
-          var saved = localStorage.getItem('aff_theme');
+          var savedPref = localStorage.getItem('aff_theme_pref');
+          var savedOld = localStorage.getItem('aff_theme');
           var isDark = false;
-          if (saved !== null) {
-            isDark = JSON.parse(saved);
+          if (savedPref !== null) {
+            if (savedPref === 'dark') isDark = true;
+            else if (savedPref === 'light') isDark = false;
+            else isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          } else if (savedOld !== null) {
+            isDark = JSON.parse(savedOld);
           } else {
             isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           }

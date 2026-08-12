@@ -91,7 +91,7 @@ export const AboutUs: React.FC = () => {
           <div className="flex gap-2 shrink-0 w-full sm:w-auto">
             <div className="inline-flex w-full sm:w-auto justify-center items-center gap-1.5 rounded-lg bg-indigo-50 px-3.5 py-2 text-[10px] font-bold text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300 break-all sm:break-normal">
               <Mail className="h-3.5 w-3.5 shrink-0" />
-              <span>support@gadgetsprohub.com</span>
+              <span>support@example.com</span>
             </div>
           </div>
         </div>

@@ -137,6 +137,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   const [accumulatedProducts, setAccumulatedProducts] = useState<Product[]>([]);
 
   useEffect(() => {
+    setAccumulatedProducts([]);
+    setCurrentPage(1);
+  }, [selectedCategory, selectedSubcategory, debouncedSearch, minPrice, maxPrice, minRating, sortField]);
+
+  useEffect(() => {
     if (!productsData?.products) return;
     if (currentPage === 1) {
       setAccumulatedProducts(productsData.products);
@@ -224,7 +229,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     if (initialFilter) {
       if (initialFilter.startsWith('category-')) {
         const cat = initialFilter.replace('category-', '');
-        const matched = categories.find(c => c.slug === cat || String(c._id) === cat);
+        const matched = categories.find(c => c.slug === cat || String(c._id) === cat || c.name.toLowerCase() === cat);
         const catId = matched ? String(matched._id) : cat;
         setSelectedCategory(catId);
         setSearch('');

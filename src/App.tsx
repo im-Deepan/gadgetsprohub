@@ -433,8 +433,11 @@ const AppContent: React.FC = () => {
       }
 
       // Map category slugs directly to 'products' view
-      const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports'];
+      const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports', 'shoes', 'earbuds', 'gaming'];
       if (viewPart && (knownCategories.includes(viewPart) || viewPart.startsWith('category-'))) {
+        return 'products';
+      }
+      if (viewPart === 'category') {
         return 'products';
       }
 
@@ -462,9 +465,12 @@ const AppContent: React.FC = () => {
       }
 
       // Map category slugs
-      const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports'];
+      const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports', 'shoes', 'earbuds', 'gaming'];
       if (viewPart && knownCategories.includes(viewPart)) {
         return `category-${viewPart}`;
+      }
+      if (viewPart === 'category' && pathParts.length > 1) {
+        return `category-${pathParts[1]}`;
       }
       if (viewPart && viewPart.startsWith('category-')) {
         return viewPart;
@@ -510,6 +516,9 @@ const AppContent: React.FC = () => {
             if (city) {
               const mappedCity = mapToTamilNaduCity(city);
               safeSetItem('aff_preferred_city', mappedCity);
+              if (data.country && typeof data.country === 'string') {
+                safeSetItem('aff_country', data.country);
+              }
               setDetectedCity(mappedCity);
               
               return;
@@ -712,7 +721,7 @@ const AppContent: React.FC = () => {
         let view: AppView = 'home';
         let slug = null;
 
-        const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports'];
+        const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports', 'shoes', 'earbuds', 'gaming'];
         if (viewUrl && (ALLOWED_VIEWS as readonly string[]).includes(viewUrl)) {
           view = viewUrl as AppView;
           slug = params.get('slug') || null;
@@ -721,6 +730,9 @@ const AppContent: React.FC = () => {
           if (pathParts.length > 1) {
              slug = pathParts.slice(1).join('/');
           }
+        } else if (viewPart === 'category' && pathParts.length > 1) {
+          view = 'products';
+          slug = `category-${pathParts[1]}`;
         } else if (viewPart && knownCategories.includes(viewPart)) {
           view = 'products';
           slug = `category-${viewPart}`;

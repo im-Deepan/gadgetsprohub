@@ -642,14 +642,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
   if (!product) {
     return (
       <div className="mx-auto max-w-xl text-center py-20 px-4">
-        <span className="text-4xl">⚠️</span>
-        <h2 className="text-sm font-bold text-slate-700 mt-4">Specification Data Not Found</h2>
-        <p className="text-xs text-slate-300 mt-1">We are unable to extract the requested product specifications slug. Try browsing other models.</p>
+        <span className="text-4xl block mb-4">🔍</span>
+        <h2 className="text-lg font-bold font-display text-slate-800 dark:text-white">Product Not Found</h2>
+        <p className="text-sm text-slate-500 mt-2">The product you are looking for doesn't exist or has been removed.</p>
         <button
           onClick={() => onNavigate('products')}
-          className="mt-6 rounded-full bg-slate-800 text-white px-5 py-2 px-4 py-2 text-xs font-semibold hover:bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 cursor-pointer"
+          className="mt-6 rounded-full bg-slate-800 text-white px-6 py-2.5 text-sm font-bold hover:bg-zinc-900 transition-colors shadow-sm dark:bg-white dark:text-slate-900 cursor-pointer inline-block"
         >
-          Check products catalog
+          Browse Catalog
         </button>
       </div>
     );
@@ -697,7 +697,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
   // Resolve dynamic URL based on current host origin
   const dynamicOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://gadgetsprohub.com';
-  const dynamicUrl = `${dynamicOrigin}/products/${product?.slug || ''}`;
+  const dynamicUrl = `${dynamicOrigin}/product-detail/${product?.slug || ''}`;
   const dynamicCategory = (typeof product.category === 'object' && product.category !== null) ? product.category.name : (product.category || '');
 
   const validatedPricing = getValidatedPricing(product);
@@ -811,7 +811,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
             label: getCategoryName(product.category, categories), 
             onClick: () => onNavigate('products', `category-${getCategoryId(product.category)}`)
           }] : []),
-          { label: product ? product.name : 'Loading...', isCurrentPage: true }
+          { label: product ? getShortProductTitle(product.name, product.brand, 40) : 'Loading...', isCurrentPage: true }
         ]} />
       </div>
 

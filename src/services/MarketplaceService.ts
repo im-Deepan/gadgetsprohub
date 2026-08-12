@@ -31,6 +31,7 @@ export interface NormalizedProduct {
   affiliateLink: string;
   gtin?: string; // UPC/EAN/GTIN
   mpn?: string;  // Manufacturer Part Number
+  reviews?: any[];
   metadata?: Record<string, any>; // Original marketplace metadata
 }
 
@@ -363,6 +364,128 @@ async function fetchRealMarketplaceData(url: string): Promise<any> {
       }
     }
 
+    // Provider-specific extraction rules when generic JSON-LD/meta doesn't yield all fields:
+    if (url.includes('flipkart.com')) {
+      if (!title) {
+        const match = html.match(/<span\s+class=["'][^"']*(?:B_NuTY|VU-423|yhR11D)[^"']*["'][^>]*>\s*([^<]+)\s*<\/span>/i);
+        if (match) title = match[1].trim();
+      }
+      if (price === null) {
+        const match = html.match(/<div\s+class=["'][^"']*(?:_30jeq3|_16J23d|Nx9bqj)[^"']*["'][^>]*>\s*₹?\s*([\d\.,]+)/i);
+        if (match) price = parseFloat(match[1].replace(/,/g, ''));
+      }
+      if (originalPrice === null) {
+        const match = html.match(/<div\s+class=["'][^"']*(?:_3I9_wc|_27Uc28|yRaATh)[^"']*["'][^>]*>\s*₹?\s*([\d\.,]+)/i);
+        if (match) originalPrice = parseFloat(match[1].replace(/,/g, ''));
+      }
+      if (!brand) {
+        const match = html.match(/<span\s+class=["'][^"']*(?:G6320N|fM237)[^"']*["'][^>]*>\s*([^<]+)\s*<\/span>/i);
+        if (match) brand = match[1].trim();
+      }
+    } else if (url.includes('meesho.com')) {
+      const nextDataMatch = html.match(/<script\s+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+      if (nextDataMatch) {
+        try {
+          const nextData = JSON.parse(nextDataMatch[1]);
+          const prodDetails = nextData?.props?.pageProps?.product || nextData?.props?.pageProps?.initialState?.product;
+          if (prodDetails) {
+            if (!title && prodDetails.name) title = prodDetails.name;
+            if (price === null && prodDetails.discounted_price) price = parseFloat(prodDetails.discounted_price);
+            if (originalPrice === null && prodDetails.price) originalPrice = parseFloat(prodDetails.price);
+            if (images.length === 0 && prodDetails.images) {
+              images = prodDetails.images.map((img: any) => typeof img === 'string' ? img : img.url).filter(Boolean);
+            }
+          }
+        } catch (e) {}
+      }
+    } else if (url.includes('myntra.com')) {
+      if (!title) {
+        const match = html.match(/<h1\s+class=["'][^"']*pdp-name[^"']*["'][^>]*>\s*([^<]+)\s*<\/h1>/i);
+        if (match) title = match[1].trim();
+      }
+      if (!brand) {
+        const match = html.match(/<h1\s+class=["'][^"']*pdp-title[^"']*["'][^>]*>\s*([^<]+)\s*<\/h1>/i);
+        if (match) brand = match[1].trim();
+      }
+      if (price === null) {
+        const match = html.match(/<span\s+class=["'][^"']*pdp-price[^"']*["'][^>]*>\s*<strong[^>]*>\s*₹?\s*([\d\.,]+)/i) ||
+                      html.match(/["']discountedPrice["']\s*:\s*(\d+)/i);
+        if (match) price = parseFloat(match[1].replace(/,/g, ''));
+      }
+    } else if (url.includes('ajio.com')) {
+      if (!title) {
+        const match = html.match(/<h2\s+class=["'][^"']*prod-title[^"']*["'][^>]*>\s*([^<]+)\s*<\/h2>/i);
+        if (match) title = match[1].trim();
+      }
+      if (!brand) {
+        const match = html.match(/<h1\s+class=["'][^"']*prod-brand[^"']*["'][^>]*>\s*([^<]+)\s*<\/h1>/i);
+        if (match) brand = match[1].trim();
+      }
+      if (price === null) {
+        const match = html.match(/<div\s+class=["'][^"']*prod-sp[^"']*["'][^>]*>\s*₹?\s*([\d\.,]+)/i);
+        if (match) price = parseFloat(match[1].replace(/,/g, ''));
+      }
+    } else if (url.includes('reliancedigital.in')) {
+      if (!title) {
+        const match = html.match(/<h1\s+class=["'][^"']*pdp__title[^"']*["'][^>]*>\s*([^<]+)\s*<\/h1>/i);
+        if (match) title = match[1].trim();
+      }
+      if (price === null) {
+        const match = html.match(/<span\s+class=["'][^"']*pdp__offerPrice[^"']*["'][^>]*>\s*₹?\s*([\d\.,]+)/i);
+        if (match) price = parseFloat(match[1].replace(/,/g, ''));
+      }
+    } else if (url.includes('croma.com')) {
+      if (!title) {
+        const match = html.match(/<h1\s+class=["'][^"']*pd-title[^"']*["'][^>]*>\s*([^<]+)\s*<\/h1>/i);
+        if (match) title = match[1].trim();
+      }
+      if (price === null) {
+        const match = html.match(/<span\s+id=["']pdp-product-price["'][^>]*>\s*₹?\s*([\d\.,]+)/i) ||
+                      html.match(/<span\s+class=["'][^"']*amount[^"']*["'][^>]*>\s*₹?\s*([\d\.,]+)/i);
+        if (match) price = parseFloat(match[1].replace(/,/g, ''));
+      }
+    } else if (url.includes('ebay.com') || url.includes('ebay.co.uk')) {
+      if (!title) {
+        const match = html.match(/<h1\s+class=["'][^"']*x-item-title__mainTitle[^"']*["'][^>]*>.*?<span[^>]*>\s*([^<]+)\s*<\/span>/i) ||
+                      html.match(/id=["']itemTitle["'][^>]*>(?:<span[^>]*>.*?<\/span>)?\s*([^<]+)/i);
+        if (match) title = match[1].trim();
+      }
+      if (price === null) {
+        const match = html.match(/<div\s+class=["'][^"']*x-price-primary[^"']*["'][^>]*>.*?<span[^>]*>\s*[\$£€]?\s*([\d\.,]+)/i) ||
+                      html.match(/id=["']prcIsum["'][^>]*>\s*[\$£€]?\s*([\d\.,]+)/i);
+        if (match) price = parseFloat(match[1].replace(/,/g, ''));
+      }
+    } else if (url.includes('aliexpress.com') || url.includes('aliexpress.ru')) {
+      if (!title) {
+        const match = html.match(/<h1\s+class=["'][^"']*product-title-text[^"']*["'][^>]*>\s*([^<]+)\s*<\/h1>/i);
+        if (match) title = match[1].trim();
+      }
+      if (price === null) {
+        const match = html.match(/<span\s+class=["'][^"']*product-price-value[^"']*["'][^>]*>\s*[\$₹€£]?\s*([\d\.,]+)/i) ||
+                      html.match(/["']formatedActivityPrice["']\s*:\s*["']([^"']+)["']/i);
+        if (match) price = parseFloat((match[1].replace(/[^0-9\.]/g, '')));
+      }
+    } else if (url.includes('walmart.com')) {
+      const nextDataMatch = html.match(/<script\s+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+      if (nextDataMatch) {
+        try {
+          const nextData = JSON.parse(nextDataMatch[1]);
+          const item = nextData?.props?.pageProps?.initialData?.data?.product;
+          if (item) {
+            if (!title && item.name) title = item.name;
+            if (price === null && item.priceInfo?.currentPrice?.price) price = parseFloat(item.priceInfo.currentPrice.price);
+            if (originalPrice === null && item.priceInfo?.wasPrice?.price) originalPrice = parseFloat(item.priceInfo.wasPrice.price);
+            if (!brand && item.brand) brand = item.brand;
+          }
+        } catch (e) {}
+      }
+      if (!title) {
+        const match = html.match(/<h1\s+itemprop=["']name["'][^>]*>\s*([^<]+)\s*<\/h1>/i) ||
+                      html.match(/<h1\s+id=["']main-title["'][^>]*>\s*([^<]+)\s*<\/h1>/i);
+        if (match) title = match[1].trim();
+      }
+    }
+
     if (title || price || images.length > 0) {
       return { title, images, price, originalPrice, brand, description, gtin, currency, specifications };
     }
@@ -410,48 +533,7 @@ export async function getProductDetails(url: string, providerId: string, default
   const realData = await fetchRealMarketplaceData(url);
   
   if (!realData || !realData.title) {
-    // Extract ID pattern from URL for fallback
-    let fallbackId = 'item-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
-    if (url.includes('/dp/') || url.includes('/gp/product/')) {
-      const match = url.match(/\/dp\/([A-Z0-9]{10})/i) || url.match(/\/gp\/product\/([A-Z0-9]{10})/i);
-      if (match) fallbackId = match[1];
-    } else if (url.includes('/p/itm') || url.includes('pid=')) {
-      const match = url.match(/pid=([A-Z0-9]{16})/i) || url.match(/\/p\/(itm[a-f0-9]{12,16})/i);
-      if (match) fallbackId = match[1];
-    }
-
-    const urlParts = url.split('/').filter(Boolean);
-    const slugPart = urlParts.find(p => p.length > 5 && !p.includes('amazon') && !p.includes('dp') && !p.includes('http') && !p.includes('www'));
-    const fallbackTitle = slugPart ? slugPart.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : `Marketplace Item (${fallbackId})`;
-    const fallbackBrand = providerId.includes('amazon') ? 'Amazon Marketplace' : 'Verified Vendor';
-
-    return {
-      name: fallbackTitle,
-      brand: fallbackBrand,
-      description: `Imported marketplace product (${fallbackId}). Live HTML scraping was protected by anti-bot measures. Details can be updated in Admin.`,
-      longDescription: `Imported marketplace product (${fallbackId}). Live HTML scraping was protected by anti-bot measures. Details can be updated in Admin.`,
-      price: 149.99,
-      originalPrice: 179.99,
-      discount: 16,
-      currency: defaultCurrency,
-      images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80'],
-      rating: 4.5,
-      totalReviews: 10,
-      category: 'Electronics',
-      specifications: generateRealTechnicalSpecs(fallbackTitle, fallbackBrand, 'Electronics'),
-      variants: [],
-      inStock: true,
-      seller: providerId.includes('amazon') ? 'Amazon Retail' : 'Verified Merchant Partner',
-      affiliateLink: url,
-      gtin: fallbackId,
-      mpn: fallbackId,
-      metadata: {
-        originalId: fallbackId,
-        scrapedAt: new Date().toISOString(),
-        provider: providerId,
-        fallbackNotice: 'Scraper bypassed anti-bot block with fallback metadata'
-      }
-    };
+    throw new Error(`Failed to extract live product details from URL (${url}). Scraper was blocked by anti-bot measures or product is unavailable.`);
   }
 
   // Extract ID pattern from URL
@@ -630,13 +712,13 @@ class FlipkartProvider implements IMarketplaceProvider {
     details.affiliateLink = trackingId ? `${url}${url.includes('?') ? '&' : '?'}affid=${trackingId}` : url;
     return details;
   }
-  async extractImages(url: string) { return []; }
-  async extractVariants(url: string) { return []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
   async extractPricing(url: string) {
     const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { return []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('flipkart.com') && (link.includes('affid=') || link.includes('click.impact.com')); }
   async synchronize(productId: string) { return { updated: true, timestamp: new Date() }; }
   async healthCheck() { return true; }
@@ -653,13 +735,13 @@ class MeeshoProvider implements IMarketplaceProvider {
   async extractProduct(url: string, trackingId?: string) {
     return await getProductDetails(url, this.providerId, this.currency);
   }
-  async extractImages(url: string) { return []; }
-  async extractVariants(url: string) { return []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
   async extractPricing(url: string) {
     const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { return []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('meesho.com') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
@@ -676,13 +758,13 @@ class MyntraProvider implements IMarketplaceProvider {
   async extractProduct(url: string, trackingId?: string) {
     return await getProductDetails(url, this.providerId, this.currency);
   }
-  async extractImages(url: string) { return []; }
-  async extractVariants(url: string) { return []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
   async extractPricing(url: string) {
     const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { return []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('myntra.com') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
@@ -699,13 +781,13 @@ class AjioProvider implements IMarketplaceProvider {
   async extractProduct(url: string, trackingId?: string) {
     return await getProductDetails(url, this.providerId, this.currency);
   }
-  async extractImages(url: string) { return []; }
-  async extractVariants(url: string) { return []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
   async extractPricing(url: string) {
     const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { return []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('ajio.com') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
@@ -722,13 +804,13 @@ class RelianceDigitalProvider implements IMarketplaceProvider {
   async extractProduct(url: string, trackingId?: string) {
     return await getProductDetails(url, this.providerId, this.currency);
   }
-  async extractImages(url: string) { return []; }
-  async extractVariants(url: string) { return []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
   async extractPricing(url: string) {
     const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { return []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('reliancedigital.in') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
@@ -745,13 +827,13 @@ class CromaProvider implements IMarketplaceProvider {
   async extractProduct(url: string, trackingId?: string) {
     return await getProductDetails(url, this.providerId, this.currency);
   }
-  async extractImages(url: string) { return []; }
-  async extractVariants(url: string) { return []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
   async extractPricing(url: string) {
     const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { return []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('croma.com') && (link.includes('affid=') || link.includes('utm_source=affiliate')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
@@ -770,13 +852,13 @@ class EbayProvider implements IMarketplaceProvider {
     details.affiliateLink = trackingId ? `${url}?mkevt=1&mkcid=1&mkrid=711-53200-19255-0&campid=${trackingId}` : url;
     return details;
   }
-  async extractImages(url: string) { return []; }
-  async extractVariants(url: string) { return []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
   async extractPricing(url: string) {
     const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { return []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('ebay.com') && link.includes('campid='); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
@@ -793,13 +875,13 @@ class AliExpressProvider implements IMarketplaceProvider {
   async extractProduct(url: string, trackingId?: string) {
     return await getProductDetails(url, this.providerId, this.currency);
   }
-  async extractImages(url: string) { return []; }
-  async extractVariants(url: string) { return []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
   async extractPricing(url: string) {
     const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { return []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('aliexpress.com') && (link.includes('aff_short_key=') || link.includes('af=')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
@@ -816,13 +898,13 @@ class WalmartProvider implements IMarketplaceProvider {
   async extractProduct(url: string, trackingId?: string) {
     return await getProductDetails(url, this.providerId, this.currency);
   }
-  async extractImages(url: string) { return []; }
-  async extractVariants(url: string) { return []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
   async extractPricing(url: string) {
     const d = await getProductDetails(url, this.providerId, this.currency);
     return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { return []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('walmart.com') && (link.includes('veh=aff') || link.includes('aff_id=')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }

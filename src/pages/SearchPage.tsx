@@ -222,7 +222,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
                     </span>
                     <h3 className="mt-1 text-sm font-bold font-display text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                       <a
-                        href={`/products/${p.slug}`}
+                        href={`/product-detail/${p.slug}`}
                         onClick={(e) => { e.preventDefault(); onNavigate('product-detail', p.slug); }}
                         className="focus:outline-none"
                       >

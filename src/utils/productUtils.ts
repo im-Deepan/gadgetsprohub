@@ -10,7 +10,7 @@ export const getNormalizedINRPrice = (price: number | undefined | null): number 
   if (price === undefined || price === null || isNaN(price) || price <= 0) {
     return 0;
   }
-  return price < 1000 ? Math.round(price * 83) : Math.round(price);
+  return Math.round(price);
 };
 
 /**
@@ -89,8 +89,27 @@ export const formatINR = (price: number | undefined | null): string => {
   if (price === undefined || price === null || isNaN(price) || price < 0) {
     return '₹0';
   }
-  // Convert legacy USD values (<1000) to INR if needed
-  const numericINR = price < 1000 ? Math.round(price * 83) : Math.round(price);
+  const numericINR = Math.round(price);
+  
+  let country = 'India';
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      country = window.localStorage.getItem('aff_country') || 'India';
+    }
+  } catch (e) {}
+
+  if (country !== 'India' && country !== 'Unknown') {
+    // Show in USD
+    const usd = numericINR / 83;
+    const formatted = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 2,
+      minimumFractionDigits: usd % 1 === 0 ? 0 : 2
+    }).format(usd);
+    return formatted;
+  }
+
   const formatted = new Intl.NumberFormat('en-IN', {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0

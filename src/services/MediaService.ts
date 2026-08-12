@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import * as dns from 'dns';
+import * as http from 'http';
+import * as https from 'https';
 import sharp from 'sharp';
 import mongoose from 'mongoose';
 
@@ -168,27 +170,33 @@ export class MediaService {
       return existing;
     }
 
+    let verifiedIp = '';
+    let targetHostname = '';
+    let isHttps = false;
+
     try {
       const urlObj = new URL(payload.url);
       if (!['http:', 'https:'].includes(urlObj.protocol)) {
          throw new Error('Only HTTP/HTTPS URLs are allowed');
       }
+      isHttps = urlObj.protocol === 'https:';
       
-      const hostname = urlObj.hostname.toLowerCase().trim();
-      if (isIpPrivate(hostname)) {
+      targetHostname = urlObj.hostname.toLowerCase().trim();
+      if (isIpPrivate(targetHostname)) {
          throw new Error('Private/Link-local IPs are not allowed');
       }
 
       // Resolve DNS to verify the resolved IP is not private (to defend against DNS-rebinding SSRF)
-      const lookupResult = await dns.promises.lookup(hostname, { all: true });
+      const lookupResult = await dns.promises.lookup(targetHostname, { all: true });
       if (lookupResult && lookupResult.length > 0) {
         for (const addr of lookupResult) {
           if (isIpPrivate(addr.address)) {
-            throw new Error(`The resolved IP address (${addr.address}) for hostname (${hostname}) is private or local.`);
+            throw new Error(`The resolved IP address (${addr.address}) for hostname (${targetHostname}) is private or local.`);
           }
         }
+        verifiedIp = lookupResult[0].address;
       } else {
-        throw new Error(`Could not resolve hostname: ${hostname}`);
+        throw new Error(`Could not resolve hostname: ${targetHostname}`);
       }
     } catch (e: any) {
        throw new Error(`Invalid URL or DNS check failed: ${e.message}`);
@@ -198,8 +206,55 @@ export class MediaService {
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds request timeout
 
     try {
-      // 2. Download
-      const response = await fetch(payload.url, { signal: controller.signal });
+      // 2. Download - connect directly to verifiedIp to prevent TOCTOU DNS rebinding
+      let response: Response;
+      if (isHttps) {
+        const ipUrl = new URL(payload.url);
+        ipUrl.hostname = verifiedIp.includes(':') ? `[${verifiedIp}]` : verifiedIp;
+
+        response = await new Promise<Response>((resolve, reject) => {
+          const req = https.request(ipUrl, {
+            method: 'GET',
+            headers: {
+              'Host': targetHostname,
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) GadgetsProHub/1.0'
+            },
+            signal: controller.signal,
+            servername: targetHostname, // TLS SNI extension matches original host
+            rejectUnauthorized: true
+          }, (res) => {
+            const statusCode = res.statusCode || 500;
+            const statusText = res.statusMessage || '';
+            const headers = new Headers();
+            for (const [k, v] of Object.entries(res.headers)) {
+              if (Array.isArray(v)) {
+                v.forEach(val => headers.append(k, val));
+              } else if (v) {
+                headers.set(k, v);
+              }
+            }
+            const chunks: Buffer[] = [];
+            res.on('data', chunk => chunks.push(chunk));
+            res.on('end', () => {
+              resolve(new Response(Buffer.concat(chunks), {
+                status: statusCode,
+                statusText,
+                headers
+              }));
+            });
+            res.on('error', reject);
+          });
+          req.on('error', reject);
+          req.end();
+        });
+      } else {
+        const ipUrl = new URL(payload.url);
+        ipUrl.hostname = verifiedIp.includes(':') ? `[${verifiedIp}]` : verifiedIp;
+        response = await fetch(ipUrl.toString(), {
+          headers: { 'Host': targetHostname },
+          signal: controller.signal
+        });
+      }
       clearTimeout(timeoutId);
 
       if (!response.ok) {

@@ -696,7 +696,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       if (val === null || val === undefined) return '""';
       let str = String(val);
       // Neutralize leading Excel/Sheets formula injection triggers (=, +, -, @, \t, \r)
-      if (/^[=\-+\@\t\r]/.test(str)) {
+      if (/^[=\+\-\@\t\r]/.test(str)) {
         str = "'" + str;
       }
       str = str.replace(/"/g, '""');

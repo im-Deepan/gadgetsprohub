@@ -43,7 +43,7 @@ The platform is designed as a modular, full-stack application.
 
 ## 🗄️ Database Schema & Architecture
 
-The application strictly mandates **MongoDB Atlas** for persistent storage to guarantee data integrity.
+The application supports a dual-mode database architecture, utilizing **MongoDB Atlas** for primary persistent storage with seamless local in-memory/file-system fallback when MongoDB is unavailable.
 
 ### 📦 Key Data Models
 
@@ -97,7 +97,7 @@ To eliminate link ambiguity and ensure commission attribution:
 
 ### 2. Chrome Extension Storage Obfuscation
 To protect administrative credentials and JWTs stored on the user's disk from extraction or standard signature scans:
-- **Reversed Base64 Cipher**: Inside the extension's `StorageService`, the `authToken` is run through a custom reversal-and-base64 obfuscator before hitting `chrome.storage.local` or `localStorage`.
+- **Reversed Base64 Cipher**: Inside the extension's `StorageService`, the `authToken` is run through a custom reversal-and-base64 obfuscator before hitting `chrome.storage.session` or `localStorage`.
 - **Restricted Storage Bus**: The messaging router `routeMessage` strictly limits read/write storage command actions (`STORAGE_WRITE`/`STORAGE_READ`) to a pre-defined set of safe public keys (e.g. `lastImportedAsin`), completely blocking any remote calls to fetch `gph_settings` or auth configurations.
 
 ### 3. Decoupled AI Key Management

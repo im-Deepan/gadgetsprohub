@@ -125,8 +125,8 @@ export const seedProducts = [
     "longDescription": "Experience crystal clear audio with our signature wireless headphones. Features premium custom dynamic audio drivers, Hybrid Active Noise Cancellation, high fidelity 30-hour battery stamina, comfortable over-ear design, memory foam padding, and ultra-crisp calling microphones.",
     "category": "665a0001bc93ef2d8c000001",
     "brand": "AudioPro",
-    "price": 149.99,
-    "originalPrice": 199.99,
+    "price": 12449,
+    "originalPrice": 16599,
     "discount": 25,
     "images": [
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=850",
@@ -203,8 +203,8 @@ export const seedProducts = [
     "longDescription": "Stay connected on every mile with our robust Smart Watch Pro. Built with high durable aluminum materials, clear customizable always-on AMOLED displays, live built-in multi-channel GPS tracking, cardiac diagnostics, blood oxygen diagnostics, sleeping quality scoring indices, and comprehensive weather forecast widgets.",
     "category": "665a0001bc93ef2d8c000001",
     "brand": "TechBrand",
-    "price": 299.99,
-    "originalPrice": 399.99,
+    "price": 24899,
+    "originalPrice": 33199,
     "discount": 25,
     "images": [
       "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=850",
@@ -281,8 +281,8 @@ export const seedProducts = [
     "longDescription": "Experience rich sound clarity with the Smart Active Noise Cancelling Earbuds. Featuring 10mm graphene drivers, active environmental noise reduction, wireless Qi charging case, 32-hour extended playback time, and IPX7 sweat resistance.",
     "category": "665a0001bc93ef2d8c000001",
     "brand": "AudioPro",
-    "price": 79.99,
-    "originalPrice": 109.99,
+    "price": 6639,
+    "originalPrice": 9129,
     "discount": 27,
     "images": [
       "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=850",
@@ -335,8 +335,8 @@ export const seedProducts = [
     "longDescription": "Dominate your games with our Mechanical Gaming Keyboard. Constructed with elegant anodized aluminum, customizable dual-shot PBT keycaps, linear red switches, vibrant per-key programmable RGB backlight profiles, dynamic dial knobs, and silent foam dampening filters.",
     "category": "665a0001bc93ef2d8c000001",
     "brand": "TechBrand",
-    "price": 119.99,
-    "originalPrice": 149.99,
+    "price": 9959,
+    "originalPrice": 12449,
     "discount": 20,
     "images": [
       "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=850"
@@ -390,8 +390,8 @@ export const seedProducts = [
     "longDescription": "Declutter your everyday carry with our beautifully tanned Minimalist Leather Cardholder. Features four precision card slots, one hidden central cash compartment, robust RFID blocking lining protection, and hand-stitched premium wax thread durability.",
     "category": "665a0001bc93ef2d8c000002",
     "brand": "ClassicGoods",
-    "price": 34.99,
-    "originalPrice": 44.99,
+    "price": 2904,
+    "originalPrice": 3734,
     "discount": 22,
     "images": [
       "https://images.unsplash.com/photo-1627123424574-724758594e93?w=850"
@@ -444,8 +444,8 @@ export const seedProducts = [
     "longDescription": "Elevate your nightstand aesthetic with the Smart LED Table Lamp. Seamlessly pairs with local smart home setups, providing flicker-free visual illumination, infinite color spectrums, dimming ranges down to 1%, and custom sleep routines.",
     "category": "665a0001bc93ef2d8c000003",
     "brand": "TechBrand",
-    "price": 45.99,
-    "originalPrice": 59.99,
+    "price": 3817,
+    "originalPrice": 4979,
     "discount": 23,
     "images": [
       "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=850"
@@ -499,8 +499,8 @@ export const seedProducts = [
     "longDescription": "Conquer extreme weather trails with the Waterproof Climbing Backpack. Built for mountain terrain, it boasts tear-resistant ripstop nylon, multi-point ergonomic heavy weight-loading shoulder suspensions, and dedicated trekking lock setups.",
     "category": "665a0001bc93ef2d8c000004",
     "brand": "SportGear",
-    "price": 79.99,
-    "originalPrice": 99.99,
+    "price": 6639,
+    "originalPrice": 8299,
     "discount": 20,
     "images": [
       "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=850"
@@ -553,8 +553,8 @@ export const seedProducts = [
     "longDescription": "Reduce workflow tension using our High-Precision Ergonomic Mouse. Offers a neutral handshake angle of 57 degrees, 4000 DPI adjustable optical cursor precision, and dual wireless modes.",
     "category": "665a0001bc93ef2d8c000001",
     "brand": "TechBrand",
-    "price": 59.99,
-    "originalPrice": 69.99,
+    "price": 4979,
+    "originalPrice": 5809,
     "discount": 14,
     "images": [
       "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=850"
@@ -607,8 +607,8 @@ export const seedProducts = [
     "longDescription": "Shield your vision with our Polarized Classic Sunglasses. Hand-polished acetate frames pair elegantly with triacetate cellulose lenses to block glare during driving or beach sessions.",
     "category": "665a0001bc93ef2d8c000002",
     "brand": "ClassicGoods",
-    "price": 49.99,
-    "originalPrice": 64.99,
+    "price": 4149,
+    "originalPrice": 5394,
     "discount": 23,
     "images": [
       "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=850"
@@ -662,8 +662,8 @@ export const seedProducts = [
     "longDescription": "Elevate your morning frying with our Non-Stick Ceramic Frying Pan. Features a heavy-gauge hard-anodized aluminum base that prevents hot spots, and a hard ceramic coating that permits healthy cooking with minimal oil.",
     "category": "665a0001bc93ef2d8c000003",
     "brand": "ClassicGoods",
-    "price": 39.99,
-    "originalPrice": 49.99,
+    "price": 3319,
+    "originalPrice": 4149,
     "discount": 20,
     "images": [
       "https://images.unsplash.com/photo-1543083477-4f7f010a6675?w=850"
@@ -716,8 +716,8 @@ export const seedProducts = [
     "longDescription": "Soothe your muscle aches after heavy gym sessions with the Adjustable Yoga Foam Block Roller. Includes physical massage grids, custom density EVA material, and lightweight durability.",
     "category": "665a0001bc93ef2d8c000004",
     "brand": "SportGear",
-    "price": 24.99,
-    "originalPrice": 29.99,
+    "price": 2074,
+    "originalPrice": 2489,
     "discount": 16,
     "images": [
       "https://images.unsplash.com/photo-1600881333168-2ef49b341f30?w=850"
@@ -770,8 +770,8 @@ export const seedProducts = [
     "longDescription": "Enjoy your gym soundtracks with our high-grade ANC In-Ear Wireless Earbuds. Features robust IPX7 sweat-resistant sealing, smart gesture control pads, deep bass audio drivers, and rapid wireless case charging.",
     "category": "665a0001bc93ef2d8c000001",
     "brand": "AudioPro",
-    "price": 89.99,
-    "originalPrice": 109.99,
+    "price": 7469,
+    "originalPrice": 9129,
     "discount": 18,
     "images": [
       "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=850"
@@ -825,8 +825,8 @@ export const seedProducts = [
     "longDescription": "Refine your wardrobe with the Classic Oxford Cotton Shirt. Cut from 100% fine long-staple organic cotton yarn, featuring double-needle stitch seams, an elegant modern collar, and high durability buttons.",
     "category": "665a0001bc93ef2d8c000002",
     "brand": "ClassicGoods",
-    "price": 54.99,
-    "originalPrice": 69.99,
+    "price": 4564,
+    "originalPrice": 5809,
     "discount": 21,
     "images": [
       "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=850"
@@ -879,8 +879,8 @@ export const seedProducts = [
     "longDescription": "Brew rich coffee extracts using the Stainless Steel Espresso Maker. Designed with thick food-grade stainless steel housings, visual copper pressure safety valves, and high-quality cold-feel plastic handles.",
     "category": "665a0001bc93ef2d8c000003",
     "brand": "ClassicGoods",
-    "price": 49.99,
-    "originalPrice": 59.99,
+    "price": 4149,
+    "originalPrice": 4979,
     "discount": 16,
     "images": [
       "https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=850"
@@ -934,8 +934,8 @@ export const seedProducts = [
     "longDescription": "Optimize space inside your health setup with the Adjustable Heavy Dumbbell Set. Instantly switch weight from 5 lbs up to 52.5 lbs using a fast turn-of-a-dial selector lock.",
     "category": "665a0001bc93ef2d8c000004",
     "brand": "SportGear",
-    "price": 199.99,
-    "originalPrice": 249.99,
+    "price": 16599,
+    "originalPrice": 20749,
     "discount": 20,
     "images": [
       "https://images.unsplash.com/photo-1638536532686-d610adfc8e5c?w=850"
@@ -989,8 +989,8 @@ export const seedProducts = [
     "longDescription": "Track your healthy milestones with our Bluetooth Smart scale. Employs 4 high-precision metal bio-impedance sensors to map weight, BMI, body fat ratio, muscle density, water ratio, and bone weight directly to your device.",
     "category": "665a0001bc93ef2d8c000001",
     "brand": "TechBrand",
-    "price": 39.99,
-    "originalPrice": 49.99,
+    "price": 3319,
+    "originalPrice": 4149,
     "discount": 20,
     "images": [
       "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=850"
@@ -1043,8 +1043,8 @@ export const seedProducts = [
     "longDescription": "Crush ice and fibrous vegetables with the Heavy-Duty Kitchen Blender. Features a 1400W pure copper motor, 6 aircraft-grade laser-cut steel blades, and variable intuitive speed dials for smoothies or soup preparations.",
     "category": "665a0001bc93ef2d8c000003",
     "brand": "TechBrand",
-    "price": 129.99,
-    "originalPrice": 159.99,
+    "price": 10789,
+    "originalPrice": 13279,
     "discount": 18,
     "images": [
       "https://images.unsplash.com/photo-1578643463396-0997cb5328c1?w=850"
@@ -1097,8 +1097,8 @@ export const seedProducts = [
     "longDescription": "Upgrade your desk battling station with the Adjustable Ergonomic Gaming Desk. Employs a dense steel frame supporting heavy set rigs, textured wrap-around carbon fiber surfaces, a clean controller stand, cup holder, and a side hook for headphones.",
     "category": "665a0001bc93ef2d8c000001",
     "brand": "SportGear",
-    "price": 149.99,
-    "originalPrice": 189.99,
+    "price": 12449,
+    "originalPrice": 15769,
     "discount": 21,
     "images": [
       "https://images.unsplash.com/photo-1598550476439-6847785fce6e?w=850"

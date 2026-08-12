@@ -1037,6 +1037,19 @@ const saveLocalSundayLogs = () => {
 // Handled by BlacklistedToken Mongoose model with TTL index
 
 // ========== MIDDLEWARE ==========
+const verifyPatTwoFactor = async (req: express.Request, userId: any): Promise<boolean> => {
+  if (!ConfigurationService.getFlag('enable2fa')) return true;
+  try {
+    const user = await User.findById(userId);
+    if (!user || !(user as any).twoFactorEnabled) return true;
+    const code = (req.headers['x-2fa-code'] || req.headers['x-two-factor-code'] || req.headers['2fa-code'] || req.body?.twoFactorCode || req.body?.code) as string;
+    if (!code) return false;
+    return TotpService.verifyToken((user as any).twoFactorSecret, code);
+  } catch (e) {
+    return false;
+  }
+};
+
 const authenticate = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<any> => {
   // Check for X-API-Key programmatic access first
   const apiKey = req.headers['x-api-key'] as string;
@@ -1045,6 +1058,10 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
       const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
       const pat = await PersonalAccessToken.findOne({ tokenHash: keyHash, revoked: false });
       if (pat) {
+        const is2FaValid = await verifyPatTwoFactor(req, pat.userId);
+        if (!is2FaValid) {
+          return res.status(401).json({ error: '2FA code required or invalid for PAT authentication', requiresTwoFactor: true });
+        }
         pat.lastUsedAt = new Date();
         await pat.save().catch((e: any) => console.warn(e));
         (req as any).userId = pat.userId.toString();
@@ -1110,6 +1127,10 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
         const pat = await PersonalAccessToken.findOne({ tokenHash, revoked: false });
         if (pat) {
+          const is2FaValid = await verifyPatTwoFactor(req, pat.userId);
+          if (!is2FaValid) {
+            return res.status(401).json({ error: '2FA code required or invalid for PAT authentication', requiresTwoFactor: true });
+          }
           pat.lastUsedAt = new Date();
           await pat.save().catch((e: any) => console.warn(e));
           (req as any).userId = pat.userId.toString();
@@ -2421,7 +2442,7 @@ async function startServer() {
   // SEO Routes (Robots & Sitemap)
   app.get('/robots.txt', (_req: express.Request, res: express.Response) => {
     res.type('text/plain');
-    res.send('User-agent: *\nDisallow: /admin\nDisallow: /admin/\nDisallow: /login\nDisallow: /profile\nDisallow: /search\nAllow: /\nSitemap: /sitemap.xml');
+    res.send('User-agent: *\nDisallow: /admin\nDisallow: /admin/\nDisallow: /login\nDisallow: /profile\nAllow: /\nSitemap: /sitemap.xml');
   });
 
   app.get('/.well-known/security.txt', (_req: express.Request, res: express.Response) => {
@@ -3671,6 +3692,12 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       if (doc.longDescription) {
         doc.longDescription = "Premium handcrafted formal shoes crafted from genuine leather. Built for daily corporate wear with breathable linings and ergonomic footbed support.";
       }
+      if (doc.pros) {
+        doc.pros = ["Premium quality material", "Comfortable fit", "Durable design", "Elegant appearance"];
+      }
+      if (doc.cons) {
+        doc.cons = ["Needs regular polishing", "Not suitable for sports"];
+      }
     }
 
     // Price guard: If sale price >= MRP or MRP is lower than price, suppress originalPrice & discount
@@ -4019,10 +4046,11 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           const interest = new PickLeftInterest({
             email: email.toLowerCase(),
             categoryName: resolvedCategory,
+            isVerified: false,
             verificationToken: token,
             tokenExpires: expires
           });
-          await PickLeftInterest.updateOne({ _id: interest._id }, { $set: { isVerified: true }, $unset: { verificationToken: 1, tokenExpires: 1 } });
+          await interest.save();
         }
       } else {
         const existingIdx = localPickLeftInterests.findIndex(
@@ -8253,7 +8281,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       const escapeCSV = (val: any) => {
         let str = String(val === null || val === undefined ? '' : val);
-        if (/^[=\-+\@\t\r]/.test(str)) {
+        if (/^[=\+\-\@\t\r]/.test(str)) {
           str = "'" + str;
         }
         str = str.replace(/"/g, '""');
@@ -9195,7 +9223,8 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         }
 
         // 8. Generate unique product slug
-        const baseSlugForImport = rawPayload.slug || cleanName;
+        // Force the slug to be generated from the clean name, ignoring messy scraper slugs
+        const baseSlugForImport = cleanName;
         const { finalSlug } = await resolveUniqueSlug(baseSlugForImport, 'product');
 
         // Generate pros and cons via AI if missing
@@ -10010,9 +10039,10 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
   });
 
   // Sunday automated logs and simulation
-  app.get('/api/admin/sunday-logs', adminOnly, async (_req: express.Request, res: express.Response) => {
+  app.get('/api/admin/sunday-logs', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      const mongoLogs = await SundayAutomationLog.find().sort({ runAt: -1 }).populate('productsAdded');
+      const limitVal = Math.min(parseInt(req.query.limit as string) || 100, 500);
+      const mongoLogs = await SundayAutomationLog.find().sort({ runAt: -1 }).limit(limitVal).populate('productsAdded');
       return res.json(mongoLogs);
     } catch (error: any) {
       return res.status(500).json({ error: 'An internal error occurred.' });

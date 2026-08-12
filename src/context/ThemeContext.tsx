@@ -60,6 +60,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsDark(nextIsDark);
     setThemeState(newTheme);
     safeSetItem('aff_theme_pref', newTheme);
+    safeSetItem('aff_theme', JSON.stringify(nextIsDark));
 
     if (typeof document !== 'undefined') {
       if (nextIsDark) {

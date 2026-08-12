@@ -146,7 +146,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ onNavigate }) => {
           </h1>
 
           <p className="mt-3 text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-xl mx-auto leading-relaxed">
-            The gadget or page you requested could not be located. It may have been moved, renamed, or is temporarily offline.
+            The page or product you're looking for doesn't exist or has been moved.
           </p>
         </motion.div>
 
