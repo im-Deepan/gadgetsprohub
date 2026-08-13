@@ -2041,7 +2041,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                           </td>
                           <td className="p-3">
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
-                              !log.status || log.status === 'sent' || log.status === 'success'
+                              log.status === 'sent' || log.status === 'success'
                                 ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/40'
                                 : log.status === 'pending'
                                 ? 'bg-amber-950/60 text-amber-400 border border-amber-900/40'
@@ -2049,7 +2049,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                                 ? 'bg-rose-950/60 text-rose-400 border border-rose-900/40'
                                 : 'bg-slate-800 text-slate-400 border border-slate-700'
                             }`}>
-                              {!log.status || log.status === 'sent' || log.status === 'success' ? 'Sent successfully' : log.status}
+                              {log.status === 'sent' || log.status === 'success' ? 'Sent successfully' : log.status || 'Unknown'}
                             </span>
                           </td>
                           <td className="p-3 text-right text-[11px] text-slate-500">

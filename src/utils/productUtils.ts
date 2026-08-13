@@ -3,15 +3,16 @@
  */
 
 /**
- * Normalizes any price number into a clean integer INR value.
- * Converts raw legacy USD values (<1000) to INR if necessary.
+ * Normalizes any price number into a clean integer value.
  */
-export const getNormalizedINRPrice = (price: number | undefined | null): number => {
+export const getNormalizedPrice = (price: number | undefined | null): number => {
   if (price === undefined || price === null || isNaN(price) || price <= 0) {
     return 0;
   }
   return Math.round(price);
 };
+
+export const getNormalizedINRPrice = getNormalizedPrice;
 
 /**
  * Returns a compressed WebP/optimized thumbnail URL under 400px for catalog grids.
@@ -82,7 +83,7 @@ export const getShortProductTitle = (fullName: string, brand?: string, maxLen = 
 };
 
 /**
- * Formats price cleanly in Indian Rupees (INR) using standard Intl.NumberFormat.
+ * Purely formats price in Indian Rupees (INR).
  * Example: 14999 -> "₹14,999"
  */
 export const formatINR = (price: number | undefined | null): string => {
@@ -91,25 +92,6 @@ export const formatINR = (price: number | undefined | null): string => {
   }
   const numericINR = Math.round(price);
   
-  let country = 'India';
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      country = window.localStorage.getItem('aff_country') || 'India';
-    }
-  } catch (e) {}
-
-  if (country !== 'India' && country !== 'Unknown') {
-    // Show in USD
-    const usd = numericINR / 83;
-    const formatted = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 2,
-      minimumFractionDigits: usd % 1 === 0 ? 0 : 2
-    }).format(usd);
-    return formatted;
-  }
-
   const formatted = new Intl.NumberFormat('en-IN', {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0
@@ -117,8 +99,6 @@ export const formatINR = (price: number | undefined | null): string => {
 
   return `₹${formatted}`;
 };
-
-export const formatINRPrice = formatINR;
 
 /**
  * Normalizes product titles or raw text/slugs:
@@ -195,8 +175,8 @@ export const normalizePricePair = (
   rawOriginalPrice?: number | null,
   productTitle?: string
 ) => {
-  let price = getNormalizedINRPrice(rawPrice);
-  let originalPrice = getNormalizedINRPrice(rawOriginalPrice);
+  let price = getNormalizedPrice(rawPrice);
+  let originalPrice = getNormalizedPrice(rawOriginalPrice);
 
   if (!price && !originalPrice) {
     return { price: 0, originalPrice: undefined, isDiscounted: false, discount: 0 };
@@ -209,7 +189,7 @@ export const normalizePricePair = (
 
   // Swap inverted prices where sale price exceeds MRP
   if (originalPrice > 0 && price > originalPrice) {
-    console.warn(`[Price Normalizer] Inverted prices for "${productTitle || 'Product'}": Sale ₹${price} > MRP ₹${originalPrice}. Swapping.`);
+    console.warn(`[Price Normalizer] Inverted prices for "${productTitle || 'Product'}": Sale ${price} > MRP ${originalPrice}. Swapping.`);
     const temp = price;
     price = originalPrice;
     originalPrice = temp;
@@ -303,12 +283,16 @@ export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?
     tz = "IST";
   } else if (isAmazonUk) {
     label = "Amazon.co.uk Price";
-    currency = "₹";
+    currency = "£";
     tz = "GMT";
   } else if (isAmazonUae) {
     label = "Amazon.ae Price";
-    currency = "₹";
+    currency = "AED";
     tz = "GST";
+  } else if (isAmazonUs) {
+    label = "Amazon.com Price";
+    currency = "$";
+    tz = "UTC";
   } else {
     label = "Amazon Price";
     currency = "₹";
@@ -340,14 +324,61 @@ export const getCurrencySymbol = (product?: { affiliateLink?: string, marketplac
 
 /**
  * Formats a price consistently considering product marketplace/currency parameters or defaults to standard INR.
+ * Performs intelligent location-based currency conversion for non-India visitors on INR bases.
  */
 export const formatProductPrice = (price: number | undefined | null, product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
   if (price === undefined || price === null || isNaN(price) || price < 0) {
     return '₹0';
   }
+  
   const symbol = getCurrencySymbol(product);
-  if (symbol !== '₹') {
-    return `${symbol}${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  
+  // Apply location-based USD conversion ONLY if base currency is INR
+  if (symbol === '₹') {
+    let country = 'India';
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        country = window.localStorage.getItem('aff_country') || 'India';
+      }
+    } catch (e) {}
+
+    if (country !== 'India' && country !== 'Unknown') {
+      const usd = Math.round(price) / 83;
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 2,
+        minimumFractionDigits: usd % 1 === 0 ? 0 : 2
+      }).format(usd);
+    }
+    
+    return formatINR(price);
   }
-  return formatINR(price);
+
+  // Formatting for non-INR explicit currencies (from product metadata)
+  let locale = 'en-US';
+  let currencyCode = 'USD';
+  
+  if (symbol === '£') { locale = 'en-GB'; currencyCode = 'GBP'; }
+  else if (symbol === '€') { locale = 'de-DE'; currencyCode = 'EUR'; }
+  else if (symbol === 'AED ' || symbol === 'AED') { locale = 'en-AE'; currencyCode = 'AED'; }
+  else if (symbol === '₹') { locale = 'en-IN'; currencyCode = 'INR'; }
+  
+  const formatted = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: currencyCode,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: price % 1 === 0 ? 0 : 2
+  }).format(price);
+  
+  // Custom cleanup for AED which often formats weirdly
+  if (currencyCode === 'AED') {
+    return `AED ${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  }
+  
+  return formatted;
 };
+
+// Map the generic legacy formatINRPrice to the new intelligent formatter 
+// so all components utilizing it get currency + location awareness automatically.
+export const formatINRPrice = formatProductPrice;

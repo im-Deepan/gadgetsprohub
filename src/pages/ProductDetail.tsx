@@ -1047,7 +1047,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                     )}
                   </div>
                   <div className="text-[11px] text-slate-400 dark:text-slate-400 font-medium pt-1" title={product.lastPriceCheck ? new Date(product.lastPriceCheck).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : 'Live price'}>
-                    Price updated 3 hours ago · IST
+                    {product.lastPriceCheck ? `Price updated ${Math.max(1, Math.floor((Date.now() - new Date(product.lastPriceCheck).getTime()) / 3600000))} hours ago` : 'Live price'}
                   </div>
                 </div>
 
@@ -1374,16 +1374,16 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         <div className="flex flex-col">
           <span className="text-[9px] font-bold text-slate-400 uppercase font-mono tracking-wider">Best Price</span>
           <span className="text-sm font-black text-zinc-900 dark:text-white dark:text-indigo-300 font-mono">
-            {formatINRPrice(product.price)}
+            {formatProductPrice(getValidatedPricing(product).price, product)}
           </span>
         </div>
         <button
           type="button"
           onClick={handleAffiliateClick}
-          className="flex-1 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-700 active:scale-95 text-white py-2.5 px-4 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+          className="flex-1 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-700 active:scale-95 py-2.5 px-4 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
         >
           <ShoppingBag className="h-4 w-4 shrink-0" />
-          <span>View on Amazon</span>
+          <span>Buy on {product.seller || product.marketplace || 'Store'}</span>
           <span>→</span>
         </button>
       </div>

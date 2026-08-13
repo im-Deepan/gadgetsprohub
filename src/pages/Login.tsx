@@ -232,9 +232,6 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         const errorMsg = res.error || 'The credentials you entered are incorrect. Please verify and try again.';
         setAuthError(errorMsg);
         showToast(errorMsg, 'error', 4000, "User Action");
-        if (res.verificationUrlSimulated) {
-          setSimulatedVerificationUrl(res.verificationUrlSimulated);
-        }
       } else {
         showToast('Successfully verified credentials. Welcome back to your affiliate portal!', 'success', 4000, "User Action");
       }
@@ -257,9 +254,6 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         const successMsg = res.message || 'Your account is registered successfully! A verification link has been sent to your email.';
         showToast(successMsg, 'success', 6000, "User Action");
         setRegisteredEmail(email);
-        if (res.verificationUrlSimulated) {
-          setSimulatedVerificationUrl(res.verificationUrlSimulated);
-        }
         if (res.smtpError) {
           setSmtpError(res.smtpError);
         }

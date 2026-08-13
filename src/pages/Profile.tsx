@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { TAMIL_NADU_DISTRICTS } from '../utils/districts';
+import { formatProductPrice, getValidatedPricing } from '../utils/productUtils';
 
 interface ProfileProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -102,18 +103,12 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
         const friendly = mapErrorToFriendly(smtpErrMsg, 'request email update');
         setEmailUpdateStatus({ type: 'error', message: friendly.message });
         showToast(friendly.message, 'error');
-        if (data.verificationUrlSimulated) {
-          setSimulatedEmailUrl(data.verificationUrlSimulated);
-        }
       } else if (res.ok) {
         setEmailUpdateStatus({
           type: 'success',
           message: data.message || 'A verification link has been sent to your new email address.'
         });
         showToast(data.message || 'Verification link sent!', 'success');
-        if (data.verificationUrlSimulated) {
-          setSimulatedEmailUrl(data.verificationUrlSimulated);
-        }
         setNewEmail('');
       } else {
         const friendly = mapErrorToFriendly(data?.error || 'Failed to request email update', 'request email update');
@@ -584,7 +579,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                       </div>
 
                       <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-700 pt-3">
-                        <span className="text-xs font-black font-mono text-slate-950 dark:text-white">${p.price}</span>
+                        <span className="text-xs font-black font-mono text-slate-950 dark:text-white">{formatProductPrice(getValidatedPricing(p).price, p)}</span>
                         <button
                           onClick={() => onNavigate('product-detail', p.slug)}
                           className="rounded bg-slate-50 hover:bg-slate-100 py-1 px-3.2 text-[10px] text-slate-600 font-bold dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 font-mono"
