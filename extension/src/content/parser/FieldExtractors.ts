@@ -355,7 +355,9 @@ export class FieldExtractors {
     return specs;
   }
 
-  public static getSiteStripeLink(): string | null {
+  public static getSiteStripeLink(expectedTag?: string): string | null {
+    let rawLink: string | null = null;
+
     // 1. Check SiteStripe elements on Amazon pages (shortlink, full link, textareas, inputs)
     const siteStripeSelectors = [
       '#amzn-ss-text-shortlink-textarea',
@@ -372,17 +374,39 @@ export class FieldExtractors {
       if (el) {
         const val = el.value || el.textContent;
         if (val && (val.includes('amzn.to') || val.includes('amazon.') || val.includes('tag='))) {
-          return val.trim();
+          rawLink = val.trim();
+          break;
         }
       }
     }
 
     // 2. Check if current URL already contains SiteStripe or affiliate parameters
-    const currentUrl = window.location.href;
-    if (currentUrl.includes('tag=') || currentUrl.includes('linkCode=') || currentUrl.includes('amzn.to')) {
-      return currentUrl;
+    if (!rawLink) {
+      const currentUrl = window.location.href;
+      if (currentUrl.includes('tag=') || currentUrl.includes('linkCode=') || currentUrl.includes('amzn.to')) {
+        rawLink = currentUrl;
+      }
     }
 
-    return null;
+    if (!rawLink) return null;
+
+    // Clean up foreign tags if expectedTag is provided
+    if (expectedTag) {
+      if (rawLink.includes('tag=')) {
+        rawLink = rawLink.replace(/tag=[^&]+/g, `tag=${expectedTag}`);
+      } else if (!rawLink.includes('amzn.to')) {
+        // If it doesn't have a tag and isn't a shortlink, append it safely
+        const sep = rawLink.includes('?') ? '&' : '?';
+        rawLink = `${rawLink}${sep}tag=${expectedTag}`;
+      }
+      // Also strip linkCode entirely to prevent attribution conflicts
+      if (rawLink.includes('linkCode=')) {
+        rawLink = rawLink.replace(/([?&])linkCode=[^&]+(&|$)/g, (_match, p1, p2) => p2 === '&' ? p1 : '');
+        // Clean up trailing ? or &
+        rawLink = rawLink.replace(/[?&]$/, '');
+      }
+    }
+
+    return rawLink;
   }
 }

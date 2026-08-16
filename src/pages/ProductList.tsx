@@ -1063,7 +1063,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 max-w-[85vw] border-r border-slate-100 bg-white shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col dark:bg-slate-950 overflow-y-auto h-auto max-h-screen"
+              className="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 max-w-[85vw] bg-white dark:bg-slate-950 shadow-xl border-r border-slate-200 dark:border-slate-800 flex flex-col overflow-y-auto h-auto max-h-screen"
             >
               {/* Drawer Header */}
               <div className="flex items-center justify-between border-b p-4 dark:border-slate-800 shrink-0">
@@ -1075,7 +1075,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   {hasActiveFilters && (
                     <button
                       onClick={handleResetFilters}
-                      className="text-[10px] font-bold text-zinc-900 dark:text-white hover:text-zinc-900 dark:text-white dark:text-zinc-200 cursor-pointer"
+                      className="text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
                     >
                       Clear All
                     </button>
@@ -1130,20 +1130,20 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-sm border border-slate-200 dark:border-slate-800 border border-slate-50 dark:border-slate-700 overflow-hidden"
+              className="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby="spec-modal-title"
             >
               {/* Header */}
-              <div className="p-5 border-b border-slate-50 dark:border-slate-700 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-950/20">
+              <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex items-start justify-between gap-4 bg-slate-50/80 dark:bg-slate-900/80">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] uppercase font-black tracking-wider text-zinc-900 dark:text-white bg-slate-100 dark:bg-slate-800 dark:bg-zinc-800/50 dark:text-zinc-200 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-mono">
                       {specModalProduct.brand || 'Premium Brand'} Specs Sheet
                     </span>
-                    <span className="text-[9px] font-mono text-slate-300 font-bold uppercase tracking-wider">{specModalProduct.sku || 'SKU-SPEC'}</span>
+                    <span className="text-[9px] font-mono text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{specModalProduct.sku || 'SKU-SPEC'}</span>
                   </div>
                   <h3 id="spec-modal-title" className="text-base font-black text-slate-800 dark:text-white leading-snug">
                     {specModalProduct.name}
@@ -1196,25 +1196,25 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   {/* Summary card info */}
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Expert Review Brief</span>
-                      <p className="text-xs text-slate-500 dark:text-slate-300 leading-relaxed font-sans">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Expert Review Brief</span>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
                         {specModalProduct.description || 'Check out complete pricing information and review parameters for this gadget choice.'}
                       </p>
                     </div>
 
-                    <div className="rounded-xl bg-slate-50 dark:bg-slate-950 p-3 border border-slate-50/60 dark:border-slate-700/60 flex items-center justify-between">
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <span className="text-[9px] text-slate-300 font-bold uppercase block">Deal price</span>
+                        <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase block">Deal price</span>
                         <div className="flex items-baseline gap-1.5">
                           <span className="text-lg font-black text-slate-800 font-mono dark:text-white">{formatProductPrice(specModalProduct.price, specModalProduct)}</span>
                           {specModalProduct.originalPrice && (
-                            <span className="text-xs text-slate-300 line-through font-mono">{formatProductPrice(specModalProduct.originalPrice, specModalProduct)}</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 line-through font-mono">{formatProductPrice(specModalProduct.originalPrice, specModalProduct)}</span>
                           )}
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-1.5 text-slate-400 font-bold dark:text-slate-300 text-xs font-mono">
-                        <ShieldCheck className="h-4 w-4 text-zinc-900" />
+                      <div className="flex items-center gap-1.5 text-slate-500 font-bold dark:text-slate-300 text-xs font-mono">
+                        <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                         <span>Verified Price</span>
                       </div>
                     </div>
@@ -1226,9 +1226,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   const modalSpecMap = parseSpecificationsString(specModalProduct?.specifications);
                   return (
                     <div className="space-y-2">
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300 dark:text-slate-400">Technical Specifications</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Technical Specifications</h4>
                       {modalSpecMap && Object.keys(modalSpecMap).length > 0 ? (
-                        <div className="rounded-xl border border-slate-50 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-700">
+                        <div className="rounded-xl border border-slate-200 bg-white dark:bg-slate-950 overflow-hidden dark:border-slate-700">
                           <div className="overflow-x-auto w-full">
                             <table className="w-full text-left border-collapse text-xs min-w-[340px] sm:min-w-0">
                               <thead className="bg-slate-50/50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-700">
@@ -1237,11 +1237,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                                   <th className="py-2.5 px-3 font-bold text-slate-400 uppercase text-[9px] tracking-wider">Specification Metric</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {Object.entries(modalSpecMap).map(([key, value]) => (
-                                  <tr key={key} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/10 transition-colors duration-300">
-                                    <td className="py-2 px-3 font-semibold text-slate-700 dark:text-slate-100">{key}</td>
-                                    <td className="py-2 px-3 text-slate-500 dark:text-slate-300 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
+                                  <tr key={key} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors duration-200">
+                                    <td className="py-2 px-3 font-semibold text-slate-700 dark:text-slate-200">{key}</td>
+                                    <td className="py-2 px-3 text-slate-600 dark:text-slate-300 font-mono text-[11px] leading-relaxed break-words">{String(value)}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -1249,7 +1249,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                           </div>
                         </div>
                       ) : (
-                        <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center">
+                        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center">
                           <p className="text-slate-500 dark:text-slate-400 text-xs">Detailed specifications are currently unavailable for this item.</p>
                         </div>
                       )}
@@ -1260,11 +1260,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 {/* Highlight Featured advantages */}
                 {specModalProduct.features && specModalProduct.features.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300">Highlighted Advantages</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Highlighted Advantages</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       {specModalProduct.features.map((feat, idx) => (
                         <div key={`feature-${idx}`} className="flex items-center gap-2 text-slate-600 dark:text-slate-200">
-                          <CheckCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <CheckCheck className="h-4 w-4 text-emerald-500 shrink-0" />
                           <span>{feat}</span>
                         </div>
                       ))}
@@ -1341,7 +1341,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                       window.open(targetUrl, '_blank', 'noopener');
                     }
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white py-3 text-xs font-bold transition-all duration-300 cursor-pointer shadow-md"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-white py-3 text-xs font-bold transition-all duration-300 cursor-pointer shadow-md"
                 >
                   <ShoppingBag size={14} />
                   <span>Shop on {specModalProduct.seller || specModalProduct.marketplace || 'Store'}</span>

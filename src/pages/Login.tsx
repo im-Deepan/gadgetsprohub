@@ -424,9 +424,9 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
             <div className="space-y-4">
               {!resetToken && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Email Address</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Email Address</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                     <input
                       type="email"
                       required
@@ -440,9 +440,9 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
               )}
               {resetToken && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">New Password</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">New Password</label>
                   <div className="relative">
-                    <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                    <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
@@ -505,16 +505,16 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                     transition={{ duration: 0.3 }}
                     className="space-y-1.5"
                   >
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Full Name</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Full Name</label>
                     <div className="relative">
-                      <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                      <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                       <input
                         type="text"
                         required
                         placeholder="John Doe"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                        className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
                       />
                     </div>
                   </motion.div>
@@ -522,22 +522,22 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
               </AnimatePresence>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Email Address</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Email Address</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                   <input
                     type="email"
                     required
                     placeholder="buyer@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                    className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Password</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Password</label>
                   {activeTab === 'login' && (
                     <button type="button" onClick={() => setIsForgotPassword(true)} className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline">
                       Forgot password?
@@ -545,7 +545,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                   )}
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-300 pointer-events-none" />
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                   <input
                     type={showPassword ? "text" : "password"}
                     required

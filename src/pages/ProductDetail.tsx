@@ -889,7 +889,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                         Your browser does not support the video tag.
                       </video>
                       
-                      <div className="absolute top-3 left-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900/90 backdrop-blur-xs text-white text-[9px] font-black uppercase font-mono px-2 py-1 rounded-md tracking-wider shadow-sm select-none">
+                      <div className="absolute top-3 left-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900/90 backdrop-blur-xs text-[9px] font-black uppercase font-mono px-2 py-1 rounded-md tracking-wider shadow-sm select-none">
                         Interactive Video Demo
                       </div>
                     </div>
@@ -1373,14 +1373,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 px-4 py-3 shadow-sm border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
         <div className="flex flex-col">
           <span className="text-[9px] font-bold text-slate-400 uppercase font-mono tracking-wider">Best Price</span>
-          <span className="text-sm font-black text-zinc-900 dark:text-white dark:text-indigo-300 font-mono">
+          <span className="text-sm font-black text-zinc-900 dark:text-indigo-400 font-mono">
             {formatProductPrice(getValidatedPricing(product).price, product)}
           </span>
         </div>
         <button
           type="button"
           onClick={handleAffiliateClick}
-          className="flex-1 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-700 active:scale-95 py-2.5 px-4 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+          className="flex-1 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-white active:scale-95 py-2.5 px-4 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
         >
           <ShoppingBag className="h-4 w-4 shrink-0" />
           <span>Buy on {product.seller || product.marketplace || 'Store'}</span>

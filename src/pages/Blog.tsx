@@ -123,7 +123,7 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
           <button
             key={sub}
             onClick={() => setSelectedSub(sub)}
-            className={`rounded-full px-5 py-1.5 text-xs font-semibold shadow-sm cursor-pointer transition-all duration-300 ${selectedSub === sub ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-white shadow-indigo-500/10' : 'bg-white border border-slate-50 hover:bg-slate-50 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'}`}
+            className={`rounded-full px-5 py-1.5 text-xs font-semibold shadow-sm cursor-pointer transition-all duration-300 ${selectedSub === sub ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-indigo-500/10' : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'}`}
           >
             {sub || '📁 All Manuals'}
           </button>

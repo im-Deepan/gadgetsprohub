@@ -845,7 +845,7 @@ const AppContent: React.FC = () => {
       
       {isGlobalLoading && (
         <div className="fixed top-0 left-0 right-0 h-[3px] bg-slate-100/50 dark:bg-slate-700/50 z-[9999] overflow-hidden">
-          <div className="h-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 dark:bg-zinc-300 dark:bg-zinc-700 w-1/3 rounded-full animate-loading-bar" />
+          <div className="h-full bg-indigo-600 dark:bg-indigo-400 w-1/3 rounded-full animate-loading-bar" />
         </div>
       )}
 

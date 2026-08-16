@@ -41,21 +41,24 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
     const fetchSearchData = async () => {
       setLoading(true);
       try {
-        const currentQ = new URLSearchParams(window.location.search).get('q') || query;
-        const res = await apiFetch(`/api/products?limit=50`);
-        if (res.ok && !isCancelled) {
-          const data = await res.json();
-          const allProds: Product[] = data.products || data.data || (Array.isArray(data) ? data : []);
-
-          if (currentQ.trim()) {
-            const matched = allProds.filter(p => matchProductByTokens(p, currentQ));
-            setProducts(matched);
-          } else {
-            setProducts([]);
+        const currentQ = (new URLSearchParams(window.location.search).get('q') || query).trim();
+        if (currentQ) {
+          const res = await apiFetch(`/api/products?search=${encodeURIComponent(currentQ)}&limit=100`);
+          if (res.ok && !isCancelled) {
+            const data = await res.json();
+            const prods: Product[] = data.products || data.data || (Array.isArray(data) ? data : []);
+            setProducts(prods);
           }
+        } else {
+          setProducts([]);
+        }
 
-          // Featured / fallback recommendations (up to 4 items)
-          setSuggestedProducts(allProds.slice(0, 4));
+        // Featured / fallback recommendations (up to 4 items)
+        const recsRes = await apiFetch(`/api/products?trending=true&limit=4`);
+        if (recsRes.ok && !isCancelled) {
+          const recsData = await recsRes.json();
+          const recs: Product[] = recsData.products || recsData.data || [];
+          setSuggestedProducts(recs.slice(0, 4));
         }
       } catch (err) {
         console.warn('Search page data error:', err);
@@ -137,7 +140,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
           <h1 className="mt-1 text-2xl sm:text-3xl font-display font-extrabold tracking-tight">
             {query ? `Search Results for "${query}"` : 'Search Gadget Catalog'}
           </h1>
-          <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed font-sans">
+          <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
             Compare prices, specifications, user ratings, and expert reviews across our tech directory.
           </p>
 

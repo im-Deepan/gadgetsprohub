@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
 import { AppView } from '../App';
 import { ArrowRight, ShoppingBag, TrendingUp, Sparkles, X, History, Trash2, Cpu, Smartphone, Headphones, Laptop, Watch, Gamepad, Search } from 'lucide-react';
-import { getShortProductTitle, formatINRPrice, getValidatedPricing } from '../utils/productUtils';
+import { getShortProductTitle, formatProductPrice, getValidatedPricing } from '../utils/productUtils';
 import type { Product, Category } from '../types';
 
 interface HomeProps {
@@ -104,9 +104,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white line-clamp-2 mb-3 leading-snug">{getShortProductTitle(p.name, p.brand)}</h3>
             <div className="mt-auto flex items-end justify-between flex-wrap gap-2">
               <div className="flex flex-col">
-                <div className="text-base sm:text-lg font-sans font-bold tabular-nums text-zinc-900 dark:text-white">{formatINRPrice(pricing.price)}</div>
+                <div className="text-base sm:text-lg font-sans font-bold tabular-nums text-zinc-900 dark:text-white">{formatProductPrice(pricing.price, p)}</div>
                 {pricing.isDiscounted && pricing.originalPrice && (
-                  <div className="text-[11px] font-sans text-slate-400 line-through tabular-nums">{formatINRPrice(pricing.originalPrice)}</div>
+                  <div className="text-[11px] font-sans text-slate-400 line-through tabular-nums">{formatProductPrice(pricing.originalPrice, p)}</div>
                 )}
               </div>
               {p.rating && p.rating > 0 ? (

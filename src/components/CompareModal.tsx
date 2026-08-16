@@ -39,7 +39,7 @@ export const CompareModal: React.FC<CompareModalProps> = ({ onNavigate }) => {
     { label: 'In Stock', get: (p: any) => p.inStock ? 'Yes' : 'Out of Stock' },
     { label: 'Category', get: (p: any) => typeof p.category === 'object' ? p.category?.name : (p.category || 'General') },
     { label: 'ASIN', get: (p: any) => p.asin || 'N/A' },
-    { label: 'Seller', get: (p: any) => p.seller || 'Amazon' },
+    { label: 'Seller', get: (p: any) => p.seller || p.marketplace || 'Store' },
   ];
 
   return (
@@ -150,9 +150,9 @@ export const CompareModal: React.FC<CompareModalProps> = ({ onNavigate }) => {
                       href={affUrl}
                       target="_blank"
                       rel="noopener"
-                      className="w-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-600 dark:hover:bg-indigo-400 py-2 px-3 rounded-lg text-[11px] font-bold text-center flex items-center justify-center gap-1 transition-all shadow-xs"
+                      className="w-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-white py-2 px-3 rounded-lg text-[11px] font-bold text-center flex items-center justify-center gap-1 transition-all shadow-xs"
                     >
-                      <span>Buy Amazon</span>
+                      <span>Buy on {product.seller || product.marketplace || 'Store'}</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>

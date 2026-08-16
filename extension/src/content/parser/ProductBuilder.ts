@@ -62,7 +62,7 @@ export class ProductBuilder {
     urlObj.search = '';
     const productUrl = urlObj.toString();
 
-    const siteStripeLink = FieldExtractors.getSiteStripeLink();
+    const siteStripeLink = FieldExtractors.getSiteStripeLink(tag);
     let affiliateLink = siteStripeLink || productUrl;
     if (!siteStripeLink && asin) {
       affiliateLink = `https://www.${domain}/dp/${asin}/?tag=${tag}`;

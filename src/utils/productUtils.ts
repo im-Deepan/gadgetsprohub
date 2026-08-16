@@ -92,12 +92,12 @@ export const formatINR = (price: number | undefined | null): string => {
   }
   const numericINR = Math.round(price);
   
-  const formatted = new Intl.NumberFormat('en-IN', {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
     maximumFractionDigits: 0,
     minimumFractionDigits: 0
   }).format(numericINR);
-
-  return `₹${formatted}`;
 };
 
 /**
@@ -333,25 +333,8 @@ export const formatProductPrice = (price: number | undefined | null, product?: {
   
   const symbol = getCurrencySymbol(product);
   
-  // Apply location-based USD conversion ONLY if base currency is INR
+  // Apply standard INR formatting if the symbol is ₹
   if (symbol === '₹') {
-    let country = 'India';
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        country = window.localStorage.getItem('aff_country') || 'India';
-      }
-    } catch (e) {}
-
-    if (country !== 'India' && country !== 'Unknown') {
-      const usd = Math.round(price) / 83;
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 2,
-        minimumFractionDigits: usd % 1 === 0 ? 0 : 2
-      }).format(usd);
-    }
-    
     return formatINR(price);
   }
 

@@ -1189,6 +1189,29 @@ const adminOnly = (req: express.Request, res: express.Response, next: express.Ne
   });
 };
 
+const checkIsAdmin = async (req: express.Request): Promise<boolean> => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || getCookieToken(req);
+  if (!token) return false;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] }) as { userId: string };
+    if (!decoded || !decoded.userId) return false;
+    
+    if (isMongoConnected) {
+      const user = await User.findById(decoded.userId);
+      if (!user) return false;
+      const role = user.role || (isAdminEmail(user.email) ? 'admin' : 'user');
+      return role === 'admin';
+    } else {
+      const u = localUsers.find(user => user._id === decoded.userId);
+      if (!u) return false;
+      const role = u.role || (isAdminEmail(u.email) ? 'admin' : 'user');
+      return role === 'admin';
+    }
+  } catch (err) {
+    return false;
+  }
+};
+
 // ========== SUNDAY AUTOMATION & TRENDING RETIREMENT UTILS ==========
 
 const SUNDAY_DUMMY_PRODUCTS_POOL = [
@@ -3713,12 +3736,15 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   app.get('/api/products', async (req: express.Request, res: express.Response) => {
     try {
       await cleanExpiredTrendingProducts();
-      const { category, subcategory, brand, minPrice, maxPrice, search, rating, sort, inStock, exclude, trending } = req.query;
+      const { category, subcategory, brand, minPrice, maxPrice, search, rating, sort, inStock, exclude, trending, ids } = req.query;
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 12));
       
       if (isMongoConnected) {
         const filter: any = {};
+        if (ids) {
+          filter._id = { $in: String(ids).split(',').filter(id => /^[0-9a-fA-F]{24}$/.test(id)) };
+        }
         if (category && category !== 'trending') {
           const catStr = String(category).replace(/^category-/, '').trim();
           if (/^[0-9a-fA-F]{24}$/.test(catStr)) {
@@ -3747,7 +3773,12 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         if (trending === 'true' || category === 'trending') filter.trending = true;
         
         // Exclude draft products for non-admin requests
-        if (req.query.includeDrafts !== 'true') {
+        if (req.query.includeDrafts === 'true') {
+          const isAdmin = await checkIsAdmin(req);
+          if (!isAdmin) {
+            filter.publishingStatus = { $ne: 'draft' };
+          }
+        } else {
           filter.publishingStatus = { $ne: 'draft' };
         }
         
@@ -3871,9 +3902,9 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         return res.status(404).json({ error: 'Product catalog item not found' });
       }
 
-      if (product.publishingStatus === 'draft' && req.query.includeDrafts !== 'true') {
-        const adminToken = req.headers.authorization?.replace('Bearer ', '');
-        if (!adminToken || adminToken !== process.env.ADMIN_JWT_SECRET) {
+      if (product.publishingStatus === 'draft') {
+        const isAdmin = await checkIsAdmin(req);
+        if (!isAdmin) {
           return res.status(404).json({ error: 'Product catalog item not found' });
         }
       }
@@ -4224,6 +4255,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         const sum = (product.reviews as any).reduce((acc: number, r: any) => acc + (r.rating || 0), 0);
         product.totalReviews = product.reviews.length;
         product.rating = product.reviews.length > 0 ? Number((sum / product.reviews.length).toFixed(1)) : 0;
+
+        saveLocalProducts();
 
         return res.json(product);
       }

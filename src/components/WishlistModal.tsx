@@ -38,13 +38,16 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ isOpen, onClose, o
             }
           }
         } else {
-          // For guests, fetch products by search or IDs
-          const res = await apiFetch(`/api/products?limit=100`);
+          // For guests, fetch products by IDs
+          if (wishlist.length === 0) {
+            setProducts([]);
+            return;
+          }
+          const res = await apiFetch(`/api/products?ids=${wishlist.join(',')}&limit=100`);
           if (res.ok) {
             const data = await res.json();
             if (data?.products && Array.isArray(data.products)) {
-              const items = data.products.filter((p: Product) => wishlist.includes(p._id));
-              setProducts(items);
+              setProducts(data.products);
             }
           }
         }
@@ -181,9 +184,9 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ isOpen, onClose, o
                         href={affUrl}
                         target="_blank"
                         rel="noopener"
-                        className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-600 dark:hover:bg-indigo-400 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
+                        className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
                       >
-                        <span>Amazon</span>
+                        <span>Buy on {product.seller || product.marketplace || 'Store'}</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                       <button

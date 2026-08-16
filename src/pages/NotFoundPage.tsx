@@ -25,7 +25,7 @@ import { Helmet } from '../components/Helmet';
 import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
 import { apiFetch } from '../utils/apiClient';
 import { useToast } from '../context/ToastContext';
-import { formatINRPrice, getShortProductTitle, getThumbnailUrl } from '../utils/productUtils';
+import { formatProductPrice, getShortProductTitle, getThumbnailUrl } from '../utils/productUtils';
 import type { Product } from '../types';
 
 interface NotFoundPageProps {
@@ -281,7 +281,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ onNavigate }) => {
 
                   <div className="mt-auto pt-2 flex items-center justify-between">
                     <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">
-                      {formatINRPrice(prod.price)}
+                      {formatProductPrice(prod.price, prod)}
                     </span>
                     <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-0.5">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
