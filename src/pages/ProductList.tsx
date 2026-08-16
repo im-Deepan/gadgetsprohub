@@ -364,10 +364,11 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
     );
   };
 
-  const renderProductCard = (p: Product) => {
+  const renderProductCard = (p: Product, index = 0) => {
     const pricing = getValidatedPricing(p);
     const ratingObj = formatRating(p.rating, p.totalReviews || p.reviewsCount || p.reviewCount);
     const shortTitle = getShortProductTitle(p.name, p.brand, 55);
+    const isPriority = index < 4;
 
     return (
     <a
@@ -385,9 +386,9 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       className="group block text-inherit no-underline h-full"
     >
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
         className="h-full"
       >
         <BorderGlow
@@ -406,10 +407,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 ? 'aspect-square w-full p-2.5 sm:p-3'
                 : 'w-full sm:w-48 h-40 p-3'
             }`}>
-              <img
+              <img width="400" height="400"
                 src={getThumbnailUrl(p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500', 400)}
                 alt={shortTitle}
-                loading="lazy"
+                loading={isPriority ? "eager" : "lazy"}
+                fetchPriority={index === 0 ? "high" : "auto"}
+                decoding="async"
                 referrerPolicy="no-referrer"
                 className="h-full w-full object-contain group-hover:scale-103 transition-transform duration-500 cursor-pointer"
               />
@@ -973,7 +976,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6" 
                   : "space-y-4"
                 }>
-                  {products.map((p: Product) => p ? renderProductCard(p) : null)}
+                  {products.map((p: Product, idx: number) => p ? renderProductCard(p, idx) : null)}
                 </div>
 
                 {/* SEE MORE / PAGINATION TRIGGERS */}
@@ -1164,7 +1167,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
                   {/* Photo area */}
                   <div className="relative h-44 sm:h-52 bg-slate-50 dark:bg-slate-950/15 rounded-xl border border-slate-50 dark:border-slate-700 p-4 flex items-center justify-center overflow-hidden">
-                    <img
+                    <img width="400" height="400"
                       src={specModalProduct.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=310'}
                       alt={specModalProduct.name}
                       referrerPolicy="no-referrer"

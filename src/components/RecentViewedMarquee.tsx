@@ -123,9 +123,12 @@ export const RecentViewedMarquee: React.FC<RecentViewedMarqueeProps> = ({
                     className="absolute w-full h-full flex items-center justify-center p-3"
                   >
                     <img
+                      width="160"
+                      height="160"
                       src={(prod.images && prod.images[0] && prod.images[0].trim() !== '') ? prod.images[0] : '/placeholder.png'}
                       alt={prod.name}
                       referrerPolicy="no-referrer"
+                      decoding="async"
                       onError={(e) => {
                         e.currentTarget.src = '/placeholder.png';
                       }}

@@ -2463,9 +2463,67 @@ async function startServer() {
   });
 
   // SEO Routes (Robots & Sitemap)
-  app.get('/robots.txt', (_req: express.Request, res: express.Response) => {
-    res.type('text/plain');
-    res.send('User-agent: *\nDisallow: /admin\nDisallow: /admin/\nDisallow: /login\nDisallow: /profile\nAllow: /\nSitemap: /sitemap.xml');
+  app.get(['/robots.txt', '/robots.tsx', '/robots.ts', '/robots', '/api/robots.txt', '/api/robots'], (req: express.Request, res: express.Response) => {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    try {
+      const robotsFilePath = path.join(process.cwd(), 'public', 'robots.txt');
+      if (fs.existsSync(robotsFilePath)) {
+        const fileContent = fs.readFileSync(robotsFilePath, 'utf8');
+        return res.status(200).send(fileContent);
+      }
+      const distRobotsPath = path.join(process.cwd(), 'dist', 'robots.txt');
+      if (fs.existsSync(distRobotsPath)) {
+        const fileContent = fs.readFileSync(distRobotsPath, 'utf8');
+        return res.status(200).send(fileContent);
+      }
+    } catch (err: any) {
+      console.warn('Fallback robots serving error:', err?.message);
+    }
+    
+    // Dynamic host fallback if physical file reading encounters an issue
+    const host = req.get('host') || 'gadgetsprohub.onrender.com';
+    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const sitemapUrl = host.includes('localhost') || host.includes('run.app') ? `${protocol}://${host}/sitemap.xml` : 'https://gadgetsprohub.onrender.com/sitemap.xml';
+
+    return res.status(200).send(`User-agent: *
+Disallow: /admin
+Disallow: /admin/
+Disallow: /login
+Disallow: /profile
+Disallow: /api/
+Allow: /api/visit
+Allow: /api/health-check
+Allow: /
+Allow: /search
+Allow: /og-banner.png
+Allow: /favicon.png
+Allow: /uploads/
+Allow: /assets/
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+Sitemap: ${sitemapUrl}
+`);
   });
 
   app.get('/.well-known/security.txt', (_req: express.Request, res: express.Response) => {

@@ -33,6 +33,7 @@ export const BorderGlow: React.FC<BorderGlowProps> = ({
   className = ''
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const rectRef = useRef<DOMRect | null>(null);
   const [position, setPosition] = useState({ x: -1000, y: -1000 });
   const [opacity, setOpacity] = useState(0);
 
@@ -47,13 +48,27 @@ export const BorderGlow: React.FC<BorderGlowProps> = ({
   const finalColors = colors !== undefined ? colors : randomColorCfg.colors;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    let rect = rectRef.current;
+    if (!rect && containerRef.current) {
+      rect = containerRef.current.getBoundingClientRect();
+      rectRef.current = rect;
+    }
+    if (rect) {
+      setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    }
   };
 
-  const handleMouseEnter = () => setOpacity(glowIntensity);
-  const handleMouseLeave = () => setOpacity(0);
+  const handleMouseEnter = () => {
+    if (containerRef.current) {
+      rectRef.current = containerRef.current.getBoundingClientRect();
+    }
+    setOpacity(glowIntensity);
+  };
+
+  const handleMouseLeave = () => {
+    setOpacity(0);
+    rectRef.current = null;
+  };
 
   // Handle color formatting if '40 80 80' instead of '40, 80, 80'
   const rgbColor = finalGlowColor.includes(',') ? finalGlowColor : finalGlowColor.split(' ').join(', ');

@@ -196,9 +196,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
                     {/* Media */}
                     <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-950 rounded-xl overflow-hidden p-3 flex items-center justify-center mb-3">
                       <img
+                        width="400"
+                        height="400"
                         src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500'}
                         alt={p.name}
                         loading="lazy"
+                        decoding="async"
                         referrerPolicy="no-referrer"
                         className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500"
                       />
@@ -308,9 +311,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
                     className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-400 transition-all cursor-pointer flex items-center gap-3"
                   >
                     <img
+                      width="48"
+                      height="48"
                       src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=150'}
                       alt={p.name}
                       loading="lazy"
+                      decoding="async"
                       className="h-12 w-12 object-contain bg-slate-50 dark:bg-slate-950 p-1 rounded-lg shrink-0"
                     />
                     <div className="overflow-hidden">

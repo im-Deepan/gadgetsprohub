@@ -3,12 +3,24 @@ Disallow: /admin
 Disallow: /admin/
 Disallow: /login
 Disallow: /profile
+Disallow: /api/
+Allow: /api/visit
+Allow: /api/health-check
 Allow: /
 Allow: /search
 Allow: /og-banner.png
 Allow: /favicon.png
 Allow: /uploads/
 Allow: /assets/
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Bingbot
+Allow: /
 
 User-agent: WhatsApp
 Allow: /
@@ -23,3 +35,4 @@ User-agent: TelegramBot
 Allow: /
 
 Sitemap: https://gadgetsprohub.onrender.com/sitemap.xml
+

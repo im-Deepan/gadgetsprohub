@@ -1000,9 +1000,12 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                   <div className="bg-white dark:bg-zinc-800/50 rounded-xl border border-slate-100 dark:border-slate-800 p-4 space-y-3">
                     <div className="flex gap-4 items-center">
                       <img
+                        width="64"
+                        height="64"
                         src={result.product.images?.[0] || result.product.imageUrl}
                         alt={result.product.name}
                         referrerPolicy="no-referrer"
+                        decoding="async"
                         className="w-16 h-16 rounded-lg object-cover border border-slate-100 bg-slate-50 shrink-0 dark:border-slate-700"
                       />
                       <div className="min-w-0 flex-grow">
@@ -1171,9 +1174,12 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                         {(scrapedProduct.images && scrapedProduct.images.length > 0 ? scrapedProduct.images : [scrapedProduct.imageUrl]).map((img, idx) => (
                           <img
                             key={idx}
+                            width="48"
+                            height="48"
                             src={img}
                             alt={`Thumbnail ${idx}`}
                             referrerPolicy="no-referrer"
+                            decoding="async"
                             className="w-12 h-12 rounded-lg border border-slate-100 bg-slate-50 object-cover shrink-0 dark:border-slate-800"
                           />
                         ))}

@@ -164,7 +164,7 @@ export function MediaLibrary({ token }: { token: string | null }) {
             {loading ? <p>Loading...</p> : media.map((item) => (
               <div key={item._id} className="border border-slate-200 rounded-lg overflow-hidden group">
                 <div className="aspect-square bg-slate-100 relative">
-                  <img src={item.variants?.thumb || item.localPath} alt={item.fileName} className="w-full h-full object-cover" loading="lazy" />
+                  <img width="150" height="150" src={item.variants?.thumb || item.localPath} alt={item.fileName} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                   <button 
                     onClick={() => setDeleteConfirmId(item._id)}
                     className="absolute top-2 right-2 p-1.5 bg-white text-rose-600 rounded-md opacity-0 group-hover:opacity-100 transition duration-300 shadow-sm hover:bg-rose-50"

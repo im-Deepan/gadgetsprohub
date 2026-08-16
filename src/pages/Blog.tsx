@@ -166,10 +166,12 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
                   if (b.slug) onPreload?.('blog-detail', b.slug);
                 }}
               >
-                <div className="h-48 bg-slate-50 overflow-hidden relative shrink-0">
-                  <img
+                <div className="h-48 bg-slate-50 overflow-hidden relative shrink-0 aspect-[5/3]">
+                  <img width="500" height="300"
                     src={b.featured_image || 'https://images.unsplash.com/photo-1005740420928-5e560c06d30e?w=500'}
                     alt={b.title}
+                    loading="lazy"
+                    decoding="async"
                     referrerPolicy="no-referrer"
                     className="h-full w-full object-cover group-hover:scale-102 transition-transform duration-500"
                   />

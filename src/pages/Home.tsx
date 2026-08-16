@@ -76,8 +76,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
     }
   });
 
-  const renderProductCard = (p: Product) => {
+  const renderProductCard = (p: Product, index = 0) => {
     const pricing = getValidatedPricing(p);
+    const isPriority = index < 2;
     return (
       <a
         key={p._id}
@@ -92,7 +93,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
       >
         <BorderGlow className="h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col hover:-translate-y-1 transition-transform" borderRadius={12}>
           <div className="relative aspect-square p-3 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-            <img loading="lazy" src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400'} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+            <img 
+              loading={isPriority ? "eager" : "lazy"} 
+              fetchPriority={index === 0 ? "high" : "auto"}
+              decoding="async"
+              src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400'} 
+              alt={p.name} 
+              width="400" 
+              height="400" 
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
+            />
             {pricing.isDiscounted ? (
               <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white font-sans font-semibold text-[11px] tracking-wide uppercase px-2 py-0.5 rounded shadow-xs">
                 -{pricing.discount}%
@@ -130,9 +140,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         
         <div className="relative z-10 w-full max-w-4xl mx-auto flex flex-col items-center text-center">
           <motion.h1 
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
             className="text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mb-2"
           >
             Find the right gadget. <br className="hidden md:block" />
@@ -195,7 +205,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {recentlyViewed.map(renderProductCard)}
+            {recentlyViewed.map((p, idx) => renderProductCard(p, idx))}
           </div>
         </section>
       )}
@@ -228,7 +238,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
           </div>
         ) : products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {products.map(renderProductCard)}
+            {products.map((p, idx) => renderProductCard(p, idx))}
           </div>
         ) : (
           <div className="p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-900/30">

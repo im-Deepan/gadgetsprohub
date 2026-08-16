@@ -147,11 +147,15 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ isOpen, onClose, o
                           onClose();
                           onNavigate('product-detail', product.slug);
                         }}
-                        className="w-16 h-16 bg-white dark:bg-slate-900 rounded-lg border border-slate-200/80 dark:border-slate-700 p-1.5 flex items-center justify-center shrink-0 cursor-pointer"
+                        className="w-16 h-16 bg-white dark:bg-slate-900 rounded-lg border border-slate-200/80 dark:border-slate-700 p-1.5 flex items-center justify-center shrink-0 cursor-pointer aspect-square"
                       >
                         <img
+                          width="64"
+                          height="64"
                           src={product.images?.[0]}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
                           className="max-h-full max-w-full object-contain"
                         />
                       </div>

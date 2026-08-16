@@ -323,29 +323,25 @@ const AppContent: React.FC = () => {
     };
   }, [showToast]);
 
-  // Gracefully verify connection to MongoDB Atlas from App initialization
+  // Gracefully verify connection to MongoDB Atlas from App initialization after main thread is idle
   useEffect(() => {
     const controller = new AbortController();
-    const checkDbHealth = async () => {
+    const timeoutId = setTimeout(async () => {
       try {
         const response = await apiFetch('/api/health-check', { signal: controller.signal, maxRetries: 0 });
         if (!response.ok) {
           await response.json().catch(() => ({}));
-          
           showToast("Server health check returned a warning status. Attempting to reconnect...", "warning", 5000, "Connectivity");
-        } else {
-          
         }
       } catch (err: unknown) {
         const errorObj = err as { name?: string };
         if (errorObj.name !== 'AbortError') {
-          
           showToast("Unable to reach primary server. Please check your network connection.", "warning", 4000, "Connectivity");
         }
       }
-    };
-    checkDbHealth().catch(() => {});
+    }, 2000);
     return () => {
+      clearTimeout(timeoutId);
       controller.abort();
     };
   }, [showToast]);
@@ -360,7 +356,7 @@ const AppContent: React.FC = () => {
       safeSetItem('affiliate_visitor_id', visitorId);
     }
     
-    const trackVisit = async () => {
+    const timeoutId = setTimeout(async () => {
       try {
         const res = await fetch('/api/visit', {
           method: 'POST',
@@ -376,11 +372,16 @@ const AppContent: React.FC = () => {
           captureError(err, { context: 'Failed to track visitor visit analytics' });
         }
       }
+    }, 1500);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
     };
+  }, []);
 
-    trackVisit().catch(() => {});
-
-    // Load AdSense script safely with fallback test publisher ID if unconfigured
+  // Load AdSense script safely with fallback test publisher ID if unconfigured
+  useEffect(() => {
     const loadAdSense = () => {
       if (adsenseScriptLoaded) return;
       adsenseScriptLoaded = true;
@@ -403,10 +404,6 @@ const AppContent: React.FC = () => {
     };
 
     loadAdSense();
-
-    return () => {
-      controller.abort();
-    };
   }, []);
 
   // Simple state router
@@ -539,32 +536,39 @@ const AppContent: React.FC = () => {
     };
   }, []);
 
-  // Keep references to state so popstate lists won't capture stale values on dynamic syncing
+  // Keep references to state so popstate lists and analytics won't capture stale values or trigger duplicate network hits
   const activeViewRef = React.useRef(activeView);
   const selectedSlugRef = React.useRef(selectedSlug);
+  const userDistrictRef = React.useRef(user?.district);
+  const detectedCityRef = React.useRef(detectedCity);
 
   useEffect(() => {
     activeViewRef.current = activeView;
     selectedSlugRef.current = selectedSlug;
-  }, [activeView, selectedSlug]);
+    userDistrictRef.current = user?.district;
+    detectedCityRef.current = detectedCity;
+  }, [activeView, selectedSlug, user?.district, detectedCity]);
 
   // Tracks activeView and selectedSlug to determine page URL and times spent on each view
   useEffect(() => {
     const pageStartTime = Date.now();
     const currentPath = selectedSlug ? `${activeView}/${selectedSlug}` : activeView;
-    const viewCity = user?.district || detectedCity || 'Unknown';
+    const viewCity = userDistrictRef.current || detectedCityRef.current || 'Unknown';
 
-    // Log instantaneous visual landing (0 seconds spent)
-    logVisit(0, currentPath, viewCity);
+    // Log instantaneous visual landing deferred slightly to not block initial render
+    const initialTimer = setTimeout(() => {
+      logVisit(0, currentPath, viewCity);
+    }, 1000);
 
     return () => {
+      clearTimeout(initialTimer);
       // Log active duration spent on cleanup
       const durationSeconds = Math.round((Date.now() - pageStartTime) / 1000);
       if (durationSeconds > 0) {
         logVisit(durationSeconds, currentPath, viewCity);
       }
     };
-  }, [activeView, selectedSlug, user, detectedCity]);
+  }, [activeView, selectedSlug]);
 
   // Dynamic metadata update effect
   useEffect(() => {
@@ -862,10 +866,10 @@ const AppContent: React.FC = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeView + (selectedSlug || '')}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className="w-full max-w-full overflow-x-hidden flex-grow flex flex-col"
           >
             <Suspense fallback={<ViewLoader />}>

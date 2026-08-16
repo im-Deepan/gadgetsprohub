@@ -236,10 +236,13 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
       </div>
 
       {/* Featured Graphic banner */}
-      <div className="w-full h-[200px] sm:h-[360px] rounded-3xl overflow-hidden mb-10 shrink-0 select-none border border-slate-50 dark:border-slate-700">
-        <img
+      <div className="w-full h-[200px] sm:h-[360px] aspect-[2/1] rounded-3xl overflow-hidden mb-10 shrink-0 select-none border border-slate-50 dark:border-slate-700">
+        <img width="1200" height="600"
           src={blog.featured_image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200'}
           alt={blog.title}
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover"
           onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200'; }}

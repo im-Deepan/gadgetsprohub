@@ -123,10 +123,14 @@ export const CompareModal: React.FC<CompareModalProps> = ({ onNavigate }) => {
                       <X className="w-3.5 h-3.5" />
                     </button>
 
-                    <div className="h-28 w-full bg-white dark:bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center p-2">
+                    <div className="h-28 w-full bg-white dark:bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center p-2 aspect-[4/3]">
                       <img
+                        width="112"
+                        height="112"
                         src={product.images?.[0]}
                         alt={product.name}
+                        loading="lazy"
+                        decoding="async"
                         className="max-h-full max-w-full object-contain"
                       />
                     </div>

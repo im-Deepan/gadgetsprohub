@@ -23,7 +23,7 @@ export const CompareBar: React.FC = () => {
                 key={product._id}
                 className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 px-2 py-1 rounded-lg shrink-0 text-xs font-medium"
               >
-                <img src={product.images?.[0]} alt="" className="w-4 h-4 object-contain rounded" />
+                <img width="16" height="16" src={product.images?.[0]} alt="" className="w-4 h-4 object-contain rounded shrink-0" />
                 <span className="max-w-[100px] truncate text-[11px] text-slate-700 dark:text-slate-200">
                   {getShortProductTitle(product.name, product.brand, 15)}
                 </span>

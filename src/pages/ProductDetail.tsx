@@ -840,7 +840,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                           : 'border-slate-50 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'
                       }`}
                     >
-                      <img 
+                      <img width="80" height="64" 
                         loading="lazy" 
                         src={img} 
                         alt={`${product.name} - view ${idx + 1} of ${product.images.length}`} 
@@ -910,10 +910,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                     </div>
                   )
                 ) : (
-                  <img
+                  <img width="600" height="600"
                     src={(product.images && activeImageIdx < product.images.length && activeImageIdx >= 0 ? product.images[activeImageIdx] : undefined) || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'}
                     alt={`${product.name} - view ${activeImageIdx + 1} of ${product.images?.length || 1}`}
                     loading={activeImageIdx === 0 ? "eager" : "lazy"}
+                    fetchPriority={activeImageIdx === 0 ? "high" : "auto"}
+                    decoding="async"
                     referrerPolicy="no-referrer"
                     className="h-full w-full object-contain p-4 transition-transform duration-300 hover:scale-101 cursor-zoom-in"
                     onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393295-5887e240974b?w=600'; }}
@@ -1329,8 +1331,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
                 onClick={() => { onNavigate('product-detail', rel.slug); window.scrollTo(0, 0); }}
                 className="group cursor-pointer rounded-xl border border-slate-50 bg-white hover:shadow-md overflow-hidden transition-all duration-300 dark:border-slate-700 dark:bg-slate-800"
               >
-                <div className="h-28 sm:h-36 bg-slate-50 overflow-hidden shrink-0">
-                  <img loading="lazy" src={rel.images?.[0]} alt={rel.name} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
+                <div className="h-28 sm:h-36 bg-slate-50 overflow-hidden shrink-0 aspect-[4/3]">
+                  <img width="400" height="300" loading="lazy" decoding="async" src={rel.images?.[0]} alt={rel.name} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
                 </div>
                 <div className="p-2.5 sm:p-3.5">
                   <h4 className="text-[11px] sm:text-xs font-bold text-slate-700 truncate dark:text-white group-hover:text-zinc-900 dark:text-white">{rel.name}</h4>

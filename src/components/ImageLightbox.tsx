@@ -271,9 +271,12 @@ export const ImageLightbox: React.FC = () => {
               onClick={handleDoubleTap}
             >
               <img
+                width="800"
+                height="800"
                 src={lightboxData.src}
                 alt={lightboxData.alt}
                 referrerPolicy="no-referrer"
+                decoding="async"
                 className="max-w-full max-h-[58vh] md:max-h-[62vh] object-contain rounded-2xl shadow-3xl border border-white/10 bg-slate-800/60 pointer-events-auto touch-none"
                 style={{
                   transform: `translate3d(${translateX}px, ${translateY + dragY}px, 0) scale(${scale})`,
@@ -315,9 +318,12 @@ export const ImageLightbox: React.FC = () => {
                     }`}
                   >
                     <img 
+                      width="40"
+                      height="40"
                       src={img} 
                       alt={`Thumbnail ${i + 1}`} 
                       referrerPolicy="no-referrer" 
+                      decoding="async"
                       className="h-full w-full object-cover select-none pointer-events-none" 
                     />
                   </button>

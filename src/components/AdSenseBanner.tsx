@@ -204,7 +204,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   }
 
   return (
-    <div id={`adsense-panel-${slot}`} className={`my-6 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-800/40 p-4 border border-dashed border-slate-200 dark:border-slate-700/80 flex flex-col items-center justify-center transition-all duration-300 ${className}`}>
+    <div id={`adsense-panel-${slot}`} className={`my-6 min-h-[140px] overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-800/40 p-4 border border-dashed border-slate-200 dark:border-slate-700/80 flex flex-col items-center justify-center transition-all duration-300 ${className}`}>
       <div className="w-full flex items-center justify-between mb-2.5 px-1">
         <span className="text-[10px] font-mono tracking-widest text-slate-400 dark:text-slate-400 uppercase font-bold flex items-center gap-1.5">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

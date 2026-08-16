@@ -263,10 +263,13 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ onNavigate }) => {
                 >
                   <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 mb-2.5">
                     <img
+                      width="300"
+                      height="300"
                       src={getThumbnailUrl((prod.images && prod.images[0]) || (prod as any).imageUrl, 300)}
                       alt={prod.name}
                       className="h-full w-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
+                      decoding="async"
                     />
                     {prod.brand && (
                       <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-900/80 text-white backdrop-blur-xs">

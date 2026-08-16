@@ -2862,9 +2862,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                                       <div className="h-8 w-8 rounded-full bg-slate-50 text-slate-600 font-bold items-center justify-center flex border border-slate-100 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600">
                                         {usr.profileImage ? (
                                           <img
+                                            width="32"
+                                            height="32"
                                             src={usr.profileImage}
                                             alt={usr?.name}
                                             referrerPolicy="no-referrer"
+                                            decoding="async"
                                             className="h-full w-full rounded-full object-cover"
                                           />
                                         ) : (

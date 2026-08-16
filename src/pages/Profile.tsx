@@ -554,8 +554,8 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                     key={p._id}
                     className="group border border-slate-100 bg-white rounded-2xl overflow-hidden dark:border-slate-700 dark:bg-slate-800 flex flex-col justify-between"
                   >
-                    <div className="h-32 bg-slate-50 relative shrink-0">
-                      <img loading="lazy" src={p.images?.[0]} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <div className="h-32 bg-slate-50 relative shrink-0 aspect-[16/9] sm:aspect-auto">
+                      <img width="320" height="180" loading="lazy" decoding="async" src={p.images?.[0]} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       
                       <button
                         onClick={() => handleRemoveBookmark(p._id)}

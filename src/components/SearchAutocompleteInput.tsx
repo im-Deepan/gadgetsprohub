@@ -448,8 +448,11 @@ export const SearchAutocompleteInput: React.FC<SearchAutocompleteInputProps> = (
                         className="group flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all duration-300 cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                       >
                         <img
+                          width="40"
+                          height="40"
                           src={img}
                           alt={product.name}
+                          decoding="async"
                           className="h-10 w-10 object-contain rounded-lg bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 shrink-0"
                         />
                         <div className="flex-1 min-w-0">

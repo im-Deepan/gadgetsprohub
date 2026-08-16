@@ -306,7 +306,7 @@ const MobileCollectionCard: React.FC<MobileCollectionCardProps> = ({
                 exit="exit"
                 className="w-full h-full flex items-center justify-center absolute"
               >
-                <img
+                <img width="300" height="300"
                   src={currentProduct.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300'}
                   alt={currentProduct.name}
                   referrerPolicy="no-referrer"
@@ -533,7 +533,7 @@ const DesktopCollectionCard: React.FC<DesktopCollectionCardProps> = ({
               exit="exit"
               className="w-full h-full flex items-center justify-center absolute"
             >
-              <img
+              <img width="300" height="300"
                 loading="lazy"
                 src={currentProduct.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400'}
                 alt={currentProduct.name}

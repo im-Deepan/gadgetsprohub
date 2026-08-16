@@ -20,6 +20,7 @@ export const GlareHover: React.FC<GlareHoverProps> = ({
   className = ''
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const rectRef = useRef<DOMRect | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [position, setPosition] = useState({ x: 50, y: 50 });
   const [hasPlayed, setHasPlayed] = useState(false);
@@ -27,20 +28,27 @@ export const GlareHover: React.FC<GlareHoverProps> = ({
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (playOnce && hasPlayed) return;
     
-    const node = containerRef.current;
-    if (node) {
-      const rect = node.getBoundingClientRect();
-      if (rect && rect.width > 0 && rect.height > 0) {
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        setPosition({ x, y });
-      }
+    let rect = rectRef.current;
+    if (!rect && containerRef.current) {
+      rect = containerRef.current.getBoundingClientRect();
+      rectRef.current = rect;
+    }
+    if (rect && rect.width > 0 && rect.height > 0) {
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setPosition({ x, y });
     }
   };
 
-  const handleMouseEnter = () => setIsHovered(true);
+  const handleMouseEnter = () => {
+    if (containerRef.current) {
+      rectRef.current = containerRef.current.getBoundingClientRect();
+    }
+    setIsHovered(true);
+  };
   const handleMouseLeave = () => {
     setIsHovered(false);
+    rectRef.current = null;
     if (playOnce) setHasPlayed(true);
   };
 
