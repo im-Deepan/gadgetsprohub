@@ -39,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
 
   useEffect(() => {
     const controller = new AbortController();
+    let interval: NodeJS.Timeout;
     const checkDb = async () => {
       try {
         const res = await apiFetch('/api/health-check', { signal: controller.signal, maxRetries: 0 });
@@ -56,13 +57,19 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onPrelo
         }
       }
     };
-    checkDb().catch(() => {});
-    const interval = setInterval(() => {
+
+    // Defer initial check by 4s to prevent network/CPU contention during initial page paint
+    const initialTimer = setTimeout(() => {
       checkDb().catch(() => {});
-    }, 60000);
+      interval = setInterval(() => {
+        checkDb().catch(() => {});
+      }, 60000);
+    }, 4000);
+
     return () => {
       controller.abort();
-      clearInterval(interval);
+      clearTimeout(initialTimer);
+      if (interval) clearInterval(interval);
     };
   }, []);
 

@@ -78,7 +78,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
 
   const renderProductCard = (p: Product, index = 0) => {
     const pricing = getValidatedPricing(p);
-    const isPriority = index < 2;
+    const isPriority = index < 4;
     return (
       <a
         key={p._id}
@@ -95,7 +95,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
           <div className="relative aspect-square p-3 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
             <img 
               loading={isPriority ? "eager" : "lazy"} 
-              fetchPriority={index === 0 ? "high" : "auto"}
+              fetchPriority={index < 2 ? "high" : "auto"}
               decoding="async"
               src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400'} 
               alt={p.name} 
@@ -186,32 +186,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         </div>
       </section>
 
-      {/* 2. RECENTLY VIEWED (Only if exists) */}
-      {recentlyViewed.length > 0 && (
-        <section className="w-full max-w-7xl mx-auto px-4 py-8 border-b border-slate-200 dark:border-slate-800/50">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <History className="h-5 w-5 text-zinc-900 dark:text-white" />
-              Recently Viewed
-            </h2>
-            <button 
-              onClick={() => {
-                setRecentlyViewed([]);
-                safeRemoveItem('aff_recent_views');
-              }}
-              className="text-xs font-semibold text-slate-500 hover:text-rose-500 flex items-center gap-1 cursor-pointer"
-            >
-              Clear
-            </button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {recentlyViewed.map((p, idx) => renderProductCard(p, idx))}
-          </div>
-        </section>
-      )}
-
-      {/* 3. ALL PRODUCTS GRID */}
-      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+      {/* 2. ALL PRODUCTS GRID (Primary Above-the-Fold Content to prevent CLS) */}
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div>
             <h2 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
@@ -233,7 +209,20 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-              <div key={i} className="aspect-[3/4] bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
+              <div key={i} className="h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col">
+                <div className="relative aspect-square p-3 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+                  <div className="w-3/4 h-3/4 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />
+                </div>
+                <div className="p-4 flex flex-col grow">
+                  <div className="h-3 w-16 bg-slate-100 dark:bg-slate-800 rounded mb-2 animate-pulse" />
+                  <div className="h-4 w-full bg-slate-100 dark:bg-slate-800 rounded mb-1.5 animate-pulse" />
+                  <div className="h-4 w-2/3 bg-slate-100 dark:bg-slate-800 rounded mb-4 animate-pulse" />
+                  <div className="mt-auto flex items-end justify-between">
+                    <div className="h-6 w-20 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                    <div className="h-4 w-10 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         ) : products.length > 0 ? (
@@ -248,6 +237,30 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
           </div>
         )}
       </section>
+
+      {/* 3. RECENTLY VIEWED (Rendered beneath catalog to eliminate CLS) */}
+      {recentlyViewed.length > 0 && (
+        <section className="w-full max-w-7xl mx-auto px-4 py-8 border-t border-slate-200 dark:border-slate-800/50">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <History className="h-5 w-5 text-zinc-900 dark:text-white" />
+              Recently Viewed
+            </h2>
+            <button 
+              onClick={() => {
+                setRecentlyViewed([]);
+                safeRemoveItem('aff_recent_views');
+              }}
+              className="text-xs font-semibold text-slate-500 hover:text-rose-500 flex items-center gap-1 cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {recentlyViewed.map((p, idx) => renderProductCard(p, idx))}
+          </div>
+        </section>
+      )}
 
       {/* 4. EDITORIAL / DEALS BAND */}
       <section className="w-full bg-slate-50 dark:bg-slate-900 py-16 border-t border-slate-100 dark:border-slate-800">

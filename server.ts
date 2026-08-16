@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -1940,6 +1941,7 @@ async function startServer() {
 
   // Security Headers and Reverse Proxy configuration
   app.set('trust proxy', 1);
+  app.use(compression());
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
@@ -10632,7 +10634,17 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      maxAge: '1y',
+      immutable: true,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        } else if (filePath.match(/\.(js|css|woff2|woff|ttf|png|jpg|jpeg|gif|ico|svg|webp)$/)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      }
+    }));
     // Do not serve index.html for missing asset requests to prevent MIME type issues
     app.use('/assets', (_req: express.Request, res: express.Response) => {
       res.status(404).send('Asset not found');

@@ -14,6 +14,7 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ImageLightbox } from './components/ImageLightbox';
+import { Home } from './pages/Home';
 import { ProductPageSkeleton, BlogPageSkeleton } from './components/PageSkeletons';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { motion, AnimatePresence } from 'motion/react';
@@ -157,8 +158,7 @@ const dynamicLoadWithPreload = <T extends React.ComponentType<any>>(factory: () 
   return Component;
 };
 
-// Code-Split Dynamic Page Imports
-const Home = dynamicLoadWithPreload(() => import('./pages/Home').then(m => ({ default: m.Home })));
+// Code-Split Dynamic Page Imports (Home is statically bundled for immediate LCP/FCP)
 const ProductList = dynamicLoadWithPreload(() => import('./pages/ProductList').then(m => ({ default: m.ProductList })));
 const SearchPage = dynamicLoadWithPreload(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })));
 const ProductDetail = dynamicLoadWithPreload(() => import('./pages/ProductDetail').then(m => ({ default: m.ProductDetail })));
@@ -180,7 +180,6 @@ export const preloadView = (view: AppView, slug?: string) => {
     };
     switch (view) {
       case 'home':
-        handlePreload(Home.preload?.());
         break;
       case 'products':
         handlePreload(ProductList.preload?.());
@@ -227,68 +226,11 @@ export const preloadView = (view: AppView, slug?: string) => {
 };
 
 const ViewLoader: React.FC = () => {
-  const [statusMessage, setStatusMessage] = useState("Preparing page components...");
-  const [progress, setProgress] = useState(25);
-  const [currentStep, setCurrentStep] = useState(1);
-
-  useEffect(() => {
-    const steps = [
-      { msg: "Connecting to secure catalog servers...", progress: 45, stepNum: 1 },
-      { msg: "Loading products & reviews...", progress: 70, stepNum: 2 },
-      { msg: "Initializing interface filters and options...", progress: 90, stepNum: 3 },
-      { msg: "Rendering gallery elements...", progress: 100, stepNum: 4 }
-    ];
-    let index = 0;
-    const interval = setInterval(() => {
-      if (index < steps.length) {
-        setStatusMessage(steps[index].msg);
-        setProgress(steps[index].progress);
-        setCurrentStep(steps[index].stepNum);
-        index++;
-      }
-    }, 400);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.02 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="w-full min-h-[60vh] flex flex-col items-center justify-center py-20 px-4 font-sans select-none"
-    >
-      <div className="relative flex items-center justify-center mb-6">
-        <div className="h-16 w-16 rounded-full border-4 border-slate-50 dark:border-slate-700/80 border-t-indigo-500 animate-spin"></div>
-        <div className="absolute h-16 w-16 rounded-full border border-dashed border-indigo-400/20 animate-ping"></div>
-        <div className="absolute text-[10px] font-mono font-bold text-zinc-900 dark:text-white dark:text-indigo-300">
-          {progress}%
-        </div>
-      </div>
-      
-      <div className="text-center max-w-sm w-full mb-4 px-2">
-        <div className="text-[10px] font-bold text-indigo-400 tracking-wider uppercase mb-1">
-          Step {currentStep} of 4 • Loading Assets
-        </div>
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-200 tracking-wide block leading-relaxed min-h-[32px]">
-          {statusMessage}
-        </span>
-      </div>
-
-      {/* Elegant glowing progress bar container */}
-      <div className="w-64 h-1.5 bg-slate-50 dark:bg-slate-700 rounded-full overflow-hidden mb-3 relative shadow-inner">
-        <motion.div 
-          className="h-full bg-gradient-to-r from-indigo-400 via-indigo-500 to-indigo-600 rounded-full"
-          initial={{ width: "15%" }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.7, ease: [0.25, 1, 0.5, 1] }}
-        />
-      </div>
-
-      <span className="text-[10px] font-bold text-slate-300/70 dark:text-slate-400/70 uppercase tracking-[0.25em] animate-pulse">
-        Optimizing experience
-      </span>
-    </motion.div>
+    <div className="w-full min-h-[50vh] flex flex-col items-center justify-center py-20 px-4 font-sans select-none">
+      <div className="h-10 w-10 rounded-full border-2 border-slate-200 dark:border-slate-700 border-t-indigo-600 animate-spin mb-4" />
+      <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Loading</span>
+    </div>
   );
 };
 
@@ -380,7 +322,7 @@ const AppContent: React.FC = () => {
     };
   }, []);
 
-  // Load AdSense script safely with fallback test publisher ID if unconfigured
+  // Load AdSense script safely after initial page render and hydration during idle time
   useEffect(() => {
     const loadAdSense = () => {
       if (adsenseScriptLoaded) return;
@@ -403,7 +345,12 @@ const AppContent: React.FC = () => {
       }
     };
 
-    loadAdSense();
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(loadAdSense, { timeout: 3500 });
+    } else {
+      const timer = setTimeout(loadAdSense, 3000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   // Simple state router
@@ -830,12 +777,7 @@ const AppContent: React.FC = () => {
         break;
     }
     
-    // We only wrap it in ViewLoader if it doesn't already have its own Suspense (which are the cases where content is wrapped in Suspense)
-    // Actually, we can just wrap EVERYTHING in ViewLoader that doesn't have it.
-    // Since ProductList and others already have Suspense in their JSX, they won't trigger the outer Suspense unless they suspend outside it, which they don't.
-    // So we can safely return <Suspense fallback={<ViewLoader />}>{content}</Suspense>;
-    
-    return <Suspense fallback={<ViewLoader />}>{content}</Suspense>;
+    return content;
   };
 
   return (
@@ -885,11 +827,13 @@ const AppContent: React.FC = () => {
       <ImageLightbox />
 
       {/* Modals & Floating Tools */}
-      <WishlistModal
-        isOpen={isWishlistOpen}
-        onClose={() => setIsWishlistOpen(false)}
-        onNavigate={navigateToView}
-      />
+      {isWishlistOpen && (
+        <WishlistModal
+          isOpen={isWishlistOpen}
+          onClose={() => setIsWishlistOpen(false)}
+          onNavigate={navigateToView}
+        />
+      )}
       <CompareModal onNavigate={navigateToView} />
       <CompareBar />
 
