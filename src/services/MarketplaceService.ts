@@ -4,6 +4,70 @@ import mongoose from 'mongoose';
 // PHASE 11: UNIVERSAL PRODUCT MODEL & PROVIDER SCHEMAS
 // ========================================================
 
+/**
+ * Universal Currency Normalizer to Indian Rupees (INR).
+ * Ensures all product prices, whether imported from extensions, scraped from web,
+ * or updated via cron jobs, are permanently converted and stored in INR.
+ */
+export function convertToINR(amount: number, fromCurrency?: string | null, urlOrHint?: string | null): number {
+  if (!amount || isNaN(amount) || amount <= 0) return 0;
+  
+  let curr = (fromCurrency || '').trim().toUpperCase();
+  if (!curr && urlOrHint) {
+    const hint = urlOrHint.toLowerCase();
+    if (hint.includes('amazon.in') || hint.includes('flipkart') || hint.includes('meesho') || hint.includes('myntra') || hint.includes('ajio') || hint.includes('croma') || hint.includes('reliancedigital')) {
+      curr = 'INR';
+    } else if (hint.includes('amazon.co.uk') || hint.includes('ebay.co.uk') || hint.includes('.uk')) {
+      curr = 'GBP';
+    } else if (hint.includes('amazon.ae') || hint.includes('.ae')) {
+      curr = 'AED';
+    } else if (hint.includes('amazon.de') || hint.includes('amazon.fr') || hint.includes('amazon.es') || hint.includes('amazon.it') || hint.includes('.eu')) {
+      curr = 'EUR';
+    } else if (hint.includes('amazon.ca') || hint.includes('.ca')) {
+      curr = 'CAD';
+    } else if (hint.includes('amazon.com.au') || hint.includes('.au')) {
+      curr = 'AUD';
+    } else if (hint.includes('amazon.com') || hint.includes('walmart') || hint.includes('bestbuy') || hint.includes('ebay.com') || hint.includes('aliexpress')) {
+      curr = 'USD';
+    }
+  }
+
+  // If already in INR
+  if (curr === 'INR' || curr === '₹' || curr === 'RS' || curr === 'RS.') {
+    return Math.round(amount);
+  }
+
+  // Fallback heuristic: If no currency is known, but the amount is small (<= 1000)
+  // in consumer electronics context (where electronics in INR are thousands), treat as USD
+  if (!curr) {
+    if (amount <= 1000) {
+      curr = 'USD';
+    } else {
+      return Math.round(amount);
+    }
+  }
+
+  const rates: Record<string, number> = {
+    'USD': 83.5,
+    '$': 83.5,
+    'EUR': 91.0,
+    '€': 91.0,
+    'GBP': 106.0,
+    '£': 106.0,
+    'AED': 22.75,
+    'CAD': 61.5,
+    'AUD': 54.5,
+    'JPY': 0.55,
+    '¥': 0.55,
+    'CNY': 11.5,
+    'SGD': 62.0
+  };
+
+  const rate = rates[curr] || 83.5;
+  const inrValue = amount * rate;
+  return Math.round(inrValue);
+}
+
 export interface NormalizedProduct {
   name: string;
   brand?: string;
@@ -552,12 +616,17 @@ export async function getProductDetails(url: string, providerId: string, default
   }
 
   const name = realData.title;
-  const price = realData.price || 0;
-  const originalPrice = realData.originalPrice || price;
+  const rawPrice = realData.price || 0;
+  const rawOriginalPrice = realData.originalPrice || rawPrice;
+  const detectedCurrency = realData.currency || defaultCurrency || (url.includes('amazon.in') || url.includes('flipkart') ? 'INR' : 'USD');
+  
+  // Permanent INR Normalization: Always convert scraped price to Indian Rupees (INR)
+  const price = convertToINR(rawPrice, detectedCurrency, url);
+  const originalPrice = convertToINR(rawOriginalPrice, detectedCurrency, url);
   const discount = (originalPrice > price) ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
   const resolvedBrand = realData.brand || 'Generic';
   const resolvedCategory = 'Electronics';
-  const currency = realData.currency || defaultCurrency;
+  const currency = 'INR';
 
   const extractedSpecs = (realData.specifications && Object.keys(realData.specifications).length > 0)
     ? realData.specifications
@@ -623,21 +692,21 @@ class AmazonInProvider implements IMarketplaceProvider {
 class AmazonUsProvider implements IMarketplaceProvider {
   providerId = 'amazon_us';
   name = 'Amazon US';
-  currency = 'USD';
+  currency = 'INR';
 
   async authenticate() { return true; }
   detectProduct(url: string) { return (url.includes('amazon.com') || url.includes('amzn.to')) && !url.includes('amazon.in') && !url.includes('amazon.co.uk') && !url.includes('amazon.ae'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = await getProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, 'USD');
     const tag = trackingId || 'gadgetsprohub-21';
     details.affiliateLink = !url.includes('tag=') ? `${url}${url.includes('?') ? '&' : '?'}tag=${tag}` : url.replace(/tag=[^&]+/g, `tag=${tag}`);
     return details;
   }
-  async extractImages(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).images; }
-  async extractVariants(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).variants; }
+  async extractImages(url: string) { return (await getProductDetails(url, this.providerId, 'USD')).images; }
+  async extractVariants(url: string) { return (await getProductDetails(url, this.providerId, 'USD')).variants; }
   async extractPricing(url: string) {
-    const d = await getProductDetails(url, this.providerId, this.currency);
-    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
+    const d = await getProductDetails(url, this.providerId, 'USD');
+    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: 'INR', inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) {
     return [];
@@ -651,21 +720,21 @@ class AmazonUsProvider implements IMarketplaceProvider {
 class AmazonUkProvider implements IMarketplaceProvider {
   providerId = 'amazon_uk';
   name = 'Amazon UK';
-  currency = 'GBP';
+  currency = 'INR';
 
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('amazon.co.uk'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = await getProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, 'GBP');
     const tag = trackingId || 'gadgetsprohub-21';
     details.affiliateLink = !url.includes('tag=') ? `${url}${url.includes('?') ? '&' : '?'}tag=${tag}` : url.replace(/tag=[^&]+/g, `tag=${tag}`);
     return details;
   }
-  async extractImages(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).images; }
-  async extractVariants(url: string) { return (await getProductDetails(url, this.providerId, this.currency)).variants; }
+  async extractImages(url: string) { return (await getProductDetails(url, this.providerId, 'GBP')).images; }
+  async extractVariants(url: string) { return (await getProductDetails(url, this.providerId, 'GBP')).variants; }
   async extractPricing(url: string) {
-    const d = await getProductDetails(url, this.providerId, this.currency);
-    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
+    const d = await getProductDetails(url, this.providerId, 'GBP');
+    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: 'INR', inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
   validateAffiliateLink(link: string) { return link.includes('amazon.co.uk') && link.includes('tag='); }
@@ -677,12 +746,12 @@ class AmazonUkProvider implements IMarketplaceProvider {
 class AmazonUaeProvider implements IMarketplaceProvider {
   providerId = 'amazon_uae';
   name = 'Amazon UAE';
-  currency = 'AED';
+  currency = 'INR';
 
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('amazon.ae'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = await getProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, 'AED');
     const tag = trackingId || 'gadgetsprohub-21';
     details.affiliateLink = !url.includes('tag=') ? `${url}${url.includes('?') ? '&' : '?'}tag=${tag}` : url.replace(/tag=[^&]+/g, `tag=${tag}`);
     return details;
@@ -690,8 +759,8 @@ class AmazonUaeProvider implements IMarketplaceProvider {
   async extractImages(url: string) { return []; }
   async extractVariants(url: string) { return []; }
   async extractPricing(url: string) {
-    const d = await getProductDetails(url, this.providerId, this.currency);
-    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
+    const d = await getProductDetails(url, this.providerId, 'AED');
+    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: 'INR', inStock: d.inStock, seller: d.seller };
   }
   async extractReviews(url: string) { return []; }
   validateAffiliateLink(link: string) { return link.includes('amazon.ae') && link.includes('tag='); }
@@ -843,22 +912,22 @@ class CromaProvider implements IMarketplaceProvider {
 class EbayProvider implements IMarketplaceProvider {
   providerId = 'ebay';
   name = 'eBay';
-  currency = 'USD';
+  currency = 'INR';
 
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('ebay.com') || url.includes('ebay.co.uk'); }
   async extractProduct(url: string, trackingId?: string) {
-    const details = await getProductDetails(url, this.providerId, this.currency);
+    const details = await getProductDetails(url, this.providerId, 'USD');
     details.affiliateLink = trackingId ? `${url}?mkevt=1&mkcid=1&mkrid=711-53200-19255-0&campid=${trackingId}` : url;
     return details;
   }
-  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
-  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, 'USD'); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, 'USD'); return d.variants || []; }
   async extractPricing(url: string) {
-    const d = await getProductDetails(url, this.providerId, this.currency);
-    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
+    const d = await getProductDetails(url, this.providerId, 'USD');
+    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: 'INR', inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, 'USD'); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('ebay.com') && link.includes('campid='); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
@@ -868,20 +937,20 @@ class EbayProvider implements IMarketplaceProvider {
 class AliExpressProvider implements IMarketplaceProvider {
   providerId = 'aliexpress';
   name = 'AliExpress';
-  currency = 'USD';
+  currency = 'INR';
 
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('aliexpress.com') || url.includes('aliexpress.ru'); }
   async extractProduct(url: string, trackingId?: string) {
-    return await getProductDetails(url, this.providerId, this.currency);
+    return await getProductDetails(url, this.providerId, 'USD');
   }
-  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
-  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, 'USD'); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, 'USD'); return d.variants || []; }
   async extractPricing(url: string) {
-    const d = await getProductDetails(url, this.providerId, this.currency);
-    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
+    const d = await getProductDetails(url, this.providerId, 'USD');
+    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: 'INR', inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, 'USD'); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('aliexpress.com') && (link.includes('aff_short_key=') || link.includes('af=')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }
@@ -891,20 +960,20 @@ class AliExpressProvider implements IMarketplaceProvider {
 class WalmartProvider implements IMarketplaceProvider {
   providerId = 'walmart';
   name = 'Walmart';
-  currency = 'USD';
+  currency = 'INR';
 
   async authenticate() { return true; }
   detectProduct(url: string) { return url.includes('walmart.com'); }
   async extractProduct(url: string, trackingId?: string) {
-    return await getProductDetails(url, this.providerId, this.currency);
+    return await getProductDetails(url, this.providerId, 'USD');
   }
-  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.images || []; }
-  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.variants || []; }
+  async extractImages(url: string) { const d = await getProductDetails(url, this.providerId, 'USD'); return d.images || []; }
+  async extractVariants(url: string) { const d = await getProductDetails(url, this.providerId, 'USD'); return d.variants || []; }
   async extractPricing(url: string) {
-    const d = await getProductDetails(url, this.providerId, this.currency);
-    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: this.currency, inStock: d.inStock, seller: d.seller };
+    const d = await getProductDetails(url, this.providerId, 'USD');
+    return { price: d.price, originalPrice: d.originalPrice, discount: d.discount, currency: 'INR', inStock: d.inStock, seller: d.seller };
   }
-  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, this.currency); return d.reviews || []; }
+  async extractReviews(url: string) { const d = await getProductDetails(url, this.providerId, 'USD'); return d.reviews || []; }
   validateAffiliateLink(link: string) { return link.includes('walmart.com') && (link.includes('veh=aff') || link.includes('aff_id=')); }
   async synchronize(productId: string) { return { updated: true }; }
   async healthCheck() { return true; }

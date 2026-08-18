@@ -1,38 +1,138 @@
-User-agent: *
-Disallow: /admin
-Disallow: /admin/
-Disallow: /login
-Disallow: /profile
-Disallow: /api/
-Allow: /api/visit
-Allow: /api/health-check
+# =========================================================================
+# Robots.txt Specification for gadgetsprohub
+# RFC 9309 Compliant | Optimized for High Performance & Google Inspection
+# Canonical Host: gadgetsprohub.onrender.com
+# =========================================================================
+
+# 1. Google Inspection Tool, Mobile Smartphone & Search Engine Core
+User-agent: Google-InspectionTool
+User-agent: Googlebot
+User-agent: Googlebot-Smartphone
+User-agent: Googlebot-Image
+User-agent: Googlebot-News
+User-agent: Googlebot-Video
+User-agent: Storebot-Google
+User-agent: Mediapartners-Google
+User-agent: AdsBot-Google
+User-agent: FeedFetcher-Google
+User-agent: APIs-Google
 Allow: /
+Allow: /assets/
+Allow: /uploads/
+Allow: /api/products
+Allow: /api/categories
+Allow: /api/blogs
+Disallow: /admin/
+Disallow: /api/admin/
+Disallow: /api/auth/
+
+# 2. Global Search Engines (Bing, DuckDuckGo, Yandex, Baidu, Apple, etc.)
+User-agent: Bingbot
+User-agent: msnbot
+User-agent: DuckDuckBot
+User-agent: YandexBot
+User-agent: Baiduspider
+User-agent: Slurp
+User-agent: Applebot
+User-agent: Sogou web spider
+User-agent: Qwantify
+User-agent: NaverBot
+Allow: /
+Allow: /assets/
+Allow: /uploads/
+Disallow: /admin/
+Disallow: /api/admin/
+Disallow: /api/auth/
+
+# 3. Social Media Platforms & Messaging Link Unfurlers (WhatsApp, Facebook, Twitter, Telegram)
+User-agent: facebookexternalhit
+User-agent: WhatsApp
+User-agent: Twitterbot
+User-agent: TelegramBot
+User-agent: LinkedInBot
+User-agent: Pinterestbot
+User-agent: Discordbot
+User-agent: Slackbot
+User-agent: SkypeUriPreview
+Allow: /
+Allow: /assets/
+Allow: /uploads/
+Allow: /og-banner.png
+Allow: /favicon.png
+Disallow: /admin/
+
+# 4. AI Knowledge Bases, LLMs & Retrieval Engines (ChatGPT, Perplexity, Claude)
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: PerplexityBot
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: Amazonbot
+User-agent: Bytespider
+User-agent: cohere-ai
+User-agent: CCBot
+Allow: /
+Allow: /products
+Allow: /product-detail/
+Allow: /blogs
+Allow: /blog-detail/
+Disallow: /admin/
+Disallow: /api/admin/
+Disallow: /api/auth/
+
+# 5. SEO Diagnostic & Audit Crawlers (Screaming Frog, Ahrefs, Semrush)
+User-agent: Screaming Frog SEO Spider
+User-agent: AhrefsBot
+User-agent: SemrushBot
+User-agent: DotBot
+User-agent: MJ12bot
+User-agent: SiteAuditBot
+Allow: /
+Crawl-delay: 2
+Disallow: /admin/
+Disallow: /api/admin/
+Disallow: /api/auth/
+
+# 6. General Catch-All Rules for All Other Web Crawlers
+User-agent: *
+Allow: /
+Allow: /assets/
+Allow: /uploads/
 Allow: /search
 Allow: /og-banner.png
 Allow: /favicon.png
-Allow: /uploads/
-Allow: /assets/
+Allow: /api/products
+Allow: /api/categories
+Allow: /api/blogs
+Allow: /api/deals
+Allow: /api/visit
+Allow: /api/health-check
+Disallow: /admin
+Disallow: /admin/
+Disallow: /profile
+Disallow: /login
+Disallow: /register
+Disallow: /auth/
+Disallow: /api/admin/
+Disallow: /api/auth/
+Disallow: /api/telemetry/
+Disallow: /api/metrics/
+Disallow: /api/internal/
+Disallow: /draft/
+Disallow: /preview/
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*session=
+Disallow: /*?*token=
+Disallow: /*?*preview=
 
-User-agent: Googlebot
-Allow: /
-
-User-agent: Googlebot-Image
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: WhatsApp
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: TelegramBot
-Allow: /
-
+# =========================================================================
+# Sitemaps & Host Index Declaration
+# =========================================================================
 Sitemap: https://gadgetsprohub.onrender.com/sitemap.xml
-
+Sitemap: https://gadgetsprohub.onrender.com/sitemap-products.xml
+Sitemap: https://gadgetsprohub.onrender.com/sitemap-blogs.xml
+Sitemap: https://gadgetsprohub.onrender.com/sitemap-categories.xml
+Sitemap: https://gadgetsprohub.onrender.com/sitemap-images.xml
+Host: gadgetsprohub.onrender.com

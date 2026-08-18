@@ -3,6 +3,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getValidatedPricing } from '../utils/productUtils';
+import { generateRobotsTxt, validateRobotsUrl, RobotsOptions } from './robotsEngine';
 
 export interface SeoMetadataPayload {
   seoTitle?: string;
@@ -669,27 +670,378 @@ export class SeoService {
   }
 
   /**
-   * Generates a standard XML sitemap file with incremental additions.
+   * Helper to resolve the canonical site URL safely
    */
-    public async buildXmlSitemap(req?: any, localProducts?: any[], localBlogs?: any[]): Promise<string> {
+  private resolveSiteUrl(req?: any): string {
+    const rawUrl = process.env.SITE_URL || process.env.APP_URL || (req ? `${req.headers['x-forwarded-proto'] || req.protocol || 'https'}://${req.get('host') || 'gadgetsprohub.onrender.com'}` : 'https://gadgetsprohub.onrender.com');
+    const cleaned = rawUrl.replace(/\/+$/, '');
+    return cleaned.startsWith('http') ? cleaned : `https://${cleaned}`;
+  }
+
+  private escapeXml(unsafe: string): string {
+    return (unsafe || '').toString().replace(/[<>&'"]/g, function (c) {
+      switch (c) {
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '&': return '&amp;';
+        case '\'': return '&apos;';
+        case '"': return '&quot;';
+        default: return c;
+      }
+    });
+  }
+
+  /**
+   * Generates a Google-compliant Sitemap Index XML pointing to all sub-sitemaps
+   */
+  public async buildXmlSitemapIndex(req?: any): Promise<string> {
+    const siteUrl = this.resolveSiteUrl(req);
+    const todayStr = new Date().toISOString();
+
+    const subSitemaps = [
+      `${siteUrl}/sitemap-products.xml`,
+      `${siteUrl}/sitemap-blogs.xml`,
+      `${siteUrl}/sitemap-categories.xml`,
+      `${siteUrl}/sitemap-pages.xml`,
+      `${siteUrl}/sitemap-images.xml`
+    ];
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+    xml += `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+    for (const loc of subSitemaps) {
+      xml += `  <sitemap>\n`;
+      xml += `    <loc>${this.escapeXml(loc)}</loc>\n`;
+      xml += `    <lastmod>${todayStr}</lastmod>\n`;
+      xml += `  </sitemap>\n`;
+    }
+    xml += `</sitemapindex>`;
+    return xml;
+  }
+
+  /**
+   * Generates a dedicated Products XML sitemap with Google Image schemas for Merchant & Search Console
+   */
+  public async buildProductsSitemap(req?: any, localProducts?: any[]): Promise<string> {
+    const siteUrl = this.resolveSiteUrl(req);
+    const todayStr = new Date().toISOString().split('T')[0];
     const isMongoConnected = mongoose.connection.readyState === 1;
+    let productsList: any[] = [];
+
+    if (isMongoConnected) {
+      try {
+        const Product = mongoose.model('Product');
+        productsList = await Product.find({ publishingStatus: { $ne: 'draft' } }, 'name slug images image updatedAt createdAt').lean();
+      } catch (err: any) {
+        console.warn('Failed to query products for sitemap:', err.message);
+      }
+    }
+
+    if (productsList.length === 0 && (localProducts || []).length > 0) {
+      productsList = (localProducts || []).map((p: any) => ({
+        name: p.name || p.title,
+        slug: p.slug,
+        images: p.images || (p.image ? [p.image] : []),
+        updatedAt: p.updatedAt || p.createdAt || new Date()
+      }));
+    }
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+
+    for (const prod of productsList) {
+      if (!prod.slug) continue;
+      const dateVal = prod.updatedAt || prod.createdAt || new Date();
+      let dateStr = todayStr;
+      try {
+        dateStr = new Date(dateVal).toISOString().split('T')[0];
+      } catch {
+        dateStr = todayStr;
+      }
+
+      xml += `  <url>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/product-detail/${this.escapeXml(prod.slug)}</loc>\n`;
+      xml += `    <lastmod>${dateStr}</lastmod>\n`;
+      xml += `    <changefreq>daily</changefreq>\n`;
+      xml += `    <priority>0.9</priority>\n`;
+
+      // Extract high quality images
+      const images: string[] = Array.isArray(prod.images) && prod.images.length > 0
+        ? prod.images
+        : (prod.image ? [prod.image] : []);
+
+      for (const img of images.slice(0, 5)) {
+        if (!img || typeof img !== 'string') continue;
+        const fullImgUrl = img.startsWith('http') ? img : `${siteUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+        xml += `    <image:image>\n`;
+        xml += `      <image:loc>${this.escapeXml(fullImgUrl)}</image:loc>\n`;
+        if (prod.name) {
+          xml += `      <image:title>${this.escapeXml(prod.name)}</image:title>\n`;
+        }
+        xml += `    </image:image>\n`;
+      }
+
+      xml += `  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+    return xml;
+  }
+
+  /**
+   * Generates a dedicated Blogs / Articles XML sitemap
+   */
+  public async buildBlogsSitemap(req?: any, localBlogs?: any[]): Promise<string> {
+    const siteUrl = this.resolveSiteUrl(req);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isMongoConnected = mongoose.connection.readyState === 1;
+    let blogsList: any[] = [];
+
+    if (isMongoConnected) {
+      try {
+        const Blog = mongoose.model('Blog');
+        blogsList = await Blog.find({ published: true }, 'title slug featured_image image updatedAt createdAt').lean();
+      } catch (err: any) {
+        console.warn('Failed to query blogs for sitemap:', err.message);
+      }
+    }
+
+    if (blogsList.length === 0 && (localBlogs || []).length > 0) {
+      blogsList = (localBlogs || []).map((b: any) => ({
+        title: b.title,
+        slug: b.slug,
+        featured_image: b.featured_image || b.image,
+        updatedAt: b.updatedAt || b.createdAt || new Date()
+      }));
+    }
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+
+    for (const blog of blogsList) {
+      if (!blog.slug) continue;
+      const dateVal = blog.updatedAt || blog.createdAt || new Date();
+      let dateStr = todayStr;
+      try {
+        dateStr = new Date(dateVal).toISOString().split('T')[0];
+      } catch {
+        dateStr = todayStr;
+      }
+
+      xml += `  <url>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/blog-detail/${this.escapeXml(blog.slug)}</loc>\n`;
+      xml += `    <lastmod>${dateStr}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.8</priority>\n`;
+
+      const blogImg = blog.featured_image || blog.image;
+      if (blogImg && typeof blogImg === 'string') {
+        const fullImgUrl = blogImg.startsWith('http') ? blogImg : `${siteUrl}${blogImg.startsWith('/') ? '' : '/'}${blogImg}`;
+        xml += `    <image:image>\n`;
+        xml += `      <image:loc>${this.escapeXml(fullImgUrl)}</image:loc>\n`;
+        if (blog.title) {
+          xml += `      <image:title>${this.escapeXml(blog.title)}</image:title>\n`;
+        }
+        xml += `    </image:image>\n`;
+      }
+
+      xml += `  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+    return xml;
+  }
+
+  /**
+   * Generates a dedicated Categories XML sitemap
+   */
+  public async buildCategoriesSitemap(req?: any, localProducts?: any[]): Promise<string> {
+    const siteUrl = this.resolveSiteUrl(req);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isMongoConnected = mongoose.connection.readyState === 1;
+    let categoriesList: any[] = [];
+
+    if (isMongoConnected) {
+      try {
+        const Category = mongoose.model('Category');
+        categoriesList = await Category.find({}, 'slug name updatedAt').lean();
+      } catch (err: any) {
+        console.warn('Failed to query categories for sitemap:', err.message);
+      }
+    }
+
+    if (categoriesList.length === 0) {
+      const catsSet = new Set<string>();
+      (localProducts || []).forEach((p: any) => {
+        if (p.categorySlug) catsSet.add(p.categorySlug);
+        else if (p.category?.slug) catsSet.add(p.category.slug);
+      });
+      categoriesList = Array.from(catsSet).map(slug => ({ slug, name: slug }));
+    }
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+    for (const cat of categoriesList) {
+      if (!cat.slug) continue;
+      const catSlug = cat.slug.replace(/^category-/, '');
+      xml += `  <url>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/${this.escapeXml(catSlug)}</loc>\n`;
+      xml += `    <lastmod>${todayStr}</lastmod>\n`;
+      xml += `    <changefreq>daily</changefreq>\n`;
+      xml += `    <priority>0.7</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+    return xml;
+  }
+
+  /**
+   * Generates a dedicated Static Pages XML sitemap
+   */
+  public async buildPagesSitemap(req?: any): Promise<string> {
+    const siteUrl = this.resolveSiteUrl(req);
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const staticUrls = [
+      { path: '', changefreq: 'daily', priority: '1.0' },
+      { path: 'products', changefreq: 'daily', priority: '0.9' },
+      { path: 'blogs', changefreq: 'weekly', priority: '0.8' },
+      { path: 'categories', changefreq: 'weekly', priority: '0.8' },
+      { path: 'deals', changefreq: 'daily', priority: '0.8' },
+      { path: 'compare', changefreq: 'weekly', priority: '0.7' },
+      { path: 'about', changefreq: 'monthly', priority: '0.5' },
+      { path: 'about-us', changefreq: 'monthly', priority: '0.5' },
+      { path: 'contact', changefreq: 'monthly', priority: '0.6' },
+      { path: 'privacy', changefreq: 'monthly', priority: '0.4' },
+      { path: 'privacy-policy', changefreq: 'monthly', priority: '0.4' },
+      { path: 'terms', changefreq: 'monthly', priority: '0.4' },
+      { path: 'terms-conditions', changefreq: 'monthly', priority: '0.4' },
+      { path: 'disclaimer', changefreq: 'monthly', priority: '0.4' },
+      { path: 'faq', changefreq: 'monthly', priority: '0.5' }
+    ];
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+    for (const item of staticUrls) {
+      const fullUrl = item.path ? `${siteUrl}/${item.path}` : siteUrl;
+      xml += `  <url>\n`;
+      xml += `    <loc>${this.escapeXml(fullUrl)}</loc>\n`;
+      xml += `    <lastmod>${todayStr}</lastmod>\n`;
+      xml += `    <changefreq>${item.changefreq}</changefreq>\n`;
+      xml += `    <priority>${item.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+    return xml;
+  }
+
+  /**
+   * Generates a dedicated Image media XML sitemap
+   */
+  public async buildImagesSitemap(req?: any, localProducts?: any[], localBlogs?: any[]): Promise<string> {
+    const siteUrl = this.resolveSiteUrl(req);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isMongoConnected = mongoose.connection.readyState === 1;
+
+    let productsList: any[] = [];
+    let blogsList: any[] = [];
+
+    if (isMongoConnected) {
+      try {
+        const Product = mongoose.model('Product');
+        const Blog = mongoose.model('Blog');
+        productsList = await Product.find({ publishingStatus: { $ne: 'draft' } }, 'name slug images image updatedAt').lean();
+        blogsList = await Blog.find({ published: true }, 'title slug featured_image image updatedAt').lean();
+      } catch (err: any) {
+        console.warn('Failed to query records for image sitemap:', err.message);
+      }
+    }
+
+    if (productsList.length === 0 && (localProducts || []).length > 0) {
+      productsList = (localProducts || []).map((p: any) => ({
+        name: p.name || p.title,
+        slug: p.slug,
+        images: p.images || (p.image ? [p.image] : [])
+      }));
+    }
+
+    if (blogsList.length === 0 && (localBlogs || []).length > 0) {
+      blogsList = (localBlogs || []).map((b: any) => ({
+        title: b.title,
+        slug: b.slug,
+        featured_image: b.featured_image || b.image
+      }));
+    }
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+
+    for (const prod of productsList) {
+      if (!prod.slug) continue;
+      const images: string[] = Array.isArray(prod.images) && prod.images.length > 0
+        ? prod.images
+        : (prod.image ? [prod.image] : []);
+
+      if (images.length === 0) continue;
+
+      xml += `  <url>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/product-detail/${this.escapeXml(prod.slug)}</loc>\n`;
+      xml += `    <lastmod>${todayStr}</lastmod>\n`;
+      for (const img of images) {
+        if (!img || typeof img !== 'string') continue;
+        const fullImgUrl = img.startsWith('http') ? img : `${siteUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+        xml += `    <image:image>\n`;
+        xml += `      <image:loc>${this.escapeXml(fullImgUrl)}</image:loc>\n`;
+        if (prod.name) {
+          xml += `      <image:title>${this.escapeXml(prod.name)}</image:title>\n`;
+        }
+        xml += `    </image:image>\n`;
+      }
+      xml += `  </url>\n`;
+    }
+
+    for (const blog of blogsList) {
+      if (!blog.slug) continue;
+      const blogImg = blog.featured_image || blog.image;
+      if (!blogImg) continue;
+
+      const fullImgUrl = blogImg.startsWith('http') ? blogImg : `${siteUrl}${blogImg.startsWith('/') ? '' : '/'}${blogImg}`;
+      xml += `  <url>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/blog-detail/${this.escapeXml(blog.slug)}</loc>\n`;
+      xml += `    <lastmod>${todayStr}</lastmod>\n`;
+      xml += `    <image:image>\n`;
+      xml += `      <image:loc>${this.escapeXml(fullImgUrl)}</image:loc>\n`;
+      if (blog.title) {
+        xml += `      <image:title>${this.escapeXml(blog.title)}</image:title>\n`;
+      }
+      xml += `    </image:image>\n`;
+      xml += `  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+    return xml;
+  }
+
+  /**
+   * Generates a unified Master XML sitemap and writes all sitemaps to public & dist directories
+   */
+  public async buildXmlSitemap(req?: any, localProducts?: any[], localBlogs?: any[]): Promise<string> {
+    const siteUrl = this.resolveSiteUrl(req);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isMongoConnected = mongoose.connection.readyState === 1;
+
     let productsList: any[] = [];
     let blogsList: any[] = [];
     let categoriesList: any[] = [];
-    const siteUrl = process.env.SITE_URL || process.env.APP_URL || (req ? `${req.headers['x-forwarded-proto'] || req.protocol || 'https'}://${req.get('host') || 'gadgetsprohub.com'}` : 'https://gadgetsprohub.com');
-    
-    const escapeXml = (unsafe: string) => {
-      return (unsafe || '').replace(/[<>&'"]/g, function (c) {
-        switch (c) {
-          case '<': return '&lt;';
-          case '>': return '&gt;';
-          case '&': return '&amp;';
-          case '\'': return '&apos;';
-          case '"': return '&quot;';
-          default: return c;
-        }
-      });
-    };
 
     if (isMongoConnected) {
       try {
@@ -697,27 +1049,27 @@ export class SeoService {
         const Category = mongoose.model('Category');
         const Blog = mongoose.model('Blog');
         
-        productsList = await Product.find({ publishingStatus: { $ne: 'draft' } }, 'slug updatedAt createdAt').lean();
-        blogsList = await Blog.find({ published: true }, 'slug updatedAt createdAt').lean();
-        categoriesList = await Category.find({}, 'slug').lean();
+        productsList = await Product.find({ publishingStatus: { $ne: 'draft' } }, 'name slug images image updatedAt createdAt').lean();
+        blogsList = await Blog.find({ published: true }, 'title slug featured_image image updatedAt createdAt').lean();
+        categoriesList = await Category.find({}, 'slug name').lean();
 
-        // Also update SitemapRecord cache if we want to retain it
+        // Sync SitemapRecord cache
         const SitemapRecord = mongoose.model('SitemapRecord');
         await SitemapRecord.deleteMany({});
         
         const bulkRecords = [];
-        for (const url of ['', '/about', '/contact', '/blog']) {
-          bulkRecords.push({ loc: `${siteUrl}${url}`, priority: url === '' ? 1.0 : 0.5, changefreq: 'weekly', type: 'static' });
+        for (const url of ['', '/products', '/blogs', '/categories', '/deals', '/compare', '/about', '/contact']) {
+          bulkRecords.push({ loc: `${siteUrl}${url}`, priority: url === '' ? 1.0 : 0.8, changefreq: 'daily', type: 'static' });
         }
         for (const cat of categoriesList) {
           const catSlug = cat.slug ? cat.slug.replace(/^category-/, '') : '';
           bulkRecords.push({ loc: `${siteUrl}/${catSlug}`, priority: 0.7, changefreq: 'daily', type: 'category' });
         }
         for (const p of productsList) {
-          bulkRecords.push({ loc: `${siteUrl}/product-detail/${p.slug}`, priority: 0.8, changefreq: 'daily', lastmod: p.updatedAt || p.createdAt, type: 'product' });
+          bulkRecords.push({ loc: `${siteUrl}/product-detail/${p.slug}`, priority: 0.9, changefreq: 'daily', lastmod: p.updatedAt || p.createdAt, type: 'product' });
         }
         for (const b of blogsList) {
-          bulkRecords.push({ loc: `${siteUrl}/blog/${b.slug}`, priority: 0.7, changefreq: 'weekly', lastmod: b.updatedAt || b.createdAt, type: 'blog' });
+          bulkRecords.push({ loc: `${siteUrl}/blog-detail/${b.slug}`, priority: 0.8, changefreq: 'weekly', lastmod: b.updatedAt || b.createdAt, type: 'blog' });
         }
         if (bulkRecords.length > 0) {
           await SitemapRecord.insertMany(bulkRecords, { ordered: false });
@@ -729,13 +1081,17 @@ export class SeoService {
     
     if (productsList.length === 0 && (localProducts || []).length > 0) {
       productsList = (localProducts || []).map((p: any) => ({
+        name: p.name || p.title,
         slug: p.slug,
+        images: p.images || (p.image ? [p.image] : []),
         updatedAt: p.updatedAt || p.createdAt || new Date(),
       }));
     }
     if (blogsList.length === 0 && (localBlogs || []).length > 0) {
       blogsList = (localBlogs || []).map((b: any) => ({
+        title: b.title,
         slug: b.slug,
+        featured_image: b.featured_image || b.image,
         updatedAt: b.updatedAt || b.createdAt || new Date(),
       }));
     }
@@ -745,30 +1101,36 @@ export class SeoService {
         if (p.categorySlug) catsSet.add(p.categorySlug);
         else if (p.category?.slug) catsSet.add(p.category.slug);
       });
-      categoriesList = Array.from(catsSet).map(slug => ({ slug }));
+      categoriesList = Array.from(catsSet).map(slug => ({ slug, name: slug }));
     }
 
     const staticUrls = [
       { path: '', changefreq: 'daily', priority: '1.0' },
       { path: 'products', changefreq: 'daily', priority: '0.9' },
       { path: 'blogs', changefreq: 'weekly', priority: '0.8' },
-      { path: 'contact', changefreq: 'monthly', priority: '0.6' },
+      { path: 'categories', changefreq: 'weekly', priority: '0.8' },
+      { path: 'deals', changefreq: 'daily', priority: '0.8' },
+      { path: 'compare', changefreq: 'weekly', priority: '0.7' },
+      { path: 'about', changefreq: 'monthly', priority: '0.5' },
       { path: 'about-us', changefreq: 'monthly', priority: '0.5' },
+      { path: 'contact', changefreq: 'monthly', priority: '0.6' },
+      { path: 'privacy', changefreq: 'monthly', priority: '0.4' },
       { path: 'privacy-policy', changefreq: 'monthly', priority: '0.4' },
+      { path: 'terms', changefreq: 'monthly', priority: '0.4' },
       { path: 'terms-conditions', changefreq: 'monthly', priority: '0.4' },
       { path: 'disclaimer', changefreq: 'monthly', priority: '0.4' },
+      { path: 'faq', changefreq: 'monthly', priority: '0.5' }
     ];
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const safeSiteUrl = escapeXml(siteUrl);
+    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
 
     // Static pages
     for (const item of staticUrls) {
+      const fullLoc = item.path ? `${siteUrl}/${item.path}` : siteUrl;
       xml += `  <url>\n`;
-      xml += `    <loc>${safeSiteUrl}/${escapeXml(item.path)}</loc>\n`;
+      xml += `    <loc>${this.escapeXml(fullLoc)}</loc>\n`;
       xml += `    <lastmod>${todayStr}</lastmod>\n`;
       xml += `    <changefreq>${item.changefreq}</changefreq>\n`;
       xml += `    <priority>${item.priority}</priority>\n`;
@@ -780,63 +1142,186 @@ export class SeoService {
       if (!cat.slug) continue;
       const catSlug = cat.slug.replace(/^category-/, '');
       xml += `  <url>\n`;
-      xml += `    <loc>${safeSiteUrl}/${escapeXml(catSlug)}</loc>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/${this.escapeXml(catSlug)}</loc>\n`;
       xml += `    <lastmod>${todayStr}</lastmod>\n`;
       xml += `    <changefreq>daily</changefreq>\n`;
       xml += `    <priority>0.7</priority>\n`;
       xml += `  </url>\n`;
     }
 
-    // Dynamic products
+    // Dynamic products with image metadata
     for (const prod of productsList) {
       if (!prod.slug) continue;
       const dateVal = prod.updatedAt || prod.createdAt || new Date();
       let dateStr = todayStr;
       try {
         dateStr = new Date(dateVal).toISOString().split('T')[0];
-      } catch (err) {
+      } catch {
         dateStr = todayStr;
       }
       xml += `  <url>\n`;
-      xml += `    <loc>${safeSiteUrl}/product-detail/${escapeXml(prod.slug)}</loc>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/product-detail/${this.escapeXml(prod.slug)}</loc>\n`;
       xml += `    <lastmod>${dateStr}</lastmod>\n`;
-      xml += `    <changefreq>weekly</changefreq>\n`;
-      xml += `    <priority>0.8</priority>\n`;
+      xml += `    <changefreq>daily</changefreq>\n`;
+      xml += `    <priority>0.9</priority>\n`;
+
+      const images: string[] = Array.isArray(prod.images) && prod.images.length > 0
+        ? prod.images
+        : (prod.image ? [prod.image] : []);
+
+      for (const img of images.slice(0, 5)) {
+        if (!img || typeof img !== 'string') continue;
+        const fullImgUrl = img.startsWith('http') ? img : `${siteUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+        xml += `    <image:image>\n`;
+        xml += `      <image:loc>${this.escapeXml(fullImgUrl)}</image:loc>\n`;
+        if (prod.name) {
+          xml += `      <image:title>${this.escapeXml(prod.name)}</image:title>\n`;
+        }
+        xml += `    </image:image>\n`;
+      }
       xml += `  </url>\n`;
     }
 
-    // Dynamic blogs
+    // Dynamic blogs with image metadata
     for (const blog of blogsList) {
       if (!blog.slug) continue;
       const dateVal = blog.updatedAt || blog.createdAt || new Date();
       let dateStr = todayStr;
       try {
         dateStr = new Date(dateVal).toISOString().split('T')[0];
-      } catch (err) {
+      } catch {
         dateStr = todayStr;
       }
       xml += `  <url>\n`;
-      xml += `    <loc>${safeSiteUrl}/blog-detail/${escapeXml(blog.slug)}</loc>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/blog-detail/${this.escapeXml(blog.slug)}</loc>\n`;
       xml += `    <lastmod>${dateStr}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
-      xml += `    <priority>0.7</priority>\n`;
+      xml += `    <priority>0.8</priority>\n`;
+
+      const blogImg = blog.featured_image || blog.image;
+      if (blogImg && typeof blogImg === 'string') {
+        const fullImgUrl = blogImg.startsWith('http') ? blogImg : `${siteUrl}${blogImg.startsWith('/') ? '' : '/'}${blogImg}`;
+        xml += `    <image:image>\n`;
+        xml += `      <image:loc>${this.escapeXml(fullImgUrl)}</image:loc>\n`;
+        if (blog.title) {
+          xml += `      <image:title>${this.escapeXml(blog.title)}</image:title>\n`;
+        }
+        xml += `    </image:image>\n`;
+      }
       xml += `  </url>\n`;
     }
 
     xml += `</urlset>`;
 
-    // Save sitemap file to public folder so search engines can read it directly
-    const publicSitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+    // Write sitemap.xml directly to disk
     try {
-      const dir = path.dirname(publicSitemapPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+      const targetDirs = [
+        path.join(process.cwd(), 'public'),
+        path.join(process.cwd(), 'dist')
+      ];
+      for (const dir of targetDirs) {
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, 'sitemap.xml'), xml, 'utf8');
       }
-      fs.writeFileSync(publicSitemapPath, xml, 'utf8');
     } catch (err: any) {
       console.warn('Failed to write sitemap.xml to disk:', err.message);
     }
+
     return xml;
+  }
+
+  /**
+   * Persists all individual XML sitemaps to public and dist folders
+   */
+  public async syncAllSitemapsToDisk(req?: any, localProducts?: any[], localBlogs?: any[]): Promise<void> {
+    try {
+      const [
+        indexXml,
+        productsXml,
+        blogsXml,
+        categoriesXml,
+        pagesXml,
+        imagesXml
+      ] = await Promise.all([
+        this.buildXmlSitemapIndex(req),
+        this.buildProductsSitemap(req, localProducts),
+        this.buildBlogsSitemap(req, localBlogs),
+        this.buildCategoriesSitemap(req, localProducts),
+        this.buildPagesSitemap(req),
+        this.buildImagesSitemap(req, localProducts, localBlogs)
+      ]);
+
+      const masterXml = await this.buildXmlSitemap(req, localProducts, localBlogs);
+
+      const fileMap: Record<string, string> = {
+        'sitemap.xml': masterXml,
+        'sitemap_index.xml': indexXml,
+        'sitemap-products.xml': productsXml,
+        'sitemap_products.xml': productsXml,
+        'product-sitemap.xml': productsXml,
+        'sitemap-blogs.xml': blogsXml,
+        'sitemap_blogs.xml': blogsXml,
+        'blog-sitemap.xml': blogsXml,
+        'sitemap-categories.xml': categoriesXml,
+        'sitemap_categories.xml': categoriesXml,
+        'category-sitemap.xml': categoriesXml,
+        'sitemap-pages.xml': pagesXml,
+        'sitemap_pages.xml': pagesXml,
+        'sitemap-images.xml': imagesXml,
+        'sitemap_images.xml': imagesXml
+      };
+
+      const targetDirs = [
+        path.join(process.cwd(), 'public'),
+        path.join(process.cwd(), 'dist')
+      ];
+
+      for (const targetDir of targetDirs) {
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+        for (const [filename, content] of Object.entries(fileMap)) {
+          const filePath = path.join(targetDir, filename);
+          fs.writeFileSync(filePath, content, 'utf8');
+        }
+      }
+    } catch (err: any) {
+      console.warn('Failed to sync all sitemaps to disk:', err.message);
+    }
+  }
+
+  /**
+   * Generates and synchronizes the canonical robots.txt file.
+   */
+  public async buildRobotsTxt(options: RobotsOptions = {}): Promise<string> {
+    const content = generateRobotsTxt(options);
+    
+    // Persist to public and dist directories if accessible
+    const targets = [
+      path.join(process.cwd(), 'public', 'robots.txt'),
+      path.join(process.cwd(), 'dist', 'robots.txt')
+    ];
+
+    for (const target of targets) {
+      try {
+        const dir = path.dirname(target);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.writeFileSync(target, content, 'utf8');
+      } catch (err: any) {
+        // Safe fallback in readonly environments
+      }
+    }
+
+    return content;
+  }
+
+  /**
+   * Validates a URL path against a specified crawler user agent.
+   */
+  public validateRobotsPath(userAgent: string, urlPath: string, customContent?: string) {
+    return validateRobotsUrl(userAgent, urlPath, customContent);
   }
 }
 

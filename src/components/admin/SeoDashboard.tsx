@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { 
   Globe, Search, AlertCircle, BookOpen, Link, FileText, 
   CheckCircle2, Sparkles, RefreshCw, Trash2, Plus, 
-  ArrowRight, Share2, Code, HelpCircle, Activity, Save, Edit
+  ArrowRight, Share2, Code, HelpCircle, Activity, Save, Edit, Bot
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
 import { useAuth } from '../../context/AuthContext';
+import { RobotsInspector } from '../../services/robots.tsx';
 
 interface SeoDashboardProps {
   token?: string;
@@ -87,6 +88,7 @@ export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
 
   // General Notification state
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [seoSection, setSeoSection] = useState<'catalog' | 'robots' | 'redirects'>('catalog');
 
   useEffect(() => {
     fetchInitialData();
@@ -419,23 +421,71 @@ export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
         </div>
       </div>
 
-      {/* Top action row */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-slate-100 dark:border-slate-800">
-        <div className="flex flex-col">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Publishing Tools & Indexing Engine</h2>
-          <p className="text-[11px] text-slate-400">Rebuild the sitemap, audit readability metrics, or optimize titles with Gemini AI</p>
-        </div>
+      {/* Top section switcher */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
         <button
-          onClick={triggerSitemapBuild}
-          className="flex items-center gap-2 bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800 px-4 py-2 rounded-lg cursor-pointer text-xs font-bold transition-transform duration-300 hover:scale-[1.02]"
+          type="button"
+          onClick={() => setSeoSection('catalog')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
+            seoSection === 'catalog'
+              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
         >
-          <RefreshCw className="h-4 w-4" />
-          Rebuild xml sitemap
+          <BookOpen className="h-4 w-4" />
+          Catalog SEO & Meta
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSeoSection('robots')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
+            seoSection === 'robots'
+              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Bot className="h-4 w-4" />
+          Robots.txt & Crawlers Engine
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSeoSection('redirects')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
+            seoSection === 'redirects'
+              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Share2 className="h-4 w-4" />
+          Redirects Manager ({totalRedirects})
         </button>
       </div>
 
-      {/* Main split dashboard view */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {seoSection === 'robots' && (
+        <RobotsInspector />
+      )}
+
+      {seoSection === 'catalog' && (
+        <>
+          {/* Top action row */}
+          <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="flex flex-col">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Publishing Tools & Indexing Engine</h2>
+              <p className="text-[11px] text-slate-400">Rebuild the sitemap, audit readability metrics, or optimize titles with Gemini AI</p>
+            </div>
+            <button
+              onClick={triggerSitemapBuild}
+              className="flex items-center gap-2 bg-slate-800 text-white dark:bg-slate-50 dark:text-slate-800 px-4 py-2 rounded-lg cursor-pointer text-xs font-bold transition-transform duration-300 hover:scale-[1.02]"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Rebuild xml sitemap
+            </button>
+          </div>
+
+          {/* Main split dashboard view */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left Column: Catalog specs listing (4 cols) */}
         <div className="lg:col-span-5 bg-white dark:bg-zinc-850 rounded-xl border border-slate-100 dark:border-slate-800 p-4 space-y-4">
@@ -1022,111 +1072,115 @@ export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
           )}
         </div>
       </div>
+        </>
+      )}
 
       {/* Redirect Manager Console */}
-      <div className="bg-white dark:bg-zinc-850 rounded-xl border border-slate-100 dark:border-slate-800 p-6 space-y-6">
-        <div className="pb-4 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-          <div>
-            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">301 / 302 URL Redirect rules manager</h3>
-            <p className="text-[11px] text-slate-400">Map outdated or deleted catalog paths safely to prevent 404 search penalties.</p>
-          </div>
-        </div>
-
-        {/* Manual Redirect Rule Adder Form */}
-        <form onSubmit={handleAddRedirect} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 dark:bg-zinc-900/30 p-4 rounded-xl border border-slate-100 dark:border-slate-800/60">
-          <div className="space-y-1">
-            <label className="text-[10px] font-mono font-bold text-slate-400 uppercase">Source path</label>
-            <input
-              type="text"
-              placeholder="/product-detail/old-slug"
-              value={newRedirect.sourceUrl}
-              onChange={e => setNewRedirect({ ...newRedirect, sourceUrl: e.target.value })}
-              className="w-full p-2.5 text-xs rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-800 text-slate-800 dark:text-slate-100 focus:outline-hidden"
-              required
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <label className="text-[10px] font-mono font-bold text-slate-400 uppercase">Target path</label>
-            <input
-              type="text"
-              placeholder="/product-detail/new-slug"
-              value={newRedirect.targetUrl}
-              onChange={e => setNewRedirect({ ...newRedirect, targetUrl: e.target.value })}
-              className="w-full p-2.5 text-xs rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-800 text-slate-800 dark:text-slate-100 focus:outline-hidden"
-              required
-            />
+      {seoSection === 'redirects' && (
+        <div className="bg-white dark:bg-zinc-850 rounded-xl border border-slate-100 dark:border-slate-800 p-6 space-y-6">
+          <div className="pb-4 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">301 / 302 URL Redirect rules manager</h3>
+              <p className="text-[11px] text-slate-400">Map outdated or deleted catalog paths safely to prevent 404 search penalties.</p>
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[10px] font-mono font-bold text-slate-400 uppercase">Redirect type</label>
-            <select
-              value={newRedirect.type}
-              onChange={e => setNewRedirect({ ...newRedirect, type: Number(e.target.value) })}
-              className="w-full p-2.5 text-xs rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-800 text-slate-800 dark:text-slate-100 focus:outline-hidden"
+          {/* Manual Redirect Rule Adder Form */}
+          <form onSubmit={handleAddRedirect} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 dark:bg-zinc-900/30 p-4 rounded-xl border border-slate-100 dark:border-slate-800/60">
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono font-bold text-slate-400 uppercase">Source path</label>
+              <input
+                type="text"
+                placeholder="/product-detail/old-slug"
+                value={newRedirect.sourceUrl}
+                onChange={e => setNewRedirect({ ...newRedirect, sourceUrl: e.target.value })}
+                className="w-full p-2.5 text-xs rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-800 text-slate-800 dark:text-slate-100 focus:outline-hidden"
+                required
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono font-bold text-slate-400 uppercase">Target path</label>
+              <input
+                type="text"
+                placeholder="/product-detail/new-slug"
+                value={newRedirect.targetUrl}
+                onChange={e => setNewRedirect({ ...newRedirect, targetUrl: e.target.value })}
+                className="w-full p-2.5 text-xs rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-800 text-slate-800 dark:text-slate-100 focus:outline-hidden"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono font-bold text-slate-400 uppercase">Redirect type</label>
+              <select
+                value={newRedirect.type}
+                onChange={e => setNewRedirect({ ...newRedirect, type: Number(e.target.value) })}
+                className="w-full p-2.5 text-xs rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-800 text-slate-800 dark:text-slate-100 focus:outline-hidden"
+              >
+                <option value={301}>301 Permanent Redirect</option>
+                <option value={302}>302 Temporary Redirect</option>
+                <option value={410}>410 Content Gone</option>
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              disabled={savingRedirect}
+              className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-800 dark:hover:bg-slate-100 p-2.5 rounded-lg cursor-pointer text-xs font-bold transition-transform duration-300 hover:scale-[1.02]"
             >
-              <option value={301}>301 Permanent Redirect</option>
-              <option value={302}>302 Temporary Redirect</option>
-              <option value={410}>410 Content Gone</option>
-            </select>
-          </div>
+              <Plus className="h-4 w-4" />
+              Add Rule
+            </button>
+          </form>
 
-          <button
-            type="submit"
-            disabled={savingRedirect}
-            className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-800 dark:hover:bg-slate-100 p-2.5 rounded-lg cursor-pointer text-xs font-bold transition-transform duration-300 hover:scale-[1.02]"
-          >
-            <Plus className="h-4 w-4" />
-            Add Rule
-          </button>
-        </form>
-
-        {/* Redirect Rules table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left text-slate-500 dark:text-slate-400">
-            <thead className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-50 dark:border-slate-800">
-              <tr>
-                <th className="py-3 px-4">Source URL</th>
-                <th className="py-3 px-4">Target URL</th>
-                <th className="py-3 px-4">Type</th>
-                <th className="py-3 px-4">Hits Counter</th>
-                <th className="py-3 px-4 text-right">Delete</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-              {redirects.map(r => (
-                <tr key={r._id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/10">
-                  <td className="py-3 px-4 font-mono text-[10px] text-rose-500">{r.sourceUrl}</td>
-                  <td className="py-3 px-4 font-mono text-[10px] text-emerald-500">{r.targetUrl}</td>
-                  <td className="py-3 px-4">
-                    <span className="bg-slate-50 text-slate-600 dark:bg-zinc-900/60 dark:text-slate-400 px-2 py-0.5 rounded font-mono font-bold text-[9px]">
-                      {r.type}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">{r.hits || 0} hits</td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRedirect(r._id)}
-                      className="text-rose-500 hover:text-rose-700 cursor-pointer p-1"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-
-              {redirects.length === 0 && (
+          {/* Redirect Rules table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left text-slate-500 dark:text-slate-400">
+              <thead className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-50 dark:border-slate-800">
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
-                    No active 301/302 redirects logged in MongoDB database.
-                  </td>
+                  <th className="py-3 px-4">Source URL</th>
+                  <th className="py-3 px-4">Target URL</th>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4">Hits Counter</th>
+                  <th className="py-3 px-4 text-right">Delete</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                {redirects.map(r => (
+                  <tr key={r._id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/10">
+                    <td className="py-3 px-4 font-mono text-[10px] text-rose-500">{r.sourceUrl}</td>
+                    <td className="py-3 px-4 font-mono text-[10px] text-emerald-500">{r.targetUrl}</td>
+                    <td className="py-3 px-4">
+                      <span className="bg-slate-50 text-slate-600 dark:bg-zinc-900/60 dark:text-slate-400 px-2 py-0.5 rounded font-mono font-bold text-[9px]">
+                        {r.type}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">{r.hits || 0} hits</td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRedirect(r._id)}
+                        className="text-rose-500 hover:text-rose-700 cursor-pointer p-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+
+                {redirects.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                      No active 301/302 redirects logged in MongoDB database.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

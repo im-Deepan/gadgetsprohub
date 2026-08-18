@@ -22,15 +22,15 @@ export const seedOrders = [
       {
         product: "665a0002bc93ef2d8c000010", // Premium Wireless Headphones
         quantity: 1,
-        price: 149.99
+        price: 12449
       },
       {
         product: "665a0002bc93ef2d8c000011", // Smart Watch Pro
         quantity: 1,
-        price: 299.99
+        price: 24899
       }
     ],
-    totalAmount: 449.98,
+    totalAmount: 37348,
     status: 'PENDING',
     trackingNumber: 'PENDING',
     carrier: 'Awaiting Carrier Assignment',
@@ -44,10 +44,10 @@ export const seedOrders = [
       {
         product: "665a0002bc93ef2d8c000010", // Premium Wireless Headphones
         quantity: 1,
-        price: 149.99
+        price: 12449
       }
     ],
-    totalAmount: 149.99,
+    totalAmount: 12449,
     status: 'PENDING',
     trackingNumber: 'PENDING',
     carrier: 'Awaiting Carrier Assignment',
@@ -61,10 +61,10 @@ export const seedOrders = [
       {
         product: "665a0002bc93ef2d8c000011", // Smart Watch Pro
         quantity: 2,
-        price: 299.99
+        price: 24899
       }
     ],
-    totalAmount: 599.98,
+    totalAmount: 49798,
     status: 'PENDING',
     trackingNumber: 'PENDING',
     carrier: 'Awaiting Carrier Assignment',

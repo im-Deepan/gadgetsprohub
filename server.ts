@@ -40,6 +40,7 @@ import {
 } from './src/middleware/validation';
 
 import { seoService } from './src/services/SeoService';
+import { generateRobotsTxt, validateRobotsUrl } from './src/services/robotsEngine';
 import { isMetadataSpecKey, cleanSpecificationsObj, parseSpecificationsString } from './src/utils/specParser';
 import { aiService, AiPrompt, AiProviderSetting, AiJob, AiResponse, AiAnalytics, AiCache } from './src/services/AiService';
 import { SyncService, PriceHistory, ProductChange, SyncJob, SchedulerTask, AlertRule, ProductHealth, AutomationRule, NotificationHistory } from './src/services/SyncService';
@@ -2029,8 +2030,18 @@ async function startServer() {
       // Store in real-time telemetry log buffer for admin console tracking
       MetricsService.addLiveLog(logData);
 
-      if (ConfigurationService.getFlag('enableStructuredLogs')) {
-        console.log(JSON.stringify(logData));
+      const url = req.originalUrl || req.url || '';
+      const isStaticDevAsset = url.startsWith('/src/') || url.startsWith('/@') || url.startsWith('/node_modules/') || url.match(/\.(tsx?|jsx?|css|svg|png|jpg|ico|map)$/);
+
+      // Only print to stdout if it's an API request with an error status (>= 400) or explicit debug mode is enabled
+      if (!isStaticDevAsset && (res.statusCode >= 400 || (process.env.DEBUG_HTTP === 'true' && ConfigurationService.getFlag('enableStructuredLogs')))) {
+        if (res.statusCode >= 500) {
+          console.error(JSON.stringify({ ...logData, level: 'ERROR' }));
+        } else if (res.statusCode >= 400) {
+          console.warn(JSON.stringify({ ...logData, level: 'WARN' }));
+        } else {
+          console.log(JSON.stringify(logData));
+        }
       }
     });
 
@@ -2351,15 +2362,147 @@ async function startServer() {
 
   // ========== API ROUTES ==========
 
-  // Public dynamic Sitemap XML endpoint
+  // ========== PUBLIC DYNAMIC SITEMAP XML ENDPOINTS (RFC & GOOGLE MERCHANT COMPLIANT) ==========
+
+  const setXmlHeaders = (res: express.Response) => {
+    res.header('Content-Type', 'application/xml; charset=utf-8');
+    res.header('X-Content-Type-Options', 'nosniff');
+    res.header('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+  };
+
+  // 1. Master unified Sitemap XML endpoint
   app.get('/sitemap.xml', async (req: express.Request, res: express.Response) => {
     try {
       const xml = await seoService.buildXmlSitemap(req, localProducts, localBlogs);
-      res.header('Content-Type', 'application/xml');
+      setXmlHeaders(res);
       res.send(xml);
     } catch (err: any) {
       console.error('Sitemap rendering failed:', err.message);
+      setXmlHeaders(res);
       res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Sitemap failed to generate</error>');
+    }
+  });
+
+  // 2. Standard Google Sitemap Index
+  app.get(['/sitemap_index.xml', '/sitemaps.xml'], async (req: express.Request, res: express.Response) => {
+    try {
+      const xml = await seoService.buildXmlSitemapIndex(req);
+      setXmlHeaders(res);
+      res.send(xml);
+    } catch (err: any) {
+      console.error('Sitemap index rendering failed:', err.message);
+      setXmlHeaders(res);
+      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Sitemap index failed to generate</error>');
+    }
+  });
+
+  // 3. Dedicated Products Sitemap (for Google Merchant Center & Shopping Indexation)
+  app.get([
+    '/sitemap-products.xml',
+    '/sitemap_products.xml',
+    '/product-sitemap.xml',
+    '/products-sitemap.xml',
+    '/sitemap-product.xml'
+  ], async (req: express.Request, res: express.Response) => {
+    try {
+      const xml = await seoService.buildProductsSitemap(req, localProducts);
+      setXmlHeaders(res);
+      res.send(xml);
+    } catch (err: any) {
+      console.error('Products sitemap rendering failed:', err.message);
+      setXmlHeaders(res);
+      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Products sitemap failed to generate</error>');
+    }
+  });
+
+  // 4. Dedicated Blogs Sitemap
+  app.get([
+    '/sitemap-blogs.xml',
+    '/sitemap_blogs.xml',
+    '/blog-sitemap.xml',
+    '/blogs-sitemap.xml'
+  ], async (req: express.Request, res: express.Response) => {
+    try {
+      const xml = await seoService.buildBlogsSitemap(req, localBlogs);
+      setXmlHeaders(res);
+      res.send(xml);
+    } catch (err: any) {
+      console.error('Blogs sitemap rendering failed:', err.message);
+      setXmlHeaders(res);
+      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Blogs sitemap failed to generate</error>');
+    }
+  });
+
+  // 5. Dedicated Categories Sitemap
+  app.get([
+    '/sitemap-categories.xml',
+    '/sitemap_categories.xml',
+    '/category-sitemap.xml',
+    '/categories-sitemap.xml'
+  ], async (req: express.Request, res: express.Response) => {
+    try {
+      const xml = await seoService.buildCategoriesSitemap(req, localProducts);
+      setXmlHeaders(res);
+      res.send(xml);
+    } catch (err: any) {
+      console.error('Categories sitemap rendering failed:', err.message);
+      setXmlHeaders(res);
+      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Categories sitemap failed to generate</error>');
+    }
+  });
+
+  // 6. Dedicated Static Pages Sitemap
+  app.get([
+    '/sitemap-pages.xml',
+    '/sitemap_pages.xml',
+    '/page-sitemap.xml',
+    '/static-sitemap.xml'
+  ], async (req: express.Request, res: express.Response) => {
+    try {
+      const xml = await seoService.buildPagesSitemap(req);
+      setXmlHeaders(res);
+      res.send(xml);
+    } catch (err: any) {
+      console.error('Pages sitemap rendering failed:', err.message);
+      setXmlHeaders(res);
+      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Pages sitemap failed to generate</error>');
+    }
+  });
+
+  // 7. Dedicated Image Media Sitemap
+  app.get([
+    '/sitemap-images.xml',
+    '/sitemap_images.xml',
+    '/image-sitemap.xml'
+  ], async (req: express.Request, res: express.Response) => {
+    try {
+      const xml = await seoService.buildImagesSitemap(req, localProducts, localBlogs);
+      setXmlHeaders(res);
+      res.send(xml);
+    } catch (err: any) {
+      console.error('Images sitemap rendering failed:', err.message);
+      setXmlHeaders(res);
+      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Images sitemap failed to generate</error>');
+    }
+  });
+
+  // 8. Sitemap XSLT Stylesheet Route
+  app.get('/sitemap.xsl', (_req: express.Request, res: express.Response) => {
+    try {
+      const xslPaths = [
+        path.join(process.cwd(), 'public', 'sitemap.xsl'),
+        path.join(process.cwd(), 'dist', 'sitemap.xsl')
+      ];
+      for (const p of xslPaths) {
+        if (fs.existsSync(p)) {
+          res.setHeader('Content-Type', 'text/xsl; charset=utf-8');
+          res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+          return res.status(200).send(fs.readFileSync(p, 'utf8'));
+        }
+      }
+      return res.status(404).send('<!-- Sitemap stylesheet not found -->');
+    } catch (err: any) {
+      return res.status(500).send('<!-- Error loading sitemap stylesheet -->');
     }
   });
 
@@ -2468,64 +2611,53 @@ async function startServer() {
   app.get(['/robots.txt', '/robots.tsx', '/robots.ts', '/robots', '/api/robots.txt', '/api/robots'], (req: express.Request, res: express.Response) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    
+    const host = req.get('host') || 'gadgetsprohub.onrender.com';
+    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const dynamicBase = `${protocol}://${host}`;
+
+    try {
+      const robotsContent = generateRobotsTxt({ host });
+      return res.status(200).send(robotsContent);
+    } catch (err: any) {
+      console.warn('Dynamic robots generation error:', err?.message);
+    }
+
     try {
       const robotsFilePath = path.join(process.cwd(), 'public', 'robots.txt');
       if (fs.existsSync(robotsFilePath)) {
         const fileContent = fs.readFileSync(robotsFilePath, 'utf8');
         return res.status(200).send(fileContent);
       }
-      const distRobotsPath = path.join(process.cwd(), 'dist', 'robots.txt');
-      if (fs.existsSync(distRobotsPath)) {
-        const fileContent = fs.readFileSync(distRobotsPath, 'utf8');
-        return res.status(200).send(fileContent);
-      }
     } catch (err: any) {
       console.warn('Fallback robots serving error:', err?.message);
     }
-    
-    // Dynamic host fallback if physical file reading encounters an issue
-    const host = req.get('host') || 'gadgetsprohub.onrender.com';
-    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const sitemapUrl = host.includes('localhost') || host.includes('run.app') ? `${protocol}://${host}/sitemap.xml` : 'https://gadgetsprohub.onrender.com/sitemap.xml';
 
-    return res.status(200).send(`User-agent: *
-Disallow: /admin
-Disallow: /admin/
-Disallow: /login
-Disallow: /profile
-Disallow: /api/
-Allow: /api/visit
-Allow: /api/health-check
-Allow: /
-Allow: /search
-Allow: /og-banner.png
-Allow: /favicon.png
-Allow: /uploads/
-Allow: /assets/
+    return res.status(200).send(generateRobotsTxt());
+  });
 
-User-agent: Googlebot
-Allow: /
+  // Robots Live Validation & Testing Endpoint
+  app.post('/api/seo/robots/test', (req: express.Request, res: express.Response) => {
+    try {
+      const { userAgent = 'Google-InspectionTool', urlPath = '/' } = req.body;
+      const host = req.get('host') || 'gadgetsprohub.onrender.com';
+      const robotsContent = generateRobotsTxt({ host });
+      const result = validateRobotsUrl(userAgent, urlPath, robotsContent);
+      return res.json({ success: true, result });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Failed to evaluate robots validation rule' });
+    }
+  });
 
-User-agent: Googlebot-Image
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: WhatsApp
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: TelegramBot
-Allow: /
-
-Sitemap: ${sitemapUrl}
-`);
+  // Admin Robots Management & Sync Endpoint
+  app.post('/api/admin/seo/robots/sync', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const host = req.get('host') || 'gadgetsprohub.onrender.com';
+      const robotsContent = await seoService.buildRobotsTxt({ host });
+      return res.json({ success: true, message: 'Robots.txt synced across disk and cache', length: robotsContent.length });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Failed to synchronize robots.txt' });
+    }
   });
 
   app.get('/.well-known/security.txt', (_req: express.Request, res: express.Response) => {
@@ -7378,9 +7510,10 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   app.post('/api/admin/seo/sitemap/generate', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
       const xml = await seoService.buildXmlSitemap(req, localProducts, localBlogs);
+      await seoService.syncAllSitemapsToDisk(req, localProducts, localBlogs);
       res.json({
         success: true,
-        message: 'Sitemap rebuilt successfully',
+        message: 'All XML sitemaps rebuilt and synchronized to disk successfully',
         length: xml.length
       });
     } catch (err: any) {
@@ -10488,13 +10621,16 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     res.send(`google.com, ${cleanId}, DIRECT, f08c47fec0942fa0\n`);
   });
 
-  // Helper function to serve index.html with dynamic OpenGraph meta tags for social share links (WhatsApp, Instagram, Twitter, etc.)
-  const serveHydratedHtml = async (req: express.Request, res: express.Response, indexPath: string) => {
+  // Helper function to serve index.html with dynamic OpenGraph meta tags, Schema.org JSON-LD, and SSR fallback for search engine crawlers
+  const serveHydratedHtml = async (req: express.Request, res: express.Response, indexPath: string, overrideHtml?: string) => {
     try {
-      if (!fs.existsSync(indexPath)) {
-        return res.status(404).send('HTML template not found');
+      let html = overrideHtml || '';
+      if (!html) {
+        if (!fs.existsSync(indexPath)) {
+          return res.status(404).send('HTML template not found');
+        }
+        html = fs.readFileSync(indexPath, 'utf8');
       }
-      let html = fs.readFileSync(indexPath, 'utf8');
 
       // Determine canonical base URL
       const hostHeader = req.get('host') || 'gadgetsprohub.onrender.com';
@@ -10511,12 +10647,41 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       let metaDesc = "gadgetsprohub - Your premium destination for discovering high-quality electronics, smartphones, laptops, smart gear, and extensive tech accessory specifications, reviews, and deals.";
       let metaImage = `${baseUrl}/og-banner.png`;
       let metaType = "website";
+      let preRenderedBody = "";
+      const jsonLdSchemas: any[] = [];
 
       const pathParts = rawPath.split('/').filter(Boolean);
+      const firstPart = pathParts[0] ? pathParts[0].toLowerCase() : '';
+      const secondPart = pathParts[1] ? pathParts[1] : '';
 
-      // Dynamic metadata for Product Detail pages (/products/:slug or /product-detail/:slug or /product/:slug)
-      if ((pathParts[0] === 'products' || pathParts[0] === 'product-detail' || pathParts[0] === 'product') && pathParts[1]) {
-        const slug = pathParts[1];
+      // Default WebSite & Organization Schema
+      const siteSchema = {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "gadgetsprohub",
+        "alternateName": ["GadgetsProHub", "gadgets pro hub", "Gadgets Pro Hub"],
+        "url": baseUrl,
+        "description": "Your premium destination for discovering high-quality electronics, smartphones, laptops, smart gear, and extensive tech accessory specifications, reviews, and deals.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": `${baseUrl}/search?q={search_term_string}`,
+          "query-input": "required name=search_term_string"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "gadgetsprohub",
+          "url": baseUrl,
+          "logo": {
+            "@type": "ImageObject",
+            "url": `${baseUrl}/favicon.png`
+          }
+        }
+      };
+      jsonLdSchemas.push(siteSchema);
+
+      // 1. Dynamic metadata for Product Detail pages (/products/:slug or /product-detail/:slug or /product/:slug)
+      if ((firstPart === 'products' || firstPart === 'product-detail' || firstPart === 'product') && secondPart) {
+        const slug = secondPart;
         let foundProduct: any = null;
         if (isMongoConnected) {
           try {
@@ -10528,18 +10693,118 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         }
 
         if (foundProduct) {
-          metaTitle = `${foundProduct.seoTitle || foundProduct.name} | gadgetsprohub`;
+          const prodName = foundProduct.seoTitle || foundProduct.name || 'Product';
+          metaTitle = `${prodName} | gadgetsprohub`;
           metaDesc = foundProduct.seoDescription || foundProduct.description || metaDesc;
           if (foundProduct.images && foundProduct.images.length > 0) {
             const img = foundProduct.images[0];
             metaImage = img.startsWith('http') ? img : `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+          } else if (foundProduct.image) {
+            metaImage = foundProduct.image.startsWith('http') ? foundProduct.image : `${baseUrl}${foundProduct.image.startsWith('/') ? '' : '/'}${foundProduct.image}`;
           }
           metaType = "product";
+
+          // Product Schema.org
+          const prodSchema: any = {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": foundProduct.name,
+            "image": foundProduct.images && foundProduct.images.length > 0 
+              ? foundProduct.images.map((img: string) => img.startsWith('http') ? img : `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`)
+              : [metaImage],
+            "description": foundProduct.description || foundProduct.seoDescription || metaDesc,
+            "sku": foundProduct.sku || foundProduct._id?.toString() || foundProduct.slug,
+            "mpn": foundProduct.sku || foundProduct.slug,
+            "url": requestUrl,
+            "brand": {
+              "@type": "Brand",
+              "name": foundProduct.brand || "gadgetsprohub"
+            },
+            "offers": {
+              "@type": "Offer",
+              "url": requestUrl,
+              "priceCurrency": "INR",
+              "price": typeof foundProduct.price === 'number' ? foundProduct.price : (parseFloat(String(foundProduct.price).replace(/[^0-9.]/g, '')) || 999),
+              "priceValidUntil": new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              "itemCondition": "https://schema.org/NewCondition",
+              "availability": foundProduct.inStock === false ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "gadgetsprohub"
+              }
+            }
+          };
+
+          if (foundProduct.rating || foundProduct.reviewsCount) {
+            prodSchema.aggregateRating = {
+              "@type": "AggregateRating",
+              "ratingValue": foundProduct.rating || 4.5,
+              "reviewCount": foundProduct.reviewsCount || 10,
+              "bestRating": 5,
+              "worstRating": 1
+            };
+          }
+          jsonLdSchemas.push(prodSchema);
+
+          // Breadcrumbs Schema
+          let catName = "Electronics";
+          let catSlug = "electronics";
+          if (foundProduct.category) {
+            if (typeof foundProduct.category === 'object' && foundProduct.category.name) {
+              catName = foundProduct.category.name;
+              catSlug = foundProduct.category.slug || "electronics";
+            } else if (typeof foundProduct.category === 'string') {
+              const matched = localCategories.find((c: any) => 
+                String(c._id) === foundProduct.category || 
+                c.slug === foundProduct.category || 
+                c.name.toLowerCase() === foundProduct.category.toLowerCase()
+              );
+              if (matched) {
+                catName = matched.name;
+                catSlug = matched.slug;
+              }
+            }
+          }
+          const breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+              { "@type": "ListItem", "position": 2, "name": "Products", "item": `${baseUrl}/products` },
+              { "@type": "ListItem", "position": 3, "name": catName, "item": `${baseUrl}/${catSlug.replace(/^category-/, '')}` },
+              { "@type": "ListItem", "position": 4, "name": foundProduct.name, "item": requestUrl }
+            ]
+          };
+          jsonLdSchemas.push(breadcrumbSchema);
+
+          // Pre-rendered HTML for search engine crawlers before JS execution
+          preRenderedBody = `
+            <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 1000px; margin: 0 auto; padding: 24px 16px; color: #1e293b;">
+              <nav aria-label="Breadcrumb" style="margin-bottom: 16px; font-size: 14px; color: #64748b;">
+                <a href="${baseUrl}/" style="color: #2563eb; text-decoration: none;">Home</a> &gt;
+                <a href="${baseUrl}/products" style="color: #2563eb; text-decoration: none;">Products</a> &gt;
+                <a href="${baseUrl}/${catSlug.replace(/^category-/, '')}" style="color: #2563eb; text-decoration: none;">${escapeHTML(catName)}</a> &gt;
+                <span>${escapeHTML(foundProduct.name)}</span>
+              </nav>
+              <article>
+                <h1 style="font-size: 28px; font-weight: 700; line-height: 1.3; margin-bottom: 12px;">${escapeHTML(foundProduct.name)}</h1>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                  <img src="${escapeHTML(metaImage)}" alt="${escapeHTML(foundProduct.name)}" style="max-width: 380px; width: 100%; border-radius: 8px; object-fit: cover;" />
+                  <div style="flex: 1; min-width: 280px;">
+                    <p style="font-size: 22px; font-weight: 600; color: #059669; margin-bottom: 12px;">Price: &#8377;${escapeHTML(String(foundProduct.price || ''))}</p>
+                    <p style="font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 16px;">${escapeHTML(foundProduct.description || foundProduct.seoDescription || '')}</p>
+                    ${foundProduct.brand ? `<p style="font-size: 14px; color: #64748b;"><strong>Brand:</strong> ${escapeHTML(foundProduct.brand)}</p>` : ''}
+                    ${foundProduct.category ? `<p style="font-size: 14px; color: #64748b;"><strong>Category:</strong> ${escapeHTML(catName)}</p>` : ''}
+                  </div>
+                </div>
+              </article>
+            </div>
+          `;
         }
       }
-      // Dynamic metadata for Blog Detail pages (/blog-detail/:slug or /blog/:slug)
-      else if ((pathParts[0] === 'blog-detail' || pathParts[0] === 'blog') && pathParts[1]) {
-        const slug = pathParts[1];
+      // 2. Dynamic metadata for Blog Detail pages (/blog-detail/:slug or /blog/:slug or /blogs/:slug)
+      else if ((firstPart === 'blog-detail' || firstPart === 'blog' || firstPart === 'blogs') && secondPart) {
+        const slug = secondPart;
         let foundBlog: any = null;
         if (isMongoConnected) {
           try {
@@ -10551,30 +10816,193 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         }
 
         if (foundBlog) {
-          metaTitle = `${foundBlog.seoTitle || foundBlog.title} | gadgetsprohub`;
+          const blogTitle = foundBlog.seoTitle || foundBlog.title || 'Article';
+          metaTitle = `${blogTitle} | gadgetsprohub Blog`;
           metaDesc = foundBlog.seoDescription || foundBlog.excerpt || metaDesc;
           if (foundBlog.featured_image) {
             const img = foundBlog.featured_image;
             metaImage = img.startsWith('http') ? img : `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+          } else if (foundBlog.image) {
+            metaImage = foundBlog.image.startsWith('http') ? foundBlog.image : `${baseUrl}${foundBlog.image.startsWith('/') ? '' : '/'}${foundBlog.image}`;
           }
           metaType = "article";
+
+          // Article Schema
+          const articleSchema = {
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "headline": foundBlog.title,
+            "description": foundBlog.excerpt || foundBlog.seoDescription || metaDesc,
+            "image": metaImage,
+            "datePublished": (foundBlog.createdAt || new Date()).toISOString ? (foundBlog.createdAt || new Date()).toISOString() : new Date().toISOString(),
+            "dateModified": (foundBlog.updatedAt || foundBlog.createdAt || new Date()).toISOString ? (foundBlog.updatedAt || foundBlog.createdAt || new Date()).toISOString() : new Date().toISOString(),
+            "author": {
+              "@type": "Person",
+              "name": foundBlog.author || "gadgetsprohub Editorial Team"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "gadgetsprohub",
+              "logo": {
+                "@type": "ImageObject",
+                "url": `${baseUrl}/favicon.png`
+              }
+            },
+            "mainEntityOfPage": {
+              "@type": "WebPage",
+              "@id": requestUrl
+            }
+          };
+          jsonLdSchemas.push(articleSchema);
+
+          // Breadcrumbs Schema
+          const breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+              { "@type": "ListItem", "position": 2, "name": "Blogs", "item": `${baseUrl}/blogs` },
+              { "@type": "ListItem", "position": 3, "name": foundBlog.title, "item": requestUrl }
+            ]
+          };
+          jsonLdSchemas.push(breadcrumbSchema);
+
+          // Pre-rendered HTML for crawler indexing
+          preRenderedBody = `
+            <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px 16px; color: #1e293b;">
+              <nav aria-label="Breadcrumb" style="margin-bottom: 16px; font-size: 14px; color: #64748b;">
+                <a href="${baseUrl}/" style="color: #2563eb; text-decoration: none;">Home</a> &gt;
+                <a href="${baseUrl}/blogs" style="color: #2563eb; text-decoration: none;">Blogs</a> &gt;
+                <span>${escapeHTML(foundBlog.title)}</span>
+              </nav>
+              <article>
+                <h1 style="font-size: 32px; font-weight: 700; line-height: 1.3; margin-bottom: 16px;">${escapeHTML(foundBlog.title)}</h1>
+                <p style="font-size: 14px; color: #64748b; margin-bottom: 20px;">By ${escapeHTML(foundBlog.author || 'gadgetsprohub Team')}</p>
+                <img src="${escapeHTML(metaImage)}" alt="${escapeHTML(foundBlog.title)}" style="max-width: 100%; border-radius: 8px; margin-bottom: 20px;" />
+                <div style="font-size: 16px; line-height: 1.7; color: #334155;">
+                  <p>${escapeHTML(foundBlog.excerpt || foundBlog.content || '')}</p>
+                </div>
+              </article>
+            </div>
+          `;
         }
       }
-      // Dynamic metadata for Category pages (/category/:slug)
-      else if (pathParts[0] === 'category' && pathParts[1]) {
-        const slug = pathParts[1];
-        let foundCat: any = null;
-        if (isMongoConnected) {
-          try {
-            foundCat = await Category.findOne({ slug }).lean();
-          } catch (e) {}
+      // 3. Dynamic metadata for Category pages (e.g. /category/:slug or /electronics, /fashion, /gaming, /sports, /shoes, /earbuds)
+      else {
+        const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports', 'shoes', 'earbuds', 'gaming'];
+        let categorySlug = '';
+        if (firstPart === 'category' && secondPart) {
+          categorySlug = secondPart;
+        } else if (knownCategories.includes(firstPart) || firstPart.startsWith('category-')) {
+          categorySlug = firstPart.replace(/^category-/, '');
         }
-        if (!foundCat) {
-          foundCat = localCategories.find((c: any) => c.slug === slug);
+
+        if (categorySlug) {
+          let foundCat: any = null;
+          if (isMongoConnected) {
+            try {
+              foundCat = await Category.findOne({ slug: { $in: [categorySlug, `category-${categorySlug}`] } }).lean();
+            } catch (e) {}
+          }
+          if (!foundCat) {
+            foundCat = localCategories.find((c: any) => c.slug === categorySlug || c.slug === `category-${categorySlug}`);
+          }
+          const catName = foundCat?.name || categorySlug.charAt(0).toUpperCase() + categorySlug.slice(1).replace(/-/g, ' ');
+          metaTitle = `Best ${catName} - Reviews, Deals & Top Models | gadgetsprohub`;
+          metaDesc = foundCat?.description || `Explore top-rated ${catName} electronics, technical specifications, price comparisons, and exclusive deals on gadgetsprohub.`;
+          metaType = "website";
+
+          // CollectionPage & Breadcrumbs Schema
+          const collectionSchema = {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": `${catName} Gadgets Directory`,
+            "description": metaDesc,
+            "url": requestUrl
+          };
+          jsonLdSchemas.push(collectionSchema);
+
+          const breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+              { "@type": "ListItem", "position": 2, "name": "Categories", "item": `${baseUrl}/categories` },
+              { "@type": "ListItem", "position": 3, "name": catName, "item": requestUrl }
+            ]
+          };
+          jsonLdSchemas.push(breadcrumbSchema);
+
+          preRenderedBody = `
+            <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 1000px; margin: 0 auto; padding: 24px 16px; color: #1e293b;">
+              <nav aria-label="Breadcrumb" style="margin-bottom: 16px; font-size: 14px; color: #64748b;">
+                <a href="${baseUrl}/" style="color: #2563eb; text-decoration: none;">Home</a> &gt;
+                <a href="${baseUrl}/categories" style="color: #2563eb; text-decoration: none;">Categories</a> &gt;
+                <span>${escapeHTML(catName)}</span>
+              </nav>
+              <h1>${escapeHTML(catName)} Gadgets & Gear</h1>
+              <p style="font-size: 16px; line-height: 1.6; color: #475569; margin-top: 8px;">${escapeHTML(metaDesc)}</p>
+            </div>
+          `;
         }
-        if (foundCat) {
-          metaTitle = `${foundCat.name} Gadgets & Gear | gadgetsprohub`;
-          metaDesc = foundCat.description || `Browse top-rated ${foundCat.name} electronics, specifications, price comparisons, and deals on gadgetsprohub.`;
+        // 4. Static Pages
+        else if (firstPart === 'products') {
+          metaTitle = "Browse All Smart Electronics & Gadgets | gadgetsprohub";
+          metaDesc = "Explore the complete gadgetsprohub catalog of high-performance tech gadgets, smart devices, audio gear, and accessories with live pricing.";
+          const breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+              { "@type": "ListItem", "position": 2, "name": "Products", "item": requestUrl }
+            ]
+          };
+          jsonLdSchemas.push(breadcrumbSchema);
+        } else if (firstPart === 'blogs' || firstPart === 'blog') {
+          metaTitle = "Tech News, Product Guides & Buying Advice | gadgetsprohub Blog";
+          metaDesc = "Read expert buying guides, in-depth gadget comparisons, technical breakdowns, and the latest consumer electronics news on gadgetsprohub.";
+          const breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+              { "@type": "ListItem", "position": 2, "name": "Blogs", "item": requestUrl }
+            ]
+          };
+          jsonLdSchemas.push(breadcrumbSchema);
+        } else if (firstPart === 'about' || firstPart === 'about-us') {
+          metaTitle = "About gadgetsprohub - Premium Smart Tech Directory";
+          metaDesc = "Learn about gadgetsprohub's mission to curate verified electronics, unbiased gear comparisons, and high-value tech deals.";
+          const breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+              { "@type": "ListItem", "position": 2, "name": "About Us", "item": requestUrl }
+            ]
+          };
+          jsonLdSchemas.push(breadcrumbSchema);
+        } else if (firstPart === 'contact') {
+          metaTitle = "Contact gadgetsprohub Support & Inquiries";
+          metaDesc = "Get in touch with the gadgetsprohub support team for product questions, feature requests, partnerships, and feedback.";
+          const breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+              { "@type": "ListItem", "position": 2, "name": "Contact", "item": requestUrl }
+            ]
+          };
+          jsonLdSchemas.push(breadcrumbSchema);
+        } else if (firstPart === 'privacy-policy' || firstPart === 'privacy') {
+          metaTitle = "Privacy Policy | gadgetsprohub";
+          metaDesc = "Understand how gadgetsprohub handles your data, cookies, preferences, and privacy protection.";
+        } else if (firstPart === 'terms-conditions' || firstPart === 'terms') {
+          metaTitle = "Terms and Conditions | gadgetsprohub";
+          metaDesc = "Terms and conditions governing the use of the gadgetsprohub website, content, and affiliate services.";
+        } else if (firstPart === 'disclaimer') {
+          metaTitle = "Affiliate & Content Disclaimer | gadgetsprohub";
+          metaDesc = "Affiliate disclosure, price verification notes, and transparency standards at gadgetsprohub.";
         }
       }
 
@@ -10618,7 +11046,18 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       // Replace twitter:url
       html = html.replace(/<meta name="twitter:url" content="[^"]*"/i, `<meta name="twitter:url" content="${cleanUrl}"`);
 
+      // Replace / Inject Schema.org JSON-LD structured data
+      const jsonLdBlock = jsonLdSchemas.map(s => `<script type="application/ld+json">\n${JSON.stringify(s, null, 2)}\n</script>`).join('\n');
+      html = html.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, jsonLdBlock);
+
+      // Inject SSR pre-rendered fallback body inside <div id="root">
+      if (preRenderedBody) {
+        html = html.replace(/<div id="root"><\/div>/i, `<div id="root">${preRenderedBody}</div>`);
+      }
+
       res.setHeader('Content-Type', 'text/html; charset=UTF-8');
+      res.setHeader('X-Robots-Tag', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+      res.setHeader('Vary', 'Accept-Encoding, User-Agent');
       res.send(html);
     } catch (err: any) {
       res.sendFile(indexPath);
@@ -10629,9 +11068,24 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "custom",
     });
     app.use(vite.middlewares);
+    app.get('*', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      try {
+        const url = req.originalUrl || req.url;
+        const indexPath = path.resolve(process.cwd(), 'index.html');
+        if (!fs.existsSync(indexPath)) {
+          return next();
+        }
+        let template = fs.readFileSync(indexPath, 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        await serveHydratedHtml(req, res, indexPath, template);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath, {
