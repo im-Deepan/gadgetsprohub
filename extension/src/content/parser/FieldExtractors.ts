@@ -392,13 +392,23 @@ export class FieldExtractors {
 
     // Clean up foreign tags if expectedTag is provided
     if (expectedTag) {
-      if (rawLink.includes('tag=')) {
-        rawLink = rawLink.replace(/tag=[^&]+/g, `tag=${expectedTag}`);
-      } else if (!rawLink.includes('amzn.to')) {
-        // If it doesn't have a tag and isn't a shortlink, append it safely
+      if (rawLink.includes('amzn.to')) {
+        // Discard shortlinks because we cannot verify or rewrite their hidden affiliate tag
+        return null;
+      }
+
+      const tagRegex = /tag=([^&]+)/;
+      const match = rawLink.match(tagRegex);
+      
+      if (match && match[1] !== expectedTag) {
+        // Replace foreign tag
+        rawLink = rawLink.replace(tagRegex, `tag=${expectedTag}`);
+      } else if (!match) {
+        // Append tag if missing
         const sep = rawLink.includes('?') ? '&' : '?';
         rawLink = `${rawLink}${sep}tag=${expectedTag}`;
       }
+
       // Also strip linkCode entirely to prevent attribution conflicts
       if (rawLink.includes('linkCode=')) {
         rawLink = rawLink.replace(/([?&])linkCode=[^&]+(&|$)/g, (_match, p1, p2) => p2 === '&' ? p1 : '');

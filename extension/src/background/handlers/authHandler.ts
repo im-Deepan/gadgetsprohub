@@ -113,23 +113,18 @@ export async function handleLogin(payload: { email?: string; password?: string }
  */
 export async function handleLogout(): Promise<ExtensionResponse> {
   try {
-    await apiService.logout();
-    return { success: true };
-  } catch (err: any) {
-    logger.error('Logout request failed in handler', err);
-    return {
-      success: false,
-      error: {
-        code: 'LOGOUT_FAILED',
-        message: 'Failed to sign out'
-      }
-    };
-  } finally {
-    // Unconditionally wipe all session state & auth keys on client
+    // Unconditionally wipe all session state & auth keys on client first
     await extensionStorage.updateSettings({
       authToken: null,
       adminEmail: null,
       tokenExpiresAt: null
     }).catch(() => {});
+
+    await apiService.logout();
+    return { success: true };
+  } catch (err: any) {
+    logger.error('Logout request failed in handler, but local credentials were wiped.', err);
+    // Return success so the UI completes the logout flow even if offline
+    return { success: true };
   }
 }
