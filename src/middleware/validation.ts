@@ -380,43 +380,75 @@ const isValidAmazonOrAllowedDomain = (urlStr: string): boolean => {
     const parsed = new URL(urlStr);
     const hostname = parsed.hostname.toLowerCase();
     const allowedPatterns = [
-      /amazon\.[a-z\.]+$/, // Matches amazon.com, amazon.in, etc.
-      /amzn\.to$/,          // Amazon shortlinks
-      /flipkart\.com$/,     // Flipkart
-      /myntra\.com$/,       // Myntra
-      /croma\.com$/,        // Croma
-      /reliance\.?digital\.in$/, // Reliance Digital
-      /nykaa\.com$/,        // Nykaa
-      /tatacliq\.com$/,     // Tata Cliq
-      /ajio\.com$/,         // Ajio
-      /apple\.com$/,        // Apple
-      /samsung\.com$/,      // Samsung
-      /sony\.com$/,         // Sony
-      /nike\.com$/,         // Nike
-      /adidas\.com$/,       // Adidas
-      /puma\.com$/,         // Puma
-      /myntra\.in$/,
-      /boat-lifestyle\.com$/,
-      /oneplus\.in$/,
-      /lenovo\.com$/,
-      /dell\.com$/,
-      /hp\.com$/,
-      /asus\.com$/,
-      /mi\.com$/,
-      /realme\.com$/,
-      /vivo\.com$/,
-      /oppo\.com$/,
-      /noise\.com$/,
-      /fireboltt\.com$/,
-      /pebblecart\.com$/,
-      /nothing\.tech$/,
-      /unsplash\.com$/,
-      /images\.unsplash\.com$/,
-      /youtube\.com$/,
-      /youtu\.be$/,
-      /vimeo\.com$/,
-      /gadgetsprohub\.com$/, // Self
-      /^localhost$/
+      // Amazon TLDs, international stores, and link shorteners
+      /(^|\.)amazon\.[a-z\.]+$/,
+      /(^|\.)amazon$/,
+      /^link\.amazon$/,
+      /(^|\.)link\.amazon$/,
+      /(^|\.)amzn\.(to|eu|in|asia|com)$/,
+      /^a\.co$/,
+      /(^|\.)a\.co$/,
+      /^z\.cn$/,
+      /(^|\.)z\.cn$/,
+
+      // Amazon CDNs & media assets
+      /(^|\.)media-amazon\.com$/,
+      /(^|\.)ssl-images-amazon\.com$/,
+      /(^|\.)images-amazon\.com$/,
+
+      // Marketplaces & eCommerce Partners
+      /(^|\.)flipkart\.com$/,
+      /(^|\.)myntra\.(com|in)$/,
+      /(^|\.)croma\.com$/,
+      /(^|\.)reliance\.?digital\.in$/,
+      /(^|\.)reliancedigital\.in$/,
+      /(^|\.)nykaa\.com$/,
+      /(^|\.)tatacliq\.com$/,
+      /(^|\.)ajio\.com$/,
+      /(^|\.)meesho\.com$/,
+      /(^|\.)ebay\.(com|co\.uk|in|de|fr|it|es|ca|com\.au)$/,
+      /(^|\.)aliexpress\.(com|ru|us)$/,
+      /(^|\.)walmart\.com$/,
+      /(^|\.)target\.com$/,
+      /(^|\.)bestbuy\.com$/,
+
+      // Direct Brand Stores
+      /(^|\.)apple\.com$/,
+      /(^|\.)samsung\.com$/,
+      /(^|\.)sony\.(com|co\.in)$/,
+      /(^|\.)nike\.com$/,
+      /(^|\.)adidas\.(com|co\.in)$/,
+      /(^|\.)puma\.com$/,
+      /(^|\.)boat-lifestyle\.com$/,
+      /(^|\.)oneplus\.(in|com)$/,
+      /(^|\.)lenovo\.com$/,
+      /(^|\.)dell\.com$/,
+      /(^|\.)hp\.com$/,
+      /(^|\.)asus\.com$/,
+      /(^|\.)mi\.com$/,
+      /(^|\.)realme\.com$/,
+      /(^|\.)vivo\.com$/,
+      /(^|\.)oppo\.com$/,
+      /(^|\.)noise\.com$/,
+      /(^|\.)gonoise\.com$/,
+      /(^|\.)fireboltt\.com$/,
+      /(^|\.)pebblecart\.com$/,
+      /(^|\.)nothing\.tech$/,
+
+      // Media & Content CDNs
+      /(^|\.)unsplash\.com$/,
+      /(^|\.)cloudinary\.com$/,
+      /(^|\.)imgur\.com$/,
+      /(^|\.)ytimg\.com$/,
+      /(^|\.)youtube\.com$/,
+      /(^|\.)youtu\.be$/,
+      /(^|\.)vimeo\.com$/,
+
+      // Self & Localhost
+      /(^|\.)gadgetsprohub\.com$/,
+      /(^|\.)gadgetsprohub\.onrender\.com$/,
+      /^localhost$/,
+      /^127\.0\.0\.1$/
     ];
     return allowedPatterns.some(pattern => pattern.test(hostname));
   } catch (e) {

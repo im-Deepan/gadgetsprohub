@@ -15,10 +15,15 @@ export function handleActiveTabInquiry(sendResponse: (response: ExtensionRespons
       return;
     }
 
+    let isAmazonDomain = false;
+    try {
+      const parsedUrl = new URL(activeTab.url);
+      isAmazonDomain = /(^|\.)(amazon\.[a-z\.]+|amzn\.[a-z]+|a\.co|link\.amazon)/i.test(parsedUrl.hostname);
+    } catch (e) {}
+
     // Ping the content script in that tab to check if it's responsive
     chrome.tabs.sendMessage(activeTab.id, { action: "PING_CONTENT_SCRIPT" }, (response: any) => {
       if (chrome.runtime.lastError) {
-        // Content script might not be injected yet (e.g., on a system page, or prior to reload)
         logger.debug('Content script not active on active tab', chrome.runtime.lastError);
         sendResponse({
           success: true,
@@ -27,7 +32,7 @@ export function handleActiveTabInquiry(sendResponse: (response: ExtensionRespons
             url: activeTab.url,
             title: activeTab.title || "",
             contentScriptLoaded: false,
-            isAmazon: false
+            isAmazon: isAmazonDomain
           }
         });
         return;
@@ -40,7 +45,7 @@ export function handleActiveTabInquiry(sendResponse: (response: ExtensionRespons
           url: activeTab.url,
           title: activeTab.title || "",
           contentScriptLoaded: true,
-          isAmazon: response?.data?.isAmazon || false,
+          isAmazon: response?.data?.isAmazon ?? isAmazonDomain,
           pingResponse: response?.data
         }
       });

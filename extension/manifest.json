@@ -15,6 +15,17 @@
     "https://*.amazon.in/*",
     "https://*.amazon.co.uk/*",
     "https://*.amazon.ca/*",
+    "https://*.amazon.de/*",
+    "https://*.amazon.fr/*",
+    "https://*.amazon.it/*",
+    "https://*.amazon.es/*",
+    "https://*.amazon.co.jp/*",
+    "https://*.amazon.ae/*",
+    "https://*.amazon.com.au/*",
+    "https://link.amazon/*",
+    "https://*.link.amazon/*",
+    "https://amzn.to/*",
+    "https://a.co/*",
     "https://*.gadgetsprohub.com/*",
     "https://gadgetsprohub.onrender.com/*"
   ],
@@ -28,7 +39,16 @@
         "https://*.amazon.com/*",
         "https://*.amazon.in/*",
         "https://*.amazon.co.uk/*",
-        "https://*.amazon.ca/*"
+        "https://*.amazon.ca/*",
+        "https://*.amazon.de/*",
+        "https://*.amazon.fr/*",
+        "https://*.amazon.it/*",
+        "https://*.amazon.es/*",
+        "https://*.amazon.co.jp/*",
+        "https://*.amazon.ae/*",
+        "https://*.amazon.com.au/*",
+        "https://link.amazon/*",
+        "https://*.link.amazon/*"
       ],
       "js": [
         "content.js"

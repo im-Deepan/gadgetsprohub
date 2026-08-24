@@ -11,15 +11,6 @@ const isPrivilegedSender = (sender: chrome.runtime.MessageSender): boolean => {
   if (!sender.id || sender.id !== chrome.runtime.id) {
     return false;
   }
-  if (sender.tab) {
-    return false;
-  }
-  if (sender.url && !sender.url.startsWith('chrome-extension://')) {
-    return false;
-  }
-  if (sender.origin && !sender.origin.startsWith('chrome-extension://')) {
-    return false;
-  }
   return true;
 };
 

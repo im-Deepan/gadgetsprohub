@@ -172,7 +172,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                     e.preventDefault();
                     onNavigate('products', `category-${cat.id}`);
                   }}
-                  className="snap-center flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-zinc-900 dark:border-white hover:shadow-xs whitespace-nowrap shrink-0 transition-all cursor-pointer group text-xs min-h-[44px]"
+                  className="snap-center flex items-center gap-2 px-4 py-2.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-slate-700 hover:shadow-sm whitespace-nowrap shrink-0 transition-all cursor-pointer group text-xs min-h-[44px]"
                 >
                   <cat.icon size={15} className={`${cat.color} group-hover:scale-110 transition-transform`} />
                   <span className="font-semibold text-slate-700 dark:text-slate-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-300">{cat.name}</span>

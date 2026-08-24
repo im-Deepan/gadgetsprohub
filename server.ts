@@ -6652,18 +6652,75 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const parsed = new URL(urlStr);
       const hostname = parsed.hostname.toLowerCase();
       const allowedPatterns = [
-        /\bamazon\.com$/,
-        /\bamazon\.co\.uk$/,
-        /\bamazon\.ca$/,
-        /\bamazon\.de$/,
-        /\bamazon\.fr$/,
-        /\bamazon\.it$/,
-        /\bamazon\.es$/,
-        /\bamazon\.co\.jp$/,
-        /\bmedia-amazon\.com$/,
-        /\bssl-images-amazon\.com$/,
-        /\bimages-na\.ssl-images-amazon\.com$/,
-        /\bimages\.unsplash\.com$/
+        // Amazon TLDs, international stores, and link shorteners
+        /(^|\.)amazon\.[a-z\.]+$/,
+        /(^|\.)amazon$/,
+        /^link\.amazon$/,
+        /(^|\.)link\.amazon$/,
+        /(^|\.)amzn\.(to|eu|in|asia|com)$/,
+        /^a\.co$/,
+        /(^|\.)a\.co$/,
+        /^z\.cn$/,
+        /(^|\.)z\.cn$/,
+
+        // Amazon CDNs & media assets
+        /(^|\.)media-amazon\.com$/,
+        /(^|\.)ssl-images-amazon\.com$/,
+        /(^|\.)images-amazon\.com$/,
+
+        // Marketplaces & eCommerce Partners
+        /(^|\.)flipkart\.com$/,
+        /(^|\.)myntra\.(com|in)$/,
+        /(^|\.)croma\.com$/,
+        /(^|\.)reliance\.?digital\.in$/,
+        /(^|\.)reliancedigital\.in$/,
+        /(^|\.)nykaa\.com$/,
+        /(^|\.)tatacliq\.com$/,
+        /(^|\.)ajio\.com$/,
+        /(^|\.)meesho\.com$/,
+        /(^|\.)ebay\.(com|co\.uk|in|de|fr|it|es|ca|com\.au)$/,
+        /(^|\.)aliexpress\.(com|ru|us)$/,
+        /(^|\.)walmart\.com$/,
+        /(^|\.)target\.com$/,
+        /(^|\.)bestbuy\.com$/,
+
+        // Direct Brand Stores
+        /(^|\.)apple\.com$/,
+        /(^|\.)samsung\.com$/,
+        /(^|\.)sony\.(com|co\.in)$/,
+        /(^|\.)nike\.com$/,
+        /(^|\.)adidas\.(com|co\.in)$/,
+        /(^|\.)puma\.com$/,
+        /(^|\.)boat-lifestyle\.com$/,
+        /(^|\.)oneplus\.(in|com)$/,
+        /(^|\.)lenovo\.com$/,
+        /(^|\.)dell\.com$/,
+        /(^|\.)hp\.com$/,
+        /(^|\.)asus\.com$/,
+        /(^|\.)mi\.com$/,
+        /(^|\.)realme\.com$/,
+        /(^|\.)vivo\.com$/,
+        /(^|\.)oppo\.com$/,
+        /(^|\.)noise\.com$/,
+        /(^|\.)gonoise\.com$/,
+        /(^|\.)fireboltt\.com$/,
+        /(^|\.)pebblecart\.com$/,
+        /(^|\.)nothing\.tech$/,
+
+        // Media & Content CDNs
+        /(^|\.)unsplash\.com$/,
+        /(^|\.)cloudinary\.com$/,
+        /(^|\.)imgur\.com$/,
+        /(^|\.)ytimg\.com$/,
+        /(^|\.)youtube\.com$/,
+        /(^|\.)youtu\.be$/,
+        /(^|\.)vimeo\.com$/,
+
+        // Self & Localhost
+        /(^|\.)gadgetsprohub\.com$/,
+        /(^|\.)gadgetsprohub\.onrender\.com$/,
+        /^localhost$/,
+        /^127\.0\.0\.1$/
       ];
       return allowedPatterns.some(pattern => pattern.test(hostname));
     } catch (e) {
@@ -6793,12 +6850,20 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     await runTest("Security: Domain Whitelist Check", async () => {
       const invalidUrl = "https://malicious-site.xyz/product-image.png";
       const validUrl = "https://images.unsplash.com/photo-1547082299?w=800";
+      const validAmazonLink = "https://link.amazon/B0goApQ5E";
+      const validAmazonIn = "https://www.amazon.in/dp/B0CXF2K8Z7";
       
       if (isValidAmazonOrAllowedDomain(invalidUrl)) {
         throw new Error("Domain check allowed unauthorized domain: " + invalidUrl);
       }
       if (!isValidAmazonOrAllowedDomain(validUrl)) {
         throw new Error("Domain check blocked authorized domain: " + validUrl);
+      }
+      if (!isValidAmazonOrAllowedDomain(validAmazonLink)) {
+        throw new Error("Domain check blocked authorized link.amazon domain: " + validAmazonLink);
+      }
+      if (!isValidAmazonOrAllowedDomain(validAmazonIn)) {
+        throw new Error("Domain check blocked authorized amazon.in domain: " + validAmazonIn);
       }
     });
 
@@ -7105,6 +7170,9 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   
   // ================= MEDIA MANAGEMENT API (PHASE 7) ================= //
 
+  if (!fs.existsSync('tmp/uploads')) {
+    fs.mkdirSync('tmp/uploads', { recursive: true });
+  }
   const upload = multer({ 
     dest: 'tmp/uploads/',
     limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
@@ -9133,7 +9201,7 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
           rawLink = 'https://' + rawLink;
         }
         try {
-          if (rawLink.includes('amazon.') || rawLink.includes('amzn.')) {
+          if (rawLink.includes('amazon.') || rawLink.includes('amzn.') || rawLink.includes('link.amazon') || rawLink.includes('a.co')) {
             // Ensure tag parameter is attached if missing or replaced if present
             if (!rawLink.includes('tag=')) {
               const sep = rawLink.includes('?') ? '&' : '?';

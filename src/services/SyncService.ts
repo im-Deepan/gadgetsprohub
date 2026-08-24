@@ -370,7 +370,7 @@ export class SyncService {
     }
 
     // Check for Amazon standard domain
-    if (!link.includes('amazon.') && !link.includes('amzn.to') && !link.includes('amzn.eu')) {
+    if (!link.includes('amazon.') && !link.includes('amzn.to') && !link.includes('amzn.eu') && !link.includes('link.amazon') && !link.includes('a.co')) {
       issues.push('Link does not point to a recognized Amazon marketplace domain or amzn shortener.');
       suggestions.push('Verify the link is imported from an official Amazon marketplace (e.g. amazon.in, amazon.com).');
     }

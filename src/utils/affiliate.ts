@@ -30,7 +30,7 @@ export function getCleanAffiliateUrl(
     let paramName = 'affid'; // Default fallback generic parameter
     let isAmazon = false;
     
-    if (host.includes('amazon.') || host.includes('amzn.')) {
+    if (host.includes('amazon.') || host.includes('amzn.') || host.includes('link.amazon') || host === 'link.amazon' || host === 'a.co' || host.includes('a.co')) {
       paramName = 'tag';
       isAmazon = true;
     } else if (host.includes('ebay.')) {
@@ -54,7 +54,7 @@ export function getCleanAffiliateUrl(
     }
     return urlObj.toString();
   } catch (err) {
-    const isAmazon = raw.includes('amazon.') || raw.includes('amzn.');
+    const isAmazon = raw.includes('amazon.') || raw.includes('amzn.') || raw.includes('link.amazon') || raw.includes('a.co');
     let tagToApply = affiliateCode;
     if (!tagToApply && isAmazon) {
       tagToApply = 'gadgetsprohub-21';

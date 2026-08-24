@@ -62,7 +62,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender: chrome
         status: "ALIVE", 
         url: window.location.href,
         title: document.title,
-        isAmazon: /amazon\.(com|in|co\.uk|ca)$/.test(window.location.hostname)
+        isAmazon: /(^|\.)(amazon\.[a-z\.]+|amzn\.[a-z]+|a\.co|link\.amazon)$/i.test(window.location.hostname)
       }
     });
     return false;
