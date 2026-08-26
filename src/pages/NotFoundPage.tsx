@@ -463,10 +463,17 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ onNavigate }) => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {trendingProducts.map((prod) => (
-                <div
+              {trendingProducts.map((prod, idx) => (
+                <motion.div
                   key={prod._id || prod.slug}
                   id={`not-found-product-${prod.slug || prod._id}`}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    duration: 0.28, 
+                    delay: Math.min(idx * 0.04, 0.2), 
+                    ease: [0.22, 1, 0.36, 1] 
+                  }}
                   onClick={() => onNavigate('product-detail', prod.slug || prod._id)}
                   className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xs transition-all cursor-pointer group"
                 >
@@ -500,7 +507,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ onNavigate }) => {
                       {prod.rating ? prod.rating.toFixed(1) : '4.5'}
                     </span>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>

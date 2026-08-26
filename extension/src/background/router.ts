@@ -7,38 +7,136 @@ import { handleStorageWrite, handleStorageRead } from './handlers/storageHandler
 import { apiService } from '../services/api';
 import { queueManager } from './queueManager';
 
-const isPrivilegedSender = (sender: chrome.runtime.MessageSender): boolean => {
-  if (!sender.id || sender.id !== chrome.runtime.id) {
+/**
+ * Checks if the sender is an internal extension context (Popup, Options page, or Background worker).
+ * Internal extension contexts do not have sender.tab attached, and sender.url starts with chrome-extension://<extension_id>/
+ */
+export const isInternalExtensionContext = (sender: chrome.runtime.MessageSender): boolean => {
+  if (!sender || !sender.id || sender.id !== chrome.runtime.id) {
     return false;
   }
-  return true;
+  
+  // If sender.tab is undefined, it originated from extension UI or background script
+  if (!sender.tab) {
+    return true;
+  }
+
+  // If sender.url is provided, it must match the extension's own origin
+  const extensionOrigin = chrome.runtime.getURL('');
+  if (sender.url && sender.url.startsWith(extensionOrigin)) {
+    return true;
+  }
+
+  return false;
 };
 
 /**
+ * Checks if the sender is a legitimate content script running on an authorized store tab (e.g. Amazon).
+ */
+export const isAuthorizedStoreTabContext = (sender: chrome.runtime.MessageSender): boolean => {
+  if (!sender || !sender.id || sender.id !== chrome.runtime.id) {
+    return false;
+  }
+
+  if (!sender.tab || !sender.url) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(sender.url);
+    return /(^|\.)(amazon\.[a-z\.]+|amzn\.[a-z]+|a\.co|link\.amazon)$/i.test(parsed.hostname);
+  } catch (e) {
+    return false;
+  }
+};
+
+/**
+ * Strict set of actions that may ONLY be called from the internal Extension UI (Popup/Options/Background).
+ * Content scripts or injected scripts are strictly forbidden from invoking these.
+ */
+const INTERNAL_ONLY_ACTIONS = new Set<string>([
+  'SET_SESSION_TOKEN',
+  'STORAGE_WRITE',
+  'STORAGE_READ',
+  'EXECUTE_LOGIN',
+  'EXECUTE_LOGOUT',
+  'BULK_IMPORT_START',
+  'BULK_IMPORT_PAUSE',
+  'BULK_IMPORT_RESUME',
+  'BULK_IMPORT_CANCEL',
+  'BULK_IMPORT_STATUS',
+  'GET_IMPORT_HISTORY',
+  'GET_IMPORT_ANALYTICS',
+  'GET_SESSION_STATUS',
+  'PING_CONTENT_SCRIPT'
+]);
+
+/**
  * Universal background coordinator routing incoming chrome runtime messages
- * safely to their dedicated business handlers.
+ * safely to their dedicated business handlers with multi-tiered privilege verification.
  */
 export function routeMessage(
   message: ExtensionMessage,
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: ExtensionResponse) => void
 ): boolean {
-  const { action, payload } = message;
-
-  logger.debug(`Background router incoming action: ${action}`);
-
-  if (!isPrivilegedSender(sender)) {
-    logger.warn(`Rejected unauthorized message sender. Action: ${action}`, {
-      senderId: sender.id,
-      senderUrl: sender.url,
-      senderOrigin: sender.origin,
-      hasTab: !!sender.tab
-    });
+  if (!message || typeof message !== 'object' || !message.action) {
     sendResponse({
       success: false,
       error: {
-        code: 'UNAUTHORIZED_SENDER',
-        message: 'Access denied: Sender lacks necessary privileges to execute background commands.'
+        code: 'INVALID_MESSAGE_STRUCTURE',
+        message: 'Malformed runtime message rejected.'
+      }
+    });
+    return false;
+  }
+
+  const { action, payload } = message;
+  const isInternal = isInternalExtensionContext(sender);
+  const isAuthorizedStoreTab = isAuthorizedStoreTabContext(sender);
+
+  logger.debug(`Background router incoming action: ${action} (isInternal: ${isInternal}, isStoreTab: ${isAuthorizedStoreTab})`);
+
+  // 1. Verify that sender is from this extension
+  if (!sender.id || sender.id !== chrome.runtime.id) {
+    logger.warn(`Rejected message from unauthorized extension/external ID: ${sender.id}. Action: ${action}`);
+    sendResponse({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED_SENDER_ID',
+        message: 'Access denied: Sender ID does not match extension ID.'
+      }
+    });
+    return false;
+  }
+
+  // 2. Block content scripts from executing privileged internal-only commands
+  if (INTERNAL_ONLY_ACTIONS.has(action)) {
+    if (!isInternal) {
+      logger.warn(`Security Violation: Content script from ${sender.url || 'unknown'} attempted to invoke privileged internal action '${action}'`, {
+        senderUrl: sender.url,
+        tabId: sender.tab?.id,
+        action
+      });
+      sendResponse({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED_PRIVILEGE_LEVEL',
+          message: `Access denied: Action '${action}' is restricted to internal extension UI contexts.`
+        }
+      });
+      return false;
+    }
+  }
+
+  // 3. For store tab content script actions, ensure tab is on an authorized domain
+  if (!isInternal && !isAuthorizedStoreTab) {
+    logger.warn(`Rejected message from unauthorized origin: ${sender.url}. Action: ${action}`);
+    sendResponse({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED_TAB_ORIGIN',
+        message: 'Access denied: Content script is not running on an authorized store domain.'
       }
     });
     return false;
@@ -151,7 +249,6 @@ export function routeMessage(
         });
       return true;
 
-    
     case 'BULK_IMPORT_START':
       queueManager.startJob(payload.jobId, payload.items, payload.concurrency, payload.maxRetries, payload.conflictStrategy, payload.options)
         .then(() => sendResponse({ success: true }))

@@ -3,6 +3,8 @@ import { apiFetch } from '../../utils/apiClient';
 import { ConfirmDialog } from './ConfirmDialog';
 import { 
   Shield, 
+  ShieldAlert,
+  ShieldCheck,
   Key, 
   Smartphone, 
   Activity, 
@@ -20,7 +22,13 @@ import {
   Copy,
   ToggleLeft,
   ToggleRight,
-  Database
+  Database,
+  Ban,
+  Search,
+  Filter,
+  Trash2,
+  Zap,
+  AlertOctagon
 } from 'lucide-react';
 
 interface SecurityConsoleProps {
@@ -30,7 +38,7 @@ interface SecurityConsoleProps {
 
 export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, triggerAlert }) => {
   // Tabs for the Security console
-  const [activeSubTab, setActiveSubTab] = useState<'sessions' | 'pats' | '2fa' | 'metrics' | 'flags' | 'database'>('sessions');
+  const [activeSubTab, setActiveSubTab] = useState<'threats' | 'sessions' | 'pats' | '2fa' | 'metrics' | 'flags' | 'database'>('threats');
 
   // Loading States
   const [loading, setLoading] = useState(false);
@@ -42,6 +50,21 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
   const [metrics, setMetrics] = useState<any>(null);
   const [liveLogs, setLiveLogs] = useState<any[]>([]);
   const [flags, setFlags] = useState<Record<string, boolean>>({});
+
+  // Anomaly & Threat Intelligence Data
+  const [anomalies, setAnomalies] = useState<any[]>([]);
+  const [anomalyStats, setAnomalyStats] = useState<any>(null);
+  const [rateLimitTiers, setRateLimitTiers] = useState<any[]>([]);
+  const [blockedIps, setBlockedIps] = useState<any[]>([]);
+  const [threatSearch, setThreatSearch] = useState('');
+  const [threatSeverityFilter, setThreatSeverityFilter] = useState('ALL');
+  const [threatCategoryFilter, setThreatCategoryFilter] = useState('ALL');
+
+  // Manual IP Block form
+  const [manualIp, setManualIp] = useState('');
+  const [manualReason, setManualReason] = useState('');
+  const [manualDuration, setManualDuration] = useState(60);
+  const [ipActionLoading, setIpActionLoading] = useState(false);
 
   // Database status states
   const [dbInfo, setDbInfo] = useState<{ isMongoConnected: boolean; readyState: number; uri: string } | null>(null);
@@ -89,6 +112,99 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
       triggerAlert('Action Failed', err.message || 'An error occurred during API communication');
       throw err;
     }
+  };
+
+  const fetchThreats = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (threatSeverityFilter !== 'ALL') params.append('severity', threatSeverityFilter);
+      if (threatCategoryFilter !== 'ALL') params.append('category', threatCategoryFilter);
+      if (threatSearch.trim()) params.append('search', threatSearch.trim());
+
+      const res = await apiCall(`/api/admin/security/anomalies?${params.toString()}`);
+      if (res.success) {
+        setAnomalies(res.anomalies || []);
+        setAnomalyStats(res.stats || null);
+      }
+    } catch (e) {}
+  };
+
+  const fetchRateLimits = async () => {
+    try {
+      const res = await apiCall('/api/admin/security/rate-limits');
+      if (res.success) {
+        setRateLimitTiers(res.tiers || []);
+      }
+    } catch (e) {}
+  };
+
+  const fetchBlockedIps = async () => {
+    try {
+      const res = await apiCall('/api/admin/security/blocked-ips');
+      if (res.success) {
+        setBlockedIps(res.blockedIps || []);
+      }
+    } catch (e) {}
+  };
+
+  const handleManualBlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualIp.trim()) return;
+    try {
+      setIpActionLoading(true);
+      const res = await apiCall('/api/admin/security/ip-block', {
+        method: 'POST',
+        body: JSON.stringify({
+          ipAddress: manualIp.trim(),
+          action: 'block',
+          reason: manualReason.trim() || 'Manual administrator block',
+          durationMinutes: manualDuration
+        })
+      });
+      if (res.success) {
+        triggerAlert('IP Address Blocked', res.message || `IP ${manualIp} has been blocked.`);
+        setManualIp('');
+        setManualReason('');
+        await Promise.all([fetchBlockedIps(), fetchThreats()]);
+      }
+    } catch (err) {
+    } finally {
+      setIpActionLoading(false);
+    }
+  };
+
+  const handleUnblockIp = async (ipAddress: string) => {
+    try {
+      const res = await apiCall('/api/admin/security/ip-block', {
+        method: 'POST',
+        body: JSON.stringify({
+          ipAddress,
+          action: 'unblock'
+        })
+      });
+      if (res.success) {
+        triggerAlert('IP Unblocked', `IP address ${ipAddress} has been unblocked.`);
+        await Promise.all([fetchBlockedIps(), fetchThreats()]);
+      }
+    } catch (err) {}
+  };
+
+  const handleClearAnomalies = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Clear Anomaly Records',
+      message: 'Are you sure you want to clear the in-memory anomaly history? Real-time counters will be reset.',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const res = await apiCall('/api/admin/security/anomalies/clear', { method: 'POST' });
+          if (res.success) {
+            triggerAlert('Success', 'Anomaly telemetry history has been cleared.');
+            await fetchThreats();
+          }
+        } catch (e) {}
+      }
+    });
   };
 
   const fetchSessions = async () => {
@@ -304,6 +420,9 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    if (activeSubTab === 'threats') {
+      await Promise.all([fetchThreats(), fetchRateLimits(), fetchBlockedIps()]);
+    }
     if (activeSubTab === 'sessions') await fetchSessions();
     if (activeSubTab === 'pats') await fetchPats();
     if (activeSubTab === '2fa') await fetch2faStatus();
@@ -322,6 +441,9 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
   useEffect(() => {
     setLoading(true);
     Promise.all([
+      fetchThreats(),
+      fetchRateLimits(),
+      fetchBlockedIps(),
       fetchSessions(),
       fetchPats(),
       fetch2faStatus(),
@@ -330,6 +452,13 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
       fetchDbStatus()
     ]).finally(() => setLoading(false));
   }, [token]);
+
+  // Refetch threats when filters change
+  useEffect(() => {
+    if (activeSubTab === 'threats') {
+      fetchThreats();
+    }
+  }, [activeSubTab, threatSeverityFilter, threatCategoryFilter, threatSearch]);
 
   return (
     <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6 dark:bg-zinc-900/40 dark:border-zinc-800">
@@ -342,14 +471,14 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
             Security & Diagnostics Control Panel
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Enterprise-grade credentials, multi-device active sessions, TOTP 2FA, API keys, feature flags and live system telemetry.
+            Enterprise-grade rate limiting, anomaly threat detection, IP shielding, multi-device sessions, TOTP 2FA, and telemetry.
           </p>
         </div>
 
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="mt-3 md:mt-0 px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 dark:bg-zinc-800 dark:text-slate-300 dark:border-zinc-700 flex items-center justify-center gap-2 transition duration-300"
+          className="mt-3 md:mt-0 px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 dark:bg-zinc-800 dark:text-slate-300 dark:border-zinc-700 flex items-center justify-center gap-2 transition duration-300 cursor-pointer"
         >
           <RefreshCcw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
           Refresh Console
@@ -359,6 +488,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
       {/* SUB TABS NAVIGATION */}
       <div className="flex flex-wrap gap-2 p-1 bg-slate-100 dark:bg-zinc-800/60 rounded-xl max-w-fit">
         {[
+          { id: 'threats', label: 'Rate Limits & Threats', icon: <ShieldAlert className="w-3.5 h-3.5" /> },
           { id: 'sessions', label: 'Active Sessions', icon: <Clock className="w-3.5 h-3.5" /> },
           { id: 'pats', label: 'API Keys / PATs', icon: <Key className="w-3.5 h-3.5" /> },
           { id: '2fa', label: 'Multi-Factor Auth', icon: <Smartphone className="w-3.5 h-3.5" /> },
@@ -369,7 +499,7 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
           <button
             key={tab.id}
             onClick={() => setActiveSubTab(tab.id as any)}
-            className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition duration-300 ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition duration-300 cursor-pointer ${
               activeSubTab === tab.id 
                 ? 'bg-white text-indigo-600 shadow-xs dark:bg-zinc-700 dark:text-slate-100' 
                 : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
@@ -389,6 +519,402 @@ export const SecurityConsole: React.FC<SecurityConsoleProps> = ({ token, trigger
         </div>
       ) : (
         <div className="space-y-4">
+
+          {/* THREATS & RATE LIMITS TAB */}
+          {activeSubTab === 'threats' && (
+            <div className="space-y-6">
+              
+              {/* STATS OVERVIEW CARDS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-100 rounded-2xl p-4 dark:bg-zinc-950/40 dark:border-zinc-800 flex items-start gap-3.5">
+                  <div className="p-2.5 bg-rose-50 dark:bg-rose-950/40 rounded-xl text-rose-500 shrink-0">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Anomalies</span>
+                    <strong className="block text-xl font-bold font-mono text-slate-800 dark:text-slate-100 mt-0.5">
+                      {anomalyStats?.totalAnomalies ?? 0}
+                    </strong>
+                    <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium block mt-0.5">
+                      {anomalyStats?.bySeverity?.CRITICAL ?? 0} Critical / {anomalyStats?.bySeverity?.HIGH ?? 0} High
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-100 rounded-2xl p-4 dark:bg-zinc-950/40 dark:border-zinc-800 flex items-start gap-3.5">
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 rounded-xl text-amber-500 shrink-0">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rate Limit Breaches</span>
+                    <strong className="block text-xl font-bold font-mono text-slate-800 dark:text-slate-100 mt-0.5">
+                      {anomalyStats?.byCategory?.RATE_LIMIT_BREACH ?? 0}
+                    </strong>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                      Across 8 Active Tiers
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-100 rounded-2xl p-4 dark:bg-zinc-950/40 dark:border-zinc-800 flex items-start gap-3.5">
+                  <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl text-indigo-500 shrink-0">
+                    <Ban className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Blocked IP Addresses</span>
+                    <strong className="block text-xl font-bold font-mono text-slate-800 dark:text-slate-100 mt-0.5">
+                      {anomalyStats?.activeBlockedIpsCount ?? blockedIps.length}
+                    </strong>
+                    <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium block mt-0.5">
+                      Automated & Manual Blocks
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-100 rounded-2xl p-4 dark:bg-zinc-950/40 dark:border-zinc-800 flex items-start gap-3.5">
+                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl text-emerald-500 shrink-0">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Security Engine Status</span>
+                    <strong className="block text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                      ACTIVE & GUARDING
+                    </strong>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                      express-rate-limit 7.5.0
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* RATE LIMITING TIERS MATRIX */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 dark:bg-zinc-950/40 dark:border-zinc-800 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800 pb-3">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-indigo-500" />
+                      Active Rate Limiter Tiers & Throttles
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Enforced per spoof-proof client IP via express-rate-limit to protect sensitive APIs from brute force and DoS.
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono px-2.5 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 rounded-lg font-bold">
+                    8 Tiers Active
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {(rateLimitTiers.length > 0 ? rateLimitTiers : [
+                    { id: 'global', name: 'Global API Baseline', windowMs: 300000, maxLimit: 600, description: 'All /api/ endpoints DoS protection', totalBreaches: 0, activeThrottlesCount: 0 },
+                    { id: 'strict_login', name: 'Strict Login & Auth', windowMs: 900000, maxLimit: 12, description: 'Brute-force & credential stuffing defense', totalBreaches: 0, activeThrottlesCount: 0 },
+                    { id: 'sensitive_auth', name: 'Sensitive Auth & 2FA', windowMs: 900000, maxLimit: 30, description: 'Registration, 2FA, token exchanges', totalBreaches: 0, activeThrottlesCount: 0 },
+                    { id: 'password_reset', name: 'Password Recovery', windowMs: 900000, maxLimit: 5, description: 'Recovery requests & enumeration defense', totalBreaches: 0, activeThrottlesCount: 0 },
+                    { id: 'extension_pair', name: 'Extension Pairing & Import', windowMs: 600000, maxLimit: 5, description: 'Single-use pairing code authorization', totalBreaches: 0, activeThrottlesCount: 0 },
+                    { id: 'admin_api', name: 'Admin Gateway Protection', windowMs: 300000, maxLimit: 200, description: 'Backoffice management operations', totalBreaches: 0, activeThrottlesCount: 0 },
+                    { id: 'ai_heavy', name: 'AI & Heavy Compute', windowMs: 300000, maxLimit: 20, description: 'Gemini generation & comparison pipeline', totalBreaches: 0, activeThrottlesCount: 0 },
+                    { id: 'public_actions', name: 'Public User Forms', windowMs: 900000, maxLimit: 15, description: 'Newsletter, contact form, interest clicks', totalBreaches: 0, activeThrottlesCount: 0 }
+                  ]).map((tier) => (
+                    <div key={tier.id} className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl dark:bg-zinc-900/50 dark:border-zinc-800/80 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-slate-700 dark:text-slate-300 truncate">{tier.name}</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300 rounded font-semibold">
+                            {tier.maxLimit} req / {Math.round(tier.windowMs / 60000)}m
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1 leading-snug">{tier.description}</p>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-slate-200/50 dark:border-zinc-800 flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500">Breaches Recorded:</span>
+                        <span className={`font-mono font-bold ${tier.totalBreaches > 0 ? 'text-amber-600' : 'text-slate-600 dark:text-slate-400'}`}>
+                          {tier.totalBreaches}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* IP BLOCKLIST & MANUAL ENFORCEMENT */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Form to manual block IP */}
+                <div className="bg-white border border-slate-100 rounded-2xl p-5 dark:bg-zinc-950/40 dark:border-zinc-800 space-y-3">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <Ban className="w-4 h-4 text-rose-500" />
+                    Manual IP Shield / Block
+                  </h4>
+                  <p className="text-[11px] text-slate-400 leading-normal">
+                    Immediately deny all API access for a malicious IP address across the entire application.
+                  </p>
+
+                  <form onSubmit={handleManualBlock} className="space-y-3 pt-1">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                        IP Address
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 198.51.100.42"
+                        value={manualIp}
+                        onChange={(e) => setManualIp(e.target.value)}
+                        required
+                        className="w-full px-3 py-1.5 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-slate-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                        Reason
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Excessive vulnerability scanning"
+                        value={manualReason}
+                        onChange={(e) => setManualReason(e.target.value)}
+                        className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-slate-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                        Duration (Minutes)
+                      </label>
+                      <select
+                        value={manualDuration}
+                        onChange={(e) => setManualDuration(parseInt(e.target.value))}
+                        className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-slate-100"
+                      >
+                        <option value={15}>15 Minutes</option>
+                        <option value={60}>1 Hour</option>
+                        <option value={360}>6 Hours</option>
+                        <option value={1440}>24 Hours</option>
+                        <option value={10080}>7 Days</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={ipActionLoading || !manualIp.trim()}
+                      className="w-full py-2 px-3 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition duration-300 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Ban className="w-3.5 h-3.5" />
+                      {ipActionLoading ? 'Blocking...' : 'Enforce IP Block'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Active blocked IPs list */}
+                <div className="lg:col-span-2 bg-white border border-slate-100 rounded-2xl p-5 dark:bg-zinc-950/40 dark:border-zinc-800 space-y-3 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-2">
+                      <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                        <ShieldAlert className="w-4 h-4 text-amber-500" />
+                        Currently Blocked IP Addresses ({blockedIps.length})
+                      </h4>
+                      <button
+                        onClick={fetchBlockedIps}
+                        className="text-[11px] text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 font-medium cursor-pointer"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+
+                    <div className="mt-3 overflow-y-auto max-h-[220px]">
+                      {blockedIps.length === 0 ? (
+                        <div className="py-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-1.5">
+                          <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                          <span>No IP addresses currently blocked. Clean traffic flow!</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {blockedIps.map((entry) => (
+                            <div key={entry.ip} className="p-2.5 bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800 rounded-xl flex items-center justify-between text-xs">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">{entry.ip}</span>
+                                  {entry.manual && (
+                                    <span className="text-[9px] px-1.5 py-0.2 bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 rounded font-semibold">
+                                      MANUAL
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-slate-500 mt-0.5">{entry.reason}</p>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">
+                                  Expires: {new Date(entry.expiresAt).toLocaleTimeString()} ({Math.max(0, Math.ceil((new Date(entry.expiresAt).getTime() - Date.now()) / 60000))}m remaining)
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleUnblockIp(entry.ip)}
+                                className="px-2.5 py-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 rounded-lg transition duration-300 cursor-pointer"
+                              >
+                                Unblock
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-2">
+                    Blocked IPs receive a 403 Forbidden with standard security code before any request is processed.
+                  </p>
+                </div>
+              </div>
+
+              {/* REAL-TIME ANOMALY DETECTION LOG STREAM */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 dark:bg-zinc-950/40 dark:border-zinc-800 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-zinc-800 pb-3">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                      <AlertOctagon className="w-4 h-4 text-rose-500" />
+                      Security Anomaly Stream & Threat Telemetry
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Captures failed auth bursts, credential stuffing patterns, vulnerability probes, and rate-limit violations.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={fetchThreats}
+                      className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl dark:bg-zinc-800 dark:text-slate-300 flex items-center gap-1.5 transition duration-300 cursor-pointer"
+                    >
+                      <RefreshCcw className="w-3.5 h-3.5" />
+                      Refresh
+                    </button>
+                    <button
+                      onClick={handleClearAnomalies}
+                      className="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-400 rounded-xl flex items-center gap-1.5 transition duration-300 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Clear History
+                    </button>
+                  </div>
+                </div>
+
+                {/* FILTERS BAR */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search IP, endpoint, identifier..."
+                      value={threatSearch}
+                      onChange={(e) => setThreatSearch(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <select
+                      value={threatSeverityFilter}
+                      onChange={(e) => setThreatSeverityFilter(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-slate-100"
+                    >
+                      <option value="ALL">All Severities</option>
+                      <option value="CRITICAL">Critical Only</option>
+                      <option value="HIGH">High Only</option>
+                      <option value="MEDIUM">Medium Only</option>
+                      <option value="LOW">Low Only</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <select
+                      value={threatCategoryFilter}
+                      onChange={(e) => setThreatCategoryFilter(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-slate-100"
+                    >
+                      <option value="ALL">All Threat Categories</option>
+                      <option value="CREDENTIAL_STUFFING">Credential Stuffing</option>
+                      <option value="VULNERABILITY_PROBE">Vulnerability Probing</option>
+                      <option value="RATE_LIMIT_BREACH">Rate Limit Breach</option>
+                      <option value="ANOMALOUS_TRAFFIC_SPIKE">Traffic Burst / Spikes</option>
+                      <option value="UNAUTHORIZED_ADMIN_ACCESS">Unauthorized Admin Access</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* ANOMALY STREAM TABLE */}
+                <div className="border border-slate-100 dark:border-zinc-800 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-zinc-900/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-zinc-800">
+                          <th className="px-3.5 py-2.5">Time</th>
+                          <th className="px-3.5 py-2.5">Severity</th>
+                          <th className="px-3.5 py-2.5">Threat Category</th>
+                          <th className="px-3.5 py-2.5">Client IP & Target</th>
+                          <th className="px-3.5 py-2.5">Details</th>
+                          <th className="px-3.5 py-2.5 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                        {anomalies.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                              No security anomalies matching current filter criteria.
+                            </td>
+                          </tr>
+                        ) : (
+                          anomalies.map((anom) => (
+                            <tr key={anom.id} className="hover:bg-slate-50/60 dark:hover:bg-zinc-900/20">
+                              <td className="px-3.5 py-2.5 whitespace-nowrap text-slate-500 font-mono text-[11px]">
+                                {new Date(anom.timestamp).toLocaleTimeString()}
+                              </td>
+                              <td className="px-3.5 py-2.5 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  anom.severity === 'CRITICAL' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' :
+                                  anom.severity === 'HIGH' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' :
+                                  anom.severity === 'MEDIUM' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300' :
+                                  'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-slate-300'
+                                }`}>
+                                  {anom.severity}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5 whitespace-nowrap">
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                  {anom.category.replace(/_/g, ' ')}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5">
+                                <div className="font-mono text-slate-800 dark:text-slate-200 font-semibold text-[11px]">{anom.ipAddress}</div>
+                                <div className="text-[10px] text-slate-400 truncate max-w-[180px]">{anom.method} {anom.path}</div>
+                              </td>
+                              <td className="px-3.5 py-2.5 text-slate-600 dark:text-slate-400 text-[11px] max-w-[260px]">
+                                <div>{anom.message}</div>
+                                {anom.targetIdentifier && (
+                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">Target: {anom.targetIdentifier}</div>
+                                )}
+                              </td>
+                              <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
+                                {!blockedIps.some(b => b.ip === anom.ipAddress) ? (
+                                  <button
+                                    onClick={() => {
+                                      setManualIp(anom.ipAddress);
+                                      setManualReason(`Detected ${anom.category}: ${anom.message}`);
+                                      setActiveSubTab('threats');
+                                    }}
+                                    className="px-2.5 py-1 text-[10px] font-bold text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 hover:border-transparent rounded-lg transition duration-300 cursor-pointer"
+                                  >
+                                    Block IP
+                                  </button>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 font-medium">Blocked</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
 
           {/* ACTIVE SESSIONS TAB */}
           {activeSubTab === 'sessions' && (

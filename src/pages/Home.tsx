@@ -80,55 +80,66 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
     const pricing = getValidatedPricing(p);
     const isPriority = index < 4;
     return (
-      <a
+      <motion.div
         key={p._id}
-        href={`/product-detail/${p.slug}`}
-        onClick={(e) => {
-          if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) {
-            e.preventDefault();
-            onNavigate('product-detail', p.slug);
-          }
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ 
+          duration: 0.32, 
+          delay: Math.min(index * 0.035, 0.28), 
+          ease: [0.22, 1, 0.36, 1] 
         }}
-        className="group block h-full"
+        className="h-full"
       >
-        <BorderGlow className="h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col hover:-translate-y-1 transition-transform" borderRadius={12}>
-          <div className="relative aspect-square p-3 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-            <img 
-              loading={isPriority ? "eager" : "lazy"} 
-              fetchPriority={index < 2 ? "high" : "auto"}
-              decoding="async"
-              src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400'} 
-              alt={p.name} 
-              width="400" 
-              height="400" 
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
-            />
-            {pricing.isDiscounted ? (
-              <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white font-sans font-semibold text-[11px] tracking-wide uppercase px-2 py-0.5 rounded shadow-xs">
-                -{pricing.discount}%
-              </div>
-            ) : null}
-          </div>
-          <div className="p-4 flex flex-col grow">
-            <span className="text-[10px] font-sans font-semibold text-slate-400 uppercase tracking-wider mb-1">{p.brand || 'Gadget'}</span>
-            <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white line-clamp-2 mb-3 leading-snug">{getShortProductTitle(p.name, p.brand)}</h3>
-            <div className="mt-auto flex items-end justify-between flex-wrap gap-2">
-              <div className="flex flex-col">
-                <div className="text-base sm:text-lg font-sans font-bold tabular-nums text-zinc-900 dark:text-white">{formatProductPrice(pricing.price, p)}</div>
-                {pricing.isDiscounted && pricing.originalPrice && (
-                  <div className="text-[11px] font-sans text-slate-400 line-through tabular-nums">{formatProductPrice(pricing.originalPrice, p)}</div>
-                )}
-              </div>
-              {p.rating && p.rating > 0 ? (
-                <div className="flex items-center gap-1 text-[11px] font-sans font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded">
-                  <span className="text-amber-400">★</span>
-                  <span className="font-bold">{p.rating}</span>
+        <a
+          href={`/product-detail/${p.slug}`}
+          onClick={(e) => {
+            if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) {
+              e.preventDefault();
+              onNavigate('product-detail', p.slug);
+            }
+          }}
+          className="group block h-full"
+        >
+          <BorderGlow className="h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col hover:-translate-y-1 transition-transform" borderRadius={12}>
+            <div className="relative aspect-square p-3 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+              <img 
+                loading={isPriority ? "eager" : "lazy"} 
+                fetchPriority={index < 2 ? "high" : "auto"}
+                decoding="async"
+                src={p.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400'} 
+                alt={p.name} 
+                width="400" 
+                height="400" 
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
+              />
+              {pricing.isDiscounted ? (
+                <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white font-sans font-semibold text-[11px] tracking-wide uppercase px-2 py-0.5 rounded shadow-xs">
+                  -{pricing.discount}%
                 </div>
               ) : null}
             </div>
-          </div>
-        </BorderGlow>
-      </a>
+            <div className="p-4 flex flex-col grow">
+              <span className="text-[10px] font-sans font-semibold text-slate-400 uppercase tracking-wider mb-1">{p.brand || 'Gadget'}</span>
+              <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white line-clamp-2 mb-3 leading-snug">{getShortProductTitle(p.name, p.brand)}</h3>
+              <div className="mt-auto flex items-end justify-between flex-wrap gap-2">
+                <div className="flex flex-col">
+                  <div className="text-base sm:text-lg font-sans font-bold tabular-nums text-zinc-900 dark:text-white">{formatProductPrice(pricing.price, p)}</div>
+                  {pricing.isDiscounted && pricing.originalPrice && (
+                    <div className="text-[11px] font-sans text-slate-400 line-through tabular-nums">{formatProductPrice(pricing.originalPrice, p)}</div>
+                  )}
+                </div>
+                {p.rating && p.rating > 0 ? (
+                  <div className="flex items-center gap-1 text-[11px] font-sans font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded">
+                    <span className="text-amber-400">★</span>
+                    <span className="font-bold">{p.rating}</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </BorderGlow>
+        </a>
+      </motion.div>
     );
   };
 
@@ -187,7 +198,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
       </section>
 
       {/* 2. ALL PRODUCTS GRID (Primary Above-the-Fold Content to prevent CLS) */}
-      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <motion.section 
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12"
+      >
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div>
             <h2 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
@@ -236,11 +252,17 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">Our catalog is currently compiling real-time specifications and deal tracking. Please explore our buying guides below.</p>
           </div>
         )}
-      </section>
+      </motion.section>
 
       {/* 3. RECENTLY VIEWED (Rendered beneath catalog to eliminate CLS) */}
       {recentlyViewed.length > 0 && (
-        <section className="w-full max-w-7xl mx-auto px-4 py-8 border-t border-slate-200 dark:border-slate-800/50">
+        <motion.section 
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-7xl mx-auto px-4 py-8 border-t border-slate-200 dark:border-slate-800/50"
+        >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <History className="h-5 w-5 text-zinc-900 dark:text-white" />
@@ -259,11 +281,17 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {recentlyViewed.map((p, idx) => renderProductCard(p, idx))}
           </div>
-        </section>
+        </motion.section>
       )}
 
       {/* 4. EDITORIAL / DEALS BAND */}
-      <section className="w-full bg-slate-50 dark:bg-slate-900 py-16 border-t border-slate-100 dark:border-slate-800">
+      <motion.section 
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-40px" }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full bg-slate-50 dark:bg-slate-900 py-16 border-t border-slate-100 dark:border-slate-800"
+      >
         <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
           <div>
             <span className="text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-wider mb-2 block">Buying Guides</span>
@@ -287,19 +315,23 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
               { title: 'TWS Earbuds Guide', icon: Headphones },
               { title: 'Gaming Accessories', icon: Gamepad }
             ].map((guide, i) => (
-              <a
+              <motion.a
                 key={i}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.3, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
                 href="/blogs"
                 onClick={(e) => { e.preventDefault(); onNavigate('blogs'); }}
                 className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm dark:hover:shadow-none p-4 sm:p-6 rounded-xl transition-all cursor-pointer group"
               >
                 <guide.icon className="h-8 w-8 text-zinc-700 dark:text-slate-300 mb-4 group-hover:scale-110 transition-transform" />
                 <h3 className="font-semibold text-slate-900 dark:text-white text-sm leading-snug">{guide.title}</h3>
-              </a>
+              </motion.a>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 };

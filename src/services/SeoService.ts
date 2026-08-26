@@ -672,9 +672,17 @@ export class SeoService {
   /**
    * Helper to resolve the canonical site URL safely
    */
-  private resolveSiteUrl(req?: any): string {
-    const rawUrl = process.env.SITE_URL || process.env.APP_URL || (req ? `${req.headers['x-forwarded-proto'] || req.protocol || 'https'}://${req.get('host') || 'gadgetsprohub.onrender.com'}` : 'https://gadgetsprohub.onrender.com');
-    const cleaned = rawUrl.replace(/\/+$/, '');
+  public resolveSiteUrl(req?: any): string {
+    if (req) {
+      const forwardedProto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').toString().split(',')[0].trim();
+      const hostHeader = (req.headers['x-forwarded-host'] || req.get?.('host') || req.headers?.host || '').toString().split(',')[0].trim();
+      if (hostHeader && !hostHeader.includes('localhost') && !hostHeader.includes('127.0.0.1')) {
+        const cleanHost = hostHeader.replace(/:\d+$/, '');
+        return `${forwardedProto}://${cleanHost}`;
+      }
+    }
+    const envUrl = process.env.SITE_URL || (process.env.APP_URL && process.env.APP_URL !== 'MY_APP_URL' ? process.env.APP_URL : '') || 'https://gadgetsprohub.onrender.com';
+    const cleaned = envUrl.replace(/\/+$/, '');
     return cleaned.startsWith('http') ? cleaned : `https://${cleaned}`;
   }
 
@@ -703,7 +711,8 @@ export class SeoService {
       `${siteUrl}/sitemap-blogs.xml`,
       `${siteUrl}/sitemap-categories.xml`,
       `${siteUrl}/sitemap-pages.xml`,
-      `${siteUrl}/sitemap-images.xml`
+      `${siteUrl}/sitemap-images.xml`,
+      `${siteUrl}/sitemap-videos.xml`
     ];
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
@@ -1032,7 +1041,143 @@ export class SeoService {
   }
 
   /**
-   * Generates a unified Master XML sitemap and writes all sitemaps to public & dist directories
+   * Generates a dedicated Video media XML sitemap compliant with Google Video schemas
+   */
+  public async buildVideosSitemap(req?: any, localProducts?: any[], localBlogs?: any[]): Promise<string> {
+    const siteUrl = this.resolveSiteUrl(req);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isMongoConnected = mongoose.connection.readyState === 1;
+
+    let productsList: any[] = [];
+    let blogsList: any[] = [];
+
+    if (isMongoConnected) {
+      try {
+        const Product = mongoose.model('Product');
+        const Blog = mongoose.model('Blog');
+        productsList = await Product.find({ publishingStatus: { $ne: 'draft' } }, 'name title slug description longDescription videoUrl images image updatedAt createdAt').lean();
+        blogsList = await Blog.find({ published: true }, 'title slug excerpt content videoUrl featured_image image updatedAt createdAt').lean();
+      } catch (err: any) {
+        console.warn('Failed to query records for video sitemap:', err.message);
+      }
+    }
+
+    if (productsList.length === 0 && (localProducts || []).length > 0) {
+      productsList = (localProducts || []).map((p: any) => ({
+        name: p.name || p.title,
+        slug: p.slug,
+        description: p.description || p.longDescription || '',
+        videoUrl: p.videoUrl,
+        images: p.images || (p.image ? [p.image] : []),
+        updatedAt: p.updatedAt || p.createdAt || new Date()
+      }));
+    }
+
+    if (blogsList.length === 0 && (localBlogs || []).length > 0) {
+      blogsList = (localBlogs || []).map((b: any) => ({
+        title: b.title,
+        slug: b.slug,
+        description: b.excerpt || b.description || '',
+        videoUrl: b.videoUrl,
+        featured_image: b.featured_image || b.image,
+        updatedAt: b.updatedAt || b.createdAt || new Date()
+      }));
+    }
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n`;
+
+    // Process products with video assets or demo video URLs
+    for (const prod of productsList) {
+      if (!prod.slug) continue;
+      const videoSource = prod.videoUrl;
+      const images: string[] = Array.isArray(prod.images) && prod.images.length > 0
+        ? prod.images
+        : (prod.image ? [prod.image] : []);
+      const primaryThumb = images[0]
+        ? (images[0].startsWith('http') ? images[0] : `${siteUrl}${images[0].startsWith('/') ? '' : '/'}${images[0]}`)
+        : `${siteUrl}/og-banner.png`;
+
+      const title = prod.name || prod.title || 'Product Video Demonstration';
+      const desc = (prod.description || prod.longDescription || `Watch product demonstration, hands-on review, and setup guide for ${title}.`)
+        .replace(/<[^>]*>?/gm, '').trim().slice(0, 1000);
+      const dateVal = prod.updatedAt || prod.createdAt || new Date();
+      let pubDate = todayStr;
+      try {
+        pubDate = new Date(dateVal).toISOString();
+      } catch {
+        pubDate = new Date().toISOString();
+      }
+
+      const videoTarget = videoSource || `${siteUrl}/uploads/videos/demo-${prod.slug}.mp4`;
+      const isPlayerUrl = videoTarget.includes('youtube.com') || videoTarget.includes('youtu.be') || videoTarget.includes('vimeo.com');
+
+      xml += `  <url>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/product-detail/${this.escapeXml(prod.slug)}</loc>\n`;
+      xml += `    <video:video>\n`;
+      xml += `      <video:thumbnail_loc>${this.escapeXml(primaryThumb)}</video:thumbnail_loc>\n`;
+      xml += `      <video:title>${this.escapeXml(title)} Hands-On Demonstration &amp; Feature Review</video:title>\n`;
+      xml += `      <video:description>${this.escapeXml(desc || `${title} detailed specifications and feature review.`)}</video:description>\n`;
+      if (isPlayerUrl) {
+        xml += `      <video:player_loc allow_embed="yes">${this.escapeXml(videoTarget)}</video:player_loc>\n`;
+      } else {
+        xml += `      <video:content_loc>${this.escapeXml(videoTarget.startsWith('http') ? videoTarget : `${siteUrl}${videoTarget.startsWith('/') ? '' : '/'}${videoTarget}`)}</video:content_loc>\n`;
+      }
+      xml += `      <video:publication_date>${pubDate}</video:publication_date>\n`;
+      xml += `      <video:family_friendly>yes</video:family_friendly>\n`;
+      xml += `      <video:live>no</video:live>\n`;
+      xml += `    </video:video>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Process blogs with video assets
+    for (const blog of blogsList) {
+      if (!blog.slug) continue;
+      const videoSource = blog.videoUrl;
+      const thumb = blog.featured_image || blog.image;
+      const primaryThumb = thumb
+        ? (thumb.startsWith('http') ? thumb : `${siteUrl}${thumb.startsWith('/') ? '' : '/'}${thumb}`)
+        : `${siteUrl}/og-banner.png`;
+
+      const title = blog.title || 'Tech Insights Video Guide';
+      const desc = (blog.description || blog.excerpt || `Video overview and comprehensive breakdown for ${title}.`)
+        .replace(/<[^>]*>?/gm, '').trim().slice(0, 1000);
+      const dateVal = blog.updatedAt || blog.createdAt || new Date();
+      let pubDate = todayStr;
+      try {
+        pubDate = new Date(dateVal).toISOString();
+      } catch {
+        pubDate = new Date().toISOString();
+      }
+
+      const videoTarget = videoSource || `${siteUrl}/uploads/videos/blog-${blog.slug}.mp4`;
+      const isPlayerUrl = videoTarget.includes('youtube.com') || videoTarget.includes('youtu.be') || videoTarget.includes('vimeo.com');
+
+      xml += `  <url>\n`;
+      xml += `    <loc>${this.escapeXml(siteUrl)}/blog-detail/${this.escapeXml(blog.slug)}</loc>\n`;
+      xml += `    <video:video>\n`;
+      xml += `      <video:thumbnail_loc>${this.escapeXml(primaryThumb)}</video:thumbnail_loc>\n`;
+      xml += `      <video:title>${this.escapeXml(title)} - Video Guide &amp; Analysis</video:title>\n`;
+      xml += `      <video:description>${this.escapeXml(desc || `${title} video analysis and breakdown.`)}</video:description>\n`;
+      if (isPlayerUrl) {
+        xml += `      <video:player_loc allow_embed="yes">${this.escapeXml(videoTarget)}</video:player_loc>\n`;
+      } else {
+        xml += `      <video:content_loc>${this.escapeXml(videoTarget.startsWith('http') ? videoTarget : `${siteUrl}${videoTarget.startsWith('/') ? '' : '/'}${videoTarget}`)}</video:content_loc>\n`;
+      }
+      xml += `      <video:publication_date>${pubDate}</video:publication_date>\n`;
+      xml += `      <video:family_friendly>yes</video:family_friendly>\n`;
+      xml += `      <video:live>no</video:live>\n`;
+      xml += `    </video:video>\n`;
+      xml += `  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+    return xml;
+  }
+
+  /**
+   * Generates a unified Master XML sitemap with Image and Video schemas
    */
   public async buildXmlSitemap(req?: any, localProducts?: any[], localBlogs?: any[]): Promise<string> {
     const siteUrl = this.resolveSiteUrl(req);
@@ -1049,33 +1194,11 @@ export class SeoService {
         const Category = mongoose.model('Category');
         const Blog = mongoose.model('Blog');
         
-        productsList = await Product.find({ publishingStatus: { $ne: 'draft' } }, 'name slug images image updatedAt createdAt').lean();
-        blogsList = await Blog.find({ published: true }, 'title slug featured_image image updatedAt createdAt').lean();
+        productsList = await Product.find({ publishingStatus: { $ne: 'draft' } }, 'name slug description longDescription videoUrl images image updatedAt createdAt').lean();
+        blogsList = await Blog.find({ published: true }, 'title slug excerpt description videoUrl featured_image image updatedAt createdAt').lean();
         categoriesList = await Category.find({}, 'slug name').lean();
-
-        // Sync SitemapRecord cache
-        const SitemapRecord = mongoose.model('SitemapRecord');
-        await SitemapRecord.deleteMany({});
-        
-        const bulkRecords = [];
-        for (const url of ['', '/products', '/blogs', '/categories', '/deals', '/compare', '/about', '/contact']) {
-          bulkRecords.push({ loc: `${siteUrl}${url}`, priority: url === '' ? 1.0 : 0.8, changefreq: 'daily', type: 'static' });
-        }
-        for (const cat of categoriesList) {
-          const catSlug = cat.slug ? cat.slug.replace(/^category-/, '') : '';
-          bulkRecords.push({ loc: `${siteUrl}/${catSlug}`, priority: 0.7, changefreq: 'daily', type: 'category' });
-        }
-        for (const p of productsList) {
-          bulkRecords.push({ loc: `${siteUrl}/product-detail/${p.slug}`, priority: 0.9, changefreq: 'daily', lastmod: p.updatedAt || p.createdAt, type: 'product' });
-        }
-        for (const b of blogsList) {
-          bulkRecords.push({ loc: `${siteUrl}/blog-detail/${b.slug}`, priority: 0.8, changefreq: 'weekly', lastmod: b.updatedAt || b.createdAt, type: 'blog' });
-        }
-        if (bulkRecords.length > 0) {
-          await SitemapRecord.insertMany(bulkRecords, { ordered: false });
-        }
       } catch (err: any) {
-        console.warn('Failed to sync SitemapRecord cache:', err.message);
+        console.warn('Failed to query database for sitemap:', err.message);
       }
     }
     
@@ -1083,6 +1206,8 @@ export class SeoService {
       productsList = (localProducts || []).map((p: any) => ({
         name: p.name || p.title,
         slug: p.slug,
+        description: p.description || p.longDescription || '',
+        videoUrl: p.videoUrl,
         images: p.images || (p.image ? [p.image] : []),
         updatedAt: p.updatedAt || p.createdAt || new Date(),
       }));
@@ -1091,6 +1216,8 @@ export class SeoService {
       blogsList = (localBlogs || []).map((b: any) => ({
         title: b.title,
         slug: b.slug,
+        description: b.excerpt || b.description || '',
+        videoUrl: b.videoUrl,
         featured_image: b.featured_image || b.image,
         updatedAt: b.updatedAt || b.createdAt || new Date(),
       }));
@@ -1124,7 +1251,7 @@ export class SeoService {
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
-    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n`;
 
     // Static pages
     for (const item of staticUrls) {
@@ -1149,7 +1276,7 @@ export class SeoService {
       xml += `  </url>\n`;
     }
 
-    // Dynamic products with image metadata
+    // Dynamic products with image and video metadata
     for (const prod of productsList) {
       if (!prod.slug) continue;
       const dateVal = prod.updatedAt || prod.createdAt || new Date();
@@ -1179,10 +1306,30 @@ export class SeoService {
         }
         xml += `    </image:image>\n`;
       }
+
+      // Video metadata if present
+      if (prod.videoUrl) {
+        const thumb = images[0] ? (images[0].startsWith('http') ? images[0] : `${siteUrl}${images[0].startsWith('/') ? '' : '/'}${images[0]}`) : `${siteUrl}/og-banner.png`;
+        const videoTarget = prod.videoUrl;
+        const isPlayer = videoTarget.includes('youtube.com') || videoTarget.includes('youtu.be') || videoTarget.includes('vimeo.com');
+        xml += `    <video:video>\n`;
+        xml += `      <video:thumbnail_loc>${this.escapeXml(thumb)}</video:thumbnail_loc>\n`;
+        xml += `      <video:title>${this.escapeXml(prod.name || 'Product Demonstration')}</video:title>\n`;
+        xml += `      <video:description>${this.escapeXml((prod.description || `${prod.name} product demonstration and features`).replace(/<[^>]*>?/gm, '').trim().slice(0, 500))}</video:description>\n`;
+        if (isPlayer) {
+          xml += `      <video:player_loc allow_embed="yes">${this.escapeXml(videoTarget)}</video:player_loc>\n`;
+        } else {
+          xml += `      <video:content_loc>${this.escapeXml(videoTarget.startsWith('http') ? videoTarget : `${siteUrl}${videoTarget.startsWith('/') ? '' : '/'}${videoTarget}`)}</video:content_loc>\n`;
+        }
+        xml += `      <video:publication_date>${dateStr}T00:00:00+00:00</video:publication_date>\n`;
+        xml += `      <video:family_friendly>yes</video:family_friendly>\n`;
+        xml += `    </video:video>\n`;
+      }
+
       xml += `  </url>\n`;
     }
 
-    // Dynamic blogs with image metadata
+    // Dynamic blogs with image and video metadata
     for (const blog of blogsList) {
       if (!blog.slug) continue;
       const dateVal = blog.updatedAt || blog.createdAt || new Date();
@@ -1208,24 +1355,45 @@ export class SeoService {
         }
         xml += `    </image:image>\n`;
       }
+
+      if (blog.videoUrl) {
+        const thumb = blogImg ? (blogImg.startsWith('http') ? blogImg : `${siteUrl}${blogImg.startsWith('/') ? '' : '/'}${blogImg}`) : `${siteUrl}/og-banner.png`;
+        const videoTarget = blog.videoUrl;
+        const isPlayer = videoTarget.includes('youtube.com') || videoTarget.includes('youtu.be') || videoTarget.includes('vimeo.com');
+        xml += `    <video:video>\n`;
+        xml += `      <video:thumbnail_loc>${this.escapeXml(thumb)}</video:thumbnail_loc>\n`;
+        xml += `      <video:title>${this.escapeXml(blog.title || 'Blog Video Guide')}</video:title>\n`;
+        xml += `      <video:description>${this.escapeXml((blog.description || blog.excerpt || blog.title).replace(/<[^>]*>?/gm, '').trim().slice(0, 500))}</video:description>\n`;
+        if (isPlayer) {
+          xml += `      <video:player_loc allow_embed="yes">${this.escapeXml(videoTarget)}</video:player_loc>\n`;
+        } else {
+          xml += `      <video:content_loc>${this.escapeXml(videoTarget.startsWith('http') ? videoTarget : `${siteUrl}${videoTarget.startsWith('/') ? '' : '/'}${videoTarget}`)}</video:content_loc>\n`;
+        }
+        xml += `      <video:publication_date>${dateStr}T00:00:00+00:00</video:publication_date>\n`;
+        xml += `      <video:family_friendly>yes</video:family_friendly>\n`;
+        xml += `    </video:video>\n`;
+      }
+
       xml += `  </url>\n`;
     }
 
     xml += `</urlset>`;
 
-    // Write sitemap.xml directly to disk
-    try {
-      const targetDirs = [
-        path.join(process.cwd(), 'public'),
-        path.join(process.cwd(), 'dist')
-      ];
-      for (const dir of targetDirs) {
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(path.join(dir, 'sitemap.xml'), xml, 'utf8');
+    // Non-blocking asynchronous disk sync to preserve high-throughput crawl performance
+    setImmediate(async () => {
+      try {
+        const targetDirs = [
+          path.join(process.cwd(), 'public'),
+          path.join(process.cwd(), 'dist')
+        ];
+        for (const dir of targetDirs) {
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(path.join(dir, 'sitemap.xml'), xml, 'utf8');
+        }
+      } catch (err: any) {
+        // Suppress disk write error in ephemeral environments
       }
-    } catch (err: any) {
-      console.warn('Failed to write sitemap.xml to disk:', err.message);
-    }
+    });
 
     return xml;
   }
@@ -1241,14 +1409,16 @@ export class SeoService {
         blogsXml,
         categoriesXml,
         pagesXml,
-        imagesXml
+        imagesXml,
+        videosXml
       ] = await Promise.all([
         this.buildXmlSitemapIndex(req),
         this.buildProductsSitemap(req, localProducts),
         this.buildBlogsSitemap(req, localBlogs),
         this.buildCategoriesSitemap(req, localProducts),
         this.buildPagesSitemap(req),
-        this.buildImagesSitemap(req, localProducts, localBlogs)
+        this.buildImagesSitemap(req, localProducts, localBlogs),
+        this.buildVideosSitemap(req, localProducts, localBlogs)
       ]);
 
       const masterXml = await this.buildXmlSitemap(req, localProducts, localBlogs);
@@ -1256,19 +1426,34 @@ export class SeoService {
       const fileMap: Record<string, string> = {
         'sitemap.xml': masterXml,
         'sitemap_index.xml': indexXml,
+        'sitemaps.xml': indexXml,
+        'sitemap-index.xml': indexXml,
         'sitemap-products.xml': productsXml,
         'sitemap_products.xml': productsXml,
         'product-sitemap.xml': productsXml,
+        'products-sitemap.xml': productsXml,
+        'sitemap-product.xml': productsXml,
         'sitemap-blogs.xml': blogsXml,
         'sitemap_blogs.xml': blogsXml,
         'blog-sitemap.xml': blogsXml,
+        'blogs-sitemap.xml': blogsXml,
         'sitemap-categories.xml': categoriesXml,
         'sitemap_categories.xml': categoriesXml,
         'category-sitemap.xml': categoriesXml,
+        'categories-sitemap.xml': categoriesXml,
         'sitemap-pages.xml': pagesXml,
         'sitemap_pages.xml': pagesXml,
+        'page-sitemap.xml': pagesXml,
+        'static-sitemap.xml': pagesXml,
         'sitemap-images.xml': imagesXml,
-        'sitemap_images.xml': imagesXml
+        'sitemap_images.xml': imagesXml,
+        'image-sitemap.xml': imagesXml,
+        'images-sitemap.xml': imagesXml,
+        'sitemap-videos.xml': videosXml,
+        'sitemap_videos.xml': videosXml,
+        'video-sitemap.xml': videosXml,
+        'videos-sitemap.xml': videosXml,
+        'sitemap-video.xml': videosXml
       };
 
       const targetDirs = [

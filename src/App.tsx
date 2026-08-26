@@ -808,10 +808,10 @@ const AppContent: React.FC = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeView + (selectedSlug || '')}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="w-full max-w-full overflow-x-hidden flex-grow flex flex-col"
           >
             <Suspense fallback={<ViewLoader />}>

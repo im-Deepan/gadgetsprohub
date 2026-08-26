@@ -55,11 +55,20 @@ class ApiService {
     const baseUrl = await extensionStorage.getApiUrl();
     const token = await extensionStorage.getAuthToken();
     const correlationId = generateCorrelationId();
+    const extensionId = (typeof chrome !== 'undefined' && chrome.runtime?.id) ? chrome.runtime.id : 'gph-importer';
+
+    // Validate and construct target URL
+    const cleanBaseUrl = (baseUrl || '').trim().replace(/\/$/, '');
+    if (!cleanBaseUrl || !/^https?:\/\//i.test(cleanBaseUrl)) {
+      throw new ValidationError('Invalid or unconfigured API Base URL.');
+    }
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'X-Correlation-ID': correlationId,
+      'X-Extension-ID': extensionId,
+      'X-Extension-Version': '1.0.0',
       ...(options.headers as Record<string, string> || {})
     };
 
@@ -72,7 +81,7 @@ class ApiService {
       headers
     };
 
-    const targetUrl = `${baseUrl.replace(/\/$/, '')}${endpoint}`;
+    const targetUrl = `${cleanBaseUrl}${endpoint}`;
     logger.debug(`[API Request] ${config.method || 'GET'} ${targetUrl} [Correlation ID: ${correlationId}]`);
 
     try {

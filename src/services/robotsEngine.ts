@@ -176,7 +176,8 @@ export function generateRobotsTxt(options: RobotsOptions = {}): string {
     `${baseUrl}/sitemap-products.xml`,
     `${baseUrl}/sitemap-blogs.xml`,
     `${baseUrl}/sitemap-categories.xml`,
-    `${baseUrl}/sitemap-images.xml`
+    `${baseUrl}/sitemap-images.xml`,
+    `${baseUrl}/sitemap-videos.xml`
   ];
 
   const sitemaps = options.sitemaps && options.sitemaps.length > 0 ? options.sitemaps : defaultSitemaps;

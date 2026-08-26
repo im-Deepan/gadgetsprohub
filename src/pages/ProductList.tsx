@@ -386,9 +386,13 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       className="group block text-inherit no-underline h-full"
     >
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.15, ease: 'easeOut' }}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ 
+          duration: 0.3, 
+          delay: Math.min(index * 0.03, 0.24), 
+          ease: [0.22, 1, 0.36, 1] 
+        }}
         className="h-full"
       >
         <BorderGlow
@@ -747,7 +751,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       </div>
 
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:px-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:px-4"
+      >
         <div>
           <h1 className="text-2xl font-display font-extrabold tracking-tight text-slate-900 dark:text-white">
             {selectedCategory === 'trending' 
@@ -815,7 +824,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             </select>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* TABLET HORIZONTAL FILTER CHIP BAR (md: 768px - 1023px) */}
       <div className="hidden md:flex lg:hidden flex-wrap items-center gap-3 p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mb-6 shadow-xs">
@@ -874,7 +883,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
       <div className="flex flex-col md:flex-row md:items-start md:gap-6 lg:gap-8 w-full md:px-4 relative">
         
         {/* PERMANENTLY DOCKED DESKTOP LEFT SIDEBAR (>=1024px) */}
-        <aside className={`${(products || []).length === 0 ? 'hidden' : 'hidden lg:block'} w-70 xl:w-72 shrink-0 sticky top-20 rounded-xl bg-white dark:bg-slate-900/60 p-5 border border-slate-200/80 dark:border-slate-800 space-y-5 h-fit`}>
+        <motion.aside 
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          className={`${(products || []).length === 0 ? 'hidden' : 'hidden lg:block'} w-70 xl:w-72 shrink-0 sticky top-20 rounded-xl bg-white dark:bg-slate-900/60 p-5 border border-slate-200/80 dark:border-slate-800 space-y-5 h-fit`}
+        >
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2 font-bold text-slate-800 text-xs uppercase tracking-wider dark:text-slate-100">
               <SlidersHorizontal className="h-4 w-4 text-zinc-900 dark:text-white" />
@@ -890,7 +904,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             )}
           </div>
           {renderFilterControls()}
-        </aside>
+        </motion.aside>
 
         {/* MAIN PRODUCTS COLUMN */}
         <div className="flex-1 min-w-0 space-y-6">
@@ -901,7 +915,12 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
             const activeSubcategories = activeCategoryObj?.subcategories || [];
             if (!selectedCategory || !activeCategoryObj || activeSubcategories.length === 0) return null;
             return (
-              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 dark:bg-zinc-800/30 dark:border-slate-700/80">
+              <motion.div 
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                className="bg-slate-50 border border-slate-100 rounded-xl p-4 dark:bg-zinc-800/30 dark:border-slate-700/80"
+              >
                 <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-dashed border-slate-100 dark:border-slate-700">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1.5">
                     Subcategories in {activeCategoryObj.name}
@@ -944,7 +963,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                     </button>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             );
           })()}
           

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { Product, Category } from '../types';
 import { AppView } from '../App';
 import { formatProductPrice } from '../utils/productUtils';
@@ -184,12 +185,19 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {products.map((p) => {
+            {products.map((p, idx) => {
               const isDiscounted = p.discount && p.discount > 0;
               const title = p.name || 'Unnamed Product';
               return (
-                <div
+                <motion.div
                   key={p._id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    duration: 0.3, 
+                    delay: Math.min(idx * 0.03, 0.24), 
+                    ease: [0.22, 1, 0.36, 1] 
+                  }}
                   className="group relative rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-300 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-500/50 flex flex-col justify-between"
                 >
                   <div>
@@ -256,7 +264,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onNavigate, onPreload })
                       View
                     </button>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>

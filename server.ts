@@ -72,6 +72,8 @@ import {
   WorkerService
 } from './src/services/RefinementService';
 
+import { SecurityAnomalyService } from './src/services/SecurityAnomalyService';
+
 dotenv.config();
 
 const getSanitizedMongoUri = (uri: string | undefined): string => {
@@ -1980,6 +1982,7 @@ async function startServer() {
       }
       
       const hostname = parsedOrigin.hostname;
+      const isChromeExtension = parsedOrigin.protocol === 'chrome-extension:' || origin.startsWith('chrome-extension://');
       
       // Safe regex check for localhost and 127.0.0.1 (any port)
       const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
@@ -1991,7 +1994,7 @@ async function startServer() {
       // Restrict run.app strictly to our specific project subdomain identifier to prevent open-subdomain takeover
       const isRunAppAllowed = /^[a-z0-9-]+-qsss35leqdsbti2ibtyylr-[a-z0-9-]+\.[a-z0-9-]+\.run\.app$/.test(hostname);
       const isOwnDomain = hostname === 'gadgetsprohub.onrender.com' || hostname.endsWith('.gadgetsprohub.onrender.com');
-      if (isLocalhost || isGoogleDomain || isRunAppAllowed || isOwnDomain) {
+      if (isLocalhost || isGoogleDomain || isRunAppAllowed || isOwnDomain || isChromeExtension) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -2174,74 +2177,176 @@ async function startServer() {
   // Spoof-proof client IP generator (extracts real IP appended by Google GFE to prevent headers spoofing)
   const getSecureClientIp = (req: express.Request): string => {
     const xff = req.headers['x-forwarded-for'];
-    if (xff && typeof xff === 'string') {
-      const parts = xff.split(',').map(p => p.trim()).filter(Boolean);
-      if (parts.length > 0) {
-        return parts[parts.length - 1]; // Real caller IP appended by downstream proxy GFE
+    if (xff) {
+      const headerStr = Array.isArray(xff) ? xff[0] : xff;
+      if (typeof headerStr === 'string') {
+        const parts = headerStr.split(',').map(p => p.trim()).filter(Boolean);
+        if (parts.length > 0) {
+          return parts[parts.length - 1]; // Real caller IP appended by downstream proxy GFE
+        }
       }
     }
-    return req.ip || '127.0.0.1';
+    return req.ip || req.socket?.remoteAddress || '127.0.0.1';
   };
 
-  // General API call rate limiter (Dos protection)
-  const generalLimiter = rateLimit({
+  // ========== STANDARDIZED RATE LIMITER FACTORY (express-rate-limit) ==========
+  const createRateLimiter = (tierId: string, options: {
+    windowMs: number;
+    max: number;
+    message: string;
+    skipSuccessfulRequests?: boolean;
+  }) => {
+    return rateLimit({
+      windowMs: options.windowMs,
+      max: options.max,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: getSecureClientIp,
+      validate: { xForwardedForHeader: false, default: false },
+      skipSuccessfulRequests: options.skipSuccessfulRequests || false,
+      handler: (req: express.Request, res: express.Response) => {
+        const clientIp = getSecureClientIp(req);
+        const userAgent = (req.headers['user-agent'] as string) || 'unknown';
+        const path = req.originalUrl || req.path;
+        const method = req.method;
+
+        // 1. Record in SecurityAnomalyService
+        SecurityAnomalyService.recordRateLimitHit(
+          tierId,
+          clientIp,
+          path,
+          method,
+          userAgent,
+          options.max,
+          options.windowMs
+        );
+
+        // 2. Also log to persistent audit trail
+        logSecurityAction(req, 'RATE_LIMIT_EXCEEDED', undefined, {
+          tierId,
+          limit: options.max,
+          windowMs: options.windowMs,
+          path,
+          method
+        }).catch(e => console.warn('Failed to log rate limit security action:', e));
+
+        res.status(429).json({
+          success: false,
+          error: options.message,
+          retryAfterSeconds: Math.ceil(options.windowMs / 1000),
+          tier: tierId
+        });
+      }
+    });
+  };
+
+  // ========== RATE LIMITING MIDDLEWARE TIERS ==========
+  // 1. Global Baseline API DoS Protection (applies to all /api/ routes)
+  const generalLimiter = createRateLimiter('global', {
     windowMs: 5 * 60 * 1000,
-    max: 1000,
-    message: { error: 'Too many requests from this IP address, please retry in 5 minutes' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: getSecureClientIp,
-    validate: { xForwardedForHeader: false, default: false }
+    max: 600,
+    message: 'Too many requests from this IP address. Please slow down and try again in 5 minutes.'
   });
   app.use('/api/', generalLimiter);
 
-  // Isolate highest-risk login paths to mitigate brute-force/credential padding attacks
-  const loginLimiter = rateLimit({
+  // 2. Strict Authentication Limiter (protects login and OAuth endpoints from brute-force & credential stuffing)
+  const loginLimiter = createRateLimiter('strict_login', {
     windowMs: 15 * 60 * 1000,
-    max: 15, // Max 15 attempts per 15 minutes
-    message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: getSecureClientIp,
-    validate: { xForwardedForHeader: false, default: false }
+    max: 12,
+    message: 'Too many login attempts. Please try again in 15 minutes.'
   });
   app.use('/api/auth/login', loginLimiter);
   app.use('/api/auth/google', loginLimiter);
 
-  // Dedicated rate limiter for extension pairing (max 5 attempts / 10 mins)
-  const emailActionLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 5,
-    message: { error: 'Too many email actions from this IP, please retry in 1 hour' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    validate: { xForwardedForHeader: false, default: false }
+  // 3. Sensitive Auth Actions Limiter (2FA verification, registration, token exchange)
+  const authLimiter = createRateLimiter('sensitive_auth', {
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    message: 'Excessive authorization requests detected. Please retry in 15 minutes.'
   });
-  app.use('/api/products/pick-left-click', emailActionLimiter);
-  app.use('/api/newsletter/subscribe', emailActionLimiter);
-  
-  const pairLimiter = rateLimit({
+  app.use('/api/auth/', authLimiter);
+
+  // 4. Password Reset & Recovery Limiter (defends against email enumeration and token abuse)
+  const passwordResetLimiter = createRateLimiter('password_reset', {
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Too many password reset requests. Please check your email or wait 15 minutes before retrying.'
+  });
+  app.use('/api/auth/forgot-password', passwordResetLimiter);
+  app.use('/api/auth/reset-password', passwordResetLimiter);
+
+  // 5. Extension Pairing Limiter (max 5 pairing attempts / 10 mins)
+  const pairLimiter = createRateLimiter('extension_pair', {
     windowMs: 10 * 60 * 1000,
     max: 5,
-    message: { error: 'Too many pairing attempts from this IP. Please try again in 10 minutes.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: getSecureClientIp,
-    validate: { xForwardedForHeader: false, default: false }
+    message: 'Too many pairing attempts from this IP. Please try again in 10 minutes.'
   });
   app.use('/api/auth/pair', pairLimiter);
 
-  // General Auth activity rate limiter
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 60,
-    message: { error: 'Excessive authorization activities detected, please attempt again in 15 minutes.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: getSecureClientIp,
-    validate: { xForwardedForHeader: false, default: false }
+  // 6. Admin Gateway Protection Limiter
+  const adminApiLimiter = createRateLimiter('admin_api', {
+    windowMs: 5 * 60 * 1000,
+    max: 200,
+    message: 'High volume of administrative actions detected. Please slow down.'
   });
-  app.use('/api/auth/', authLimiter);
+  app.use('/api/admin/', adminApiLimiter);
+
+  // 7. AI & Heavy Compute Limiter
+  const aiComputeLimiter = createRateLimiter('ai_heavy', {
+    windowMs: 5 * 60 * 1000,
+    max: 20,
+    message: 'AI generation / heavy compute rate limit reached. Please wait 5 minutes before initiating new generation requests.'
+  });
+  app.use('/api/admin/ai/', aiComputeLimiter);
+  app.use('/api/admin/seo/analyze', aiComputeLimiter);
+  app.use('/api/products/compare', aiComputeLimiter);
+
+  // 8. Public Actions Limiter (newsletter, contact, interest tracking)
+  const emailActionLimiter = createRateLimiter('public_actions', {
+    windowMs: 15 * 60 * 1000,
+    max: 15,
+    message: 'Too many submissions from this IP. Please try again in 15 minutes.'
+  });
+  app.use('/api/products/pick-left-click', emailActionLimiter);
+  app.use('/api/newsletter/subscribe', emailActionLimiter);
+  app.use('/api/contact', emailActionLimiter);
+
+  // ========== SECURITY LOGGING & ANOMALY DETECTION MIDDLEWARE ==========
+  app.use('/api/', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const clientIp = getSecureClientIp(req);
+    const path = req.originalUrl || req.url || '';
+    const method = req.method;
+    const userAgent = (req.headers['user-agent'] as string) || 'unknown';
+
+    // 1. IP Blocklist Enforcement
+    if (SecurityAnomalyService.isIpBlocked(clientIp)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: Your IP address has been flagged and temporarily blocked due to security violations.',
+        code: 'IP_BLOCKED'
+      });
+    }
+
+    // 2. Real-time request inspection (vulnerability probes & burst traffic)
+    const inspection = SecurityAnomalyService.inspectIncomingRequest(clientIp, path, method, userAgent);
+    if (inspection.isBlocked) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied by Security Engine.',
+        code: 'IP_BLOCKED'
+      });
+    }
+
+    // 3. Response monitor for 401/403 status codes on protected endpoints
+    res.on('finish', () => {
+      if (res.statusCode === 403 || (res.statusCode === 401 && path.startsWith('/api/admin'))) {
+        const userEmail = (req as any).userEmail || 'unauthenticated';
+        SecurityAnomalyService.recordUnauthorizedAccess(clientIp, path, method, userEmail, userAgent);
+      }
+    });
+
+    next();
+  });
 
   // Database auto-seeding function
   async function seedDatabase() {
@@ -2365,34 +2470,60 @@ async function startServer() {
   // ========== PUBLIC DYNAMIC SITEMAP XML ENDPOINTS (RFC & GOOGLE MERCHANT COMPLIANT) ==========
 
   const setXmlHeaders = (res: express.Response) => {
-    res.header('Content-Type', 'application/xml; charset=utf-8');
-    res.header('X-Content-Type-Options', 'nosniff');
-    res.header('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Robots-Tag', 'noindex, follow');
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
   };
 
-  // 1. Master unified Sitemap XML endpoint
-  app.get('/sitemap.xml', async (req: express.Request, res: express.Response) => {
+  // 1. Master unified Sitemap XML endpoint (handles .xml, aliases, uppercase, and trailing slashes)
+  app.get([
+    '/sitemap.xml',
+    '/sitemap.xml/',
+    '/sitemap',
+    '/sitemap/',
+    '/sitemaps',
+    '/sitemaps/',
+    '/Sitemap.xml',
+    '/SITEMAP.XML'
+  ], async (req: express.Request, res: express.Response) => {
     try {
       const xml = await seoService.buildXmlSitemap(req, localProducts, localBlogs);
       setXmlHeaders(res);
-      res.send(xml);
+      res.status(200).send(xml);
     } catch (err: any) {
-      console.error('Sitemap rendering failed:', err.message);
+      console.warn('Sitemap dynamic rendering error (falling back to static XML):', err?.message);
+      try {
+        const fallbackPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+        if (fs.existsSync(fallbackPath)) {
+          setXmlHeaders(res);
+          return res.status(200).send(fs.readFileSync(fallbackPath, 'utf8'));
+        }
+      } catch {}
       setXmlHeaders(res);
-      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Sitemap failed to generate</error>');
+      const safeHost = seoService.resolveSiteUrl(req);
+      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${safeHost}</loc><lastmod>${new Date().toISOString().split('T')[0]}</lastmod><priority>1.0</priority></url>\n  <url><loc>${safeHost}/products</loc><lastmod>${new Date().toISOString().split('T')[0]}</lastmod><priority>0.9</priority></url>\n  <url><loc>${safeHost}/blogs</loc><lastmod>${new Date().toISOString().split('T')[0]}</lastmod><priority>0.8</priority></url>\n</urlset>`);
     }
   });
 
   // 2. Standard Google Sitemap Index
-  app.get(['/sitemap_index.xml', '/sitemaps.xml'], async (req: express.Request, res: express.Response) => {
+  app.get([
+    '/sitemap_index.xml',
+    '/sitemap_index.xml/',
+    '/sitemaps.xml',
+    '/sitemaps.xml/',
+    '/sitemap-index.xml',
+    '/sitemapindex.xml'
+  ], async (req: express.Request, res: express.Response) => {
     try {
       const xml = await seoService.buildXmlSitemapIndex(req);
       setXmlHeaders(res);
-      res.send(xml);
+      res.status(200).send(xml);
     } catch (err: any) {
-      console.error('Sitemap index rendering failed:', err.message);
+      console.warn('Sitemap index rendering fallback:', err?.message);
       setXmlHeaders(res);
-      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Sitemap index failed to generate</error>');
+      const safeHost = seoService.resolveSiteUrl(req);
+      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <sitemap><loc>${safeHost}/sitemap-products.xml</loc></sitemap>\n  <sitemap><loc>${safeHost}/sitemap-blogs.xml</loc></sitemap>\n  <sitemap><loc>${safeHost}/sitemap-videos.xml</loc></sitemap>\n</sitemapindex>`);
     }
   });
 
@@ -2407,11 +2538,12 @@ async function startServer() {
     try {
       const xml = await seoService.buildProductsSitemap(req, localProducts);
       setXmlHeaders(res);
-      res.send(xml);
+      res.status(200).send(xml);
     } catch (err: any) {
-      console.error('Products sitemap rendering failed:', err.message);
+      console.warn('Products sitemap rendering error:', err?.message);
       setXmlHeaders(res);
-      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Products sitemap failed to generate</error>');
+      const safeHost = seoService.resolveSiteUrl(req);
+      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${safeHost}/products</loc><priority>0.9</priority></url>\n</urlset>`);
     }
   });
 
@@ -2425,11 +2557,12 @@ async function startServer() {
     try {
       const xml = await seoService.buildBlogsSitemap(req, localBlogs);
       setXmlHeaders(res);
-      res.send(xml);
+      res.status(200).send(xml);
     } catch (err: any) {
-      console.error('Blogs sitemap rendering failed:', err.message);
+      console.warn('Blogs sitemap rendering error:', err?.message);
       setXmlHeaders(res);
-      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Blogs sitemap failed to generate</error>');
+      const safeHost = seoService.resolveSiteUrl(req);
+      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${safeHost}/blogs</loc><priority>0.8</priority></url>\n</urlset>`);
     }
   });
 
@@ -2443,11 +2576,12 @@ async function startServer() {
     try {
       const xml = await seoService.buildCategoriesSitemap(req, localProducts);
       setXmlHeaders(res);
-      res.send(xml);
+      res.status(200).send(xml);
     } catch (err: any) {
-      console.error('Categories sitemap rendering failed:', err.message);
+      console.warn('Categories sitemap rendering error:', err?.message);
       setXmlHeaders(res);
-      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Categories sitemap failed to generate</error>');
+      const safeHost = seoService.resolveSiteUrl(req);
+      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${safeHost}/categories</loc><priority>0.7</priority></url>\n</urlset>`);
     }
   });
 
@@ -2461,11 +2595,12 @@ async function startServer() {
     try {
       const xml = await seoService.buildPagesSitemap(req);
       setXmlHeaders(res);
-      res.send(xml);
+      res.status(200).send(xml);
     } catch (err: any) {
-      console.error('Pages sitemap rendering failed:', err.message);
+      console.warn('Pages sitemap rendering error:', err?.message);
       setXmlHeaders(res);
-      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Pages sitemap failed to generate</error>');
+      const safeHost = seoService.resolveSiteUrl(req);
+      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${safeHost}/</loc><priority>1.0</priority></url>\n</urlset>`);
     }
   });
 
@@ -2473,21 +2608,47 @@ async function startServer() {
   app.get([
     '/sitemap-images.xml',
     '/sitemap_images.xml',
-    '/image-sitemap.xml'
+    '/image-sitemap.xml',
+    '/images-sitemap.xml'
   ], async (req: express.Request, res: express.Response) => {
     try {
       const xml = await seoService.buildImagesSitemap(req, localProducts, localBlogs);
       setXmlHeaders(res);
-      res.send(xml);
+      res.status(200).send(xml);
     } catch (err: any) {
-      console.error('Images sitemap rendering failed:', err.message);
+      console.warn('Images sitemap rendering error:', err?.message);
       setXmlHeaders(res);
-      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Images sitemap failed to generate</error>');
+      const safeHost = seoService.resolveSiteUrl(req);
+      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${safeHost}/products</loc></url>\n</urlset>`);
     }
   });
 
-  // 8. Sitemap XSLT Stylesheet Route
-  app.get('/sitemap.xsl', (_req: express.Request, res: express.Response) => {
+  // 8. Dedicated Video Media Sitemap (Google Video Central Compliant)
+  app.get([
+    '/sitemap-videos.xml',
+    '/sitemap_videos.xml',
+    '/video-sitemap.xml',
+    '/videos-sitemap.xml',
+    '/sitemap-video.xml'
+  ], async (req: express.Request, res: express.Response) => {
+    try {
+      const xml = await seoService.buildVideosSitemap(req, localProducts, localBlogs);
+      setXmlHeaders(res);
+      res.status(200).send(xml);
+    } catch (err: any) {
+      console.warn('Videos sitemap rendering error:', err?.message);
+      setXmlHeaders(res);
+      const safeHost = seoService.resolveSiteUrl(req);
+      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n  <url><loc>${safeHost}/products</loc></url>\n</urlset>`);
+    }
+  });
+
+  // 9. Sitemap XSLT Stylesheet Route
+  app.get([
+    '/sitemap.xsl',
+    '/sitemap.xsl/',
+    '/sitemap.xslt'
+  ], (_req: express.Request, res: express.Response) => {
     try {
       const xslPaths = [
         path.join(process.cwd(), 'public', 'sitemap.xsl'),
@@ -3140,8 +3301,14 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     }
   }
 
-  function recordFailedLoginAttempt(email: string): void {
+  function recordFailedLoginAttempt(email: string, req?: express.Request, reason: string = 'Invalid password or account not found'): void {
     cleanupFailedLoginTracker();
+    if (req) {
+      const clientIp = getSecureClientIp(req);
+      const userAgent = (req.headers['user-agent'] as string) || 'unknown';
+      const path = req.originalUrl || req.path;
+      SecurityAnomalyService.recordFailedAuth(clientIp, email, reason, path, userAgent);
+    }
     if (!ConfigurationService.getFlag('enableBruteForceProtection')) return;
     const record = failedLoginTracker.get(email) || { count: 0, lastAttemptAt: new Date() };
     record.count += 1;
@@ -3153,8 +3320,12 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     failedLoginTracker.set(email, record);
   }
 
-  function clearFailedLoginAttempts(email: string): void {
+  function clearFailedLoginAttempts(email: string, req?: express.Request): void {
     failedLoginTracker.delete(email);
+    if (req) {
+      const clientIp = getSecureClientIp(req);
+      SecurityAnomalyService.recordSuccessfulAuth(email, clientIp);
+    }
   }
 
   app.post('/api/auth/login', loginLimiter, validateLogin, async (req: express.Request, res: express.Response): Promise<any> => {
@@ -3165,6 +3336,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       if (!storageEmail) {
         await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
+        recordFailedLoginAttempt(email || 'unknown', req, 'Non-existent user');
         return res.status(401).json({ error: genericError });
       }
 
@@ -3179,20 +3351,20 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         const user = await User.findOne({ email: storageEmail });
         if (!user) {
           await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
-          recordFailedLoginAttempt(storageEmail);
+          recordFailedLoginAttempt(storageEmail, req, 'User record not found in MongoDB');
           return res.status(401).json({ error: genericError });
         }
 
         if (!user.password) {
           await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
-          recordFailedLoginAttempt(storageEmail);
+          recordFailedLoginAttempt(storageEmail, req, 'User missing password record');
           return res.status(401).json({ error: genericError });
         }
 
         // Check password FIRST to prevent unverified bypasses
         const isMatch = await comparePasswords(password, user.password);
         if (!isMatch) {
-          recordFailedLoginAttempt(storageEmail);
+          recordFailedLoginAttempt(storageEmail, req, 'Invalid password');
           return res.status(401).json({ error: genericError });
         }
 
@@ -3233,12 +3405,12 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           }
           const isValid = TotpService.verifyToken((user as any).twoFactorSecret, code);
           if (!isValid) {
-            recordFailedLoginAttempt(storageEmail);
+            recordFailedLoginAttempt(storageEmail, req, 'Invalid 2FA TOTP verification code');
             return res.status(401).json({ error: 'Two-factor code verification failed. Please try again.' });
           }
         }
 
-        clearFailedLoginAttempts(storageEmail);
+        clearFailedLoginAttempts(storageEmail, req);
         const token = signUserToken(user._id);
 
         // Create active session in database
@@ -3263,20 +3435,20 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         const user = localUsers.find(u => u.email === storageEmail);
         if (!user) {
           await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
-          recordFailedLoginAttempt(storageEmail);
+          recordFailedLoginAttempt(storageEmail, req, 'Local user account not found');
           return res.status(401).json({ error: genericError });
         }
 
         if (!user.password) {
           await bcrypt.compare(password, '$2a$10$NotRealPasswordPlaceholderToPreventTimingAttacks12345');
-          recordFailedLoginAttempt(storageEmail);
+          recordFailedLoginAttempt(storageEmail, req, 'Local user missing password');
           return res.status(401).json({ error: genericError });
         }
 
         // Check password FIRST to prevent unverified bypasses
         const isMatch = await comparePasswords(password, user.password);
         if (!isMatch) {
-          recordFailedLoginAttempt(storageEmail);
+          recordFailedLoginAttempt(storageEmail, req, 'Invalid password');
           return res.status(401).json({ error: genericError });
         }
 
@@ -3303,7 +3475,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
           user.role = isAdminEmail(user.email) ? 'admin' : 'user';
           saveLocalUsers();
         }
-        clearFailedLoginAttempts(storageEmail);
+        clearFailedLoginAttempts(storageEmail, req);
         const token = signUserToken(user._id);
         res.cookie('token', token, {
           httpOnly: true,
@@ -3806,10 +3978,14 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
       if (!allowSimulated || !isSimulated) {
         if (!idToken) {
+          const clientIp = getSecureClientIp(req);
+          SecurityAnomalyService.recordFailedAuth(clientIp, email || 'google-auth', 'Missing Google ID Token', req.path, req.headers['user-agent'] as string);
           return res.status(401).json({ error: 'Google ID Token is required for authentication' });
         }
         const verifiedUser = await verifyIdToken(idToken);
         if (!verifiedUser) {
+          const clientIp = getSecureClientIp(req);
+          SecurityAnomalyService.recordFailedAuth(clientIp, email || 'google-auth', 'Google ID Token cryptographic verification failed', req.path, req.headers['user-agent'] as string);
           return res.status(401).json({ error: 'Google ID Token verification failed' });
         }
         verifiedEmail = verifiedUser.email;
@@ -3826,6 +4002,9 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       if (!storageEmail) {
         return res.status(400).json({ error: 'Invalid email configuration' });
       }
+
+      const clientIp = getSecureClientIp(req);
+      SecurityAnomalyService.recordSuccessfulAuth(storageEmail, clientIp);
       const initialRole = isAdminEmail(storageEmail) ? 'admin' : 'user';
       if (isMongoConnected) {
         let user = await User.findOne({ email: storageEmail });
@@ -6621,6 +6800,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
   });
 
   // Active pairing codes for extension configuration (valid for 10 minutes)
+  const localPairingCodes: Array<{ code: string; token: string; email: string; expiresAt: Date }> = [];
+
   const generatePairingCode = async (token: string, email: string): Promise<string> => {
     let code = '';
     let exists = true;
@@ -6629,18 +6810,27 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     while (exists && attempts < 50) {
       code = crypto.randomInt(100000, 1000000).toString();
       attempts++;
-      const found = await ActivePairingCodeModel.findOne({ code });
-      if (!found) {
-        exists = false;
+      if (isMongoConnected) {
+        const found = await ActivePairingCodeModel.findOne({ code });
+        if (!found) exists = false;
+      } else {
+        const found = localPairingCodes.find(p => p.code === code && p.expiresAt.getTime() > Date.now());
+        if (!found) exists = false;
       }
     }
 
-    await ActivePairingCodeModel.create({
-      code,
-      token,
-      email,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes validity
-    });
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes validity
+
+    if (isMongoConnected) {
+      await ActivePairingCodeModel.create({
+        code,
+        token,
+        email,
+        expiresAt
+      });
+    } else {
+      localPairingCodes.push({ code, token, email, expiresAt });
+    }
 
     return code;
   };
@@ -6773,18 +6963,37 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     }
 
     const codeStr = String(pairingCode).trim();
-    const data = await ActivePairingCodeModel.findOne({ code: codeStr });
+    let data: { token: string; email: string; expiresAt: Date } | null = null;
+
+    if (isMongoConnected) {
+      // Atomically find and delete active pairing code to prevent race condition reuse
+      const found = await ActivePairingCodeModel.findOneAndDelete({
+        code: codeStr,
+        expiresAt: { $gt: new Date() }
+      });
+      if (found) {
+        data = {
+          token: found.token,
+          email: found.email,
+          expiresAt: found.expiresAt
+        };
+      }
+    } else {
+      const now = Date.now();
+      const index = localPairingCodes.findIndex(p => p.code === codeStr && p.expiresAt.getTime() > now);
+      if (index !== -1) {
+        data = localPairingCodes.splice(index, 1)[0];
+      }
+    }
+
     if (!data) {
-      return res.status(400).json({ error: 'Invalid or expired pairing code' });
+      return res.status(400).json({ error: 'Invalid, expired, or already used pairing code' });
     }
 
-    if (data.expiresAt.getTime() < Date.now()) {
-      await ActivePairingCodeModel.deleteOne({ code: codeStr });
-      return res.status(400).json({ error: 'Pairing code has expired' });
+    // Verify that the email is an authorized administrator
+    if (!isAdminEmail(data.email)) {
+      return res.status(403).json({ error: 'Access denied: Associated account lacks administrator privileges' });
     }
-
-    // Successfully paired! Consume the code
-    await ActivePairingCodeModel.deleteOne({ code: codeStr });
 
     // Build the correct API base URL from the current request's headers
     const proto = (Array.isArray(req.headers['x-forwarded-proto']) ? req.headers['x-forwarded-proto'][0] : req.headers['x-forwarded-proto']) || (req.secure ? 'https' : 'http');
@@ -10329,6 +10538,89 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       }
     } catch (error: any) {
       res.status(500).json({ error: 'An internal error occurred.' });
+    }
+  });
+
+  // Admin Real-Time Security Anomalies & Threat Intelligence
+  app.get('/api/admin/security/anomalies', adminOnly, (req: express.Request, res: express.Response) => {
+    try {
+      const { severity, category, search, limit, sinceMinutes } = req.query;
+      const anomalies = SecurityAnomalyService.getAnomalies({
+        severity: severity as string,
+        category: category as string,
+        search: search as string,
+        limit: limit ? parseInt(limit as string) : 100,
+        sinceMinutes: sinceMinutes ? parseInt(sinceMinutes as string) : undefined
+      });
+      const stats = SecurityAnomalyService.getAnomalyStats();
+      res.json({
+        success: true,
+        stats,
+        anomalies
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Admin Rate Limit Tiers Status & Telemetry
+  app.get('/api/admin/security/rate-limits', adminOnly, (req: express.Request, res: express.Response) => {
+    try {
+      const tiers = SecurityAnomalyService.getRateLimitTiers();
+      res.json({
+        success: true,
+        tiers
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Admin IP Block Management (Block / Unblock IP)
+  app.post('/api/admin/security/ip-block', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const { ipAddress, action, reason, durationMinutes } = req.body;
+      if (!ipAddress || typeof ipAddress !== 'string') {
+        return res.status(400).json({ success: false, error: 'Valid IP address is required' });
+      }
+
+      if (action === 'unblock') {
+        SecurityAnomalyService.unblockIp(ipAddress);
+        await logSecurityAction(req, 'IP_UNBLOCKED', undefined, { ipAddress });
+        return res.json({ success: true, message: `IP ${ipAddress} has been unblocked successfully` });
+      } else {
+        const entry = SecurityAnomalyService.blockIp(
+          ipAddress,
+          reason || 'Manual administrator block',
+          durationMinutes || 60,
+          true
+        );
+        await logSecurityAction(req, 'IP_BLOCKED', undefined, { ipAddress, reason, durationMinutes });
+        return res.json({ success: true, message: `IP ${ipAddress} has been blocked for ${durationMinutes || 60} minutes`, entry });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Admin Blocked IPs List
+  app.get('/api/admin/security/blocked-ips', adminOnly, (req: express.Request, res: express.Response) => {
+    try {
+      const blockedIps = SecurityAnomalyService.getBlockedIps();
+      res.json({ success: true, blockedIps });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Admin Clear Security Anomaly History
+  app.post('/api/admin/security/anomalies/clear', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      SecurityAnomalyService.clearAnomalies();
+      await logSecurityAction(req, 'SECURITY_ANOMALIES_CLEARED', undefined, {});
+      res.json({ success: true, message: 'Anomaly records cleared successfully' });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 

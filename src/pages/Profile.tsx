@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Product } from '../types';
@@ -549,9 +550,16 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {wishlistProducts.map((p) => (
-                  <div
+                {wishlistProducts.map((p, idx) => (
+                  <motion.div
                     key={p._id}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ 
+                      duration: 0.28, 
+                      delay: Math.min(idx * 0.04, 0.2), 
+                      ease: [0.22, 1, 0.36, 1] 
+                    }}
                     className="group border border-slate-100 bg-white rounded-2xl overflow-hidden dark:border-slate-700 dark:bg-slate-800 flex flex-col justify-between"
                   >
                     <div className="h-32 bg-slate-50 relative shrink-0 aspect-[16/9] sm:aspect-auto">
@@ -588,7 +596,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { Product, Category } from '../types';
 import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, CheckCheck, MessageSquare, Check, X, BookmarkCheck, Video, Copy, Share2, Scale } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -816,7 +817,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       </div>
 
       {/* 2. BODY SPECS EXPAND PANEL */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:px-4 mb-10">
+      <motion.div 
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:px-4 mb-10"
+      >
         
         {/* Left Side: Sticky Image Gallery */}
         <div className="w-full lg:sticky lg:top-24 lg:self-start">
@@ -1158,7 +1164,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           })()}
 
         </div>
-      </div>
+      </motion.div>
 
       {/* 3. PROS AND CONS PANEL */}
       <section className="mx-auto max-w-7xl md:px-4 mb-16 space-y-4">
@@ -1322,29 +1328,39 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
       {/* 6. RELATED MATCHER RECOMMENDATIONS RAIL */}
       {relatedProducts.length > 0 && (
-        <section className="mx-auto max-w-7xl md:px-4 space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300 px-1">Similar Recommendations</h3>
+        <motion.section 
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto max-w-7xl md:px-4 space-y-4"
+        >
+          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-300 px-1">Similar Recommendations</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
-            {relatedProducts.map(rel => (
-              <div
+            {relatedProducts.map((rel, rIdx) => (
+              <motion.div
                 key={rel._id}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.3, delay: rIdx * 0.05, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => { onNavigate('product-detail', rel.slug); window.scrollTo(0, 0); }}
-                className="group cursor-pointer rounded-xl border border-slate-50 bg-white hover:shadow-md overflow-hidden transition-all duration-300 dark:border-slate-700 dark:bg-slate-800"
+                className="group cursor-pointer rounded-xl border border-slate-200/80 bg-white hover:shadow-md overflow-hidden transition-all duration-300 dark:border-slate-700 dark:bg-slate-800"
               >
-                <div className="h-28 sm:h-36 bg-slate-50 overflow-hidden shrink-0 aspect-[4/3]">
+                <div className="h-28 sm:h-36 bg-slate-50 dark:bg-slate-950 overflow-hidden shrink-0 aspect-[4/3]">
                   <img width="400" height="300" loading="lazy" decoding="async" src={rel.images?.[0]} alt={rel.name} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
                 </div>
                 <div className="p-2.5 sm:p-3.5">
                   <h4 className="text-[11px] sm:text-xs font-bold text-slate-700 truncate dark:text-white group-hover:text-zinc-900 dark:text-white">{rel.name}</h4>
-                  <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-1 text-[10px] sm:text-xs mt-2 pt-2 border-t border-slate-50 dark:border-slate-700">
+                  <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-1 text-[10px] sm:text-xs mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
                     <span className="font-extrabold text-slate-800 font-mono dark:text-white">{formatProductPrice(rel.price, rel)}</span>
-                    <span className="text-[9px] sm:text-[10px] text-slate-300 font-semibold font-mono">★ {rel.rating && rel.rating > 0 ? rel.rating : 'N/A'}</span>
+                    <span className="text-[9px] sm:text-[10px] text-slate-400 font-semibold font-mono">★ {rel.rating && rel.rating > 0 ? rel.rating : 'N/A'}</span>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
       )}
 
       {/* 7. REDIRECTING SPINNER OVERLAY POPUP */}
