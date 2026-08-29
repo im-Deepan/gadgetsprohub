@@ -44,6 +44,11 @@ const chromeMock = {
           cb(mockSettings);
         }
       }),
+      remove: jest.fn((key, cb) => {
+        if (typeof key === 'string') delete mockSettings[key];
+        else if (Array.isArray(key)) key.forEach(k => delete mockSettings[k]);
+        cb();
+      }),
       set: jest.fn((data, cb) => {
         Object.keys(data).forEach(k => {
           mockSettings[k] = data[k];
@@ -174,7 +179,7 @@ describe('Chrome Extension Auth & Session Integration Tests', () => {
 
       expect(response.success).toBe(false);
       expect(response.error?.code).toBe('LOGIN_FAILED');
-      expect(response.error?.message).toContain('Invalid password');
+      expect(response.error?.message).toContain('Authentication failed');
     });
   });
 

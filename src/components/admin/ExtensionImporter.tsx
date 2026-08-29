@@ -32,14 +32,14 @@ const PRESET_PRODUCTS: ScrapedProduct[] = [
     name: "Keychron Q1 Max QMK Custom Wireless Mechanical Keyboard",
     asin: "B0CSY18N5V",
     brand: "Keychron",
-    price: 219.99,
-    originalPrice: 249.99,
+    price: 18499,
+    originalPrice: 21999,
     categoryName: "Electronics",
     subcategory: "Keyboards",
     description: "A fully customizable wireless mechanical keyboard with QMK/VIA support and double-gasket design.",
     longDescription: "The Keychron Q1 Max is a premium all-metal custom mechanical keyboard that supports 2.4GHz wireless, Bluetooth 5.1, and USB-C wired connectivity. It features a solid CNC aluminum body, hot-swappable switches, double-gasket mount design, and customizable RGB backlighting for the ultimate typing experience.",
     imageUrl: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800",
-    affiliateCode: "gadgetspro-20",
+    affiliateCode: "gadgetsprohub-21",
     features: [
       "2.4 GHz wireless & Bluetooth 5.1 connection",
       "Full CNC aluminum body & double-gasket design",
@@ -59,14 +59,14 @@ const PRESET_PRODUCTS: ScrapedProduct[] = [
     name: "Sony WH-1000XM5 Wireless Industry Leading Noise Canceling Headphones",
     asin: "B09XS7J858",
     brand: "Sony",
-    price: 348.00,
-    originalPrice: 399.99,
+    price: 29990,
+    originalPrice: 34990,
     categoryName: "Electronics",
     subcategory: "Audio",
     description: "Premium wireless over-ear noise-canceling headphones with auto-optimizing noise canceling.",
     longDescription: "The Sony WH-1000XM5 headphones rewrite the rules for distraction-free listening. With two processors controlling 8 microphones, Auto NC Optimizer for automatically optimizing noise canceling based on your wearing conditions and environment, and a specially designed driver unit, you get premium audio performance.",
     imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800",
-    affiliateCode: "gadgetspro-20",
+    affiliateCode: "gadgetsprohub-21",
     features: [
       "Industry-leading active noise cancellation (ANC)",
       "Up to 30-hour battery life with quick charging",
@@ -85,14 +85,14 @@ const PRESET_PRODUCTS: ScrapedProduct[] = [
     name: "Anker Prime 20,000mAh Power Bank (200W Output)",
     asin: "B0BYP69P5H",
     brand: "Anker",
-    price: 129.99,
-    originalPrice: 139.99,
+    price: 10999,
+    originalPrice: 12999,
     categoryName: "Electronics",
     subcategory: "Accessories",
     description: "Ultra-high capacity power bank with 200W total output and smart digital display screen.",
     longDescription: "Anker Prime Power Bank combines ultra-compact design with maximum charging speed. Equipped with two USB-C ports and one USB-A port, it lets you charge up to 3 devices simultaneously. The intelligent digital display provides real-time information on remaining battery, input power, and output power.",
     imageUrl: "https://images.unsplash.com/photo-1609592424109-dd9892f1b17c?w=800",
-    affiliateCode: "gadgetspro-20",
+    affiliateCode: "gadgetsprohub-21",
     features: [
       "Massive 200W total output to charge laptops quickly",
       "Smart digital display screen showing power stats",
@@ -1144,10 +1144,10 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Price */}
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Current Price ($)</label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Current Price (₹)</label>
                       <input
                         type="number"
-                        step="0.01"
+                        step="1"
                         value={scrapedProduct.price}
                         onChange={(e) => setScrapedProduct({ ...scrapedProduct, price: parseFloat(e.target.value) || 0 })}
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/20 dark:bg-zinc-800/20 text-xs text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
@@ -1155,10 +1155,10 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                     </div>
                     {/* Original Price */}
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Original Price ($)</label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Original Price (₹)</label>
                       <input
                         type="number"
-                        step="0.01"
+                        step="1"
                         value={scrapedProduct.originalPrice || ''}
                         onChange={(e) => setScrapedProduct({ ...scrapedProduct, originalPrice: parseFloat(e.target.value) || undefined })}
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/20 dark:bg-zinc-800/20 text-xs text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
@@ -1381,7 +1381,7 @@ export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
                     >
                       <div className="min-w-0 pr-4">
                         <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">{item.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">ASIN: {item.asin} • Price: ${item.price}</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">ASIN: {item.asin} • Price: ₹{item.price?.toLocaleString('en-IN')}</p>
                       </div>
                       <span className="shrink-0 text-[10px] font-mono bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded">
                         {item.brand}

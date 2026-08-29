@@ -224,6 +224,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
             <button onClick={() => onNavigate('terms-conditions')} className="min-h-[44px] flex items-center hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Terms & Conditions</button>
             <span>•</span>
             <button onClick={() => onNavigate('disclaimer')} className="min-h-[44px] flex items-center hover:text-slate-600 dark:hover:text-white cursor-pointer bg-transparent border-none p-0">Disclosure</button>
+            <span>•</span>
+            <button 
+              onClick={() => window.dispatchEvent(new CustomEvent('open_cookie_settings'))} 
+              className="min-h-[44px] flex items-center hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer bg-transparent border-none p-0 underline-offset-4 hover:underline"
+              title="Manage Cookie Consent and GDPR/CCPA Privacy Preferences"
+            >
+              Cookie Preferences & Opt-Out
+            </button>
           </div>
         </div>
       </div>

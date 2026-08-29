@@ -78,7 +78,35 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   const configuredPublisherId = siteSettings?.adsenseClientId || (typeof import.meta.env !== 'undefined' ? import.meta.env.VITE_ADSENSE_CLIENT_ID || '' : '');
   const publisherId = configuredPublisherId || FALLBACK_PUBLISHER_ID;
   const isTestMode = publisherId === FALLBACK_PUBLISHER_ID || publisherId.includes('1234567890');
-  const adsEnabled = siteSettings?.adsenseEnabled ?? true;
+  
+  const checkMarketingConsent = () => {
+    try {
+      const consent = localStorage.getItem('cookie_consent');
+      if (consent === 'declined') return false;
+      const prefs = localStorage.getItem('cookie_preferences');
+      if (prefs) {
+        const parsed = JSON.parse(prefs);
+        if (parsed.marketing === false) return false;
+      }
+      return true;
+    } catch (e) {
+      return true;
+    }
+  };
+
+  const [consentGiven, setConsentGiven] = React.useState<boolean>(checkMarketingConsent);
+
+  React.useEffect(() => {
+    const handleConsentChange = () => {
+      setConsentGiven(checkMarketingConsent());
+    };
+    window.addEventListener('cookie_consent_updated', handleConsentChange);
+    return () => {
+      window.removeEventListener('cookie_consent_updated', handleConsentChange);
+    };
+  }, []);
+
+  const adsEnabled = (siteSettings?.adsenseEnabled ?? true) && consentGiven;
 
   useEffect(() => {
     if (!adsEnabled) return;

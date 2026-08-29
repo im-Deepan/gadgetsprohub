@@ -273,15 +273,11 @@ export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?
   
   if (!isAmazon) return null;
   
-  let label = "Amazon Price";
+  let label = "Amazon.in Price";
   let currency = "₹";
-  let tz = "UTC";
+  let tz = "IST";
   
-  if (isAmazonIn) {
-    label = "Amazon.in Price";
-    currency = "₹";
-    tz = "IST";
-  } else if (isAmazonUk) {
+  if (isAmazonUk) {
     label = "Amazon.co.uk Price";
     currency = "£";
     tz = "GMT";
@@ -289,36 +285,33 @@ export const getAmazonDetails = (product: { affiliateLink?: string, marketplace?
     label = "Amazon.ae Price";
     currency = "AED";
     tz = "GST";
-  } else if (isAmazonUs) {
-    label = "Amazon.com Price";
-    currency = "$";
-    tz = "UTC";
+  } else if (isAmazonIn) {
+    label = "Amazon.in Price";
+    currency = "₹";
+    tz = "IST";
   } else {
+    // Default to Amazon.in / INR for GadgetsProHub
     label = "Amazon Price";
     currency = "₹";
-    tz = "UTC";
+    tz = "IST";
   }
   
   return { label, currency, tz, isAmazonIn, isAmazonUk, isAmazonUae, isAmazonUs };
 };
 
 /**
- * Returns the currency symbol for the product based on explicit currency/currencyCode, or marketplace/affiliate link, or defaults to ₹.
+ * Returns the currency symbol for the product based on explicit currency/currencyCode, or defaults to ₹.
  */
 export const getCurrencySymbol = (product?: { affiliateLink?: string, marketplace?: string, seller?: string, currency?: string, currencyCode?: string }): string => {
   if (!product) return '₹';
   const code = (product.currencyCode || product.currency || '').toUpperCase().trim();
+  if (code === 'INR' || code === '₹' || code === 'RS' || code === 'RS.') return '₹';
   if (code === 'USD' || code === '$') return '$';
   if (code === 'EUR' || code === '€') return '€';
   if (code === 'GBP' || code === '£') return '£';
   if (code === 'AED') return 'AED ';
   
-  const amazon = getAmazonDetails(product);
-  if (amazon) {
-    if (amazon.isAmazonUs) return '$';
-    if (amazon.isAmazonUk) return '£';
-    if (amazon.isAmazonUae) return 'AED ';
-  }
+  // Default to standard Indian Rupee (₹) across the platform
   return '₹';
 };
 

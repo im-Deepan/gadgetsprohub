@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
 import { useAuth } from '../../context/AuthContext';
+import { formatINR } from '../../utils/productUtils';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, Cell,
   PieChart, Pie, Legend
@@ -1054,7 +1055,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                         </span>
                       )}
                       <span className="px-2.5 py-1 bg-purple-950/60 border border-purple-800/40 text-purple-300 text-[10px] font-mono rounded-full">
-                        Order: Descending Price ($High → $Low)
+                        Order: Descending Price (₹High → ₹Low)
                       </span>
                     </div>
 
@@ -1383,9 +1384,9 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                             </td>
                             <td className="p-3 text-slate-400 text-[11px]">{log.timestamp}</td>
                             <td className="p-3 text-slate-200 font-sans text-[11px]">{log.message}</td>
-                            <td className="p-3 text-right text-slate-400 font-bold">${log.oldPrice ? log.oldPrice.toFixed(2) : '0.00'}</td>
+                            <td className="p-3 text-right text-slate-400 font-bold">{formatINR(log.oldPrice)}</td>
                             <td className={`p-3 text-right font-bold ${log.oldPrice !== log.newPrice ? 'text-emerald-400' : 'text-slate-300'}`}>
-                              ${log.newPrice ? log.newPrice.toFixed(2) : '0.00'}
+                              {formatINR(log.newPrice)}
                             </td>
                           </tr>
                         ))
@@ -2504,7 +2505,7 @@ export default function SyncDashboard({ token, showNotice = () => {} }: SyncDash
                               <tr key={idx} className="hover:bg-slate-900/40">
                                 <td className="p-2.5 font-bold text-slate-200">{offer.marketplace}</td>
                                 <td className="p-2.5 text-slate-400">{offer.seller || 'N/A'}</td>
-                                <td className="p-2.5 text-indigo-400 font-bold">${offer.price}</td>
+                                <td className="p-2.5 text-indigo-400 font-bold">{formatINR(offer.price)}</td>
                                 <td className="p-2.5">
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${offer.inStock ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}`}>
                                     {offer.inStock ? 'In Stock' : 'Out of Stock'}

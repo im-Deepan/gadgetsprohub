@@ -1,0 +1,31 @@
+version: 2
+updates:
+  # Maintain dependencies for the root full-stack application
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "deepan20060609"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # Maintain dependencies for the Chrome Extension
+  - package-ecosystem: "npm"
+    directory: "/extension"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "deepan20060609"
+    commit-message:
+      prefix: "deps(extension)"
+      include: "scope"
+
+  # Maintain GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

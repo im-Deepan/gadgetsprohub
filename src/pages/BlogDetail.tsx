@@ -184,6 +184,36 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
         {blog?.category && <meta name="twitter:data1" content={blog.category} />}
 
         <meta name="robots" content="index, follow" />
+
+        {/* BlogPosting JSON-LD Structured Data */}
+        {blog && (
+          <script type="application/ld+json">
+            {JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BlogPosting",
+              "headline": blog.title,
+              "description": blog.excerpt,
+              "image": blog.imageUrl ? [blog.imageUrl] : [],
+              "datePublished": blog.date ? new Date(blog.date).toISOString() : new Date().toISOString(),
+              "author": {
+                "@type": "Person",
+                "name": blog.author || "GadgetsProHub Editorial Team"
+              },
+              "publisher": {
+                "@type": "Organization",
+                "name": "gadgetsprohub",
+                "logo": {
+                  "@type": "ImageObject",
+                  "url": "https://gadgetsprohub.onrender.com/logo.png"
+                }
+              },
+              "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": `https://gadgetsprohub.com/blogs/${blog.slug || ''}`
+              }
+            })}
+          </script>
+        )}
       </Helmet>
       
       {/* Back button and share */}

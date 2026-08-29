@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Helmet } from '../components/Helmet';
 import { BorderGlow } from '../components/BorderGlow';
 import { GlareHover } from '../components/GlareHover';
 import { safeGetItem, safeRemoveItem } from '../utils/localStorage';
@@ -145,6 +146,53 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
 
   return (
     <div className="w-full flex flex-col bg-slate-50 dark:bg-black font-sans min-h-screen">
+      <Helmet>
+        <title>gadgetsprohub | Compare Specs, Honest Reviews & Best Gadget Deals</title>
+        <meta name="description" content="Discover, compare and explore in-depth gadget specifications, hardware benchmarks, transparent pros & cons, and verified tech product deals on gadgetsprohub." />
+        <meta name="keywords" content="gadgets, smartphones, laptops, audio gear, smartwatches, electronics comparison, tech reviews, specs, gadgetsprohub" />
+        <link rel="canonical" href="https://gadgetsprohub.onrender.com/" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://gadgetsprohub.onrender.com/" />
+        <meta property="og:title" content="gadgetsprohub | Compare Specs, Honest Reviews & Best Gadget Deals" />
+        <meta property="og:description" content="Discover, compare and explore in-depth gadget specifications, hardware benchmarks, transparent pros & cons, and verified tech product deals on gadgetsprohub." />
+        <meta property="og:site_name" content="gadgetsprohub" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="gadgetsprohub | Compare Specs, Honest Reviews & Best Gadget Deals" />
+        <meta name="twitter:description" content="Discover, compare and explore in-depth gadget specifications, hardware benchmarks, transparent pros & cons, and verified tech product deals." />
+        
+        {/* JSON-LD Schema */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebSite",
+                "@id": "https://gadgetsprohub.onrender.com/#website",
+                "url": "https://gadgetsprohub.onrender.com/",
+                "name": "gadgetsprohub",
+                "description": "Premium Electronics & Smart Gear Specs, Reviews & Directory",
+                "potentialAction": {
+                  "@type": "SearchAction",
+                  "target": "https://gadgetsprohub.onrender.com/search?q={search_term_string}",
+                  "query-input": "required name=search_term_string"
+                }
+              },
+              {
+                "@type": "Organization",
+                "@id": "https://gadgetsprohub.onrender.com/#organization",
+                "name": "gadgetsprohub",
+                "url": "https://gadgetsprohub.onrender.com/",
+                "logo": "https://gadgetsprohub.onrender.com/logo.png"
+              }
+            ]
+          })}
+        </script>
+      </Helmet>
+
       {/* 1. HERO SECTION (Compact Sizing & Centered) */}
       <section className="relative w-full py-4 md:py-6 px-4 overflow-hidden border-b border-slate-100 dark:border-slate-800">
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-slate-50 dark:from-indigo-950/20 dark:to-black z-0 pointer-events-none" />

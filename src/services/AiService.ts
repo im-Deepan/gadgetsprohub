@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { GoogleGenAI } from '@google/genai';
 import * as crypto from 'crypto';
+import { encryptSensitiveData, decryptSensitiveData } from '../utils/encryption';
 
 // ==========================================
 // TYPES & INTERFACES
@@ -207,16 +208,18 @@ export class AiService {
   }
 
   private getEncryptionSecret(): string {
-    if (process.env.AI_KEY_ENCRYPTION_SECRET) {
+    if (process.env.AI_KEY_ENCRYPTION_SECRET && process.env.AI_KEY_ENCRYPTION_SECRET.trim() !== '') {
       return process.env.AI_KEY_ENCRYPTION_SECRET;
     }
-    // Decouple from JWT_SECRET so token rotation does not break encrypted database keys.
-    // Derive a stable fallback from persistent server config (e.g. MONGODB_URI, APP_URL, GEMINI_API_KEY)
-    // rather than volatile container HOSTNAME or hardcoded secret literals in source code.
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Fatal: AI_KEY_ENCRYPTION_SECRET must be explicitly provided in production. Check your .env file or deployment config.');
+    }
+    // Fallback for development only
     const persistentSeed = process.env.MONGODB_URI || process.env.APP_URL || process.env.GEMINI_API_KEY;
     if (!persistentSeed) {
-      throw new Error('Fatal: Cannot derive secure encryption seed. Set MONGODB_URI, APP_URL, or GEMINI_API_KEY.');
+      throw new Error('Fatal: Cannot derive secure encryption seed for dev. Set MONGODB_URI, APP_URL, or GEMINI_API_KEY.');
     }
+    console.warn("⚠️ AI_KEY_ENCRYPTION_SECRET not provided; generated fallback key for development.");
     return crypto.createHash('sha256').update(`ai-key-encryption-seed:${persistentSeed}`).digest('hex');
   }
 
@@ -225,23 +228,14 @@ export class AiService {
   // ==========================================
 
   public encrypt(text: string): string {
-    const iv = crypto.randomBytes(this.ivLength);
-    const cipher = crypto.createCipheriv('aes-256-cbc', this.encryptionKey, iv);
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
+    const secret = this.getEncryptionSecret();
+    return encryptSensitiveData(text, secret);
   }
 
   public decrypt(encryptedText: string): string {
     try {
-      const parts = encryptedText.split(':');
-      if (parts.length !== 2) return '';
-      const iv = Buffer.from(parts[0], 'hex');
-      const encrypted = parts[1];
-      const decipher = crypto.createDecipheriv('aes-256-cbc', this.encryptionKey, iv);
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      return decrypted;
+      const secret = this.getEncryptionSecret();
+      return decryptSensitiveData(encryptedText, secret);
     } catch {
       return '';
     }

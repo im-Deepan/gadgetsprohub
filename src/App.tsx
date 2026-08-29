@@ -94,6 +94,16 @@ let adsenseScriptLoaded = false;
 // Standardized telemetry visitor logger extracted outside component context to eliminate state/callback circular reference loops
 export const logVisit = (timeSpentSeconds: number, currentPath: string, viewCity: string) => {
   try {
+    const consent = localStorage.getItem('cookie_consent');
+    if (consent === 'declined') return;
+    const prefs = localStorage.getItem('cookie_preferences');
+    if (prefs) {
+      try {
+        const parsed = JSON.parse(prefs);
+        if (parsed.analytics === false) return;
+      } catch (e) {}
+    }
+
     const ua = navigator.userAgent;
     let browser = "Chrome";
     let device = "Desktop";
@@ -325,6 +335,16 @@ const AppContent: React.FC = () => {
   // Load AdSense script safely after initial page render and hydration during idle time
   useEffect(() => {
     const loadAdSense = () => {
+      const consent = localStorage.getItem('cookie_consent');
+      if (consent === 'declined') return;
+      const prefs = localStorage.getItem('cookie_preferences');
+      if (prefs) {
+        try {
+          const parsed = JSON.parse(prefs);
+          if (parsed.marketing === false) return;
+        } catch (e) {}
+      }
+
       if (adsenseScriptLoaded) return;
       adsenseScriptLoaded = true;
 
@@ -351,6 +371,22 @@ const AppContent: React.FC = () => {
       const timer = setTimeout(loadAdSense, 3000);
       return () => clearTimeout(timer);
     }
+
+    const handleConsentUpdate = () => {
+      const consent = localStorage.getItem('cookie_consent');
+      if (consent === 'declined') {
+        const existingScript = document.querySelector(`script[src*="pagead2.googlesyndication.com"]`);
+        if (existingScript) existingScript.remove();
+        adsenseScriptLoaded = false;
+      } else {
+        loadAdSense();
+      }
+    };
+
+    window.addEventListener('cookie_consent_updated', handleConsentUpdate);
+    return () => {
+      window.removeEventListener('cookie_consent_updated', handleConsentUpdate);
+    };
   }, []);
 
   // Simple state router

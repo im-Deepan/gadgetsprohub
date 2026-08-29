@@ -36,7 +36,7 @@ The platform is designed as a modular, full-stack application.
         ├── background/                     # Background service workers, router, and queue managers
         ├── content/                        # DOM Scraping algorithms and data validators
         ├── popup/                          # Visual extension dashboard popup
-        └── services/                       # Storage obfuscation, logger, and API clients
+        └── services/                       # Secure storage, logger, and API clients
 ```
 
 ---
@@ -95,10 +95,11 @@ To eliminate link ambiguity and ensure commission attribution:
 - **Enforced Tracking Injection**: Product import routes parse incoming URLs and apply the platform's active site tag (`AMAZON_AFFILIATE_TAG` or configured provider profile) to guarantee valid commission tracking.
 - **Restricted Access**: Administrative import endpoints are strictly guarded by `adminOnly` middleware requiring authenticated admin JWT credentials.
 
-### 2. Chrome Extension Storage Obfuscation
-To protect administrative credentials and JWTs stored on the user's disk from extraction or standard signature scans:
-- **Reversed Base64 Cipher**: Inside the extension's `StorageService`, the `authToken` is run through a custom reversal-and-base64 obfuscator before hitting `chrome.storage.session` or `localStorage`.
-- **Restricted Storage Bus**: The messaging router `routeMessage` strictly limits read/write storage command actions (`STORAGE_WRITE`/`STORAGE_READ`) to a pre-defined set of safe public keys (e.g. `lastImportedAsin`), completely blocking any remote calls to fetch `gph_settings` or auth configurations.
+### 2. Zero-Disk Ephemeral Storage & Cryptographic Isolation
+To protect administrative credentials and JWTs against disk extraction, unauthorized inspection, or token theft:
+- **Ephemeral In-Memory Token Storage**: Inside the extension's `StorageService`, sensitive tokens (`authToken`, `sessionToken`) are exclusively held in `chrome.storage.session` (in-memory only). They are never written to disk, and are immediately purged when the browser process closes or on explicit logout.
+- **Restricted Messaging Bus**: The internal messaging router `routeMessage` strictly limits read/write storage command actions (`STORAGE_WRITE`/`STORAGE_READ`) to an explicit allowlist of safe public keys (e.g. `lastImportedAsin`), completely rejecting remote attempts to extract settings or authentication state.
+- **Authenticated Data Encryption**: Sensitive server-side secrets and third-party API credentials are encrypted at rest using authenticated AES-256-GCM (`src/utils/encryption.ts`) with unique 96-bit initialization vectors and 128-bit authentication tags.
 
 ### 3. Decoupled AI Key Management
 - **Stable Key Derivation**: AI Service configuration keys are encrypted at rest using `AI_KEY_ENCRYPTION_SECRET` (defined securely in `.env.example`).

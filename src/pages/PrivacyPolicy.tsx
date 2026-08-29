@@ -32,15 +32,28 @@ export const PrivacyPolicy: React.FC = () => {
           </p>
         </section>
 
-        {/* Cookies */}
+        {/* Cookies & Consent Controls */}
         <section className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
             <Cookie className="h-4 w-4 text-indigo-400" />
-            <span>2. Cookies</span>
+            <span>2. Cookies & User Consent Controls (GDPR / CCPA)</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-200 leading-relaxed">
-            We use essential cookies to maintain site functionality, such as remembering your theme preferences (light/dark mode) and managing your local wishlist items. These cookies are not used for tracking your behavior across other websites.
+            We use essential cookies to maintain site functionality, such as remembering your theme preferences (light/dark mode) and managing your local wishlist items. Analytics telemetry and personalized Google AdSense advertising cookies are optional and require your explicit consent under GDPR and CCPA regulations.
           </p>
+          <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-slate-900/60 border border-indigo-100 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 dark:text-white">Granular Consent & Opt-Out Management</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-300">Review your active cookie preferences or opt out of telemetry and personalized ads at any time.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('open_cookie_settings'))}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors shrink-0 shadow-xs"
+            >
+              Manage Preferences
+            </button>
+          </div>
         </section>
 
         {/* Analytics */}

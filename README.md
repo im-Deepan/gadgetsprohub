@@ -1,128 +1,146 @@
 # GadgetsProHub: Full-Stack E-Commerce Affiliate & Content Automation Platform
 
-Welcome to the **GadgetsProHub** master documentation. This repository contains a fully-integrated, production-ready full-stack affiliate ecosystem comprising a high-performance **React Web Frontend (Vite)**, a robust **Express API Server (TypeScript/Node.js)**, a resilient offline-first **Database Layer (MongoDB/Mongoose + Local JSON-File Fallbacks)**, and an intelligent **Chrome Scraping Extension** for bulk automated product imports.
+[![CI & Quality Assurance](https://github.com/deepan20060609/gadgetsprohub/actions/workflows/ci.yml/badge.svg)](https://github.com/deepan20060609/gadgetsprohub/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node: v20 | v22](https://img.shields.io/badge/Node.js-v20%20%7C%20v22-green.svg)](https://nodejs.org)
+[![Security: AES-256-GCM](https://img.shields.io/badge/Security-AES--256--GCM-blue.svg)](SECURITY.md)
+
+Welcome to the **GadgetsProHub** master documentation. This repository contains an integrated, production-grade affiliate ecosystem comprising a high-performance **React Web Frontend (Vite & Tailwind CSS)**, a robust **Express API Server (TypeScript/Node.js)**, a resilient offline-first **Database Layer (MongoDB/Mongoose + Atomic Local JSON-File Fallbacks)**, and an intelligent **Chrome Scraping Extension (Manifest V3)** for automated product imports.
+
+---
+
+## 👨‍💻 Maintainers & Contributor Info
+
+- **Project Lead & Author**: Deepan ([deepan20060609@gmail.com](mailto:deepan20060609@gmail.com))
+- **Contribution Guide**: See [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Security & Vulnerability Reporting**: See [SECURITY.md](SECURITY.md)
 
 ---
 
 ## 🗺️ System & Directory Architecture
 
-The repository is divided into two primary contexts: the **Core Web Application (Server & Web Client)** and the **Chrome Extension**.
+The repository is organized into distinct, modular functional layers:
 
-### 1. Root Directory & Server Core (`/`)
-- `server.ts`: The unified entry point. It manages Express server instances, registers production-grade middleware (Helmet, CORS with origin strict-matching, Express Rate Limiter, Mongo-Sanitizer), initializes connections to MongoDB (via Mongoose), registers the Sunday Automation Engine, and manages the Express Router.
-- `package.json`: Configures execution scripts (`npm run dev` via `tsx`, `npm run build` using Rollup/Vite/Esbuild bundles, `npm run start` running on `dist/server.cjs`).
-- `local_products.json`, `local_users.json`, `local_sunday_logs.json`: Active JSON storage buffers. These serve as the high-availability local storage layer when the remote MongoDB cluster is disconnected.
-- `seeddata.ts`: Pre-populated bootstrap data representing categories, sample products, and blogs.
-- `zip-extension.js`: Bundling script that automatically compiles and zips the Chrome Extension during the root build cycle.
+### 1. Root Directory & Backend Core (`/`)
+- `server.ts`: The unified server entry point. Manages Express instances, registers production-grade middleware (Helmet, CORS with origin strict-matching, Express Rate Limiter, Mongo-Sanitizer), connects to MongoDB (via Mongoose), registers the Sunday Automation Engine, and provides RESTful APIs.
+- `src/services/`: High-performance services:
+  - `MediaService.ts`: Secure image optimization, SSRF private IP validation, multi-format transcoding (`webp`, `avif`) via `sharp`.
+  - `AiService.ts`: Multi-provider AI content generation (Google Gemini, OpenAI, Claude, OpenRouter) with authenticated encrypted API key storage.
+  - `CacheService.ts`: In-memory LRU cache for accelerated reads.
+- `src/utils/`:
+  - `encryption.ts`: Authenticated **AES-256-GCM** encryption and decryption utilities.
+- `src/__tests__/`: Automated unit and integration test suites:
+  - `adminEndpoints.test.ts`: JWT HS256 enforcement, alg:none defense, pairing handshake PIN lifecycle.
+  - `encryption.test.ts`: Authenticated encryption, semantic security, tampering detection.
+  - `dbFallback.test.ts`: High-concurrency atomic persistence and graceful offline resilience.
+  - `parser.test.ts`: Price normalizer, ASIN extraction, and strict Zod validation.
 
 ### 2. React Web Client (`/src/`)
 - `src/main.tsx` & `src/App.tsx`: Applet mounting context and layout router.
-- `src/types.ts`: Master TypeScript interface registry containing strict schemas for `Product`, `Category`, `Blog`, `User`, `Review`, `SundayLog`, and `Session`.
-- `src/firebase.ts`: Authentication and client-side configuration loaders.
-- `src/pages/`: Page containers including `Home` (Interactive feed & analytics), `ProductList`, `ProductDetail` (specs & price trackers), `Blog`, `BlogDetail`, `Admin` (Security/AI/SEO/Sync Consoles), and core legal compliance structures (`Disclaimer`, `PrivacyPolicy`, `TermsConditions`).
-- `src/components/`: Modular, high-end components including:
-  - `GlareHover.tsx` & `BorderGlow.tsx`: Premium card hovering reflections and interaction elements.
-  - `AdSenseBanner.tsx`: Configurable AdSense container for platform monetization.
-  - `LazySection.tsx`: Low-overhead viewport intersection loaders.
-  - `MediaLibrary.tsx`: Centralized asset uploads manager.
-  - `RecentViewedMarquee.tsx`: Dynamic looping marquee tracking user navigation history.
+- `src/types.ts`: TypeScript interface registry containing schemas for `Product`, `Category`, `Blog`, `User`, `Review`, and `SundayLog`.
+- `src/pages/`: Interactive views including `Home` (feed & analytics), `ProductList`, `ProductDetail` (specs & price tracking), `Blog`, `Admin` (Security/AI/SEO Consoles), and legal compliance pages (`Disclaimer`, `PrivacyPolicy`, `TermsConditions`).
 
 ### 3. Chrome Scraping Extension (`/extension/`)
-- `extension/manifest.json`: WebExtension Manifest V3. Configures content script injections on Amazon and allied sites, and registers background service workers.
-- `extension/src/content/`:
-  - `parser/FieldExtractors.ts`: Highly precise DOM scraper targeting item titles, image galleries, ratings, stock statuses, and raw tabular specifications.
-  - `parser/DataNormalizer.ts`: Standardizes scraped currencies, strips extraneous whitespace, and shapes properties.
-  - `parser/PageValidator.ts`: Detects page contexts and guards against firing parsers on non-product pages.
-- `extension/src/popup/`: A lightweight React popup prompting admins to log in or pair using high-entropy code exchanges.
-- `extension/src/background/`: Manages cross-script messaging routers, keeps proxy authentications alive, and manages storage synchronization.
+- `extension/manifest.json`: WebExtension Manifest V3 with minimal host permissions (`*.amazon.*`).
+- `extension/src/content/`: DOM scrapers, data normalizers, and schema validators for Amazon product pages.
+- `extension/src/background/`: Privilege-checked inter-script messaging router, alarms, and API synchronization.
+- `extension/src/popup/`: React + Tailwind popup coordinating user sessions, PIN exchanges, and bulk import queues.
+- `extension/src/**/__tests__/`: Jest test suite verifying content parsing and background messaging security boundaries.
 
 ---
 
-## 🛠️ Key Architectural Features & Logics
+## 🔐 Advanced Security & Cryptographic Controls
 
-### 1. High-Availability Offline-First Fallback
-The backend implements a dual-mode database strategy via the `isMongoConnected` control flag:
-- **Online Mode:** Performs ACID transactions, aggregates, and schemas via a remote MongoDB cluster.
-- **Offline Fallback:** Automatically switches read/write operations to the secure, disk-persisted local JSON stores (`local_products.json`, `local_users.json`, `local_sunday_logs.json`). If MongoDB goes offline or is unprovisioned, the server remains fully operational, reading and writing to disk seamlessly. Once MongoDB reconnects, write methods dynamically sync or fallback as required.
+### 1. Zero-Disk Ephemeral Storage in Extension
+- **Memory-Only Session Storage**: Sensitive authentication tokens (`authToken`, `sessionToken`) in the Chrome extension are stored exclusively in `chrome.storage.session`. No tokens are written to unencrypted persistent local disk storage.
+- **5-Minute One-Time Pairing PIN**: Extension pairing uses a single-use 6-digit numeric PIN with strict brute-force rate-limiting (max 5 attempts per 10 minutes) generated via `/api/admin/products/import/pairing-code`. The PIN is atomically destroyed upon initial verification.
 
-### 2. Sunday Automation & Weekly Summary Engine (`runSundayAutomation`)
-The platform includes an automated cron-like task executor designed to run every Sunday (and checking/running on startup if a week has elapsed):
-- **Weekly Progress Logging:** Logs automated product additions and generates performance reports.
-- **Unique Mock Product Generation:** Uses `generateUniqueProduct` to populate dummy sample items for category filling, preventing blank layouts.
-- **Mongoose ObjectId Validation Protection:** When logging the automation outputs, IDs are rigorously sanitized. The array of product IDs is pre-filtered via `mongoose.Types.ObjectId.isValid(id)` before being mapped via `new mongoose.Types.ObjectId(id)`. This explicitly prevents the server from crashing or throwing `BSONError` runtime exceptions when invalid hex strings enter the database pipeline in either fallback or live states.
+### 2. Authenticated Encryption at Rest (AES-256-GCM)
+- Third-party AI provider credentials and sensitive keys are encrypted at rest using **AES-256-GCM** (`src/utils/encryption.ts`) with unique 96-bit IVs and 128-bit authentication tags.
+- Rotation of session `JWT_SECRET` does not affect stored encrypted AI keys due to decoupled key derivation via `AI_KEY_ENCRYPTION_SECRET`.
 
-### 3. Crypto-Secure Authentication & Session Guards
-- **Algorithm Pinning:** Pinning JWT validation explicitly to the `HS256` symmetric algorithm to guard against signature-bypass attacks (e.g., `alg: "none"` spoofing).
-- **Auto-Generating High-Entropy Secrets:** If no `JWT_SECRET` exists in the environmental variables, the server dynamically generates a 64-byte high-entropy fallback secret on boot, keeping session signatures safe.
-- **CSRF & Cookie Hardening:** Session cookies enforce `httpOnly: true`, `secure: true`, and `sameSite: "none"` (optimised for cross-origin iframe embedding and preview environments).
-- **Global `wrapAsync` Middleware:** Seamlessly catches synchronous and asynchronous handler errors, piping them to the global Express error responder, which prevents stack traces from leaking database structures or internal directories.
+### 3. JWT Algorithm Enforcement
+- Strict `HS256` verification blocks unsigned `alg: "none"` bypass attempts and algorithm substitution attacks.
 
 ---
 
-## 📡 API Endpoints Reference
+## 🚀 Deployment Targets & Strategy
 
-### 🔐 Authentication Endpoints
-- **`POST /api/auth/register`**: Validates parameters and registers a new local user. Passes passwords through secure hashes with salt hooks.
-- **`POST /api/auth/login`**: Validates email/password and returns a signed HS256 JWT, binding secure session cookies.
-- **`POST /api/auth/logout`**: Adds the active token to a MongoDB TTL index collection (`BlacklistedToken`) to immediately invalidate the session.
-- **`GET /api/auth/me`**: Decodes and returns the caller's session details (e.g. email, role) with sensitive fields safely stripped.
-- **`POST /api/auth/exchange-code`**: Exchanges a temporary 6-digit numeric PIN for a valid Chrome Extension session JWT (used during extension pairing).
+### 1. Full-Stack Production Target (Recommended)
+- **Target Platform**: Node.js Container, Google Cloud Run, Render, AWS ECS, or DigitalOcean App Platform.
+- **Why**: Hosts the full Express API server, MongoDB connection, native Sharp image pipelines, background Sunday automations, and Telegram webhook integration.
+- **Production Start Command**: `npm run start` (serves `dist/server.cjs` which includes built Vite static assets).
 
-### 🛒 Product & Category Endpoints
-- **`GET /api/products`**: Supports cursor pagination, full-text search, and multi-category slug filters.
-- **`GET /api/products/:id`**: Retrieves detailed specifications, prices, and nested customer reviews for a given product ID.
-- **`POST /api/products`**: (Admin Only) Creates a product entry.
-- **`PUT /api/products/:id`**: (Admin Only) Updates structural fields or changes active pricing metrics.
-- **`DELETE /api/products/:id`**: (Admin Only) Removes the target item.
-- **`GET /api/categories`**: Lists all active product classification groups.
-
-### 🤖 AI Content Intelligence & Bulk Tools (Gemini SDK)
-- **`POST /api/admin/generate-content`**: Connects server-side to the modern `@google/genai` SDK to dynamically draft blog posts, summarize specification tables, or write customer reviews using customizable system templates. Utilizes a Server-Sent Events (SSE) stream for real-time text output.
-- **`POST /api/admin/import-csv`**: Performs bulk database updates from raw CSV streams.
-- **`GET /api/diagnostic/products`**: A diagnostic endpoint displaying schema shapes and fallback configurations.
-
-### 📬 User Enquiries & Automation Hooks
-- **`POST /api/contact`**: Validates input schema constraints and files customer enquiries.
-- **`POST /api/newsletter/subscribe`**: Adds target emails to the subscriber database.
-- **`POST /api/webhooks/telegram`**: Receives webhooks from the integrated Telegram Bot for performing product management tasks conversations.
+### 2. Static & Serverless Hosting (Vercel & Netlify)
+- `vercel.json` and `netlify.toml` are configured with matching Content Security Policies (CSP), security headers, and rewrite routes for static frontend distribution or proxy configurations.
 
 ---
 
-## 🔌 Integrated Services & Automations
+## 📦 Package Manager & Lockfile Standard
 
-### 1. n8n Real-Time Automation Workflows
-Provides real-time product price scraping pipelines:
-- **Background Checks:** Runs every 10 minutes to scan for products with prices older than 12 hours.
-- **Real-Time Locks:** Employs a dedicated `RequestLock` MongoDB schema with a TTL index to enforce mutual exclusion, preventing concurrent duplicate scraping requests on the same product and protecting affiliate sites from request flooding.
-
-### 2. Telegram CRUD Bot
-A conversational bot mapped via `/api/webhooks/telegram` that enables admins to manage inventory on the go:
-- `/start`: Mounts bot context and checks admin authorization.
-- `/add [name] | [link] | [price]`: Instantly saves a new affiliate item.
-- `/list`: Displays pagination summaries of the latest products.
-- `/price [productId] [newPrice]`: Remotely updates database item costs.
-- `/delete [productId]`: Removes items from catalog systems.
-
-### 3. Google AdSense & SEO Optimization
-- **Dynamic Headers:** `Helmet.tsx` manages viewport canonicals, automated schema-markup injection (JSON-LD), and sitemap registrations.
-- **AdSense Container:** Easily enabled via `AdSenseBanner.tsx` with customized layout layouts for responsive horizontal, vertical, or multiplex formats.
+- **Standard Package Manager**: This repository strictly standardizes on `npm` with `package-lock.json`.
+- Do NOT commit secondary lockfiles (e.g., `bun.lock`, `yarn.lock`).
+- Continuous Integration (`.github/workflows/ci.yml`) runs `npm ci` to guarantee deterministic builds.
 
 ---
 
-## 🚀 Building & Launching the Application
+## 🖼️ Native Modules (`sharp`) & Build Environment
 
-### 1. Environment Configurations
-Create a `.env` file at the root of your project using the keys defined in `.env.example`:
-```env
-MONGODB_URI=your_mongodb_connection_uri
-JWT_SECRET=your_secure_hs256_secret
-GEMINI_API_KEY=your_google_ai_studio_api_key
-ADMIN_EMAILS=admin@gadgetsprohub.com
+- The platform utilizes `sharp` for high-speed image resizing, metadata inspection, and WebP/AVIF compression.
+- **Supported Runtimes**: Linux (x64, arm64), macOS, and Windows. Prebuilt native bindings are resolved automatically during `npm ci`.
+- **Fault-Tolerant Fallback**: In constrained or serverless environments where native bindings are unavailable, `MediaService.ts` catches initialization errors gracefully and passes through raw image buffers without interrupting application execution.
+
+---
+
+## 🧪 Quality Assurance & Test Suites
+
+The project maintains 100% passing automated test suites across both the server backend and the Chrome extension:
+
+```bash
+# Run root unit & integration tests
+npm test
+
+# Run Chrome extension automated test suite
+npm run test:extension
+
+# Run entire end-to-end test suite
+npm run test:all
+
+# Run TypeScript typechecks
+npm run lint
+
+# Run high-severity security vulnerability audit
+npm run audit
+
+# Build complete production bundle & extension zip
+npm run build
 ```
 
-### 2. Standard Commands
-- **Install Dependencies:** `npm install` (and `npm install` in `/extension`).
-- **Run Local Development Server:** `npm run dev`
-- **Compile & Package Assets:** `npm run build`
-  *(Compiles React assets, packages the Chrome Extension, bundles the Express server via esbuild into CJS, and creates `/extension.zip`)*.
-- **Start Production Build:** `npm run start`
+---
+
+## ⚙️ Environment Variables
+
+Copy `.env.example` to `.env` and configure your environment:
+
+```env
+# Server & Database Configuration
+PORT=3000
+MONGODB_URI="mongodb+srv://user:pass@cluster.mongodb.net/gadgetsprohub?retryWrites=true&w=majority"
+JWT_SECRET="your-secure-64-byte-hs256-secret-key"
+
+# AI Key Encryption Secret (Dedicated for encrypting third-party API keys at rest)
+AI_KEY_ENCRYPTION_SECRET="your-cryptographically-secure-ai-key-encryption-secret"
+
+# Third-Party AI Services (Optional)
+GEMINI_API_KEY=""
+
+# Affiliate Tracking Configuration
+AMAZON_AFFILIATE_TAG="gadgetsprohub-20"
+ADMIN_EMAILS="admin@gadgetsprohub.com"
+```
+
+---
+
+## 📄 License
+
+This project is open-source under the [MIT License](LICENSE).

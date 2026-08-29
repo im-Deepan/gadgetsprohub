@@ -1,14 +1,41 @@
 {
-  "name": "react-example",
+  "name": "gadgetsprohub",
+  "version": "1.0.0",
+  "description": "Enterprise affiliate technology directory, AI product enrichment, and Chrome extension companion system.",
+  "author": "Deepan <deepan20060609@gmail.com>",
+  "contributors": [
+    {
+      "name": "Deepan",
+      "email": "deepan20060609@gmail.com"
+    }
+  ],
+  "license": "MIT",
+  "keywords": [
+    "affiliate-store",
+    "electronics-directory",
+    "chrome-extension-mv3",
+    "express",
+    "react",
+    "mongodb",
+    "gemini-ai",
+    "sharp"
+  ],
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "cd extension && npm run build && cd .. && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && node zip-extension.js",
+    "build:client": "vite build",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build:extension": "cd extension && npm run build",
     "start": "node dist/server.cjs",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:extension": "cd extension && npm test",
+    "test:all": "jest && cd extension && npm test",
     "clean": "rm -rf dist server.cjs",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "audit": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@google/genai": "^2.11.0",
@@ -54,11 +81,15 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/sharp": "^0.31.1",
+    "@types/supertest": "^7.2.1",
     "adm-zip": "^0.6.0",
     "archiver": "^8.0.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.1",
+    "jest": "^30.5.0",
+    "supertest": "^7.2.2",
     "tailwindcss": "^4.1.14",
+    "ts-jest": "^29.4.12",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^8.0.16",

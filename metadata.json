@@ -1,6 +1,6 @@
 {
-  "name": "Remix: Affiliate Store",
-  "description": "An affiliate store application containing advanced backend APIs, product tracking, analytics, blogs, and categories.",
+  "name": "gadgetsprohub | Premium Electronics & Smart Gear Directory",
+  "description": "gadgetsprohub - Your premium destination for discovering high-quality electronics, smartphones, laptops, smart gear, and extensive tech accessory specifications, reviews, and deals.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

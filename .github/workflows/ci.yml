@@ -1,0 +1,54 @@
+name: CI & Quality Assurance
+
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js 22.x with Cache
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22.x'
+        cache: 'npm'
+        
+    - name: Root Dependencies Installation
+      run: npm ci
+        
+    - name: Extension Dependencies Installation
+      run: |
+        cd extension
+        npm ci --legacy-peer-deps
+        
+    - name: Security Vulnerability Audit
+      run: |
+        npm audit --audit-level=high || true
+        cd extension && npm audit --audit-level=high || true
+        
+    - name: Root TypeScript & Lint Checks
+      run: npm run lint
+      
+    - name: Extension TypeScript & Lint Checks
+      run: |
+        cd extension
+        npx tsc --noEmit
+        
+    - name: Root Unit & Integration Tests (Parser, DB-Fallback, Admin, Encryption)
+      run: npm test
+      
+    - name: Extension Automated Tests (Router, Handlers, Content Script)
+      run: |
+        cd extension
+        npm test
+        
+    - name: Production Build & Asset Verification
+      run: npm run build
+
