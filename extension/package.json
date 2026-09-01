@@ -24,7 +24,7 @@
     "autoprefixer": "^10.4.17",
     "jest": "^30.5.0",
     "jest-environment-jsdom": "^30.4.1",
-    "postcss": "^8.4.35",
+    "postcss": "^8.5.26",
     "tailwindcss": "^4.1.14",
     "ts-jest": "^29.4.11",
     "typescript": "~5.8.2",
