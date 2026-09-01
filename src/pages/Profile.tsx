@@ -50,6 +50,9 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
   // States
   const [loading, setLoading] = useState(true);
   const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [activeTab, setActiveTab] = useState<'wishlist' | 'orders'>('wishlist');
 
   // Profile preferences sync states
   const [editName, setEditName] = useState(user?.name || '');
@@ -171,6 +174,23 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
     }
   };
 
+  const loadOrders = async () => {
+    if (!token) return;
+    try {
+      const res = await apiFetch('/api/user/orders', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(data);
+      }
+    } catch (e) {
+      console.warn('Failed to load orders', e);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+  
   const loadUserProfile = async () => {
     if (!token) return;
     setLoading(true);
@@ -196,7 +216,8 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     loadUserProfile().catch(() => {});
-  }, [wishlist, token]);
+    loadOrders().catch(() => {});
+  }, [token]);
 
   const handleRemoveBookmark = async (id: string) => {
     const p = wishlistProducts.find(item => item._id === id);
@@ -516,18 +537,86 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
         <div className="lg:col-span-3 space-y-8">
           
           <div className="relative z-30 overflow-visible flex border-b border-slate-100 dark:border-slate-700">
-            <div className="flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-indigo-500 text-indigo-500 dark:text-indigo-300">
-              <Heart className="h-4 w-4 text-rose-400 shrink-0" />
+            <button
+              onClick={() => setActiveTab('wishlist')}
+              className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider ${activeTab === 'wishlist' ? 'border-b-2 border-indigo-500 text-indigo-500 dark:text-indigo-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+            >
+              <Heart className="h-4 w-4 shrink-0" />
               <span>Bookmarks ({wishlistProducts.length})</span>
-            </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider ${activeTab === 'orders' ? 'border-b-2 border-indigo-500 text-indigo-500 dark:text-indigo-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+              <span>Orders ({orders.length})</span>
+            </button>
           </div>
 
-          {/* BOOKMARKS LIST */}
+          {/* TAB CONTENT */}
           <div className="space-y-4">
-            {loading ? (
+            {activeTab === 'orders' ? (
+              loadingOrders ? (
+                <div className="grid grid-cols-1 gap-4 animate-pulse">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={'order-skeleton-' + i} className="h-32 rounded-xl bg-slate-50 dark:bg-slate-800/50"></div>
+                  ))}
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="text-center py-12 rounded-2xl border border-dashed border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">No Orders Found</p>
+                  <p className="text-xs text-slate-500 mt-2 dark:text-slate-400">You haven't placed any orders yet.</p>
+                  <button onClick={() => onNavigate('products')} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow hover:bg-indigo-500 transition-colors">Start Shopping</button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {orders.map(order => (
+                    <div key={order._id} className="border border-slate-200 rounded-2xl overflow-hidden dark:border-slate-700 bg-white dark:bg-black shadow-sm">
+                      <div className="bg-slate-50 dark:bg-slate-900 p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-900 dark:text-white">Order #{order._id.substring(order._id.length - 8).toUpperCase()}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <div className="text-right">
+                           <span className={'inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ' + (
+                              order.status === 'Delivered' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' :
+                              order.status === 'Cancelled' ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300' :
+                              'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                            )}>
+                              {order.status}
+                            </span>
+                            <p className="text-xs font-bold text-slate-900 dark:text-white mt-1.5">${order.totalAmount.toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-4">
+                        {order.items.map((item, idx) => (
+                          <div key={idx} className="flex gap-4">
+                             <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800 shrink-0 flex items-center justify-center">
+                                {item.product?.images?.[0] ? (
+                                  <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-contain p-2" />
+                                ) : (
+                                  <span className="text-slate-300 text-xs text-center p-2 break-all">{item.product?.name?.substring(0,2) || 'NA'}</span>
+                                )}
+                             </div>
+                             <div className="flex-1 min-w-0">
+                               <p className="text-sm font-semibold text-slate-900 dark:text-white truncate cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => onNavigate('product-detail', item.product?.slug)}>{item.product?.name || 'Unknown Product'}</p>
+                               <div className="flex items-center gap-2 mt-1">
+                                 <span className="text-xs text-slate-500 dark:text-slate-400">Qty: {item.quantity}</span>
+                                 <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">${item.price.toFixed(2)}</span>
+                               </div>
+                             </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
                 {[...Array(3)].map((_, i) => (
-                  <div key={`bookmark-skeleton-${i}`} className="group flex flex-col rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-700 overflow-hidden">
+                  <div key={'bookmark-skeleton-' + i} className="group flex flex-col rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-700 overflow-hidden">
                     <div className="h-32 bg-slate-50 dark:bg-slate-800/50 shrink-0"></div>
                     <div className="p-4 flex flex-col flex-grow space-y-2.5">
                       <div className="h-3 w-1/3 bg-slate-50 dark:bg-slate-800/50 rounded"></div>
@@ -538,55 +627,53 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 ))}
               </div>
             ) : wishlistProducts.length === 0 ? (
-              <div className="border border-dashed border-slate-100 p-12 rounded-2xl text-center dark:border-slate-700 space-y-3">
-                <span className="text-3xl block">🏷️</span>
-                <p className="text-xs text-slate-300 italic">Your bookmark list is currently empty. Bookmark product specs to save them here.</p>
+              <div className="text-center py-16 px-4 rounded-3xl border border-dashed border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50">
+                <div className="mx-auto w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 dark:bg-slate-800 text-slate-300 dark:text-slate-600">
+                  <Heart className="h-8 w-8" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Your wishlist is empty</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto mb-6 dark:text-slate-400">Save your favorite gadgets and compare them later. They will appear here safely.</p>
                 <button
                   onClick={() => onNavigate('products')}
-                  className="rounded-full bg-slate-800 border border-slate-800 text-white font-bold text-xs px-4 py-2 hover:bg-slate-700 transition-colors duration-300 cursor-pointer"
+                  className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                 >
-                  Explore Products
+                  Explore Gadgets
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {wishlistProducts.map((p, idx) => (
+                {wishlistProducts.map((p) => (
                   <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
                     key={p._id}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ 
-                      duration: 0.28, 
-                      delay: Math.min(idx * 0.04, 0.2), 
-                      ease: [0.22, 1, 0.36, 1] 
-                    }}
-                    className="group border border-slate-100 bg-white rounded-2xl overflow-hidden dark:border-slate-700 dark:bg-slate-800 flex flex-col justify-between"
+                    className="group flex flex-col rounded-2xl border border-slate-100 bg-white shadow-xs transition-all hover:shadow-md dark:border-slate-700 dark:bg-black overflow-hidden relative"
                   >
-                    <div className="h-32 bg-slate-50 relative shrink-0 aspect-[16/9] sm:aspect-auto">
-                      <img width="320" height="180" loading="lazy" decoding="async" src={p.images?.[0]} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      
-                      <button
-                        onClick={() => handleRemoveBookmark(p._id)}
-                        className="absolute top-2.5 right-2.5 h-8 w-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-700 hover:bg-rose-50 hover:text-rose-500 text-slate-400 shadow-md transition-colors duration-300 cursor-pointer-none border-0"
-                        title="Remove bookmark"
-                        aria-label={`Remove ${p.name} from bookmarks`}
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      </button>
+                    <button
+                      onClick={() => handleRemoveBookmark(p._id)}
+                      className="absolute top-2 right-2 z-10 p-2 rounded-full bg-white/90 shadow-sm text-rose-500 hover:bg-rose-50 hover:scale-110 transition-all dark:bg-slate-900/90"
+                      aria-label="Remove from bookmarks"
+                    >
+                      <Heart className="h-4 w-4 fill-current" />
+                    </button>
+                    <div className="h-40 bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4 cursor-pointer shrink-0" onClick={() => onNavigate('product-detail', p.slug)}>
+                      <img
+                        src={p.images?.[0] || 'https://via.placeholder.com/300?text=No+Image'}
+                        alt={p.name}
+                        className="h-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-105 transition-transform duration-500"
+                      />
                     </div>
-
-                    <div className="p-4 space-y-3.5 flex-grow flex flex-col justify-between">
-                      <div>
-                        <h4
-                          onClick={() => onNavigate('product-detail', p.slug)}
-                          className="text-xs sm:text-sm font-bold text-slate-700 dark:text-white truncate cursor-pointer hover:text-indigo-500 transition-colors duration-300"
-                        >
-                          {p.name}
-                        </h4>
-                        <p className="text-[10px] text-slate-300 font-mono font-bold mt-1 uppercase leading-none">{p.brand || (typeof p.category === 'object' ? p.category?.name : p.category) || 'Gadget'}</p>
+                    <div className="p-4 flex flex-col flex-grow">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-1">
+                        {typeof p.category === 'string' ? p.category : p.category?.name || ''}
                       </div>
-
-                      <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-700 pt-3">
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-white line-clamp-2 leading-snug cursor-pointer hover:text-indigo-600" onClick={() => onNavigate('product-detail', p.slug)}>
+                        {p.name}
+                      </h3>
+                      <div className="mt-auto pt-4 flex items-center justify-between">
                         <span className="text-xs font-black font-mono text-slate-950 dark:text-white">{formatProductPrice(getValidatedPricing(p).price, p)}</span>
                         <button
                           onClick={() => onNavigate('product-detail', p.slug)}
@@ -601,14 +688,20 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
               </div>
             )}
           </div>
-
           {/* Tips block */}
           <div className="rounded-2xl bg-indigo-50/40 p-6 border border-indigo-50/20 flex gap-4 text-indigo-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
             <Sparkle className="h-6 w-6 text-indigo-400 shrink-0 animate-pulse mt-0.5" />
             <div className="view-details-block space-y-1">
               <h4 className="text-xs font-bold uppercase tracking-wider">MEMBER BENEFITS EXCLUSIVE</h4>
-              <p className="text-[11px] text-slate-400 dark:text-slate-300 leading-relaxed">Bookmarks of product collections and wishlist items are securely logged to ensure 100% platform integrity and session security across all your devices.</p>
+              <p className="text-[11px] leading-relaxed opacity-90">Enjoy early access to gadget restocks, priority response in Q&A, and secure price tracking. Ensure your account is secured.</p>
             </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/50">
+            <h4 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+              <ShieldCheck className="h-3 w-3" /> Integrity Log
+            </h4>
+            <p className="text-[11px] text-slate-400 dark:text-slate-300 leading-relaxed">Bookmarks of product collections and wishlist items are securely logged to ensure 100% platform integrity and session security across all your devices.</p>
           </div>
 
         </div>

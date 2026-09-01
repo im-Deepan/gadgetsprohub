@@ -279,6 +279,18 @@ export class MetricsService {
   private static dbLatencies: number[] = [];
   private static dbLatencySum = 0;
   private static liveLogs: any[] = [];
+  private static lastEventLoopLagMs = 0;
+
+  public static measureEventLoopLag(): Promise<number> {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      setImmediate(() => {
+        const lag = Math.max(0, Date.now() - start);
+        MetricsService.lastEventLoopLagMs = lag;
+        resolve(lag);
+      });
+    });
+  }
 
   public static incrementRequests(): void {
     this.totalRequests++;
@@ -322,6 +334,8 @@ export class MetricsService {
   }
 
   public static getMetrics() {
+    this.measureEventLoopLag();
+
     const avgResponseTime = this.apiResponseTimes.length > 0
       ? Math.round(this.apiResponseTimesSum / this.apiResponseTimes.length)
       : 0;
@@ -336,6 +350,7 @@ export class MetricsService {
       averageResponseTimeMs: avgResponseTime,
       dbQueriesExecuted: this.dbQueries,
       dbLatencyAvgMs: avgDbLatency,
+      eventLoopLagMs: this.lastEventLoopLagMs,
       activeConnectionSockets: this.activeSockets,
       memory: process.memoryUsage(),
       cpu: process.cpuUsage(),

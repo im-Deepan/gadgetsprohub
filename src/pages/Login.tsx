@@ -136,6 +136,8 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   const [submitting, setSubmitting] = useState(false);
   const [subscribeNewsletter, setSubscribeNewsletter] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [twoFactorToken, setTwoFactorToken] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [simulatedVerificationUrl, setSimulatedVerificationUrl] = useState('');
   const [smtpError, setSmtpError] = useState('');
@@ -215,27 +217,43 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
       }
       setSubmitting(false);
       return;
-    }
-
-    if (activeTab === 'login') {
-      const validation = loginSchema.safeParse({ email, password });
-      if (!validation.success) {
-        const errorMsg = validation.error.issues[0]?.message || 'Please check your login details.';
-        setAuthError(errorMsg);
-        showToast(errorMsg, 'warning', 4000, "User Action");
-        setSubmitting(false);
-        return;
-      }
-
-      const res = await login(email, password);
-      if (!res.success) {
-        const errorMsg = res.error || 'The credentials you entered are incorrect. Please verify and try again.';
-        setAuthError(errorMsg);
-        showToast(errorMsg, 'error', 4000, "User Action");
+    }    if (activeTab === 'login') {
+      if (requiresTwoFactor) {
+        if (!twoFactorToken || twoFactorToken.length < 6) {
+           setAuthError('Please enter a valid 6-digit verification code.');
+           setSubmitting(false);
+           return;
+        }
+        const res = await login(email, password, twoFactorToken);
+        if (!res.success) {
+          const errorMsg = res.error || 'The verification code is incorrect or expired.';
+          setAuthError(errorMsg);
+          showToast(errorMsg, 'error', 4000, 'User Action');
+        } else {
+          showToast('Successfully verified credentials. Welcome back!', 'success', 4000, 'User Action');
+        }
       } else {
-        showToast('Successfully verified credentials. Welcome back to your affiliate portal!', 'success', 4000, "User Action");
+        const validation = loginSchema.safeParse({ email, password });
+        if (!validation.success) {
+          const errorMsg = validation.error.issues[0]?.message || 'Please check your login details.';
+          setAuthError(errorMsg);
+          showToast(errorMsg, 'warning', 4000, 'User Action');
+          setSubmitting(false);
+          return;
+        }
+        const res = await login(email, password);
+        if (res.requiresTwoFactor) {
+          setRequiresTwoFactor(true);
+          showToast('Additional verification required.', 'info', 4000, 'User Action');
+        } else if (!res.success) {
+          const errorMsg = res.error || 'The credentials you entered are incorrect. Please verify and try again.';
+          setAuthError(errorMsg);
+          showToast(errorMsg, 'error', 4000, 'User Action');
+        } else {
+          showToast('Successfully verified credentials. Welcome back!', 'success', 4000, 'User Action');
+        }
       }
-    } else {
+        } else {
       const validation = registerSchema.safeParse({ email, password, name });
       if (!validation.success) {
         const errorMsg = validation.error.issues[0]?.message || 'Please check your registration details.';
@@ -420,7 +438,41 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
         {/* Input Forms */}
                 <form onSubmit={handleSubmit} className="space-y-4">
           <LoginErrorDisplay error={authError} onClear={() => setAuthError('')} />
-          {isForgotPassword ? (
+          {requiresTwoFactor ? (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Authenticator Code</label>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="123456"
+                    value={twoFactorToken}
+                    onChange={(e) => setTwoFactorToken(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">Open your Authenticator app and enter the 6-digit code.</p>
+              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full text-xs relative flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white shadow-md transition-all hover:bg-indigo-500 disabled:opacity-50"
+              >
+                {submitting ? 'Verifying...' : 'Verify Code'}
+              </button>
+              <div className="text-center mt-4">
+                <button 
+                   type="button" 
+                   onClick={() => setRequiresTwoFactor(false)}
+                   className="text-xs text-slate-500 hover:underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : isForgotPassword ? (
             <div className="space-y-4">
               {!resetToken && (
                 <div className="space-y-1.5">

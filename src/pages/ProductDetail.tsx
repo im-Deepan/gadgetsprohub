@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Product, Category } from '../types';
 import { ChevronLeft, ChevronRight, Heart, Star, ShoppingBag, ExternalLink, CheckCheck, MessageSquare, Check, X, BookmarkCheck, Video, Copy, Share2, Scale } from 'lucide-react';
@@ -28,44 +28,6 @@ interface ProductDetailProps {
 
 const sanitizeText = (text: string): string => {
   return (text || '').slice(0, 500); // Cap length to prevent DOM bloat
-};
-
-
-const formatAmazonTime = (lastPriceCheck: string | undefined, tz: string): string => {
-  const date = lastPriceCheck ? new Date(lastPriceCheck) : new Date();
-  try {
-    let timeString = "";
-    if (tz === 'IST') {
-      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-      const istDate = new Date(utc + (3600000 * 5.5));
-      const hh = String(istDate.getHours()).padStart(2, '0');
-      const mm = String(istDate.getMinutes()).padStart(2, '0');
-      timeString = `${hh}:${mm} IST`;
-    } else if (tz === 'EST') {
-      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-      const estDate = new Date(utc - (3600000 * 5));
-      const hh = String(estDate.getHours()).padStart(2, '0');
-      const mm = String(estDate.getMinutes()).padStart(2, '0');
-      timeString = `${hh}:${mm} EST`;
-    } else if (tz === 'GMT') {
-      const hh = String(date.getUTCHours()).padStart(2, '0');
-      const mm = String(date.getUTCMinutes()).padStart(2, '0');
-      timeString = `${hh}:${mm} GMT`;
-    } else if (tz === 'GST') {
-      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-      const gstDate = new Date(utc + (3600000 * 4));
-      const hh = String(gstDate.getHours()).padStart(2, '0');
-      const mm = String(gstDate.getMinutes()).padStart(2, '0');
-      timeString = `${hh}:${mm} GST`;
-    } else {
-      const hh = String(date.getHours()).padStart(2, '0');
-      const mm = String(date.getMinutes()).padStart(2, '0');
-      timeString = `${hh}:${mm} ${tz}`;
-    }
-    return timeString;
-  } catch (e) {
-    return "14:11 IST";
-  }
 };
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNavigate }) => {
@@ -311,13 +273,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           });
       } else {
         if (!signal?.aborted) {
+          const errData = await res.json().catch(() => ({}));
+          showToast(errData?.error || `Failed to fetch product details (HTTP ${res.status}).`, 'error', 4000, 'System Error');
           setLoading(false);
         }
       }
     } catch (e: unknown) {
       const errorObj = e as { name?: string };
       if (errorObj.name !== 'AbortError') {
-        
+        console.error('[ProductDetail] Failed to load product details:', e);
+        const friendly = mapErrorToFriendly(e, 'load product details');
+        showToast(friendly.message, 'error', 4000, 'Network Error');
       }
       if (!signal?.aborted) {
         setLoading(false);
@@ -656,10 +622,20 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     );
   }
 
-  // Find current sequence information
-  const currentIdx = allProductsSequence.findIndex(p => p.slug === productSlug || (product && p._id === product._id));
-  const prevProduct = currentIdx > 0 ? allProductsSequence[currentIdx - 1] : null;
-  const nextProduct = currentIdx !== -1 && currentIdx < allProductsSequence.length - 1 ? allProductsSequence[currentIdx + 1] : null;
+  // Find current sequence information (memoized to avoid re-scanning sequence array on every render)
+  const { prevProduct, nextProduct } = useMemo(() => {
+    if (!allProductsSequence.length || !product) {
+      return { prevProduct: null, nextProduct: null };
+    }
+    const currentIdx = allProductsSequence.findIndex(p => p.slug === productSlug || p._id === product._id);
+    if (currentIdx === -1) {
+      return { prevProduct: null, nextProduct: null };
+    }
+    return {
+      prevProduct: currentIdx > 0 ? allProductsSequence[currentIdx - 1] : null,
+      nextProduct: currentIdx < allProductsSequence.length - 1 ? allProductsSequence[currentIdx + 1] : null
+    };
+  }, [allProductsSequence, productSlug, product]);
 
   // Specifications fields map with exhaustive, safe, multi-format parsing
   let specMap: Record<string, string> = parseSpecificationsString(product?.specifications);

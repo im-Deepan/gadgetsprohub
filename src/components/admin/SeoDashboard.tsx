@@ -5,7 +5,6 @@ import {
   ArrowRight, Share2, Code, HelpCircle, Activity, Save, Edit, Bot
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
-import { useAuth } from '../../context/AuthContext';
 import { RobotsInspector } from '../../services/robots.tsx';
 
 interface SeoDashboardProps {
@@ -42,8 +41,7 @@ interface RedirectRule {
   createdAt: string;
 }
 
-export const SeoDashboard: React.FC<SeoDashboardProps> = ({ token }) => {
-  const { token: authContextToken } = useAuth();
+export const SeoDashboard: React.FC<SeoDashboardProps> = () => {
 
   const [products, setProducts] = useState<ProductSeo[]>([]);
   const [redirects, setRedirects] = useState<RedirectRule[]>([]);

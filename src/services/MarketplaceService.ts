@@ -9,7 +9,7 @@ import mongoose from 'mongoose';
  * Ensures all product prices, whether imported from extensions, scraped from web,
  * or updated via cron jobs, are permanently converted and stored in INR.
  */
-export function convertToINR(amount: number, fromCurrency?: string | null, urlOrHint?: string | null): number {
+export async function convertToINR(amount: number, fromCurrency?: string | null, urlOrHint?: string | null): Promise<number> {
   if (!amount || isNaN(amount) || amount <= 0) return 0;
   
   let curr = (fromCurrency || '').trim().toUpperCase();
@@ -32,13 +32,10 @@ export function convertToINR(amount: number, fromCurrency?: string | null, urlOr
     }
   }
 
-  // If already in INR
   if (curr === 'INR' || curr === '₹' || curr === 'RS' || curr === 'RS.') {
     return Math.round(amount);
   }
 
-  // Fallback heuristic: If no currency is known, but the amount is small (<= 1000)
-  // in consumer electronics context (where electronics in INR are thousands), treat as USD
   if (!curr) {
     if (amount <= 1000) {
       curr = 'USD';
@@ -47,26 +44,32 @@ export function convertToINR(amount: number, fromCurrency?: string | null, urlOr
     }
   }
 
-  const rates: Record<string, number> = {
-    'USD': 83.5,
-    '$': 83.5,
-    'EUR': 91.0,
-    '€': 91.0,
-    'GBP': 106.0,
-    '£': 106.0,
-    'AED': 22.75,
-    'CAD': 61.5,
-    'AUD': 54.5,
-    'JPY': 0.55,
-    '¥': 0.55,
-    'CNY': 11.5,
-    'SGD': 62.0
-  };
-
-  const rate = rates[curr] || 83.5;
-  const inrValue = amount * rate;
-  return Math.round(inrValue);
+  if (curr === '$') curr = 'USD';
+  if (curr === '€') curr = 'EUR';
+  if (curr === '£') curr = 'GBP';
+  if (curr === '¥') curr = 'JPY';
+  
+  try {
+    const ms = MarketplaceService.getInstance();
+    const inrValue = await ms.convertCurrency(amount, curr, 'INR');
+    return Math.round(inrValue);
+  } catch (e) {
+    const rates: Record<string, number> = {
+      'USD': 83.5,
+      'EUR': 91.0,
+      'GBP': 106.0,
+      'AED': 22.75,
+      'CAD': 61.5,
+      'AUD': 54.5,
+      'JPY': 0.55,
+      'CNY': 11.5,
+      'SGD': 62.0
+    };
+    const rate = rates[curr] || 83.5;
+    return Math.round(amount * rate);
+  }
 }
+
 
 export interface NormalizedProduct {
   name: string;
@@ -557,8 +560,8 @@ export async function getProductDetails(url: string, providerId: string, default
   const detectedCurrency = realData.currency || defaultCurrency || (url.includes('amazon.in') || url.includes('flipkart') ? 'INR' : 'USD');
   
   // Permanent INR Normalization: Always convert scraped price to Indian Rupees (INR)
-  const price = convertToINR(rawPrice, detectedCurrency, url);
-  const originalPrice = convertToINR(rawOriginalPrice, detectedCurrency, url);
+  const price = await convertToINR(rawPrice, detectedCurrency, url);
+  const originalPrice = await convertToINR(rawOriginalPrice, detectedCurrency, url);
   const discount = (originalPrice > price) ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
   const resolvedBrand = realData.brand || 'Generic';
   const resolvedCategory = 'Electronics';
@@ -1248,7 +1251,7 @@ export class MarketplaceService {
         {
           marketplace: primary.brand || 'Primary',
           price: primary.price,
-          currency: 'USD',
+          currency: 'INR',
           convertedPrice: primary.price,
           affiliateUrl: primary.affiliateLink,
           rating: primary.rating,
@@ -1259,7 +1262,7 @@ export class MarketplaceService {
         {
           marketplace: duplicate.brand || 'Secondary Partner',
           price: duplicate.price,
-          currency: 'USD',
+          currency: 'INR',
           convertedPrice: duplicate.price,
           affiliateUrl: duplicate.affiliateLink,
           rating: duplicate.rating,
@@ -1285,7 +1288,7 @@ export class MarketplaceService {
       {
         marketplace: product.brand || 'Default',
         price: product.price,
-        currency: 'USD',
+        currency: 'INR',
         convertedPrice: product.price,
         affiliateUrl: product.affiliateLink,
         rating: product.rating,
@@ -1301,7 +1304,7 @@ export class MarketplaceService {
         offers.push({
           marketplace: compProd.brand || 'Partner Marketplace',
           price: compProd.price,
-          currency: 'USD',
+          currency: 'INR',
           convertedPrice: compProd.price,
           affiliateUrl: compProd.affiliateLink,
           rating: compProd.rating,
@@ -1614,12 +1617,17 @@ export class MarketplaceService {
     const overallSuccessRate = activeProviders.length > 0
       ? Math.round(activeProviders.reduce((acc, curr) => acc + curr.successRate, 0) / activeProviders.length)
       : 0;
+      
+    const averageLatency = activeProviders.length > 0
+      ? Math.round(activeProviders.reduce((acc, curr) => acc + curr.latency, 0) / activeProviders.length)
+      : 0;
 
     return {
       totalProducts,
       overallSuccessRate,
       providersCount: this.providers.length,
-      providers: providersSummary
+      providers: providersSummary,
+      averageLatency
     };
   }
 }

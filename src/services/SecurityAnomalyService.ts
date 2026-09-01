@@ -12,8 +12,7 @@ export type AnomalyCategory =
   | 'ANOMALOUS_TRAFFIC_SPIKE'
   | 'VULNERABILITY_PROBE'
   | 'UNAUTHORIZED_ACCESS'
-  | 'CREDENTIAL_STUFFING'
-  | 'SUSPICIOUS_PAYLOAD';
+  | 'CREDENTIAL_STUFFING';
 
 export interface SecurityAnomaly {
   id: string;
@@ -273,7 +272,8 @@ export class SecurityAnomalyService {
         userAgent,
         details: { matchedPath: path }
       });
-      return { isBlocked: false, anomalyDetected: anomaly };
+      this.blockIp(ip, 'Vulnerability Probe / Path Traversal Detected', 1440, false);
+      return { isBlocked: true, anomalyDetected: anomaly };
     }
 
     // 2. Track request timestamps for sudden burst / traffic spike detection
@@ -323,6 +323,10 @@ export class SecurityAnomalyService {
           userAgent,
           details: { countIn10s, countIn60s: timestamps.length }
         });
+        if (countIn10s >= 60 || timestamps.length >= 250) {
+          this.blockIp(ip, 'Volumetric Traffic Spike / DDoS Attempt', 60, false);
+          return { isBlocked: true, anomalyDetected: anomaly };
+        }
         return { isBlocked: false, anomalyDetected: anomaly };
       }
     }
@@ -422,6 +426,26 @@ export class SecurityAnomalyService {
   /**
    * Resets failed authentication tracker on successful login
    */
+  public static recordEndpointHit(path: string): void {
+    // Basic heuristic to increment totalHits based on path
+    for (const [tierId, tier] of this.rateLimitTiers.entries()) {
+      const prefixes = tier.endpointPrefix.split(',').map(p => p.trim());
+      for (const prefix of prefixes) {
+        if (prefix.endsWith('/*')) {
+          if (path.startsWith(prefix.slice(0, -2))) {
+            tier.totalHits++;
+            return; // matched
+          }
+        } else {
+          if (path === prefix || path.startsWith(prefix + '/')) {
+            tier.totalHits++;
+            return; // matched
+          }
+        }
+      }
+    }
+  }
+
   public static recordSuccessfulAuth(identifier: string, ip: string): void {
     const cleanId = (identifier || '').toLowerCase().trim();
     if (cleanId) {

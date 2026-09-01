@@ -149,8 +149,8 @@ interface ExtensionImporterProps {
   token?: string;
 }
 
-export function ExtensionImporter({ token }: ExtensionImporterProps = {}) {
-  const { user, token: authContextToken } = useAuth();
+export function ExtensionImporter(_props: ExtensionImporterProps = {}) {
+  const { user } = useAuth();
   
   // Importer Mode Navigation
   const [activeTab, setActiveTab] = useState<'live' | 'simulator' | 'devtools'>('simulator');

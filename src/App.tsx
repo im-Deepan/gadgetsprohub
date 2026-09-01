@@ -411,13 +411,11 @@ const AppContent: React.FC = () => {
       if (viewPart && (ALLOWED_VIEWS as readonly string[]).includes(viewPart)) {
         return viewPart as AppView;
       }
-
-      // Map category slugs directly to 'products' view
-      const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports', 'shoes', 'earbuds', 'gaming'];
-      if (viewPart && (knownCategories.includes(viewPart) || viewPart.startsWith('category-'))) {
+      // Any unknown top-level route is treated as a category slug
+      if (viewPart === 'category') {
         return 'products';
       }
-      if (viewPart === 'category') {
+      if (viewPart && !(ALLOWED_VIEWS as readonly string[]).includes(viewPart)) {
         return 'products';
       }
 
@@ -443,10 +441,8 @@ const AppContent: React.FC = () => {
       if (viewPart === 'blog' || viewPart === 'blogs') {
         return pathParts.length > 1 ? pathParts.slice(1).join('/') : null;
       }
-
-      // Map category slugs
-      const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports', 'shoes', 'earbuds', 'gaming'];
-      if (viewPart && knownCategories.includes(viewPart)) {
+      // Any unknown top-level route is treated as a category slug
+      if (viewPart && !(ALLOWED_VIEWS as readonly string[]).includes(viewPart)) {
         return `category-${viewPart}`;
       }
       if (viewPart === 'category' && pathParts.length > 1) {
@@ -781,31 +777,67 @@ const AppContent: React.FC = () => {
         );
         break;
       case 'blog-detail':
-        content = <BlogDetail blogSlug={selectedSlug || ''} onNavigate={navigateToView} />;
+        content = (
+          <Suspense fallback={<BlogPageSkeleton />}>
+            <BlogDetail blogSlug={selectedSlug || ''} onNavigate={navigateToView} />
+          </Suspense>
+        );
         break;
       case 'contact':
-        content = <Contact />;
+        content = (
+          <Suspense fallback={<ViewLoader />}>
+            <Contact />
+          </Suspense>
+        );
         break;
       case 'login':
-        content = <Login onNavigate={navigateToView} />;
+        content = (
+          <Suspense fallback={<ViewLoader />}>
+            <Login onNavigate={navigateToView} />
+          </Suspense>
+        );
         break;
       case 'profile':
-        content = <Profile onNavigate={navigateToView} />;
+        content = (
+          <Suspense fallback={<ViewLoader />}>
+            <Profile onNavigate={navigateToView} />
+          </Suspense>
+        );
         break;
       case 'admin':
-        content = <Admin onNavigate={navigateToView} />;
+        content = (
+          <Suspense fallback={<ViewLoader />}>
+            <Admin onNavigate={navigateToView} />
+          </Suspense>
+        );
         break;
       case 'privacy-policy':
-        content = <PrivacyPolicy />;
+        content = (
+          <Suspense fallback={<ViewLoader />}>
+            <PrivacyPolicy />
+          </Suspense>
+        );
         break;
       case 'about-us':
-        content = <AboutUs />;
+        content = (
+          <Suspense fallback={<ViewLoader />}>
+            <AboutUs />
+          </Suspense>
+        );
         break;
       case 'terms-conditions':
-        content = <TermsConditions />;
+        content = (
+          <Suspense fallback={<ViewLoader />}>
+            <TermsConditions />
+          </Suspense>
+        );
         break;
       case 'disclaimer':
-        content = <Disclaimer />;
+        content = (
+          <Suspense fallback={<ViewLoader />}>
+            <Disclaimer />
+          </Suspense>
+        );
         break;
       case '404':
       default:
@@ -905,8 +937,7 @@ const setupGlobalErrorTracking = () => {
       (reason && typeof reason === 'object' && (
         reason.name === 'AbortError' ||
         reason.name === 'CanceledError' ||
-        String(reason.name || '').toLowerCase() === 'aborterror' ||
-        (String(reason.name || '').toLowerCase() === 'error' && (!reason.message || reason.message === 'Error')) ||
+        String(reason.name || '').toLowerCase() === 'aborterror'  ||
         String(reason.message || '').toLowerCase().includes('abort') ||
         String(reason.message || '').toLowerCase().includes('canceled') ||
         String(reason.message || '').toLowerCase().includes('cancelled') ||

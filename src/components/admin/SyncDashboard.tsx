@@ -7,7 +7,6 @@ import {
   Layers, FileSpreadsheet, FileCode, RotateCcw, PieChart as PieChartIcon
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
-import { useAuth } from '../../context/AuthContext';
 import { formatINR } from '../../utils/productUtils';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, Cell,
@@ -19,8 +18,7 @@ interface SyncDashboardProps {
   showNotice?: (type: 'success' | 'error' | 'info', message: string) => void;
 }
 
-export default function SyncDashboard({ token, showNotice = () => {} }: SyncDashboardProps) {
-  const { token: authContextToken } = useAuth();
+export default function SyncDashboard({ showNotice = () => {} }: SyncDashboardProps) {
 
   const [activeTab, setActiveTab] = useState<'scanner' | 'overview' | 'scheduler' | 'health' | 'rules' | 'audits' | 'marketplace'>('scanner');
 

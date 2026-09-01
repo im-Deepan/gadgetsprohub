@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { GoogleGenAI } from '@google/genai';
 import * as crypto from 'crypto';
+import pLimit from 'p-limit';
 import { encryptSensitiveData, decryptSensitiveData } from '../utils/encryption';
 
 // ==========================================
@@ -189,9 +190,8 @@ export const AiAnalytics = mongoose.models.AiAnalytics || mongoose.model('AiAnal
 // ==========================================
 
 export class AiService {
-  private encryptionKey: Buffer;
-  private ivLength = 16;
   private defaultProvider: AiProviderType = 'gemini';
+  private generationLimit = pLimit(5); // Limit concurrent external API calls
   private defaultModelMap: Record<AiProviderType, string> = {
     gemini: 'gemini-2.5-flash',
     openai: 'gpt-4o-mini',
@@ -203,8 +203,7 @@ export class AiService {
   };
 
   constructor() {
-    const secret = this.getEncryptionSecret();
-    this.encryptionKey = crypto.scryptSync(secret, 'salt-enterprise-affiliate-ai', 32);
+    // Encryption key is managed centrally by src/utils/encryption.ts
   }
 
   private getEncryptionSecret(): string {
@@ -236,8 +235,9 @@ export class AiService {
     try {
       const secret = this.getEncryptionSecret();
       return decryptSensitiveData(encryptedText, secret);
-    } catch {
-      return '';
+    } catch (err) {
+      console.error('Failed to decrypt API key. This may happen if the encryption secret has changed.');
+      throw new Error('API key decryption failed due to invalid encryption secret.');
     }
   }
 
@@ -542,8 +542,9 @@ export class AiService {
     let promptTokens = 0;
     let completionTokens = 0;
 
-    try {
-      if (provider === 'gemini') {
+    return this.generationLimit(async () => {
+      try {
+        if (provider === 'gemini') {
         const apiKey = activeProv.apiKey || process.env.GEMINI_API_KEY;
         if (!apiKey) throw new Error('Gemini API key is not configured');
 
@@ -699,6 +700,7 @@ export class AiService {
       cached: false,
       analyticsId: analyticsDoc._id.toString()
     };
+    });
   }
 
   private getProviderDefaultBaseUrl(provider: AiProviderType): string {

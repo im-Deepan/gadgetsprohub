@@ -10,7 +10,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; verificationUrlSimulated?: string }>;
+  login: (email: string, password: string, twoFactorToken?: string) => Promise<{ success: boolean; error?: string; verificationUrlSimulated?: string; requiresTwoFactor?: boolean; userId?: string }>;
   register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; message?: string; verificationUrlSimulated?: string; smtpError?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string; email?: string }>;
   logout: () => void;
@@ -125,13 +125,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setGlobalAuthToken(token);
   }, [token]);
 
-  const fallbackBackendLogin = async (email: string, password: string) => {
+  const fallbackBackendLogin = async (email: string, password: string, twoFactorToken?: string) => {
       setLoading(true);
       try {
         const res = await apiFetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email, password, twoFactorToken })
         });
         
         let data: Record<string, unknown> = {};
@@ -140,6 +140,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data = JSON.parse(text);
         } catch (jsonErr) {
           data = { error: 'The server returned an unexpected response. Please try again.' };
+        }
+        if (res.ok && data.requiresTwoFactor) {
+          return {
+            success: true,
+            requiresTwoFactor: true,
+            userId: data.userId as string
+          };
         }
         if (!res.ok) {
           return { 
@@ -168,8 +175,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
   };
 
-  const login = async (email: string, password: string) => {
-    return await fallbackBackendLogin(email, password);
+  const login = async (email: string, password: string, twoFactorToken?: string) => {
+    return await fallbackBackendLogin(email, password, twoFactorToken);
   };
 
   const register = async (email: string, password: string, name: string) => {
@@ -377,11 +384,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         // Rollback on server error
         setWishlist(previousWishlist);
+        showToast('Failed to update bookmarks. Please try again.', 'error');
       }
     } catch (e) {
-      
       // Rollback on network error
       setWishlist(previousWishlist);
+      showToast('Network error. Please check your connection.', 'error');
     }
   };
 

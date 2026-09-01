@@ -135,18 +135,32 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   });
 
   const [accumulatedProducts, setAccumulatedProducts] = useState<Product[]>([]);
+  const lastProcessedKeyRef = React.useRef<string>('');
 
   useEffect(() => {
     setAccumulatedProducts([]);
     setCurrentPage(1);
+    lastProcessedKeyRef.current = '';
   }, [selectedCategory, selectedSubcategory, debouncedSearch, minPrice, maxPrice, minRating, sortField]);
 
   useEffect(() => {
     if (!productsData?.products) return;
-    if (currentPage === 1) {
+
+    const dataPage = productsData.page || 1;
+    const processKey = `${selectedCategory}-${selectedSubcategory}-${debouncedSearch}-${minPrice}-${maxPrice}-${minRating}-${sortField}-${dataPage}-${productsData.products.length}-${productsData.total || 0}`;
+
+    if (lastProcessedKeyRef.current === processKey && accumulatedProducts.length > 0) {
+      return;
+    }
+    lastProcessedKeyRef.current = processKey;
+
+    if (dataPage === 1) {
       setAccumulatedProducts(productsData.products);
     } else {
       setAccumulatedProducts(prev => {
+        if (prev.length === 0) {
+          return productsData.products;
+        }
         const existingIds = new Set(prev.map(p => String(p._id || p.id || p.asin)));
         const newUnique = productsData.products.filter(
           (p: Product) => !existingIds.has(String(p._id || p.id || p.asin))
@@ -154,7 +168,7 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
         return [...prev, ...newUnique];
       });
     }
-  }, [productsData, currentPage]);
+  }, [productsData, selectedCategory, selectedSubcategory, debouncedSearch, minPrice, maxPrice, minRating, sortField, accumulatedProducts.length]);
 
   const products = accumulatedProducts.length > 0 ? accumulatedProducts : (productsData?.products || []);
   const totalPages = productsData?.pages || 1;

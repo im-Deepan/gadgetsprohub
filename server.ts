@@ -21,30 +21,48 @@ import { seedOrders, seedCategories, seedProducts, seedBlogs, seedUsers, seedMes
 
 
 // ========== ATOMIC FILE WRITE UTILITY ==========
-const atomicWriteFileSync = (filePath: string, data: string | Buffer, encoding: BufferEncoding = 'utf8') => {
-  const tempPath = `${filePath}.${Date.now()}.${Math.floor(Math.random() * 100000)}.tmp`;
-  try {
-    if (Buffer.isBuffer(data)) {
-      fs.writeFileSync(tempPath, data);
-    } else {
-      fs.writeFileSync(tempPath, data, encoding);
-    }
-    fs.renameSync(tempPath, filePath);
-  } catch (err: any) {
-    const errorLog = {
-      timestamp: new Date().toISOString(),
-      level: 'ERROR',
-      module: 'Persistence',
-      file: filePath,
-      error: err.message,
-      stack: err.stack
-    };
-    console.error(`[FATAL Persistence Error] Atomic write failed for ${filePath}:`, JSON.stringify(errorLog));
-    if (fs.existsSync(tempPath)) {
-      try { fs.unlinkSync(tempPath); } catch (e) {}
-    }
-    throw err;
+const writeQueues: Record<string, { pendingData: string | Buffer | null, isWriting: boolean }> = {};
+
+const atomicWriteFileAsync = async (filePath: string, data: string | Buffer, encoding: BufferEncoding = 'utf8') => {
+  if (!writeQueues[filePath]) {
+    writeQueues[filePath] = { pendingData: null, isWriting: false };
   }
+  
+  const queue = writeQueues[filePath];
+  queue.pendingData = data;
+  
+  if (queue.isWriting) return;
+  queue.isWriting = true;
+  
+  while (queue.pendingData !== null) {
+    const currentData = queue.pendingData;
+    queue.pendingData = null; // Clear pending before writing
+    
+    const tempPath = `${filePath}.${Date.now()}.${Math.floor(Math.random() * 100000)}.tmp`;
+    try {
+      if (Buffer.isBuffer(currentData)) {
+        await fs.promises.writeFile(tempPath, currentData);
+      } else {
+        await fs.promises.writeFile(tempPath, currentData, encoding);
+      }
+      await fs.promises.rename(tempPath, filePath);
+    } catch (err: any) {
+      const errorLog = {
+        timestamp: new Date().toISOString(),
+        level: 'ERROR',
+        module: 'Persistence',
+        file: filePath,
+        error: err.message,
+        stack: err.stack
+      };
+      console.error(`[FATAL Persistence Error] Atomic write failed for ${filePath}:`, JSON.stringify(errorLog));
+      try {
+        await fs.promises.unlink(tempPath).catch(() => {});
+      } catch (e) {}
+    }
+  }
+  
+  queue.isWriting = false;
 };
 // ===============================================
 import {
@@ -322,6 +340,10 @@ const productSchema = new mongoose.Schema({
 
 // Create text index for search in Mongo
 productSchema.index({ name: 'text', description: 'text', tags: 'text', brand: 'text', features: 'text' });
+productSchema.index({ category: 1 });
+productSchema.index({ slug: 1 });
+productSchema.index({ lastPriceCheck: 1 });
+productSchema.index({ price: 1 });
 const Product = mongoose.model('Product', productSchema);
 
 // Blog Schema
@@ -437,9 +459,9 @@ if (fs.existsSync(LOCAL_SUBSCRIBERS_FILE)) {
 
 const saveLocalSubscribers = () => {
   try {
-    atomicWriteFileSync(LOCAL_SUBSCRIBERS_FILE, JSON.stringify(localSubscribers, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_SUBSCRIBERS_FILE, JSON.stringify(localSubscribers, null, 2), 'utf8');
   } catch (e: any) {
-    console.warn("Failed saving local subscribers:", e.message);
+    console.error("[Persistence Error] Failed saving local subscribers:", e.message, e.stack);
   }
 };
 
@@ -468,7 +490,7 @@ if (fs.existsSync(LOCAL_PICK_LEFT_INTERESTS_FILE)) {
 
 async function syncPickLeftInterestsToLocalFile() {
   try {
-    atomicWriteFileSync(LOCAL_PICK_LEFT_INTERESTS_FILE, JSON.stringify(localPickLeftInterests, null, 2));
+    atomicWriteFileAsync(LOCAL_PICK_LEFT_INTERESTS_FILE, JSON.stringify(localPickLeftInterests, null, 2));
   } catch (err: any) {
     console.warn("Could not write to local_pick_left_interests.json:", err.message);
   }
@@ -596,9 +618,9 @@ if (fs.existsSync(LOCAL_SECURITY_LOGS_FILE)) {
 
 const saveLocalSecurityLogs = () => {
   try {
-    atomicWriteFileSync(LOCAL_SECURITY_LOGS_FILE, JSON.stringify(localSecurityLogs, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_SECURITY_LOGS_FILE, JSON.stringify(localSecurityLogs, null, 2), 'utf8');
   } catch (e: any) {
-    console.warn("Failed saving local security logs:", e.message);
+    console.error("[Persistence Error] Failed saving local security logs:", e.message, e.stack);
   }
 };
 
@@ -741,6 +763,13 @@ const activePairingCodeSchema = new mongoose.Schema({
 });
 const ActivePairingCodeModel = mongoose.model('ActivePairingCode', activePairingCodeSchema);
 
+const requestLockSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  lockedAt: { type: Date, default: Date.now },
+  expiresAt: { type: Date, required: true, expires: 0 }
+});
+const RequestLock = mongoose.model('RequestLock', requestLockSchema);
+
 const siteSettingsSchema = new mongoose.Schema({
   adsenseClientId: { type: String, default: 'ca-pub-1234567890123456' },
   adsenseEnabled: { type: Boolean, default: true },
@@ -784,9 +813,9 @@ if (fs.existsSync(LOCAL_SITE_SETTINGS_FILE)) {
 
 const saveLocalSiteSettings = () => {
   try {
-    atomicWriteFileSync(LOCAL_SITE_SETTINGS_FILE, JSON.stringify(localSiteSettings, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_SITE_SETTINGS_FILE, JSON.stringify(localSiteSettings, null, 2), 'utf8');
   } catch (e: any) {
-    console.warn("Failed saving local site settings:", e.message);
+    console.error("[Persistence Error] Failed saving local site settings:", e.message, e.stack);
   }
 };
 
@@ -819,9 +848,9 @@ if (fs.existsSync(LOCAL_IMPORT_HISTORY_FILE)) {
 
 const saveLocalImportHistory = () => {
   try {
-    atomicWriteFileSync(LOCAL_IMPORT_HISTORY_FILE, JSON.stringify(localImportHistory, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_IMPORT_HISTORY_FILE, JSON.stringify(localImportHistory, null, 2), 'utf8');
   } catch (e: any) {
-    console.warn("Failed saving local import history:", e.message);
+    console.error("[Persistence Error] Failed saving local import history:", e.message, e.stack);
   }
 };
 
@@ -877,7 +906,7 @@ if (fs.existsSync(SOCIAL_CLICKS_FILE)) {
 // Function to save counts
 const saveSocialClicks = () => {
   try {
-    atomicWriteFileSync(SOCIAL_CLICKS_FILE, JSON.stringify(socialClicks, null, 2), 'utf8');
+    atomicWriteFileAsync(SOCIAL_CLICKS_FILE, JSON.stringify(socialClicks, null, 2), 'utf8');
   } catch (err: any) {
     console.warn("Could not save social_clicks.json:", err.message);
   }
@@ -915,7 +944,7 @@ Promise.all(localUsers.map(async (u) => {
   }
 })).then(() => {
   try {
-    atomicWriteFileSync(LOCAL_USERS_FILE, JSON.stringify(localUsers, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_USERS_FILE, JSON.stringify(localUsers, null, 2), 'utf8');
   } catch (err: any) {
     // Ignore write failure in read-only setups
   }
@@ -935,9 +964,9 @@ if (fs.existsSync(LOCAL_BULK_JOBS_FILE)) {
 
 const saveLocalBulkImportJobs = () => {
   try {
-    atomicWriteFileSync(LOCAL_BULK_JOBS_FILE, JSON.stringify(localBulkImportJobs, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_BULK_JOBS_FILE, JSON.stringify(localBulkImportJobs, null, 2), 'utf8');
   } catch (err: any) {
-    console.warn("Could not save local_bulk_jobs.json:", err.message);
+    console.error("[Persistence Error] Could not save local_bulk_jobs.json:", err.message, err.stack);
   }
 };
 
@@ -952,7 +981,7 @@ if (fs.existsSync(LOCAL_ALERT_RULES_FILE)) {
 }
 const saveLocalAlertRules = () => {
   try {
-    atomicWriteFileSync(LOCAL_ALERT_RULES_FILE, JSON.stringify(localAlertRules, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_ALERT_RULES_FILE, JSON.stringify(localAlertRules, null, 2), 'utf8');
   } catch (err: any) {
     console.error('[Persistence Error] Failed to save local_alert_rules.json:', err.message);
   }
@@ -969,7 +998,7 @@ if (fs.existsSync(LOCAL_AUTOMATION_RULES_FILE)) {
 }
 const saveLocalAutomationRules = () => {
   try {
-    atomicWriteFileSync(LOCAL_AUTOMATION_RULES_FILE, JSON.stringify(localAutomationRules, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_AUTOMATION_RULES_FILE, JSON.stringify(localAutomationRules, null, 2), 'utf8');
   } catch (err: any) {
     console.error('[Persistence Error] Failed to save local_automation_rules.json:', err.message);
   }
@@ -986,7 +1015,7 @@ if (fs.existsSync(LOCAL_PRODUCT_HEALTH_FILE)) {
 }
 const saveLocalProductHealth = () => {
   try {
-    atomicWriteFileSync(LOCAL_PRODUCT_HEALTH_FILE, JSON.stringify(localProductHealth, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_PRODUCT_HEALTH_FILE, JSON.stringify(localProductHealth, null, 2), 'utf8');
   } catch (err: any) {
     console.error('[Persistence Error] Failed to save local_product_health.json:', err.message);
   }
@@ -1003,7 +1032,7 @@ if (fs.existsSync(LOCAL_PRICE_HISTORY_FILE)) {
 }
 const saveLocalPriceHistory = () => {
   try {
-    atomicWriteFileSync(LOCAL_PRICE_HISTORY_FILE, JSON.stringify(localPriceHistory, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_PRICE_HISTORY_FILE, JSON.stringify(localPriceHistory, null, 2), 'utf8');
   } catch (err: any) {
     console.error('[Persistence Error] Failed to save local_price_history.json:', err.message);
   }
@@ -1020,7 +1049,7 @@ if (fs.existsSync(LOCAL_PRODUCT_CHANGES_FILE)) {
 }
 const saveLocalProductChanges = () => {
   try {
-    atomicWriteFileSync(LOCAL_PRODUCT_CHANGES_FILE, JSON.stringify(localProductChanges, null, 2), 'utf8');
+    atomicWriteFileAsync(LOCAL_PRODUCT_CHANGES_FILE, JSON.stringify(localProductChanges, null, 2), 'utf8');
   } catch (err: any) {
     console.error('[Persistence Error] Failed to save local_product_changes.json:', err.message);
   }
@@ -1079,16 +1108,16 @@ let localAnalytics: any[] = [
 
 // Persistent Savers
 const saveLocalUsers = () => {
-  try { atomicWriteFileSync(LOCAL_USERS_FILE, JSON.stringify(localUsers, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local users:", e.message); }
+  try { atomicWriteFileAsync(LOCAL_USERS_FILE, JSON.stringify(localUsers, null, 2), 'utf8'); } catch (e: any) { console.error("[Persistence Error] Failed saving local users:", e.message, e.stack); }
 };
 const saveLocalProducts = () => {
-  try { atomicWriteFileSync(LOCAL_PRODUCTS_FILE, JSON.stringify(localProducts, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local products:", e.message); }
+  try { atomicWriteFileAsync(LOCAL_PRODUCTS_FILE, JSON.stringify(localProducts, null, 2), 'utf8'); } catch (e: any) { console.error("[Persistence Error] Failed saving local products:", e.message, e.stack); }
 };
 const saveLocalOrders = () => {
-  try { atomicWriteFileSync(LOCAL_ORDERS_FILE, JSON.stringify(localOrders, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local orders:", e.message); }
+  try { atomicWriteFileAsync(LOCAL_ORDERS_FILE, JSON.stringify(localOrders, null, 2), 'utf8'); } catch (e: any) { console.error("[Persistence Error] Failed saving local orders:", e.message, e.stack); }
 };
 const saveLocalSundayLogs = () => {
-  try { atomicWriteFileSync(LOCAL_SUNDAY_LOGS_FILE, JSON.stringify(localSundayAutomationLogs, null, 2), 'utf8'); } catch (e: any) { console.warn("Failed saving local logs:", e.message); }
+  try { atomicWriteFileAsync(LOCAL_SUNDAY_LOGS_FILE, JSON.stringify(localSundayAutomationLogs, null, 2), 'utf8'); } catch (e: any) { console.error("[Persistence Error] Failed saving local logs:", e.message, e.stack); }
 };
 // ========== TOKEN BLACKLIST FOR LOGOUT ==========
 // Handled by BlacklistedToken Mongoose model with TTL index
@@ -2383,6 +2412,9 @@ async function startServer() {
       });
     }
 
+    // Record endpoint hit for metrics
+    SecurityAnomalyService.recordEndpointHit(path);
+    
     // 2. Real-time request inspection (vulnerability probes & burst traffic)
     const inspection = SecurityAnomalyService.inspectIncomingRequest(clientIp, path, method, userAgent);
     if (inspection.isBlocked) {
@@ -2579,7 +2611,7 @@ async function startServer() {
       console.warn('Sitemap index rendering fallback:', err?.message);
       setXmlHeaders(res);
       const safeHost = seoService.resolveSiteUrl(req);
-      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <sitemap><loc>${safeHost}/sitemap-products.xml</loc></sitemap>\n  <sitemap><loc>${safeHost}/sitemap-blogs.xml</loc></sitemap>\n  <sitemap><loc>${safeHost}/sitemap-videos.xml</loc></sitemap>\n</sitemapindex>`);
+      res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <sitemap><loc>${safeHost}/sitemap-products.xml</loc></sitemap>\n  <sitemap><loc>${safeHost}/sitemap-blogs.xml</loc></sitemap>\n  <sitemap><loc>${safeHost}/sitemap-videos.xml</loc></sitemap>\n  <sitemap><loc>${safeHost}/sitemap-categories.xml</loc></sitemap>\n  <sitemap><loc>${safeHost}/sitemap-pages.xml</loc></sitemap>\n  <sitemap><loc>${safeHost}/sitemap-images.xml</loc></sitemap>\n</sitemapindex>`);
     }
   });
 
@@ -3025,7 +3057,7 @@ async function startServer() {
   };
   const saveLocalAuthCodes = (codes: Record<string, PendingAuthCode>) => {
     try {
-      atomicWriteFileSync(LOCAL_AUTH_CODES_FILE, JSON.stringify(codes, null, 2), 'utf8');
+      atomicWriteFileAsync(LOCAL_AUTH_CODES_FILE, JSON.stringify(codes, null, 2), 'utf8');
     } catch (e) {
       // ignore
     }
@@ -4303,7 +4335,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         if (rating) filter.rating = { $gte: Number(rating) };
 
         const skip = (Number(page) - 1) * Number(limit);
-        let query = Product.find(filter).populate('category').skip(skip).limit(Number(limit));
+        let query = Product.find(filter).select('-reviews -comparisonProducts -longDescription -seoDescription -publishingHistory').populate('category', 'name slug').skip(skip).limit(Number(limit));
 
         if (sort === 'price-asc') query = query.sort({ price: 1 }) as any;
         else if (sort === 'price-desc') query = query.sort({ price: -1 }) as any;
@@ -4312,6 +4344,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
 
         const products = await query;
         const total = await Product.countDocuments(filter);
+        res.setHeader('Cache-Control', 'public, max-age=60');
         res.json({ products: products.map(sanitizeServerProduct), total, pages: Math.ceil(total / Number(limit)), currentPage: Number(page) });
       } else {
         res.status(503).json({ error: 'Database is currently offline. Please try again shortly.' });
@@ -4346,6 +4379,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         }
       }
       
+      res.setHeader('Cache-Control', 'public, max-age=120');
+
       // --- Real-time Price Update Trigger ---
       const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
       const now = Date.now();
@@ -6685,12 +6720,28 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       if (isMongoConnected) {
-        // Find products sorted by oldest lastPriceCheck (or null)
-        const products = await Product.find({})
-          .sort({ lastPriceCheck: 1, _id: 1 }) // Nulls first (or earliest dates)
-          .limit(limit)
+        // Atomic fetch and lock loop to prevent duplicate processing
+        const productsToReturn = [];
+        const candidateProducts = await Product.find({})
+          .sort({ lastPriceCheck: 1, _id: 1 })
+          .limit(limit * 3)
           .select('_id name affiliateLink price slug lastPriceCheck');
-        return res.json(products);
+          
+        for (const p of candidateProducts) {
+          if (productsToReturn.length >= limit) break;
+          try {
+            await RequestLock.create({
+              key: `n8n-price-update-${p._id}`,
+              lockedAt: new Date(),
+              expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+            });
+            productsToReturn.push(p);
+          } catch(e) {
+            // lock failed (duplicate key), skip
+          }
+        }
+        
+        return res.json(productsToReturn);
       } else {
         return res.json([]);
       }
@@ -7267,6 +7318,10 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         return res.status(400).json({ success: false, error: 'Either ASIN or URL parameter is required for scraping.' });
       }
 
+      if (inputUrl && !isValidAmazonOrAllowedDomain(inputUrl)) {
+        return res.status(400).json({ success: false, error: 'URL provided is not allowed or invalid.' });
+      }
+
       // 1. Check if product already exists in database or local store by ASIN
       let existingProduct: any = null;
       if (cleanAsin) {
@@ -7505,44 +7560,47 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
     }
   });
 
+class AsyncImageWorker {
+    private queue: (() => Promise<void>)[] = [];
+    private active = 0;
+    constructor(private concurrency: number) {}
+    enqueue(task: () => Promise<void>) {
+      this.queue.push(task);
+      this.process();
+    }
+    private process() {
+      if (this.active >= this.concurrency || this.queue.length === 0) return;
+      const task = this.queue.shift()!;
+      this.active++;
+      task().finally(() => {
+        this.active--;
+        this.process();
+      });
+    }
+  }
+  const imageUploadWorker = new AsyncImageWorker(2); // Limit CPU-heavy sharp processing to 2 concurrent tasks
+
   app.post('/api/admin/media/upload', adminOnly, upload.single('file'), async (req: express.Request, res: express.Response) => {
     try {
       if (!(req as any).file) return res.status(400).json({ error: 'No file uploaded' });
       
-      // For a real upload we would process it directly here instead of download
-      // Since it's a file, we can read it and process it
-      
       const file = (req as any).file;
-      const buffer = fs.readFileSync(file.path);
+      const buffer = await fs.promises.readFile(file.path);
       
       const hash = crypto.createHash('sha256').update(buffer).digest('hex');
       const originalMetadata = await sharp(buffer).metadata();
       const rawFormat = (originalMetadata.format || 'jpg').toLowerCase();
       let extension = rawFormat === 'jpeg' ? 'jpg' : rawFormat;
       
-      let sharpPipeline = sharp(buffer);
-      if (rawFormat === 'png') {
-        sharpPipeline = sharpPipeline.png({ quality: 80, compressionLevel: 8 });
-      } else if (rawFormat === 'webp') {
-        sharpPipeline = sharpPipeline.webp({ quality: 80 });
-      } else if (rawFormat === 'avif') {
-        sharpPipeline = sharpPipeline.avif({ quality: 80 });
-      } else if (rawFormat === 'gif') {
-        // GIF - keep format
-        sharpPipeline = sharpPipeline.gif();
-      } else {
-        sharpPipeline = sharpPipeline.jpeg({ quality: 80, mozjpeg: true });
+      if (rawFormat === 'svg') {
+        extension = 'png';
+      } else if (rawFormat !== 'png' && rawFormat !== 'webp' && rawFormat !== 'avif' && rawFormat !== 'gif') {
         extension = 'jpg';
       }
 
       const fileName = `${hash}.${extension}`;
       const relativePath = `/uploads/media/${fileName}`;
       const destPath = path.join(process.cwd(), 'public', 'uploads', 'media', fileName);
-      
-      // optimize while preserving image format & transparency
-      const optimizedBuffer = await sharpPipeline.toBuffer();
-      fs.writeFileSync(destPath, optimizedBuffer);
-      fs.unlinkSync(file.path); // cleanup temp
       
       const asset = new MediaAsset({
         fileName,
@@ -7552,13 +7610,60 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
         height: originalMetadata.height,
         aspectRatio: originalMetadata.width && originalMetadata.height ? (originalMetadata.width / originalMetadata.height) : 1,
         hash,
-        optimizationStatus: 'completed',
+        optimizationStatus: 'pending',
         originalSize: buffer.length,
-        optimizedSize: optimizedBuffer.length,
-        compressionRatio: buffer.length / optimizedBuffer.length,
+        optimizedSize: 0,
+        compressionRatio: 1,
         storageProvider: 'local'
       });
       await asset.save();
+      
+      imageUploadWorker.enqueue(async () => {
+        try {
+          let sharpPipeline = sharp(buffer);
+          if (rawFormat === 'png') {
+            sharpPipeline = sharpPipeline.png({ quality: 80, compressionLevel: 8 });
+          } else if (rawFormat === 'webp') {
+            sharpPipeline = sharpPipeline.webp({ quality: 80 });
+          } else if (rawFormat === 'avif') {
+            sharpPipeline = sharpPipeline.avif({ quality: 80 });
+          } else if (rawFormat === 'gif') {
+            sharpPipeline = sharpPipeline.gif();
+          } else if (rawFormat === 'svg') {
+            sharpPipeline = sharpPipeline.png({ quality: 90 });
+          } else {
+            sharpPipeline = sharpPipeline.jpeg({ quality: 80, mozjpeg: true });
+          }
+          
+          const optimizedBuffer = await sharpPipeline.toBuffer();
+          await fs.promises.writeFile(destPath, optimizedBuffer);
+          
+          // Generate responsive variants
+          const variants: Record<string, string> = {};
+          if (extension !== 'webp') {
+             const webpBuf = await sharp(buffer).webp({ quality: 80 }).toBuffer();
+             const webpName = `${hash}.webp`;
+             await fs.promises.writeFile(path.join(process.cwd(), 'public', 'uploads', 'media', webpName), webpBuf);
+             variants.webp = `/uploads/media/${webpName}`;
+          }
+          const thumbBuf = await sharp(buffer).resize({ width: 300, height: 300, fit: 'inside' }).toFormat(extension as any).toBuffer();
+          const thumbName = `${hash}-thumb.${extension}`;
+          await fs.promises.writeFile(path.join(process.cwd(), 'public', 'uploads', 'media', thumbName), thumbBuf);
+          variants.thumb = `/uploads/media/${thumbName}`;
+          
+          asset.variants = variants;
+          asset.optimizationStatus = 'completed';
+          asset.optimizedSize = optimizedBuffer.length;
+          asset.compressionRatio = buffer.length / optimizedBuffer.length;
+          await asset.save();
+        } catch (e) {
+          console.error('[MediaQueue] Error processing upload:', e);
+          asset.optimizationStatus = 'failed';
+          await asset.save();
+        } finally {
+          await fs.promises.unlink(file.path).catch(() => {});
+        }
+      });
       
       res.json({ success: true, data: asset });
     } catch (err: any) {
@@ -9338,7 +9443,93 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
   });
 
   // Dedicated Product Import API endpoint
-  app.post('/api/admin/products/import', adminOnly, importLimiter, express.json({ limit: '5mb' }), async (req: express.Request, res: express.Response): Promise<any> => {
+  
+  // Streaming CSV Import with backpressure and batching
+  app.post('/api/admin/import-csv', adminOnly, upload.single('file'), async (req: express.Request, res: express.Response): Promise<any> => {
+    try {
+      if (!(req as any).file) return res.status(400).json({ error: 'No CSV file uploaded' });
+      
+      const file = (req as any).file;
+      const { parse } = await import('csv-parse');
+      
+      const stream = fs.createReadStream(file.path)
+        .pipe(parse({ columns: true, skip_empty_lines: true, trim: true }));
+        
+      let processed = 0;
+      let failed = 0;
+      let batch: any[] = [];
+      
+      const processBatch = async (rows: any[]) => {
+        if (!rows.length) return;
+        
+        // Execute writes in parallel but bounded by batch size
+        await Promise.all(rows.map(async (row) => {
+          try {
+            if (row.name && row.price) {
+              const slug = row.slug || row.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+              let catId = null;
+              if (row.category) {
+                const cat = await Category.findOne({ name: new RegExp("^" + row.category + "$", "i") });
+                if (cat) catId = cat._id;
+              }
+              if (!catId) {
+                const defaultCat = await Category.findOne();
+                if (defaultCat) catId = defaultCat._id;
+              }
+              
+              if (catId) {
+                await Product.findOneAndUpdate(
+                  { slug },
+                  {
+                    $setOnInsert: {
+                      name: row.name,
+                      slug,
+                      price: Number(row.price),
+                      category: catId,
+                      brand: row.brand || "Generic",
+                      affiliateLink: row.affiliateLink || "https://amazon.com",
+                      description: row.description || "",
+                      createdAt: new Date()
+                    }
+                  },
+                  { upsert: true, new: true }
+                );
+                processed++;
+              } else {
+                failed++;
+              }
+            } else {
+              failed++;
+            }
+          } catch(e) {
+            failed++;
+          }
+        }));
+      };
+
+      for await (const row of stream) {
+        batch.push(row);
+        if (batch.length >= 50) {
+          await processBatch(batch);
+          batch = [];
+        }
+      }
+      
+      if (batch.length > 0) {
+        await processBatch(batch);
+      }
+      
+      try { fs.unlinkSync(file.path); } catch(e){}
+      
+      return res.json({ success: true, processed, failed });
+    } catch (e: any) {
+      console.error("CSV import error", e);
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Dedicated Product Import API endpoint
+  app.post("/api/admin/products/import", adminOnly, importLimiter, express.json({ limit: "5mb" }), async (req: express.Request, res: express.Response): Promise<any> => {
     const startTime = Date.now();
     
     // 1. Resolve / Generate Request & Correlation ID
@@ -11682,14 +11873,18 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
     }
 
     // Register Telegram Webhook if configured
-    registerTelegramWebhook().catch(err => console.error("Telegram webhook registration error on startup:", err));
+    setTimeout(() => {
+      registerTelegramWebhook().catch(err => console.error("Telegram webhook registration error on startup:", err));
+    }, 2000);
 
     // Perform boot-up check for Sunday tasks and expired trending products
-    console.log("Initializing boot-up checks for automated Sunday products and trending items...");
-    runSundayAutomation().catch(err => console.error("Startup Sunday automation check error:", err));
-    cleanExpiredTrendingProducts().catch(err => console.error("Startup trending expiration check error:", err));
-    cleanExpiredBlacklistedTokens().catch(err => console.error("Startup blacklisted tokens purge error:", err));
-    mediaService.processQueue().catch(err => console.error("Startup media queue processing error:", err));
+    console.log("Initializing boot-up checks for automated Sunday products and trending items (deferred)...");
+    setTimeout(() => {
+      runSundayAutomation().catch(err => console.error("Startup Sunday automation check error:", err));
+      cleanExpiredTrendingProducts().catch(err => console.error("Startup trending expiration check error:", err));
+      cleanExpiredBlacklistedTokens().catch(err => console.error("Startup blacklisted tokens purge error:", err));
+      mediaService.processQueue().catch(err => console.error("Startup media queue processing error:", err));
+    }, 5000); // Defer by 5 seconds to prioritize server readiness
 
     // Schedule background check every 12 hours
     const backgroundTask = setInterval(() => {

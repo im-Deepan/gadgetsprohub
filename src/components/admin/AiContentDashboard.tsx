@@ -5,7 +5,6 @@ import {
   Settings, Key, Trash2, ChevronRight, Save, Copy, FileText, ArrowRight, Eye
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
-import { useAuth } from '../../context/AuthContext';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
   BarChart, Bar, Cell, Legend
@@ -16,8 +15,7 @@ interface AiContentDashboardProps {
   showNotice?: (type: 'success' | 'error' | 'info', message: string) => void;
 }
 
-export default function AiContentDashboard({ token, showNotice = () => {} }: AiContentDashboardProps) {
-  const { token: authContextToken } = useAuth();
+export default function AiContentDashboard({ showNotice = () => {} }: AiContentDashboardProps) {
 
   const [activeTab, setActiveTab] = useState<'assistant' | 'prompts' | 'queue' | 'analytics' | 'settings'>('assistant');
 
@@ -168,7 +166,8 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
         if (!reader) throw new Error('No reader found on response body');
 
         let chunkBuffer = '';
-        while (true) {
+        let streamFinished = false;
+        while (!streamFinished) {
           const { value, done } = await reader.read();
           if (done) break;
           chunkBuffer += decoder.decode(value, { stream: true });
@@ -181,6 +180,8 @@ export default function AiContentDashboard({ token, showNotice = () => {} }: AiC
               const dataStr = line.replace('data: ', '').trim();
               if (dataStr === '[DONE]') {
                 showNotice('success', 'AI Generation completed successfully!');
+                streamFinished = true;
+                reader.cancel().catch(() => {});
                 break;
               }
               try {

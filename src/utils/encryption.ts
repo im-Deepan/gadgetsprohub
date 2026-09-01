@@ -11,6 +11,9 @@ const IV_LENGTH = 12; // 96-bit recommended for GCM
 const AUTH_TAG_LENGTH = 16; // 128-bit authentication tag
 const SALT = 'gadgetsprohub-master-data-protection-salt-v1';
 
+// Cache derived keys to prevent synchronous PBKDF2 blocking the event loop on every request
+const keyCache = new Map<string, Buffer>();
+
 /**
  * Derives a 256-bit cryptographic key from a secret using PBKDF2
  */
@@ -22,7 +25,14 @@ function deriveKey(secret?: string): Buffer {
     process.env.JWT_SECRET || 
     'gadgetsprohub-default-fallback-secret-key-32b';
 
-  return crypto.pbkdf2Sync(masterSecret, SALT, 100000, 32, 'sha256');
+  // Return cached key if already derived
+  if (keyCache.has(masterSecret)) {
+    return keyCache.get(masterSecret)!;
+  }
+
+  const key = crypto.pbkdf2Sync(masterSecret, SALT, 100000, 32, 'sha256');
+  keyCache.set(masterSecret, key);
+  return key;
 }
 
 export interface EncryptedPayload {
@@ -114,7 +124,16 @@ function decryptLegacyCbc(encryptedText: string, customSecret?: string): string 
     const iv = Buffer.from(parts[0], 'hex');
     const encrypted = parts[1];
     const secret = customSecret || process.env.AI_KEY_ENCRYPTION_SECRET || 'salt-enterprise-affiliate-ai';
-    const key = crypto.scryptSync(secret, 'salt-enterprise-affiliate-ai', 32);
+    
+    const cacheKey = `legacy:${secret}`;
+    let key: Buffer;
+    if (keyCache.has(cacheKey)) {
+      key = keyCache.get(cacheKey)!;
+    } else {
+      key = crypto.scryptSync(secret, 'salt-enterprise-affiliate-ai', 32);
+      keyCache.set(cacheKey, key);
+    }
+    
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
