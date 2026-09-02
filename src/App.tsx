@@ -23,6 +23,15 @@ import { DEFAULT_VIEW_METADATA, updateDocumentMetadata } from './utils/metaManag
 import { apiFetch } from './utils/apiClient';
 import { captureError } from './utils/errorTracker';
 
+const isAbortError = (err: unknown): boolean => {
+  if (!err) return false;
+  if (err instanceof Error) return err.name === 'AbortError';
+  if (typeof err === 'object' && err !== null && 'name' in err) {
+    return (err as { name?: unknown }).name === 'AbortError';
+  }
+  return false;
+};
+
 const TAMIL_NADU_CITIES = [
   "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri",
   "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur",
@@ -94,9 +103,9 @@ let adsenseScriptLoaded = false;
 // Standardized telemetry visitor logger extracted outside component context to eliminate state/callback circular reference loops
 export const logVisit = (timeSpentSeconds: number, currentPath: string, viewCity: string) => {
   try {
-    const consent = localStorage.getItem('cookie_consent');
+    const consent = safeGetItem('cookie_consent');
     if (consent === 'declined') return;
-    const prefs = localStorage.getItem('cookie_preferences');
+    const prefs = safeGetItem('cookie_preferences');
     if (prefs) {
       try {
         const parsed = JSON.parse(prefs);
@@ -286,8 +295,7 @@ const AppContent: React.FC = () => {
           showToast("Server health check returned a warning status. Attempting to reconnect...", "warning", 5000, "Connectivity");
         }
       } catch (err: unknown) {
-        const errorObj = err as { name?: string };
-        if (errorObj.name !== 'AbortError') {
+        if (!isAbortError(err)) {
           showToast("Unable to reach primary server. Please check your network connection.", "warning", 4000, "Connectivity");
         }
       }
@@ -320,7 +328,7 @@ const AppContent: React.FC = () => {
           console.warn(`Analytics visit tracking failed with status ${res.status}`);
         }
       } catch (err: unknown) {
-        if (err instanceof Error && err.name !== 'AbortError') {
+        if (!isAbortError(err)) {
           captureError(err, { context: 'Failed to track visitor visit analytics' });
         }
       }
@@ -502,9 +510,8 @@ const AppContent: React.FC = () => {
           }
         }
       } catch (err: unknown) {
-        const e = err as { name?: string };
-        if (e.name !== 'AbortError') {
-          
+        if (!isAbortError(err)) {
+          // Log location lookup warning defensively without throwing
         }
       }
     };
@@ -578,9 +585,8 @@ const AppContent: React.FC = () => {
             return;
           }
         } catch (err: unknown) {
-          const errorObj = err as { name?: string };
-          if (errorObj.name !== 'AbortError') {
-            
+          if (!isAbortError(err)) {
+            // Defensively continue with static metadata fallback
           }
         }
       }
@@ -607,9 +613,8 @@ const AppContent: React.FC = () => {
             return;
           }
         } catch (err: unknown) {
-          const errorObj = err as { name?: string };
-          if (errorObj.name !== 'AbortError') {
-            
+          if (!isAbortError(err)) {
+            // Defensively continue with static metadata fallback
           }
         }
       }
@@ -704,7 +709,6 @@ const AppContent: React.FC = () => {
         let view: AppView = 'home';
         let slug = null;
 
-        const knownCategories = ['electronics', 'fashion', 'home-garden', 'sports', 'shoes', 'earbuds', 'gaming'];
         if (viewUrl && (ALLOWED_VIEWS as readonly string[]).includes(viewUrl)) {
           view = viewUrl as AppView;
           slug = params.get('slug') || null;
@@ -716,12 +720,12 @@ const AppContent: React.FC = () => {
         } else if (viewPart === 'category' && pathParts.length > 1) {
           view = 'products';
           slug = `category-${pathParts[1]}`;
-        } else if (viewPart && knownCategories.includes(viewPart)) {
-          view = 'products';
-          slug = `category-${viewPart}`;
         } else if (viewPart && viewPart.startsWith('category-')) {
           view = 'products';
           slug = viewPart;
+        } else if (viewPart && !(ALLOWED_VIEWS as readonly string[]).includes(viewPart)) {
+          view = 'products';
+          slug = `category-${viewPart}`;
         }
         
         setActiveView(view);

@@ -30,8 +30,8 @@ jobs:
         
     - name: Security Vulnerability Audit
       run: |
-        npm audit --audit-level=high || true
-        cd extension && npm audit --audit-level=high || true
+        npm audit --audit-level=high
+        cd extension && npm audit --audit-level=high
         
     - name: Root TypeScript & Lint Checks
       run: npm run lint

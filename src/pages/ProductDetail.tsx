@@ -9,6 +9,7 @@ import { Helmet } from '../components/Helmet';
 import { AdSenseBanner } from '../components/AdSenseBanner';
 
 import { Breadcrumb } from '../components/Breadcrumb';
+import { ErrorStateView } from '../components/ErrorStateView';
 
 import { AdminProductEditPanel } from '../components/product/AdminProductEditPanel';
 import { ReviewForm } from '../components/product/ReviewForm';
@@ -608,16 +609,23 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
   if (!product) {
     return (
-      <div className="mx-auto max-w-xl text-center py-20 px-4">
-        <span className="text-4xl block mb-4">🔍</span>
-        <h2 className="text-lg font-bold font-display text-slate-800 dark:text-white">Product Not Found</h2>
-        <p className="text-sm text-slate-500 mt-2">The product you are looking for doesn't exist or has been removed.</p>
-        <button
-          onClick={() => onNavigate('products')}
-          className="mt-6 rounded-full bg-slate-800 text-white px-6 py-2.5 text-sm font-bold hover:bg-zinc-900 transition-colors shadow-sm dark:bg-white dark:text-slate-900 cursor-pointer inline-block"
-        >
-          Browse Catalog
-        </button>
+      <div className="mx-auto max-w-2xl py-16 px-4 font-sans">
+        <ErrorStateView
+          variant="not-found"
+          title="Product Unavailable in Catalog"
+          description="The gadget or tech gear you requested is not listed, has expired, or may have been unmapped from our live catalog."
+          suggestion="You can explore trending electronics, browse department listings, or search for alternative models."
+          onAction={() => onNavigate('products')}
+          actionLabel="Browse All Products"
+          onHome={() => onNavigate('home')}
+          onBack={() => {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              window.history.back();
+            } else {
+              onNavigate('products');
+            }
+          }}
+        />
       </div>
     );
   }

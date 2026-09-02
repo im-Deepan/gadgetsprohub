@@ -147,22 +147,22 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
   return (
     <div className="w-full flex flex-col bg-slate-50 dark:bg-black font-sans min-h-screen">
       <Helmet>
-        <title>gadgetsprohub | Compare Specs, Honest Reviews & Best Gadget Deals</title>
-        <meta name="description" content="Discover, compare and explore in-depth gadget specifications, hardware benchmarks, transparent pros & cons, and verified tech product deals on gadgetsprohub." />
+        <title>gadgetsprohub | Tech Specs, Gadget Comparisons & Reviews</title>
+        <meta name="description" content="Compare technical specifications, read unbiased reviews, and find the best prices on smartphones, laptops, audio gear, wearables, and smart tech on gadgetsprohub." />
         <meta name="keywords" content="gadgets, smartphones, laptops, audio gear, smartwatches, electronics comparison, tech reviews, specs, gadgetsprohub" />
         <link rel="canonical" href="https://gadgetsprohub.onrender.com/" />
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://gadgetsprohub.onrender.com/" />
-        <meta property="og:title" content="gadgetsprohub | Compare Specs, Honest Reviews & Best Gadget Deals" />
-        <meta property="og:description" content="Discover, compare and explore in-depth gadget specifications, hardware benchmarks, transparent pros & cons, and verified tech product deals on gadgetsprohub." />
+        <meta property="og:title" content="gadgetsprohub | Tech Specs, Gadget Comparisons & Reviews" />
+        <meta property="og:description" content="Compare technical specifications, read unbiased reviews, and find the best prices on smartphones, laptops, audio gear, wearables, and smart tech on gadgetsprohub." />
         <meta property="og:site_name" content="gadgetsprohub" />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="gadgetsprohub | Compare Specs, Honest Reviews & Best Gadget Deals" />
-        <meta name="twitter:description" content="Discover, compare and explore in-depth gadget specifications, hardware benchmarks, transparent pros & cons, and verified tech product deals." />
+        <meta name="twitter:title" content="gadgetsprohub | Tech Specs, Gadget Comparisons & Reviews" />
+        <meta name="twitter:description" content="Compare technical specifications, read unbiased reviews, and find the best prices on smartphones, laptops, audio gear, wearables, and smart tech on gadgetsprohub." />
         
         {/* JSON-LD Schema */}
         <script type="application/ld+json">
@@ -174,7 +174,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                 "@id": "https://gadgetsprohub.onrender.com/#website",
                 "url": "https://gadgetsprohub.onrender.com/",
                 "name": "gadgetsprohub",
-                "description": "Premium Electronics & Smart Gear Specs, Reviews & Directory",
+                "alternateName": ["GadgetsProHub", "gadgets pro hub", "Gadgets Pro Hub"],
+                "description": "Compare technical specifications, read unbiased reviews, and find the best prices on smartphones, laptops, audio gear, wearables, and smart tech on gadgetsprohub.",
+                "inLanguage": "en-US",
                 "potentialAction": {
                   "@type": "SearchAction",
                   "target": "https://gadgetsprohub.onrender.com/search?q={search_term_string}",
@@ -185,8 +187,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onPreload }) => {
                 "@type": "Organization",
                 "@id": "https://gadgetsprohub.onrender.com/#organization",
                 "name": "gadgetsprohub",
+                "alternateName": "GadgetsProHub",
                 "url": "https://gadgetsprohub.onrender.com/",
-                "logo": "https://gadgetsprohub.onrender.com/logo.png"
+                "logo": "https://gadgetsprohub.onrender.com/favicon.png"
               }
             ]
           })}

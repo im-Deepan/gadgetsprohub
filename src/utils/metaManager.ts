@@ -13,16 +13,16 @@ export interface ViewMetadata {
  */
 export const DEFAULT_VIEW_METADATA: Record<string, ViewMetadata> = {
   home: {
-    title: 'GadgetsProHub | Top Electronics, Smart Gear & Tech Reviews',
-    description: 'Discover top-rated tech gadgets, electronics, and honest reviews. Compare specs and find the best prices on smartphones, laptops, audio gear, and more.',
-    keywords: 'electronics, gadgets, smartphones, laptops, audio gear, smartwatches, tech reviews, budget gadgets, GadgetsProHub',
+    title: 'gadgetsprohub | Tech Specs, Gadget Comparisons & Reviews',
+    description: 'Compare technical specifications, read unbiased reviews, and find the best prices on smartphones, laptops, audio gear, wearables, and smart tech on gadgetsprohub.',
+    keywords: 'electronics, gadgets, smartphones, laptops, audio gear, smartwatches, tech reviews, budget gadgets, gadgetsprohub',
     ogType: 'website',
     ogImage: '/og-banner.png'
   },
   products: {
-    title: 'All Products - Compare Tech Specs & Prices | GadgetsProHub',
-    description: 'Browse our full collection of gadgets and compare specifications across smartphones, laptops, audio gear, and smart accessories.',
-    keywords: 'product directory, search gadgets, electronic specs, compare mobile phones, compare laptops',
+    title: 'All Products - Compare Tech Specs & Prices | gadgetsprohub',
+    description: 'Browse our full collection of gadgets and compare specifications across smartphones, laptops, audio gear, and smart accessories on gadgetsprohub.',
+    keywords: 'product directory, search gadgets, electronic specs, compare mobile phones, compare laptops, gadgetsprohub',
     ogType: 'website',
     ogImage: '/og-banner.png'
   },

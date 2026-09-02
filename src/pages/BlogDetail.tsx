@@ -6,6 +6,7 @@ import { Eye, Share2, Sparkle, Tag } from 'lucide-react';
 import { Helmet } from '../components/Helmet';
 
 import { Breadcrumb } from '../components/Breadcrumb';
+import { ErrorStateView } from '../components/ErrorStateView';
 
 interface BlogDetailProps {
   blogSlug: string;
@@ -135,16 +136,23 @@ export const BlogDetail: React.FC<BlogDetailProps> = ({ blogSlug, onNavigate }) 
 
   if (!blog) {
     return (
-      <div className="mx-auto max-w-xl text-center py-20 px-4">
-        <span className="text-4xl">📚</span>
-        <h2 className="text-sm font-bold text-slate-700 mt-4">Manual Not Sourced</h2>
-        <p className="text-xs text-slate-300 mt-1">We are unable to extract the specified curation guides. Try choosing other topics.</p>
-        <button
-          onClick={() => onNavigate('blogs')}
-          className="mt-6 rounded-full bg-slate-950 text-white px-5 py-2.5 text-xs font-semibold hover:bg-indigo-500 cursor-pointer"
-        >
-          Check manuals board
-        </button>
+      <div className="mx-auto max-w-2xl py-16 px-4 font-sans">
+        <ErrorStateView
+          variant="not-found"
+          title="Tech Article Unavailable"
+          description="The article, buying guide, or teardown review you requested could not be located in our publication archives."
+          suggestion="You can explore the tech knowledge center for other recently published buying guides and hardware manuals."
+          onAction={() => onNavigate('blogs')}
+          actionLabel="Browse All Articles"
+          onHome={() => onNavigate('home')}
+          onBack={() => {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              window.history.back();
+            } else {
+              onNavigate('blogs');
+            }
+          }}
+        />
       </div>
     );
   }

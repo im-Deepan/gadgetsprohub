@@ -315,7 +315,10 @@ export class MediaService {
       }
 
       const hash = crypto.createHash('sha256').update(buffer).digest('hex');
-      const format: string = originalMetadata.format === 'jpeg' ? 'jpg' : (originalMetadata.format || 'jpg');
+      let format: string = originalMetadata.format === 'jpeg' ? 'jpg' : (originalMetadata.format || 'jpg');
+      if (format.toLowerCase() === 'svg') {
+        format = 'png';
+      }
       const fileName = `${hash}.${format}`;
       const relativePath = `/uploads/media/${fileName}`;
       const localPath = path.join(this.baseStoragePath, fileName);

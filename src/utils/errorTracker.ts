@@ -75,16 +75,34 @@ export const captureError = (error: Error | unknown, context?: ErrorContext) => 
   // Log to console (simulating central service for development/demonstration)
   console.warn('[GlobalErrorTracker]', JSON.stringify(errorDetails, null, 2));
 
-  // If in a browser environment, optionally send to our global error tracking endpoint
-  if (typeof window !== 'undefined') {
-    fetch('/api/track-error', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(errorDetails),
-    }).catch(() => {
-      // Prevent infinite loop if the error tracker itself fails
-    });
+  // If in a browser environment, safely send to our global error tracking endpoint with comprehensive boundary
+  if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+    try {
+      // Don't attempt outbound network tracking when clearly offline
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return;
+      }
+
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
+
+      window.fetch('/api/track-error', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(errorDetails),
+        signal: controller ? controller.signal : undefined,
+        keepalive: true
+      })
+      .catch(() => {
+        // Prevent unhandled promise rejection or loop if error endpoint is unreachable
+      })
+      .finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+      });
+    } catch {
+      // Defensive boundary: never let error tracking itself throw or interrupt application flow
+    }
   }
 };

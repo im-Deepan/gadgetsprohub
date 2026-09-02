@@ -18,6 +18,7 @@ import { getShortProductTitle, formatProductPrice, formatRating, hasValidDiscoun
 import { parseSpecificationsString } from '../utils/specParser';
 import { getCleanAffiliateUrl } from '../utils/affiliate';
 import { CategoryIcon } from '../components/CategoryIcon';
+import { ErrorStateView } from '../components/ErrorStateView';
 
 interface ProductListProps {
   initialFilter?: string | null;
@@ -112,7 +113,14 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
   });
 
   // Products loading via TanStack Query
-  const { data: productsData, isLoading: productsLoading, isFetching: productsFetching } = useQuery({
+  const { 
+    data: productsData, 
+    isLoading: productsLoading, 
+    isFetching: productsFetching,
+    isError: isProductsError,
+    error: productsError,
+    refetch: refetchProducts
+  } = useQuery({
     queryKey: ['products', debouncedSearch, selectedCategory, selectedSubcategory, minPrice, maxPrice, minRating, sortField, currentPage],
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams();
@@ -989,18 +997,30 @@ export const ProductList: React.FC<ProductListProps> = ({ initialFilter, onNavig
                   <ProductCardSkeleton key={`skeleton-prod-${i}`} />
                 ))}
               </div>
+            ) : isProductsError && products.length === 0 ? (
+              <div className="py-12 px-4 max-w-xl mx-auto w-full grow flex items-center justify-center">
+                <ErrorStateView
+                  variant="network"
+                  title="Unable to Load Catalog"
+                  description="We could not synchronize the latest product entries from the server. Check your connection or retry."
+                  error={productsError as Error}
+                  onRetry={() => { refetchProducts(); }}
+                  isRetrying={productsFetching}
+                  onAction={handleResetFilters}
+                  actionLabel="Clear Active Filters"
+                />
+              </div>
             ) : products.length === 0 ? (
-              <div className="flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-3xl p-12 text-center dark:border-slate-700 grow">
-                <span className="text-3xl block">🔍</span>
-                <h3 className="text-sm font-bold text-slate-700 mt-3 dark:text-white">No products found</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm">Try loosening your search filters or browse all categories.</p>
-                <button
-                  type="button"
-                  onClick={handleResetFilters}
-                  className="mt-4 px-5 py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-xs hover:bg-zinc-800 transition-all cursor-pointer min-h-[44px]"
-                >
-                  Reset All Filters
-                </button>
+              <div className="py-12 px-4 max-w-xl mx-auto w-full grow flex items-center justify-center">
+                <ErrorStateView
+                  variant="empty"
+                  title="No Matching Gadgets Found"
+                  description={hasActiveFilters ? "No products match your combination of category, search keyword, price, or rating filters." : "Our product catalog is currently being updated with new hardware specifications."}
+                  suggestion="Try loosening your filters, removing price limits, or searching for broader terms."
+                  onAction={handleResetFilters}
+                  actionLabel="Reset All Filters"
+                  onRetry={() => { refetchProducts(); }}
+                />
               </div>
             ) : (
               <div className="space-y-8">

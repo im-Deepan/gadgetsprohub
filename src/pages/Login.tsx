@@ -74,18 +74,21 @@ const LoginErrorDisplay: React.FC<{ error: string; onClear: () => void }> = ({ e
   const { title, description, suggestion } = translateAuthError(error);
 
   return (
-    <div id="login-error-card" className="relative overflow-hidden rounded-xl border border-rose-50 bg-rose-50/75 p-4 text-xs text-rose-950 transition-all duration-300 dark:border-rose-950/40 dark:bg-rose-950/10 dark:text-rose-100">
-      <div className="flex items-start gap-2.5">
-        <div className="mt-0.5 rounded-full bg-rose-50 p-1 text-rose-500 dark:bg-rose-950/80 dark:text-rose-300">
-          <svg className="h-3.5 w-3.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
+    <div 
+      id="login-error-card" 
+      role="alert"
+      aria-live="polite"
+      className="relative overflow-hidden rounded-2xl border border-rose-200/90 bg-rose-50/90 p-4 text-xs text-rose-900 shadow-xs transition-all duration-300 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-100"
+    >
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 rounded-xl bg-rose-100 p-1.5 text-rose-600 dark:bg-rose-900/60 dark:text-rose-300 shrink-0">
+          <Lock className="h-4 w-4" />
         </div>
-        <div className="flex-1 space-y-1">
-          <h4 className="font-bold tracking-tight text-rose-800 dark:text-rose-200">{title}</h4>
-          <p className="text-[11px] leading-normal opacity-90 text-rose-700 dark:text-rose-300">{description}</p>
+        <div className="flex-1 space-y-1 pr-6">
+          <h4 className="font-bold tracking-tight text-rose-900 dark:text-rose-100">{title}</h4>
+          <p className="text-xs leading-relaxed text-rose-800 dark:text-rose-200">{description}</p>
           {suggestion && (
-            <p className="text-[11px] font-semibold leading-normal mt-1 border-t border-rose-50/50 pt-1 text-indigo-600 dark:border-rose-950/30 dark:text-indigo-300">
+            <p className="text-[11px] font-semibold leading-relaxed mt-2 border-t border-rose-200/60 pt-2 text-indigo-700 dark:border-rose-900/40 dark:text-indigo-300">
               💡 <span className="font-bold">Tip:</span> {suggestion}
             </p>
           )}
@@ -93,12 +96,12 @@ const LoginErrorDisplay: React.FC<{ error: string; onClear: () => void }> = ({ e
         <button
           type="button"
           onClick={onClear}
-          className="absolute right-2 top-2 rounded-md p-1 text-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:hover:bg-rose-950/50 dark:hover:text-rose-200 cursor-pointer"
+          className="absolute right-2.5 top-2.5 rounded-lg p-1 text-rose-400 hover:bg-rose-100 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-900/40 dark:hover:text-rose-200 transition-colors cursor-pointer"
           title="Dismiss Error"
+          aria-label="Dismiss error notice"
         >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <EyeOff className="hidden" />
+          <span className="text-xs font-bold px-1">&times;</span>
         </button>
       </div>
     </div>
@@ -106,7 +109,7 @@ const LoginErrorDisplay: React.FC<{ error: string; onClear: () => void }> = ({ e
 };
 
 export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
-  const { login, register, loginWithGoogle, isAuthenticated, user } = useAuth();
+  const { login, register, loginWithGoogle, isAuthenticated, user, isFirebaseMock } = useAuth();
   const { showToast } = useToast();
   
   // Tab states
@@ -547,76 +550,123 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
             </div>
           ) : (
             <>
-              <AnimatePresence mode="popLayout" initial={false}>
-                {activeTab === 'register' && (
-                  <motion.div
-                    key="register-name"
-                    initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                    animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
-                    exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-1.5"
-                  >
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Full Name</label>
+              {requiresTwoFactor ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/40">
+                    <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-semibold text-xs mb-1">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Two-Factor Authentication Required</span>
+                    </div>
+                    <p className="text-[11px] text-indigo-900/80 dark:text-indigo-200/80">
+                      Enter the 6-digit security code from your authenticator app to complete sign in.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                      2FA Verification Code
+                    </label>
                     <div className="relative">
-                      <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                      <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                       <input
                         type="text"
                         required
-                        placeholder="John Doe"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        maxLength={6}
+                        placeholder="123456"
+                        value={twoFactorToken}
+                        onChange={(e) => setTwoFactorToken(e.target.value.trim())}
+                        className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 font-mono tracking-widest focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRequiresTwoFactor(false);
+                      setTwoFactorToken('');
+                      setAuthError('');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline"
+                  >
+                    ← Cancel and use different credentials
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {activeTab === 'register' && (
+                      <motion.div
+                        key="register-name"
+                        initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                        animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
+                        exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-1.5"
+                      >
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Full Name</label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                          <input
+                            type="text"
+                            required
+                            placeholder="John Doe"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="buyer@gmail.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
                       />
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="buyer@gmail.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-200 bg-white p-2.5 pl-9 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Password</label>
-                  {activeTab === 'login' && (
-                    <button type="button" onClick={() => setIsForgotPassword(true)} className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline">
-                      Forgot password?
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 pr-10 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 focus:outline-none cursor-pointer transition-colors duration-300"
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Password</label>
+                      {activeTab === 'login' && (
+                        <button type="button" onClick={() => setIsForgotPassword(true)} className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline">
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-100 bg-white p-2.5 pl-9 pr-10 outline-none text-slate-950 focus:border-indigo-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white transition-colors duration-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-100 focus:outline-none cursor-pointer transition-colors duration-300"
+                        title={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <AnimatePresence mode="popLayout" initial={false}>
                 {activeTab === 'register' && (
@@ -682,6 +732,14 @@ export const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           </svg>
           <span>Sign In with Google Account</span>
         </button>
+
+        {isFirebaseMock && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/90 dark:border-amber-900/40 dark:bg-amber-950/20 p-2.5 text-center">
+            <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">
+              ⚡ Local Mock Auth Active: Using simulated local credentials for preview. Set live Firebase keys in .env for production OAuth.
+            </p>
+          </div>
+        )}
 
         {/* Registration Note */}
         <div className="text-center">

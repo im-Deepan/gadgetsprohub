@@ -1,6 +1,6 @@
 {
-  "name": "gadgetsprohub | Premium Electronics & Smart Gear Directory",
-  "description": "gadgetsprohub - Your premium destination for discovering high-quality electronics, smartphones, laptops, smart gear, and extensive tech accessory specifications, reviews, and deals.",
+  "name": "gadgetsprohub | Tech Specs, Gadget Comparisons & Reviews",
+  "description": "Compare technical specifications, read unbiased reviews, and find the best prices on smartphones, laptops, audio gear, wearables, and smart tech on gadgetsprohub.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

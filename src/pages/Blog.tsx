@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from '../components/Helmet';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { SearchAutocompleteInput } from '../components/SearchAutocompleteInput';
+import { ErrorStateView } from '../components/ErrorStateView';
 
 interface BlogProps {
   onNavigate: (view: string, slug?: string) => void;
@@ -37,7 +38,14 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
     return () => clearTimeout(handler);
   }, [search]);
 
-  const { data: blogsData, isLoading: queryLoading, isFetching: queryFetching } = useQuery({
+  const { 
+    data: blogsData, 
+    isLoading: queryLoading, 
+    isFetching: queryFetching,
+    isError: isBlogsError,
+    error: blogsError,
+    refetch: refetchBlogs
+  } = useQuery({
     queryKey: ['blogs', debouncedSearch, selectedSub],
     queryFn: async ({ signal }) => {
       const q = new URLSearchParams();
@@ -136,17 +144,36 @@ export const BlogList: React.FC<BlogProps> = ({ onNavigate, onPreload }) => {
       </div>
 
       {/* Cards Area */}
-      {loading ? (
+      {loading && blogs.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:px-4">
           {[...Array(6)].map((_, i) => (
             <BlogCardSkeleton key={`blog-skeleton-${i}`} />
           ))}
         </div>
+      ) : isBlogsError && blogs.length === 0 ? (
+        <div className="py-12 px-4 max-w-xl mx-auto w-full flex items-center justify-center">
+          <ErrorStateView
+            variant="network"
+            title="Unable to Load Tech Insights"
+            description="We encountered an issue retrieving articles and buyer guides from the server."
+            error={blogsError as Error}
+            onRetry={() => { refetchBlogs(); }}
+            isRetrying={queryFetching}
+            onAction={() => { setSearch(''); setSelectedSub(''); }}
+            actionLabel="Reset Search & Filters"
+          />
+        </div>
       ) : blogs.length === 0 ? (
-        <div className="border border-dashed border-slate-100 p-12 text-center rounded-xl dark:border-slate-700">
-          <Compass className="h-6 w-6 text-slate-200 mx-auto" />
-          <h3 className="text-sm font-bold text-slate-700 mt-2 dark:text-white">No Matching Manuals Found</h3>
-          <p className="text-xs text-slate-300">Try checking other keywords or clicking clear.</p>
+        <div className="py-12 px-4 max-w-xl mx-auto w-full flex items-center justify-center">
+          <ErrorStateView
+            variant="empty"
+            title="No Matching Articles Found"
+            description={search || selectedSub ? `No editorial manuals or buyer guides match "${search || selectedSub}".` : "Our editorial team is preparing deep-dive tech reviews and buying guides."}
+            suggestion="Try searching for broader keywords such as 'smartphone', 'battery', or 'headphones'."
+            onAction={() => { setSearch(''); setSelectedSub(''); }}
+            actionLabel="View All Articles"
+            onRetry={() => { refetchBlogs(); }}
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:px-4">

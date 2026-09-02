@@ -11291,8 +11291,8 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       const requestUrl = `${baseUrl}${rawPath}`;
 
       // Default metadata values
-      let metaTitle = "gadgetsprohub | Premium Electronics & Smart Gear Directory";
-      let metaDesc = "gadgetsprohub - Your premium destination for discovering high-quality electronics, smartphones, laptops, smart gear, and extensive tech accessory specifications, reviews, and deals.";
+      let metaTitle = "gadgetsprohub | Tech Specs, Gadget Comparisons & Reviews";
+      let metaDesc = "Compare technical specifications, read unbiased reviews, and find the best prices on smartphones, laptops, audio gear, wearables, and smart tech on gadgetsprohub.";
       let metaImage = `${baseUrl}/og-banner.png`;
       let metaType = "website";
       let preRenderedBody = "";
@@ -11309,7 +11309,8 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
         "name": "gadgetsprohub",
         "alternateName": ["GadgetsProHub", "gadgets pro hub", "Gadgets Pro Hub"],
         "url": baseUrl,
-        "description": "Your premium destination for discovering high-quality electronics, smartphones, laptops, smart gear, and extensive tech accessory specifications, reviews, and deals.",
+        "description": "Compare technical specifications, read unbiased reviews, and find the best prices on smartphones, laptops, audio gear, wearables, and smart tech on gadgetsprohub.",
+        "inLanguage": "en-US",
         "potentialAction": {
           "@type": "SearchAction",
           "target": `${baseUrl}/search?q={search_term_string}`,

@@ -16,6 +16,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isFirebaseMock: boolean;
   wishlist: string[];
   toggleWishlist: (productId: string, productName?: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -403,6 +404,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     isAuthenticated: Boolean(token),
     isAdmin: user?.role === 'admin',
+    isFirebaseMock,
     wishlist,
     toggleWishlist,
     refreshProfile
