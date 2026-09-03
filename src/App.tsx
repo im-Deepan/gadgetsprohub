@@ -14,6 +14,7 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ImageLightbox } from './components/ImageLightbox';
+import { CookieConsent } from './components/CookieConsent';
 import { Home } from './pages/Home';
 import { ProductPageSkeleton, BlogPageSkeleton } from './components/PageSkeletons';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -89,6 +90,7 @@ export const ALLOWED_VIEWS = [
   'profile',
   'admin',
   'privacy-policy',
+  'privacy',
   'about-us',
   'terms-conditions',
   'disclaimer',
@@ -224,6 +226,7 @@ export const preloadView = (view: AppView, slug?: string) => {
       case 'admin':
         handlePreload(Admin.preload?.());
         break;
+      case 'privacy':
       case 'privacy-policy':
         handlePreload(PrivacyPolicy.preload?.());
         break;
@@ -342,7 +345,7 @@ const AppContent: React.FC = () => {
 
   // Load AdSense script safely after initial page render and hydration during idle time
   useEffect(() => {
-    const loadAdSense = () => {
+    const loadAdSense = async () => {
       const consent = localStorage.getItem('cookie_consent');
       if (consent === 'declined') return;
       const prefs = localStorage.getItem('cookie_preferences');
@@ -354,11 +357,38 @@ const AppContent: React.FC = () => {
       }
 
       if (adsenseScriptLoaded) return;
-      adsenseScriptLoaded = true;
 
       try {
-        const publisherId = import.meta.env.VITE_ADSENSE_CLIENT_ID;
-        if (publisherId && publisherId !== 'ca-pub-1234567890123456') {
+        let publisherId = (import.meta.env.VITE_ADSENSE_CLIENT_ID || '').trim();
+        let adsEnabled = true;
+
+        // Fetch dynamic site settings configured in Admin dashboard
+        try {
+          const res = await fetch('/api/settings');
+          if (res.ok) {
+            const json = await res.json();
+            if (json.success && json.data) {
+              if (json.data.adsenseEnabled === false) {
+                adsEnabled = false;
+              }
+              if (json.data.adsenseClientId) {
+                publisherId = json.data.adsenseClientId.trim();
+              }
+            }
+          }
+        } catch (e) {}
+
+        if (!adsEnabled) return;
+
+        const isValidPublisher = Boolean(
+          publisherId && 
+          publisherId.startsWith('ca-pub-') && 
+          publisherId !== 'ca-pub-1234567890123456' && 
+          publisherId !== 'ca-pub-0000000000000000'
+        );
+
+        if (isValidPublisher) {
+          adsenseScriptLoaded = true;
           const existingScript = document.querySelector(`script[src*="pagead2.googlesyndication.com"]`);
           if (!existingScript) {
             const script = document.createElement('script');
@@ -414,6 +444,10 @@ const AppContent: React.FC = () => {
 
       if (viewPart === 'blog' || viewPart === 'blogs') {
         return pathParts.length > 1 && pathParts[1] ? 'blog-detail' : 'blogs';
+      }
+
+      if (viewPart === 'privacy' || viewPart === 'privacy-policy') {
+        return 'privacy-policy';
       }
 
       if (viewPart && (ALLOWED_VIEWS as readonly string[]).includes(viewPart)) {
@@ -644,7 +678,9 @@ const AppContent: React.FC = () => {
 
   // Manage body scroll positions on navigating
   const navigateToView = (view: AppView | string, slug?: string) => {
-    const targetView = (view === 'blog' ? 'blogs' : view) as AppView;
+    let normalized = view === 'blog' ? 'blogs' : view;
+    if (normalized === 'privacy') normalized = 'privacy-policy';
+    const targetView = normalized as AppView;
     if (!(ALLOWED_VIEWS as readonly string[]).includes(targetView)) {
       setActiveView('404');
       return;
@@ -815,6 +851,7 @@ const AppContent: React.FC = () => {
           </Suspense>
         );
         break;
+      case 'privacy':
       case 'privacy-policy':
         content = (
           <Suspense fallback={<ViewLoader />}>
@@ -897,6 +934,7 @@ const AppContent: React.FC = () => {
       <Footer onNavigate={navigateToView} isHomePage={activeView === 'home'} />
       <ScrollToTop />
       <ImageLightbox />
+      <CookieConsent onNavigate={navigateToView} />
 
       {/* Modals & Floating Tools */}
       {isWishlistOpen && (

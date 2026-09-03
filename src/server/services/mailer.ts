@@ -145,8 +145,8 @@ export async function triggerProductAddedEmailNotifications(product: any) {
               <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 4px 0; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHTML(product.name)}</h3>
               <p style="font-size: 12px; color: #64748b; margin: 0 0 8px 0; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHTML(product.description || 'View details and latest specifications on our site.')}</p>
               <div style="font-size: 15px; font-weight: 900; color: #0f172a;">
-                $${product.price}
-                ${product.originalPrice ? `<span style="font-size: 11px; text-decoration: line-through; color: #94a3b8; font-weight: 500; margin-left: 6px;">$${product.originalPrice}</span>` : ''}
+                ₹${Number(product.price).toLocaleString('en-IN')}
+                ${product.originalPrice ? `<span style="font-size: 11px; text-decoration: line-through; color: #94a3b8; font-weight: 500; margin-left: 6px;">₹${Number(product.originalPrice).toLocaleString('en-IN')}</span>` : ''}
               </div>
             </div>
           </div>
@@ -431,7 +431,7 @@ export async function runSundayAutomation(targetSundayStr?: string, forceEmail?:
           ${addedProductsList.map(p => `
             <li style="margin-bottom: 10px;">
               <strong style="color: #0f172a;">${p.name}</strong><br/>
-              <em>Brand:</em> ${p.brand} | <em>Price:</em> $${p.price.toFixed(2)}<br/>
+              <em>Brand:</em> ${p.brand} | <em>Price:</em> ₹${Number(p.price).toLocaleString('en-IN')}<br/>
               <em>Features:</em> ${p.features ? p.features.slice(0, 3).join(', ') : 'None'}<br/>
               <span style="color: #6366f1; font-size: 11px; font-family: monospace;">Slug: ${p.slug}</span>
             </li>

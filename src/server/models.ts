@@ -415,15 +415,18 @@ export const requestLockSchema = new mongoose.Schema({
 export const RequestLock = mongoose.models.RequestLock || mongoose.model('RequestLock', requestLockSchema);
 
 export const siteSettingsSchema = new mongoose.Schema({
-  adsenseClientId: { type: String, default: 'ca-pub-1234567890123456' },
-  adsenseEnabled: { type: Boolean, default: true },
+  adsenseClientId: { type: String, default: '' },
+  adsenseEnabled: { type: Boolean, default: false },
+  adsenseTestMode: { type: Boolean, default: false },
+  adsenseAutoAds: { type: Boolean, default: false },
   adsenseSlots: {
-    headerBannerSlot: { type: String, default: '6223881151' },
-    productDetailSlot: { type: String, default: '7898031267' },
-    blogSlot: { type: String, default: '1223904982' },
-    sidebarSlot: { type: String, default: '9876543210' },
-    homeSlot: { type: String, default: '6223881151' }
+    headerBannerSlot: { type: String, default: '' },
+    productDetailSlot: { type: String, default: '' },
+    blogSlot: { type: String, default: '' },
+    sidebarSlot: { type: String, default: '' },
+    homeSlot: { type: String, default: '' }
   },
+  customAdsTxt: { type: String, default: '' },
   siteName: { type: String, default: 'gadgetsprohub' },
   supportEmail: { type: String, default: 'support@gadgetsprohub.com' },
   updatedAt: { type: Date, default: Date.now }

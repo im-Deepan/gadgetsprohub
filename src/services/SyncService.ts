@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { MarketplaceService } from './MarketplaceService';
+import { aiService } from './AiService';
 
 // ==========================================
 // SCHEMAS & MODELS FOR PRICE MONITORING
@@ -475,7 +476,9 @@ export class SyncService {
         const dropPct = ((old - currentPrice) / old) * 100;
         if (dropPct >= alert.threshold) {
           isTriggered = true;
-          alertMessage = `🚨 Price Drop alert! ${product.name} fell by ${Math.round(dropPct)}% (Now $${currentPrice}, previously $${old}).`;
+          const formattedCurrent = `₹${Number(currentPrice).toLocaleString('en-IN')}`;
+          const formattedOld = `₹${Number(old).toLocaleString('en-IN')}`;
+          alertMessage = `🚨 Price Drop alert! ${product.name} fell by ${Math.round(dropPct)}% (Now ${formattedCurrent}, previously ${formattedOld}).`;
         }
       } else if (alert.triggerType === 'out_of_stock' && changedFields['inStock']) {
         const { old, new: inStock } = changedFields['inStock'];
@@ -487,7 +490,8 @@ export class SyncService {
         const { old, new: inStock } = changedFields['inStock'];
         if (old === false && inStock === true) {
           isTriggered = true;
-          alertMessage = `🎉 Inventory Restock: ${product.name} is back in stock at $${product.price}!`;
+          const formattedPrice = `₹${Number(product.price).toLocaleString('en-IN')}`;
+          alertMessage = `🎉 Inventory Restock: ${product.name} is back in stock at ${formattedPrice}!`;
         }
       }
 
@@ -582,7 +586,27 @@ export class SyncService {
                 body: JSON.stringify({ content: `[Automation: ${rule.name}] ${product.name} updated!` })
               });
             } else if (act.actionType === 'regenerate_ai') {
-              product.description = `Featured Deal: ${product.name} - now available at $${product.price}.`;
+              const formattedPrice = `₹${Number(product.price).toLocaleString('en-IN')}`;
+              
+              // Back up previous description if present and not already backed up
+              if (!product.previousDescription && product.description) {
+                product.previousDescription = product.description;
+              }
+
+              // Attempt genuine AI description generation if AI service is operational
+              try {
+                const aiResult = await aiService.generateProductContent(product, 'product_long_description');
+                if (aiResult && aiResult.generatedText) {
+                  product.longDescription = aiResult.generatedText;
+                }
+              } catch (aiErr: any) {
+                // Non-blocking fallback if AI generation fails or is offline
+              }
+
+              // Only populate a default headline if the description is completely empty or is a legacy template
+              if (!product.description || product.description.startsWith('Featured Deal:')) {
+                product.description = `Featured Deal: ${product.name} - now available at ${formattedPrice}.`;
+              }
               await product.save();
             }
           } catch (e) {

@@ -47,8 +47,18 @@ export interface InternalLinkRecommendation {
   relationType: 'category' | 'brand' | 'complementary' | 'similar';
 }
 
+const seoRobotsConfigSchema = new mongoose.Schema({
+  enableAiBots: { type: Boolean, default: true },
+  enableSeoAuditBots: { type: Boolean, default: true },
+  customRules: { type: Array, default: [] },
+  updatedAt: { type: Date, default: Date.now }
+});
+export const SeoRobotsConfig = mongoose.models.SeoRobotsConfig || mongoose.model('SeoRobotsConfig', seoRobotsConfigSchema);
+
 export class SeoService {
   private ai: GoogleGenAI | null = null;
+  private robotsConfig: RobotsOptions = { enableAiBots: true, enableSeoAuditBots: true };
+  private isRobotsConfigInitialized = false;
 
   constructor() {
     this.initGemini();
@@ -1475,11 +1485,75 @@ export class SeoService {
     }
   }
 
+  public async getRobotsConfig(): Promise<RobotsOptions> {
+    if (this.isRobotsConfigInitialized) {
+      return this.robotsConfig;
+    }
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const doc = await SeoRobotsConfig.findOne({});
+        if (doc) {
+          this.robotsConfig = {
+            enableAiBots: doc.enableAiBots !== false,
+            enableSeoAuditBots: doc.enableSeoAuditBots !== false,
+            customRules: doc.customRules || []
+          };
+          this.isRobotsConfigInitialized = true;
+          return this.robotsConfig;
+        }
+      }
+      const configFile = path.join(process.cwd(), 'data', 'robots_config.json');
+      if (fs.existsSync(configFile)) {
+        const parsed = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+        if (parsed && typeof parsed === 'object') {
+          this.robotsConfig = { ...this.robotsConfig, ...parsed };
+          this.isRobotsConfigInitialized = true;
+          return this.robotsConfig;
+        }
+      }
+    } catch (e) {}
+    return this.robotsConfig;
+  }
+
+  public async saveRobotsConfig(config: Partial<RobotsOptions>): Promise<RobotsOptions> {
+    const current = await this.getRobotsConfig();
+    this.robotsConfig = { ...current, ...config };
+    this.isRobotsConfigInitialized = true;
+    try {
+      const configFile = path.join(process.cwd(), 'data', 'robots_config.json');
+      const dir = path.dirname(configFile);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(configFile, JSON.stringify(this.robotsConfig, null, 2), 'utf8');
+
+      if (mongoose.connection.readyState === 1) {
+        await SeoRobotsConfig.findOneAndUpdate(
+          {},
+          {
+            enableAiBots: this.robotsConfig.enableAiBots !== false,
+            enableSeoAuditBots: this.robotsConfig.enableSeoAuditBots !== false,
+            customRules: this.robotsConfig.customRules || [],
+            updatedAt: new Date()
+          },
+          { upsert: true }
+        );
+      }
+    } catch (e) {}
+    return this.robotsConfig;
+  }
+
   /**
    * Generates and synchronizes the canonical robots.txt file.
    */
   public async buildRobotsTxt(options: RobotsOptions = {}): Promise<string> {
-    const content = generateRobotsTxt(options);
+    const persisted = await this.getRobotsConfig();
+    const mergedOptions: RobotsOptions = {
+      ...persisted,
+      ...options
+    };
+    if (options.enableAiBots !== undefined) {
+      await this.saveRobotsConfig({ enableAiBots: options.enableAiBots });
+    }
+    const content = generateRobotsTxt(mergedOptions);
     
     // Persist to public and dist directories if accessible
     const targets = [

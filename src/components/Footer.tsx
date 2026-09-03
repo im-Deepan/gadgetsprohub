@@ -230,7 +230,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isHomePage = false }
               className="min-h-[44px] flex items-center hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer bg-transparent border-none p-0 underline-offset-4 hover:underline"
               title="Manage Cookie Consent and GDPR/CCPA Privacy Preferences"
             >
-              Cookie Preferences & Opt-Out
+              Cookie Preferences
+            </button>
+            <span>•</span>
+            <button 
+              onClick={() => window.dispatchEvent(new CustomEvent('open_privacy_optout'))} 
+              className="min-h-[44px] flex items-center hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer bg-transparent border-none p-0 underline-offset-4 hover:underline"
+              title="California Consumer Privacy Act (CCPA) Do Not Sell or Share My Personal Information"
+            >
+              Do Not Sell or Share My Info
             </button>
           </div>
         </div>

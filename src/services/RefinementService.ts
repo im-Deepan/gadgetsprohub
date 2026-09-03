@@ -110,23 +110,31 @@ export class ConfigurationService {
     enableStructuredLogs: true,
     enableDependencyInjection: true
   };
-  private static isInitialized = false;
+  private static isFileInitialized = false;
+  private static isDbSynced = false;
 
-  private static async initFlagsAsync(): Promise<void> {
-    if (this.isInitialized) return;
-    this.isInitialized = true;
+  public static async initFlagsAsync(forceRefresh = false): Promise<void> {
+    if (this.isDbSynced && !forceRefresh) return;
     try {
       if (mongoose.connection.readyState === 1) {
         const doc = await FeatureFlags.findOne({});
-        if (doc && doc.flags) {
+        if (doc && doc.flags && typeof doc.flags === 'object') {
           this.flags = { ...this.flags, ...doc.flags };
+          this.isDbSynced = true;
+          // Sync to local JSON file as durable secondary cache
+          try {
+            const dir = path.dirname(FLAGS_FILE_PATH);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(FLAGS_FILE_PATH, JSON.stringify(this.flags, null, 2), 'utf8');
+          } catch (fileErr) {}
         }
-      } else if (fs.existsSync(FLAGS_FILE_PATH)) {
+      } else if (!this.isFileInitialized && fs.existsSync(FLAGS_FILE_PATH)) {
         const fileData = fs.readFileSync(FLAGS_FILE_PATH, 'utf8');
         const parsed = JSON.parse(fileData);
         if (parsed && typeof parsed === 'object') {
           this.flags = { ...this.flags, ...parsed };
         }
+        this.isFileInitialized = true;
       }
     } catch (err: any) {
       console.warn('[ConfigurationService] Failed to load persisted feature flags:', err.message);
@@ -134,10 +142,8 @@ export class ConfigurationService {
   }
 
   public static initFlags(): void {
-    // This is a synchronous fallback since some getters are synchronous.
-    // In a real startup sequence, initFlagsAsync should be awaited first.
-    if (!this.isInitialized) {
-      this.isInitialized = true;
+    if (!this.isFileInitialized) {
+      this.isFileInitialized = true;
       try {
         if (fs.existsSync(FLAGS_FILE_PATH)) {
           const fileData = fs.readFileSync(FLAGS_FILE_PATH, 'utf8');
@@ -147,6 +153,11 @@ export class ConfigurationService {
           }
         }
       } catch (err: any) {}
+    }
+
+    // Trigger non-blocking DB hydration if MongoDB is connected and not yet synced
+    if (mongoose.connection.readyState === 1 && !this.isDbSynced) {
+      this.initFlagsAsync().catch(() => {});
     }
   }
 
@@ -160,6 +171,7 @@ export class ConfigurationService {
 
       if (mongoose.connection.readyState === 1) {
         await FeatureFlags.findOneAndUpdate({}, { flags: this.flags, updatedAt: new Date() }, { upsert: true });
+        this.isDbSynced = true;
       }
     } catch (err: any) {
       console.warn('[ConfigurationService] Failed to persist feature flags:', err.message);
@@ -641,7 +653,8 @@ export class CacheService {
     // Invalidate distributed L2
     if (mongoose.connection.readyState === 1) {
       try {
-        await CacheEntry.deleteMany({ key: { $regex: keyPattern, $options: 'i' } });
+        const escapedPattern = keyPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        await CacheEntry.deleteMany({ key: { $regex: escapedPattern, $options: 'i' } });
       } catch (err) {
         Logger.error('CacheService.invalidate distributed delete failed', err, 'CacheService');
       }

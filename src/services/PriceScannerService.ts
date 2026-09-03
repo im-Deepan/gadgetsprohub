@@ -298,7 +298,7 @@ export class PriceScannerService {
       };
 
       console.log(
-        `🔍 [PriceScanner] [${currentIndex}/${this.state.totalProducts}] Checking price for "${nextProduct.name}" ($${nextProduct.price})`
+        `🔍 [PriceScanner] [${currentIndex}/${this.state.totalProducts}] Checking price for "${nextProduct.name}" (₹${nextProduct.price})`
       );
 
       const oldPrice = Number(nextProduct.price) || 0;
@@ -357,7 +357,7 @@ export class PriceScannerService {
         this.state.productsUpdated++;
         this.addLog(
           nextProduct._id.toString(),
-          `PRICE UPDATED: "${nextProduct.name}" changed from $${oldPrice} to $${newPrice} (DB timestamp updated)`,
+          `PRICE UPDATED: "${nextProduct.name}" changed from ₹${oldPrice.toLocaleString('en-IN')} to ₹${newPrice.toLocaleString('en-IN')} (DB timestamp updated)`,
           oldPrice,
           newPrice,
           'updated',
@@ -369,7 +369,7 @@ export class PriceScannerService {
         this.state.productsUnchanged++;
         this.addLog(
           nextProduct._id.toString(),
-          `Price verified for "${nextProduct.name}": $${currentPrice} (No change, DB timestamp updated)`,
+          `Price verified for "${nextProduct.name}": ₹${currentPrice.toLocaleString('en-IN')} (No change, DB timestamp updated)`,
           oldPrice,
           currentPrice,
           'unchanged',
@@ -422,7 +422,7 @@ export class PriceScannerService {
     const resolvedName = productName || (isSystem ? 'System Notification' : 'Unknown Product');
     const logItem: PriceScannerLog = {
       id: 'log_' + Math.random().toString(36).substring(2, 9),
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      timestamp: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       productId,
       productName: resolvedName,
       asin,

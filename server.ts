@@ -87,7 +87,7 @@ import {
 } from './src/middleware/validation';
 
 import { seoService } from './src/services/SeoService';
-import { generateRobotsTxt, validateRobotsUrl } from './src/services/robotsEngine';
+import robots, { generateRobotsTxt, validateRobotsUrl } from './src/services/robotsEngine';
 import { isMetadataSpecKey, cleanSpecificationsObj, parseSpecificationsString } from './src/utils/specParser';
 import { aiService, AiPrompt, AiProviderSetting, AiJob, AiResponse, AiAnalytics, AiCache } from './src/services/AiService';
 import { SyncService, PriceHistory, ProductChange, SyncJob, SchedulerTask, AlertRule, ProductHealth, AutomationRule, NotificationHistory } from './src/services/SyncService';
@@ -771,15 +771,18 @@ const requestLockSchema = new mongoose.Schema({
 const RequestLock = mongoose.model('RequestLock', requestLockSchema);
 
 const siteSettingsSchema = new mongoose.Schema({
-  adsenseClientId: { type: String, default: 'ca-pub-1234567890123456' },
-  adsenseEnabled: { type: Boolean, default: true },
+  adsenseClientId: { type: String, default: '' },
+  adsenseEnabled: { type: Boolean, default: false },
+  adsenseTestMode: { type: Boolean, default: false },
+  adsenseAutoAds: { type: Boolean, default: false },
   adsenseSlots: {
-    headerBannerSlot: { type: String, default: '6223881151' },
-    productDetailSlot: { type: String, default: '7898031267' },
-    blogSlot: { type: String, default: '1223904982' },
-    sidebarSlot: { type: String, default: '9876543210' },
-    homeSlot: { type: String, default: '6223881151' }
+    headerBannerSlot: { type: String, default: '' },
+    productDetailSlot: { type: String, default: '' },
+    blogSlot: { type: String, default: '' },
+    sidebarSlot: { type: String, default: '' },
+    homeSlot: { type: String, default: '' }
   },
+  customAdsTxt: { type: String, default: '' },
   siteName: { type: String, default: 'gadgetsprohub' },
   supportEmail: { type: String, default: 'support@gadgetsprohub.com' },
   updatedAt: { type: Date, default: Date.now }
@@ -788,15 +791,18 @@ const SiteSettingsModel = mongoose.model('SiteSettings', siteSettingsSchema);
 
 const LOCAL_SITE_SETTINGS_FILE = path.join(process.env.DATA_DIR || process.cwd(), 'local_site_settings.json');
 let localSiteSettings = {
-  adsenseClientId: process.env.VITE_ADSENSE_CLIENT_ID || process.env.ADSENSE_CLIENT_ID || 'ca-pub-1234567890123456',
-  adsenseEnabled: true,
+  adsenseClientId: process.env.VITE_ADSENSE_CLIENT_ID || process.env.ADSENSE_CLIENT_ID || '',
+  adsenseEnabled: false,
+  adsenseTestMode: false,
+  adsenseAutoAds: false,
   adsenseSlots: {
-    headerBannerSlot: '6223881151',
-    productDetailSlot: '7898031267',
-    blogSlot: '1223904982',
-    sidebarSlot: '9876543210',
-    homeSlot: '6223881151'
+    headerBannerSlot: '',
+    productDetailSlot: '',
+    blogSlot: '',
+    sidebarSlot: '',
+    homeSlot: ''
   },
+  customAdsTxt: '',
   siteName: 'gadgetsprohub',
   supportEmail: 'support@gadgetsprohub.com',
   updatedAt: new Date().toISOString()
@@ -1673,8 +1679,8 @@ async function triggerProductAddedEmailNotifications(product: any) {
               <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 4px 0; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHTML(product.name)}</h3>
               <p style="font-size: 12px; color: #64748b; margin: 0 0 8px 0; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHTML(product.description || 'View details and latest specifications on our site.')}</p>
               <div style="font-size: 15px; font-weight: 900; color: #0f172a;">
-                $${product.price}
-                ${product.originalPrice ? `<span style="font-size: 11px; text-decoration: line-through; color: #94a3b8; font-weight: 500; margin-left: 6px;">$${product.originalPrice}</span>` : ''}
+                ₹${Number(product.price).toLocaleString('en-IN')}
+                ${product.originalPrice ? `<span style="font-size: 11px; text-decoration: line-through; color: #94a3b8; font-weight: 500; margin-left: 6px;">₹${Number(product.originalPrice).toLocaleString('en-IN')}</span>` : ''}
               </div>
             </div>
           </div>
@@ -1899,7 +1905,7 @@ async function runSundayAutomation(targetSundayStr?: string, forceEmail?: string
           ${addedProductsList.map(p => `
             <li style="margin-bottom: 10px;">
               <strong style="color: #0f172a;">${p.name}</strong><br/>
-              <em>Brand:</em> ${p.brand} | <em>Price:</em> $${p.price.toFixed(2)}<br/>
+              <em>Brand:</em> ${p.brand} | <em>Price:</em> ₹${Number(p.price).toLocaleString('en-IN')}<br/>
               <em>Features:</em> ${p.features ? p.features.slice(0, 3).join(', ') : 'None'}<br/>
               <span style="color: #6366f1; font-size: 11px; font-family: monospace;">Slug: ${p.slug}</span>
             </li>
@@ -2520,6 +2526,13 @@ async function startServer() {
         console.log('Successfully connected to MongoDB Cluster');
         isMongoConnected = true;
 
+        // Hydrate persisted feature flags from MongoDB into memory
+        ConfigurationService.initFlagsAsync(true).then(() => {
+          console.log('Successfully hydrated persisted feature flags from MongoDB');
+        }).catch((err: any) => {
+          console.warn('Failed to hydrate feature flags from MongoDB:', err.message);
+        });
+
         // Safely drop index sub_1 if it exists in the database
         if (mongoose.connection.db) {
           mongoose.connection.db.collection('users').dropIndex('sub_1')
@@ -2856,16 +2869,33 @@ async function startServer() {
   });
 
   // SEO Routes (Robots & Sitemap)
-  app.get(['/robots.txt', '/robots.tsx', '/robots.ts', '/robots', '/api/robots.txt', '/api/robots'], (req: express.Request, res: express.Response) => {
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  app.get(['/robots.txt', '/robots.tsx', '/robots.ts', '/robots', '/api/robots.txt', '/api/robots'], async (req: express.Request, res: express.Response) => {
     res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     
     const host = req.get('host') || 'gadgetsprohub.onrender.com';
-    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const dynamicBase = `${protocol}://${host}`;
+    const isJsonRequested = req.path.endsWith('.tsx') || req.path.endsWith('.ts') || (req.headers.accept && req.headers.accept.includes('application/json') && !req.path.endsWith('.txt'));
+
+    if (isJsonRequested) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      try {
+        const metadata = robots();
+        metadata.host = host.startsWith('http') ? host : `https://${host}`;
+        return res.status(200).json(metadata);
+      } catch (err: any) {
+        return res.status(200).json(robots());
+      }
+    }
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 
     try {
-      const robotsContent = generateRobotsTxt({ host });
+      const config = await seoService.getRobotsConfig();
+      const robotsContent = generateRobotsTxt({
+        host,
+        enableAiBots: config.enableAiBots,
+        enableSeoAuditBots: config.enableSeoAuditBots,
+        customRules: config.customRules
+      });
       return res.status(200).send(robotsContent);
     } catch (err: any) {
       console.warn('Dynamic robots generation error:', err?.message);
@@ -2881,15 +2911,31 @@ async function startServer() {
       console.warn('Fallback robots serving error:', err?.message);
     }
 
-    return res.status(200).send(generateRobotsTxt());
+    return res.status(200).send(generateRobotsTxt({ host }));
+  });
+
+  // Fetch Current SEO Robots Config
+  app.get('/api/admin/seo/robots/config', adminOnly, async (req: express.Request, res: express.Response) => {
+    try {
+      const config = await seoService.getRobotsConfig();
+      return res.json({ success: true, config });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Failed to fetch robots configuration' });
+    }
   });
 
   // Robots Live Validation & Testing Endpoint
-  app.post('/api/seo/robots/test', (req: express.Request, res: express.Response) => {
+  app.post('/api/seo/robots/test', async (req: express.Request, res: express.Response) => {
     try {
       const { userAgent = 'Google-InspectionTool', urlPath = '/' } = req.body;
       const host = req.get('host') || 'gadgetsprohub.onrender.com';
-      const robotsContent = generateRobotsTxt({ host });
+      const config = await seoService.getRobotsConfig();
+      const robotsContent = generateRobotsTxt({
+        host,
+        enableAiBots: config.enableAiBots,
+        enableSeoAuditBots: config.enableSeoAuditBots,
+        customRules: config.customRules
+      });
       const result = validateRobotsUrl(userAgent, urlPath, robotsContent);
       return res.json({ success: true, result });
     } catch (err: any) {
@@ -2900,9 +2946,19 @@ async function startServer() {
   // Admin Robots Management & Sync Endpoint
   app.post('/api/admin/seo/robots/sync', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
+      const { enableAiBots, customRules } = req.body || {};
       const host = req.get('host') || 'gadgetsprohub.onrender.com';
-      const robotsContent = await seoService.buildRobotsTxt({ host });
-      return res.json({ success: true, message: 'Robots.txt synced across disk and cache', length: robotsContent.length });
+      const robotsContent = await seoService.buildRobotsTxt({
+        host,
+        ...(enableAiBots !== undefined ? { enableAiBots: Boolean(enableAiBots) } : {}),
+        ...(customRules ? { customRules } : {})
+      });
+      return res.json({
+        success: true,
+        message: 'Robots.txt synced across database, memory, and disk',
+        length: robotsContent.length,
+        config: await seoService.getRobotsConfig()
+      });
     } catch (err: any) {
       return res.status(500).json({ error: 'Failed to synchronize robots.txt' });
     }
@@ -6667,8 +6723,8 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
               `• <b>Category:</b> ${escapeHTML(categoryName)}\n` +
               `• <b>Subcategory:</b> ${escapeHTML(state.data.subcategory || 'N/A')}\n` +
               `• <b>Brand:</b> ${escapeHTML(state.data.brand || 'N/A')}\n` +
-              `• <b>Price:</b> $${state.data.price}\n` +
-              `• <b>Original Price:</b> ${state.data.originalPrice ? '$' + state.data.originalPrice : 'N/A'}\n` +
+              `• <b>Price:</b> ₹${Number(state.data.price).toLocaleString('en-IN')}\n` +
+              `• <b>Original Price:</b> ${state.data.originalPrice ? '₹' + Number(state.data.originalPrice).toLocaleString('en-IN') : 'N/A'}\n` +
               `• <b>Discount:</b> ${state.data.discount ? state.data.discount + '%' : 'N/A'}\n` +
               `• <b>Affiliate Link:</b> <code>${escapeHTML(state.data.affiliateLink || '')}</code>\n` +
               `• <b>Description:</b> ${escapeHTML(state.data.description || 'N/A')}\n` +
@@ -8873,20 +8929,40 @@ class AsyncImageWorker {
   // Admin protected endpoint to save site & AdSense settings
   app.post('/api/admin/settings', adminOnly, async (req: express.Request, res: express.Response) => {
     try {
-      const { adsenseClientId, adsenseEnabled, adsenseSlots, siteName, supportEmail } = req.body;
+      const { adsenseClientId, adsenseEnabled, adsenseTestMode, adsenseAutoAds, adsenseSlots, customAdsTxt, siteName, supportEmail } = req.body;
       
+      // Clean and normalize Publisher ID (strip scripts/tags, extract ca-pub-XXXXXXXXXXXXXXXX)
+      let cleanClientId = '';
+      if (typeof adsenseClientId === 'string') {
+        const trimmed = adsenseClientId.trim();
+        const match = trimmed.match(/(?:ca-)?pub-\d{16}/i);
+        if (match) {
+          cleanClientId = match[0].toLowerCase();
+          if (!cleanClientId.startsWith('ca-')) {
+            cleanClientId = 'ca-' + cleanClientId;
+          }
+        } else if (/^\d{16}$/.test(trimmed)) {
+          cleanClientId = `ca-pub-${trimmed}`;
+        } else {
+          cleanClientId = trimmed;
+        }
+      }
+
       const updatedData = {
-        adsenseClientId: adsenseClientId?.trim() || localSiteSettings.adsenseClientId,
+        adsenseClientId: cleanClientId,
         adsenseEnabled: adsenseEnabled !== undefined ? Boolean(adsenseEnabled) : localSiteSettings.adsenseEnabled,
+        adsenseTestMode: adsenseTestMode !== undefined ? Boolean(adsenseTestMode) : Boolean(localSiteSettings.adsenseTestMode),
+        adsenseAutoAds: adsenseAutoAds !== undefined ? Boolean(adsenseAutoAds) : Boolean(localSiteSettings.adsenseAutoAds),
         adsenseSlots: {
-          headerBannerSlot: adsenseSlots?.headerBannerSlot || localSiteSettings.adsenseSlots.headerBannerSlot,
-          productDetailSlot: adsenseSlots?.productDetailSlot || localSiteSettings.adsenseSlots.productDetailSlot,
-          blogSlot: adsenseSlots?.blogSlot || localSiteSettings.adsenseSlots.blogSlot,
-          sidebarSlot: adsenseSlots?.sidebarSlot || localSiteSettings.adsenseSlots.sidebarSlot,
-          homeSlot: adsenseSlots?.homeSlot || localSiteSettings.adsenseSlots.homeSlot
+          headerBannerSlot: typeof adsenseSlots?.headerBannerSlot === 'string' ? adsenseSlots.headerBannerSlot.trim() : (localSiteSettings.adsenseSlots?.headerBannerSlot || ''),
+          productDetailSlot: typeof adsenseSlots?.productDetailSlot === 'string' ? adsenseSlots.productDetailSlot.trim() : (localSiteSettings.adsenseSlots?.productDetailSlot || ''),
+          blogSlot: typeof adsenseSlots?.blogSlot === 'string' ? adsenseSlots.blogSlot.trim() : (localSiteSettings.adsenseSlots?.blogSlot || ''),
+          sidebarSlot: typeof adsenseSlots?.sidebarSlot === 'string' ? adsenseSlots.sidebarSlot.trim() : (localSiteSettings.adsenseSlots?.sidebarSlot || ''),
+          homeSlot: typeof adsenseSlots?.homeSlot === 'string' ? adsenseSlots.homeSlot.trim() : (localSiteSettings.adsenseSlots?.homeSlot || '')
         },
-        siteName: siteName || localSiteSettings.siteName,
-        supportEmail: supportEmail || localSiteSettings.supportEmail,
+        customAdsTxt: typeof customAdsTxt === 'string' ? customAdsTxt.trim() : (localSiteSettings.customAdsTxt || ''),
+        siteName: siteName ? siteName.trim() : localSiteSettings.siteName,
+        supportEmail: supportEmail ? supportEmail.trim() : localSiteSettings.supportEmail,
         updatedAt: new Date().toISOString()
       };
 
@@ -8897,11 +8973,15 @@ class AsyncImageWorker {
         await SiteSettingsModel.findOneAndUpdate({}, updatedData, { upsert: true, new: true });
       }
 
-      await logSecurityAction(req, 'SETTINGS_UPDATED', 'site_settings', { adsenseClientId: updatedData.adsenseClientId, adsenseEnabled: updatedData.adsenseEnabled });
+      await logSecurityAction(req, 'SETTINGS_UPDATED', 'site_settings', { 
+        adsenseClientId: updatedData.adsenseClientId, 
+        adsenseEnabled: updatedData.adsenseEnabled,
+        adsenseTestMode: updatedData.adsenseTestMode
+      });
 
-      res.json({ success: true, data: updatedData, message: 'Site & AdSense settings saved and updated in real-time!' });
+      res.json({ success: true, data: updatedData, message: 'Google AdSense and site settings saved successfully!' });
     } catch (err: any) {
-      res.status(500).json({ error: 'An internal error occurred.' });
+      res.status(500).json({ error: 'An internal error occurred while saving settings.' });
     }
   });
 
@@ -11249,24 +11329,44 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
 
   const adsTxtLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // Limit each IP to 10 requests per 15 minutes
+    max: 120, // Allow crawlers and admin verification tests
     message: 'Too many requests, please try again later.'
   });
 
   // Google AdSense ads.txt crawler verification endpoint
   app.get('/ads.txt', adsTxtLimiter, async (_req: express.Request, res: express.Response) => {
-    const settings = await getSiteSettingsData();
-    const publisherId = settings.adsenseClientId || process.env.ADSENSE_CLIENT_ID || 'ca-pub-1234567890123456';
-    if (!publisherId || publisherId === 'ca-pub-0000000000000000') {
-      return res.status(404).send('Not configured');
+    try {
+      const settings = await getSiteSettingsData();
+      const publisherId = settings.adsenseClientId || process.env.ADSENSE_CLIENT_ID || '';
+      
+      let lines: string[] = [
+        '# Google AdSense Authorized Digital Sellers (ads.txt)',
+        '# Domain: gadgetsprohub.onrender.com'
+      ];
+
+      if (publisherId && publisherId !== 'ca-pub-1234567890123456' && publisherId !== 'ca-pub-0000000000000000') {
+        let cleanId = publisherId.trim();
+        if (cleanId.startsWith('ca-')) {
+          cleanId = cleanId.slice(3);
+        }
+        lines.push(`google.com, ${cleanId}, DIRECT, f08c47fec0942fa0`);
+      } else {
+        lines.push('# Notice: Google AdSense Publisher ID is pending setup.');
+        lines.push('# Please configure your ca-pub-XXXXXXXXXXXXXXXX ID in Admin -> AdSense Settings.');
+      }
+
+      if (settings.customAdsTxt && typeof settings.customAdsTxt === 'string' && settings.customAdsTxt.trim()) {
+        lines.push('');
+        lines.push('# Additional Authorized Digital Sellers:');
+        lines.push(settings.customAdsTxt.trim());
+      }
+
+      res.type('text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.send(lines.join('\n') + '\n');
+    } catch (err: any) {
+      res.status(500).type('text/plain; charset=utf-8').send('# Error generating ads.txt\n');
     }
-    // Clean any prefix e.g. "ca-pub-XX" -> "pub-XX" for correct ads.txt formatting
-    let cleanId = publisherId;
-    if (cleanId.startsWith('ca-')) {
-      cleanId = cleanId.slice(3);
-    }
-    res.type('text/plain');
-    res.send(`google.com, ${cleanId}, DIRECT, f08c47fec0942fa0\n`);
   });
 
   // Helper function to serve index.html with dynamic OpenGraph meta tags, Schema.org JSON-LD, and SSR fallback for search engine crawlers
@@ -11703,6 +11803,29 @@ app.get('/api/admin/products/import/history', adminOnly, async (req: express.Req
       if (preRenderedBody) {
         html = html.replace(/<div id="root"><\/div>/i, `<div id="root">${preRenderedBody}</div>`);
       }
+
+      // Inject Google AdSense Site Verification Meta Tag & Script if configured
+      try {
+        const settings = await getSiteSettingsData();
+        const publisherId = (settings.adsenseClientId || process.env.ADSENSE_CLIENT_ID || '').trim();
+        const isValidPublisher = Boolean(publisherId && publisherId.startsWith('ca-pub-') && publisherId !== 'ca-pub-1234567890123456' && publisherId !== 'ca-pub-0000000000000000');
+        
+        if (isValidPublisher) {
+          const metaAccountTag = `<meta name="google-adsense-account" content="${publisherId}">`;
+          if (!html.includes('google-adsense-account')) {
+            html = html.replace(/<\/head>/i, `  ${metaAccountTag}\n</head>`);
+          } else {
+            html = html.replace(/<meta name="google-adsense-account" content="[^"]*"/i, metaAccountTag);
+          }
+
+          if (settings.adsenseEnabled) {
+            const adsenseScriptTag = `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}" crossorigin="anonymous"></script>`;
+            if (!html.includes('pagead2.googlesyndication.com')) {
+              html = html.replace(/<\/head>/i, `  ${adsenseScriptTag}\n</head>`);
+            }
+          }
+        }
+      } catch (e) {}
 
       res.setHeader('Content-Type', 'text/html; charset=UTF-8');
       res.setHeader('X-Robots-Tag', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');

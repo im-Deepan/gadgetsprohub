@@ -5,7 +5,7 @@ import {
   ArrowRight, Share2, Code, HelpCircle, Activity, Save, Edit, Bot
 } from 'lucide-react';
 import { apiFetch } from '../../utils/apiClient';
-import { RobotsInspector } from '../../services/robots.tsx';
+import { RobotsInspector } from '../../services/RobotsInspector';
 
 interface SeoDashboardProps {
   token?: string;

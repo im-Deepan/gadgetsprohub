@@ -1,8 +1,33 @@
 import mongoose from 'mongoose';
 import { GoogleGenAI } from '@google/genai';
 import * as crypto from 'crypto';
-import pLimit from 'p-limit';
 import { encryptSensitiveData, decryptSensitiveData } from '../utils/encryption';
+
+// Native concurrency limiter to avoid CJS/ESM interop crashes in production bundles
+function createConcurrencyLimiter(concurrency: number) {
+  let active = 0;
+  const queue: (() => void)[] = [];
+  const next = () => {
+    active--;
+    if (queue.length > 0) {
+      active++;
+      const fn = queue.shift()!;
+      fn();
+    }
+  };
+  return async <T>(fn: () => Promise<T>): Promise<T> => {
+    if (active >= concurrency) {
+      await new Promise<void>(resolve => queue.push(resolve));
+    } else {
+      active++;
+    }
+    try {
+      return await fn();
+    } finally {
+      next();
+    }
+  };
+}
 
 // ==========================================
 // TYPES & INTERFACES
@@ -191,7 +216,7 @@ export const AiAnalytics = mongoose.models.AiAnalytics || mongoose.model('AiAnal
 
 export class AiService {
   private defaultProvider: AiProviderType = 'gemini';
-  private generationLimit = pLimit(5); // Limit concurrent external API calls
+  private generationLimit = createConcurrencyLimiter(5); // Limit concurrent external API calls
   private defaultModelMap: Record<AiProviderType, string> = {
     gemini: 'gemini-2.5-flash',
     openai: 'gpt-4o-mini',

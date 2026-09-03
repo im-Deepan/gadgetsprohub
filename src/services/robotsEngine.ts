@@ -365,19 +365,21 @@ export function validateRobotsUrl(
     };
   }
 
-  // Helper to match path pattern (supports wildcard *)
+  // Helper to match path pattern (supports wildcard * and end-of-string anchor $)
   const matchesPattern = (pattern: string, path: string) => {
     if (!pattern) return false;
     if (pattern === '/') return true;
-    const regexPattern = '^' + pattern
+    const hasEndAnchor = pattern.endsWith('$');
+    const cleanPattern = hasEndAnchor ? pattern.slice(0, -1) : pattern;
+    const escaped = cleanPattern
       .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-      .replace(/\*/g, '.*')
-      .replace(/\$$/, '$');
+      .replace(/\*/g, '.*');
+    const regexPattern = '^' + escaped + (hasEndAnchor ? '$' : '');
     try {
       const regex = new RegExp(regexPattern);
       return regex.test(path);
     } catch {
-      return path.startsWith(pattern);
+      return path.startsWith(cleanPattern);
     }
   };
 
@@ -419,3 +421,82 @@ export function validateRobotsUrl(
     reason: `Allowed by default under agent block [${matchingBlock.agents.join(', ')}]`
   };
 }
+
+/**
+ * Next.js / Universal Metadata Route compatibility interface
+ */
+export interface RobotsMetadata {
+  rules: {
+    userAgent: string | string[];
+    allow?: string | string[];
+    disallow?: string | string[];
+    crawlDelay?: number;
+  }[];
+  sitemap?: string | string[];
+  host?: string;
+}
+
+/**
+ * Metadata exporter for framework standard route handlers (Next.js/Remix/Universal)
+ */
+export function robots(): RobotsMetadata {
+  return {
+    rules: [
+      {
+        userAgent: ROBOTS_CRAWLER_GROUPS.googleInspection,
+        allow: ['/', '/assets/', '/uploads/', '/api/products', '/api/categories', '/api/blogs'],
+        disallow: ['/admin/', '/api/admin/', '/api/auth/']
+      },
+      {
+        userAgent: ROBOTS_CRAWLER_GROUPS.majorSearchEngines,
+        allow: ['/', '/assets/', '/uploads/'],
+        disallow: ['/admin/', '/api/admin/', '/api/auth/']
+      },
+      {
+        userAgent: ROBOTS_CRAWLER_GROUPS.socialMediaBots,
+        allow: ['/', '/assets/', '/uploads/', '/og-banner.png', '/favicon.png'],
+        disallow: ['/admin/']
+      },
+      {
+        userAgent: ROBOTS_CRAWLER_GROUPS.aiAssistantBots,
+        allow: ['/', '/products', '/product-detail/', '/blogs', '/blog-detail/'],
+        disallow: ['/admin/', '/api/admin/', '/api/auth/']
+      },
+      {
+        userAgent: ROBOTS_CRAWLER_GROUPS.seoAuditBots,
+        allow: ['/'],
+        disallow: ['/admin/', '/api/admin/', '/api/auth/'],
+        crawlDelay: 2
+      },
+      {
+        userAgent: '*',
+        allow: [
+          '/',
+          '/assets/',
+          '/uploads/',
+          '/search',
+          '/og-banner.png',
+          '/favicon.png',
+          '/api/products',
+          '/api/categories',
+          '/api/blogs',
+          '/api/deals',
+          '/api/visit',
+          '/api/health-check'
+        ],
+        disallow: STANDARD_DISALLOWED_PATHS
+      }
+    ],
+    sitemap: [
+      'https://gadgetsprohub.onrender.com/sitemap.xml',
+      'https://gadgetsprohub.onrender.com/sitemap-products.xml',
+      'https://gadgetsprohub.onrender.com/sitemap-blogs.xml',
+      'https://gadgetsprohub.onrender.com/sitemap-categories.xml',
+      'https://gadgetsprohub.onrender.com/sitemap-images.xml'
+    ],
+    host: 'https://gadgetsprohub.onrender.com'
+  };
+}
+
+export default robots;
+

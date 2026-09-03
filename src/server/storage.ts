@@ -242,15 +242,18 @@ if (fs.existsSync(SOCIAL_CLICKS_FILE)) {
 }
 
 export let localSiteSettings = {
-  adsenseClientId: process.env.VITE_ADSENSE_CLIENT_ID || process.env.ADSENSE_CLIENT_ID || 'ca-pub-1234567890123456',
-  adsenseEnabled: true,
+  adsenseClientId: process.env.VITE_ADSENSE_CLIENT_ID || process.env.ADSENSE_CLIENT_ID || '',
+  adsenseEnabled: false,
+  adsenseTestMode: false,
+  adsenseAutoAds: false,
   adsenseSlots: {
-    headerBannerSlot: '6223881151',
-    productDetailSlot: '7898031267',
-    blogSlot: '1223904982',
-    sidebarSlot: '9876543210',
-    homeSlot: '6223881151'
+    headerBannerSlot: '',
+    productDetailSlot: '',
+    blogSlot: '',
+    sidebarSlot: '',
+    homeSlot: ''
   },
+  customAdsTxt: '',
   siteName: 'gadgetsprohub',
   supportEmail: 'support@gadgetsprohub.com',
   updatedAt: new Date().toISOString()
