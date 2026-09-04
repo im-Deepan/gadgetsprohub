@@ -14,14 +14,32 @@ interface ApiFetchOptions extends RequestInit {
   deduplicate?: boolean; // Enable promise deduplication for concurrent identical calls
 }
 
+interface CachedResponseSnapshot {
+  bodyText: string;
+  status: number;
+  statusText: string;
+  headers: [string, string][];
+  timestamp: number;
+}
+
+function createResponseFromSnapshot(snapshot: CachedResponseSnapshot): Response {
+  const headers = new Headers();
+  snapshot.headers.forEach(([k, v]) => headers.append(k, v));
+  return new Response(snapshot.bodyText, {
+    status: snapshot.status,
+    statusText: snapshot.statusText,
+    headers
+  });
+}
+
 // Registry to track and coalescing identical in-flight promises (Deduplication)
-const activeRequests = new Map<string, Promise<Response>>();
+const activeRequests = new Map<string, Promise<CachedResponseSnapshot>>();
 
 // Registry for auto-aborting previous duplicate requests
 const abortControllersRegistry = new Map<string, AbortController>();
 
 // Memory cache to store completed GET responses with a Time To Live (TTL)
-const completedRequestsCache = new Map<string, { response: Response; timestamp: number }>();
+const completedRequestsCache = new Map<string, CachedResponseSnapshot>();
 const CACHE_TTL_MS = 45000; // Cache GET requests for 45 seconds by default to enable lightning fast Back/Forward and Page transitions
 
 /**
@@ -166,7 +184,7 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
     if (cachedEntry) {
       const isExpired = Date.now() - cachedEntry.timestamp > CACHE_TTL_MS;
       if (!isExpired) {
-        return cachedEntry.response.clone();
+        return createResponseFromSnapshot(cachedEntry);
       } else {
         completedRequestsCache.delete(requestKey);
       }
@@ -261,7 +279,25 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
   if (deduplicate && isGet) {
     let existingPromise = activeRequests.get(requestKey);
     if (!existingPromise) {
-      const p = executeFetchWithRetry();
+      const fetchAndSnapshot = async (): Promise<CachedResponseSnapshot> => {
+        const res = await executeFetchWithRetry();
+        const bodyText = await res.text();
+        const headersList: [string, string][] = [];
+        res.headers.forEach((v, k) => headersList.push([k, v]));
+        const snapshot: CachedResponseSnapshot = {
+          bodyText,
+          status: res.status,
+          statusText: res.statusText,
+          headers: headersList,
+          timestamp: Date.now()
+        };
+        if (res.ok) {
+          completedRequestsCache.set(requestKey, snapshot);
+        }
+        return snapshot;
+      };
+
+      const p = fetchAndSnapshot();
       p.catch(() => {}); // Prevent unhandled rejection on base promise
       existingPromise = p.finally(() => {
         activeRequests.delete(requestKey);
@@ -270,18 +306,9 @@ export async function apiFetch(url: string, options: ApiFetchOptions = {}): Prom
       existingPromise.catch(() => {});
       activeRequests.set(requestKey, existingPromise);
     }
-    // Return a clone of the response so multiple callers can read the body stream
-    const returnedPromise = existingPromise.then(res => {
-      // Cache the response if it is successful and is a GET
-      if (res.ok) {
-        completedRequestsCache.set(requestKey, {
-          response: res.clone(),
-          timestamp: Date.now()
-        });
-      }
-      return res.clone();
-    });
-    returnedPromise.catch(() => {}); // Prevent unhandled rejection on the returned cloned promise
+    // Return a fresh independent Response from snapshot so multiple callers can read the body stream
+    const returnedPromise = existingPromise.then(snapshot => createResponseFromSnapshot(snapshot));
+    returnedPromise.catch(() => {}); // Prevent unhandled rejection on the returned promise
     return returnedPromise;
   }
 

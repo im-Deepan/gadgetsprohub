@@ -450,6 +450,14 @@ const AppContent: React.FC = () => {
         return 'privacy-policy';
       }
 
+      if (viewPart === 'product-detail' || viewPart === 'product') {
+        return 'product-detail';
+      }
+
+      if (viewPart === 'products' && pathParts.length > 1 && pathParts[1] && !pathParts[1].startsWith('category-')) {
+        return 'product-detail';
+      }
+
       if (viewPart && (ALLOWED_VIEWS as readonly string[]).includes(viewPart)) {
         return viewPart as AppView;
       }
@@ -482,6 +490,12 @@ const AppContent: React.FC = () => {
 
       if (viewPart === 'blog' || viewPart === 'blogs') {
         return pathParts.length > 1 ? pathParts.slice(1).join('/') : null;
+      }
+      if (viewPart === 'product-detail' || viewPart === 'product') {
+        return pathParts.length > 1 ? pathParts.slice(1).join('/') : null;
+      }
+      if (viewPart === 'products' && pathParts.length > 1 && !pathParts[1].startsWith('category-')) {
+        return pathParts.slice(1).join('/');
       }
       // Any unknown top-level route is treated as a category slug
       if (viewPart && !(ALLOWED_VIEWS as readonly string[]).includes(viewPart)) {
@@ -599,7 +613,7 @@ const AppContent: React.FC = () => {
       // 1. If it's a product , inspect dynamic s from db API
       if (activeView === 'product-detail' && selectedSlug) {
         try {
-          const res = await fetch(`/api/products/${selectedSlug}`, { signal: controller.signal });
+          const res = await apiFetch(`/api/products/${encodeURIComponent(selectedSlug)}`, { signal: controller.signal });
           if (res.ok && active) {
             const product = await res.json();
             const categoryName = (typeof product.category === 'object' && product.category !== null) ? product.category.name : (product.category || 'Tech');
@@ -680,6 +694,7 @@ const AppContent: React.FC = () => {
   const navigateToView = (view: AppView | string, slug?: string) => {
     let normalized = view === 'blog' ? 'blogs' : view;
     if (normalized === 'privacy') normalized = 'privacy-policy';
+    if (normalized === 'product') normalized = 'product-detail';
     const targetView = normalized as AppView;
     if (!(ALLOWED_VIEWS as readonly string[]).includes(targetView)) {
       setActiveView('404');

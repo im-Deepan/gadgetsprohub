@@ -185,9 +185,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
 
   // Sourcing product stats
   const loadProductStats = async (signal?: AbortSignal) => {
+    if (!productSlug || !productSlug.trim()) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/products/${productSlug}`, { signal });
+      const cleanSlug = encodeURIComponent(productSlug.trim());
+      const res = await apiFetch(`/api/products/${cleanSlug}`, { signal });
       if (signal?.aborted) return;
       if (res.ok) {
         const data = await res.json();
@@ -208,8 +213,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
           setShowVideo(false);
         } else {
           console.error('[ProductDetail] Invalid product response format:', data);
-          showToast(data?.error || 'Product not found or database is offline.', 'error', 4000, 'System Error');
-          if (!signal?.aborted) setLoading(false);
+          if (!signal?.aborted) {
+            showToast(data?.error || 'Product not found or catalog item unavailable.', 'error', 4000, 'Catalog Status');
+            setLoading(false);
+          }
           return;
         }
         
@@ -256,26 +263,28 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
         setLoading(false);
         
         // Fetch related products in the background so it doesn't block loading
-        const catId = getCategoryId(data.category);
-        apiFetch(`/api/products?category=${encodeURIComponent(catId)}&limit=4`, { signal })
-          .then(async (relRes) => {
-            if (signal?.aborted) return;
-            if (relRes.ok) {
-              const relData = await relRes.json();
+        const catId = getCategoryId(resolvedProduct.category);
+        if (catId) {
+          apiFetch(`/api/products?category=${encodeURIComponent(catId)}&limit=4`, { signal })
+            .then(async (relRes) => {
               if (signal?.aborted) return;
-              const filtered = (relData.products || []).filter((p: Product) => p._id !== data._id);
-              setRelatedProducts(filtered);
-            }
-          })
-          .catch(err => {
-            if (err.name !== 'AbortError') {
-              console.warn('ProductDetail load related products warning:', err);
-            }
-          });
+              if (relRes.ok) {
+                const relData = await relRes.json();
+                if (signal?.aborted) return;
+                const filtered = (relData.products || []).filter((p: Product) => p._id !== resolvedProduct._id);
+                setRelatedProducts(filtered);
+              }
+            })
+            .catch(err => {
+              if (err.name !== 'AbortError') {
+                console.warn('ProductDetail load related products warning:', err);
+              }
+            });
+        }
       } else {
         if (!signal?.aborted) {
           const errData = await res.json().catch(() => ({}));
-          showToast(errData?.error || `Failed to fetch product details (HTTP ${res.status}).`, 'error', 4000, 'System Error');
+          showToast(errData?.error || `Failed to fetch product details (HTTP ${res.status}).`, 'error', 4000, 'Catalog Status');
           setLoading(false);
         }
       }
@@ -419,6 +428,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     const controller = new AbortController();
     if (productSlug) {
       loadProductStats(controller.signal).catch(() => {});
+    } else {
+      setLoading(false);
     }
     return () => {
       controller.abort();

@@ -4415,15 +4415,55 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const inputDistrict = (req.headers['x-user-district'] || req.query.district) as string;
       const districtName = inputDistrict ? sanitizeDistrict(inputDistrict) : 'Unknown';
 
-      if (!isMongoConnected) {
-        return res.status(503).json({ error: 'Database is currently offline. Please try again shortly.' });
+      const rawSlug = req.params.slug;
+      if (!rawSlug) {
+        return res.status(400).json({ error: 'Product slug or ID is required' });
+      }
+      let decodedSlug = rawSlug;
+      try {
+        decodedSlug = decodeURIComponent(rawSlug).trim();
+      } catch {
+        decodedSlug = rawSlug.trim();
       }
 
-      const product = await Product.findOne({ slug: req.params.slug })
-        .populate('category')
-        .populate('reviews.userId', 'name profileImage')
-        .populate('comparisonProducts');
-      
+      let product: any = null;
+
+      if (isMongoConnected) {
+        // Query MongoDB by slug, decoded slug, case-insensitive, or ObjectId
+        const escapedDecoded = decodedSlug.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        product = await Product.findOne({
+          $or: [
+            { slug: rawSlug },
+            { slug: decodedSlug },
+            { slug: new RegExp(`^${escapedDecoded}$`, 'i') }
+          ]
+        })
+          .populate('category')
+          .populate('reviews.userId', 'name profileImage')
+          .populate('comparisonProducts');
+
+        if (!product && mongoose.Types.ObjectId.isValid(rawSlug)) {
+          product = await Product.findById(rawSlug)
+            .populate('category')
+            .populate('reviews.userId', 'name profileImage')
+            .populate('comparisonProducts');
+        }
+      }
+
+      // Fallback to localProducts if not found in Mongo or if Mongo is disconnected
+      if (!product && typeof localProducts !== 'undefined' && Array.isArray(localProducts)) {
+        const lowerRaw = rawSlug.toLowerCase();
+        const lowerDecoded = decodedSlug.toLowerCase();
+        product = localProducts.find((p: any) =>
+          p.slug === rawSlug ||
+          p.slug === decodedSlug ||
+          (p.slug && p.slug.toLowerCase() === lowerDecoded) ||
+          (p.slug && p.slug.toLowerCase() === lowerRaw) ||
+          String(p._id) === rawSlug ||
+          String(p._id) === decodedSlug
+        );
+      }
+
       if (!product) {
         return res.status(404).json({ error: 'Product catalog item not found' });
       }
@@ -4442,7 +4482,7 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       const now = Date.now();
       const lastCheck = product.lastPriceCheck ? new Date(product.lastPriceCheck).getTime() : 0;
       
-      if (now - lastCheck > TWENTY_FOUR_HOURS && process.env.N8N_REALTIME_WEBHOOK_URL) {
+      if (isMongoConnected && now - lastCheck > TWENTY_FOUR_HOURS && process.env.N8N_REALTIME_WEBHOOK_URL) {
         // Atomically acquire lock to prevent race conditions across horizontal clusters
         Product.findOneAndUpdate(
           {
@@ -4491,14 +4531,16 @@ app.get('/api/auth/verify', async (req: express.Request, res: express.Response):
       // ---------------------------------------
       
       // Create live anonymous analytics node asynchronously in background without blocking
-      Analytics.create({
-        productId: product._id,
-        eventType: 'view',
-        district: districtName,
-        userAgent: req.headers['user-agent']
-      }).catch(err => {
-        console.warn('Background view analytics logging failed:', err.message);
-      });
+      if (isMongoConnected) {
+        Analytics.create({
+          productId: product._id,
+          eventType: 'view',
+          district: districtName,
+          userAgent: req.headers['user-agent']
+        }).catch(err => {
+          console.warn('Background view analytics logging failed:', err.message);
+        });
+      }
       return res.json(sanitizeServerProduct(product));
     } catch (error: any) {
       res.status(400).json({ error: error.message });
