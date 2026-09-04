@@ -558,6 +558,21 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
     }
   };
 
+  // Find current sequence information (memoized to avoid re-scanning sequence array on every render)
+  const { prevProduct, nextProduct } = useMemo(() => {
+    if (!allProductsSequence.length || !product) {
+      return { prevProduct: null, nextProduct: null };
+    }
+    const currentIdx = allProductsSequence.findIndex(p => p.slug === productSlug || p._id === product._id);
+    if (currentIdx === -1) {
+      return { prevProduct: null, nextProduct: null };
+    }
+    return {
+      prevProduct: currentIdx > 0 ? allProductsSequence[currentIdx - 1] : null,
+      nextProduct: currentIdx < allProductsSequence.length - 1 ? allProductsSequence[currentIdx + 1] : null
+    };
+  }, [allProductsSequence, productSlug, product]);
+
   if (loading) {
     return (
       <div className="mx-auto max-w-7xl px-4 pt-12 pb-8 sm:px-6 lg:px-8 animate-pulse text-slate-700 dark:text-slate-50">
@@ -640,21 +655,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productSlug, onNav
       </div>
     );
   }
-
-  // Find current sequence information (memoized to avoid re-scanning sequence array on every render)
-  const { prevProduct, nextProduct } = useMemo(() => {
-    if (!allProductsSequence.length || !product) {
-      return { prevProduct: null, nextProduct: null };
-    }
-    const currentIdx = allProductsSequence.findIndex(p => p.slug === productSlug || p._id === product._id);
-    if (currentIdx === -1) {
-      return { prevProduct: null, nextProduct: null };
-    }
-    return {
-      prevProduct: currentIdx > 0 ? allProductsSequence[currentIdx - 1] : null,
-      nextProduct: currentIdx < allProductsSequence.length - 1 ? allProductsSequence[currentIdx + 1] : null
-    };
-  }, [allProductsSequence, productSlug, product]);
 
   // Specifications fields map with exhaustive, safe, multi-format parsing
   let specMap: Record<string, string> = parseSpecificationsString(product?.specifications);
