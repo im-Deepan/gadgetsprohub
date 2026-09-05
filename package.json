@@ -92,7 +92,7 @@
     "supertest": "^7.2.2",
     "tailwindcss": "^4.1.14",
     "ts-jest": "^29.4.12",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.13",
     "typescript": "~5.8.2",
     "vite": "^8.0.16",
     "vite-plugin-static-copy": "^4.1.1"
