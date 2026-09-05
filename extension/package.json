@@ -10,7 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "lucide-react": "^0.546.0",
+    "lucide-react": "^1.39.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1"
   },
